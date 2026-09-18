@@ -227,8 +227,8 @@ class CognitiveAssocEvaluationHarnessTests(unittest.TestCase):
                 )
                 for item in baseline["R2_surfaceDecoyContrast"]
             }
-            self.assertIn(("pair", "U", "hard_negative"), strata)
-            self.assertIn(("pair", "L", "related_but_separate"), strata)
+            self.assertIn(("pair", "U", "related_but_separate"), strata)
+            self.assertIn(("pair", "L", "hard_negative"), strata)
 
     def test_summary_refuses_mismatched_source_digests(self) -> None:
         left = self.build_probe("A")
