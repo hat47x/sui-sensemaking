@@ -1,5 +1,7 @@
 # CE2 Low-Risk AI Assist
 
+> **位置づけ:** 本書は、現在提供するCE2の低リスクAI支援を安全に利用するための運用ガイドです。ここで定めるproposal-only・人間レビュー境界は**現行CE2の提供範囲**であり、SUI Sensemaking全体の長期的なAI自律度の上限を定めるものではありません。長期的なsensemaking lifecycleと権限境界は `01_Plans/adr/ADR-0084-sensemaking-lifecycle-and-authority-boundary.md` を参照してください。
+
 対象読者: AI 提案機能を使う利用者、レビュー担当者、QA。
 
 目的: AI 出力を「提案」として扱い、人間が採用、保留、破棄を判断する運用を説明します。

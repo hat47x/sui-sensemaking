@@ -1,7 +1,7 @@
 # ROADMAP
 
 **English summary**  
-sui-sensemaking is a safe, human-in-the-loop environment for structured qualitative synthesis. The core product foundation is already implemented; the current priority is to validate, with controlled comparison and third-party use, where that foundation creates a real cognitive and practical advantage. Future capabilities remain candidates until actual-use evidence justifies promoting them.
+SUI Sensemaking is a durable environment for human–AI sensemaking, with a KJ-inspired canvas as its current core human interface. The current public product remains human-reviewed and SafeMode-first, while the long-term architecture is intended to support a continuum from human-led exploration to delegated and supervised AI sensemaking without losing evidence, provenance, uncertainty, or authority boundaries. Future capabilities remain candidates until actual-use evidence justifies promoting them.
 
 この文書は、**開発コミュニティ向けの公開コミュニケーション文書**です。
 
@@ -9,12 +9,14 @@ sui-sensemaking is a safe, human-in-the-loop environment for structured qualitat
 
 ## 基本方針
 
-sui-sensemaking は、まとまりきらない定性資料や観察を、早すぎる分類・要約・合意で潰さず、出典・異論・保留・人間の判断権を残したまま構造化し、後から根拠へ戻れる共有可能な理解へ育てることを、現在の中心的な利用仕事として検証しています。
+SUI Sensemaking は、まとまりきらない定性資料や観察を、早すぎる分類・要約・合意で潰さず、出典・異論・保留・来歴を残したまま構造化し、後から根拠へ戻れる共有可能な理解へ育てることを、現在の中心的な利用仕事として検証しています。
+
+現在の公開機能では人間レビューを強く前提としますが、長期的なProduct Scopeはそこに固定しません。AIが探索・仮説形成・反証・構造化・統合のより大きな区間を担い、人間が方向づけ、理解、異議、承認へ比重を移す場合でも、同じsensemaking資産と来歴を継続できることを目指します。
 
 そのため、次を中核原則として維持します。
 
 - 🧠 意味を急いで閉じない（Ambiguity Preservation）
-- 🔁 人間が判断を引き受ける Human-in-the-loop の構造思考支援
+- 🔁 現行フェーズではHuman-in-the-loopを維持しつつ、長期的には人間・AIの役割分担を固定しない
 - 🔒 SafeMode を既定とする安全設計
 - 🌐 オフライン / 自前ホストを選べる構成
 - 📦 OSSとして持続可能な規模感
@@ -83,11 +85,12 @@ sui-sensemaking は、まとまりきらない定性資料や観察を、早す�
 
 一部の基盤機能は既に実装済みです。今後の拡張は、実際の大規模利用で同じ摩擦が再現した場合に進めます。
 
-### B. AIによる補助提案
+### B. AIによる認知・sensemaking支援
 
-- ローカルLLMと大規模LLMを同じ抽象境界から扱える構成。
-- LLMは結論を自動確定せず、提案・反証・探索を補助する。
-- SafeMode と人間の承認境界を利用形態にかかわらず維持する。
+- ローカルLLMと大規模LLMだけでなく、embedding、分類器、決定論的処理、将来の異種認知器を同じ上位境界から扱える構成。
+- 現行の共有・確定面ではAI出力をproposalとして扱い、人間承認なしに`human_reviewed`・Accepted・Consensusへ昇格させない。
+- 将来のAI Workspaceでは、Observation、Relation、Hypothesis、Structure、Synthesisを複数段階にわたり探索・反証・再構成できる余地を持つ。
+- SafeMode、Evidence保全、Provenance、権限境界を、AIの自律度とは独立した不変条件として維持する。
 - Providerやモデルを変えても、失敗や根拠の見え方が失われないようにする。
 
 現行のローカルLLM `/generate` 契約は sui-sensemaking 独自形状です。OpenAI/Ollama互換ワイヤ形式は、実使用で接続失敗が顕在化した場合に改めて判断します。
@@ -97,8 +100,8 @@ sui-sensemaking は、まとまりきらない定性資料や観察を、早す�
 生成AI APIの従量課金を前提にせず、定額チャットや外部AIエージェントと安全に往復できる経路を維持・発展させます。
 
 - キャンバス文脈と依頼内容を、外部AIへ渡せる形で書き出す。
-- 外部AIの結果は、構造化変更提案として受け取り、人間の承認後に反映する。
-- AI側がキャンバスの意味を自動確定しない。
+- 現行フェーズでは、外部AIの結果を構造化変更提案として受け取り、人間の承認後に共有・確定面へ反映する。
+- 将来AI側で複数段階のsensemakingを行う場合も、その内部採択と、人間承認済み・共有済みの意味への昇格を区別する。
 
 この方向の契約は `ADR-0049-external-flat-rate-agent-collaboration.md` と関連仕様で管理しています。
 
@@ -123,6 +126,9 @@ visibility、read-only表示、Static Publish、DocumentACLなどは、実利用
 
 ## 長期的に保持する探索余地
 
+- AI Workspaceでの複数段階sensemakingと、工程ごとの委任範囲・停止条件の設計
+- AIが大規模な探索を担った後、人間が主要根拠・反証・未解決点を理解して異議・承認できるReview View / Review Capsule
+- 複数の異質な認知器が出すObservationやRelationを、一つの総合スコアへ潰さず比較・保持する仕組み
 - 自由曲線や不定形包囲など、島表現の高度化
 - 差分レビューを中心とした慎重な複数人協働
 - 署名付きレビュー記録や監査ログハッシュなど、研究・組織利用向け監査強化
@@ -132,11 +138,11 @@ visibility、read-only表示、Static Publish、DocumentACLなどは、実利用
 ## 非目標（Out of Scope）
 
 - SNS型公開プラットフォーム化
-- AIによる自動結論生成、自動合意、自動意思決定
+- AI内部の作業結果を、来歴・権限・レビュー境界を飛び越えて人間承認済みの結論・合意・意思決定として扱うこと
 - SaaSに依存しなければ成立しない設計
 - 大規模リアルタイム共同編集を主目的にすること
 - 汎用ホワイトボードの機能数を競うこと
-- 人間のレビューをなくすことをAI活用の目標にすること
+- AI自律率そのものを成功指標にし、人間が必要なときに理解・異議・承認できる経路を失うこと
 
 ## 設計原則（常に維持する）
 
@@ -145,7 +151,8 @@ visibility、read-only表示、Static Publish、DocumentACLなどは、実利用
 - SafeMode は既定ONとする。
 - 個人情報を安易に保存しない。
 - 重い処理はWorker等へ逃がし、UI応答性を守る。
-- 出典・異論・保留・人間の判断履歴へ戻れることを、便利な自動化より優先する。
+- 出典・異論・保留・生成主体・判断履歴へ戻れることを、便利な自動化より優先する。
+- AI Workspace内の自律探索と、共有・承認済み状態への権限昇格を同一視しない。
 - dogfoodや実利用で見つかった摩擦は、手順で隠すのではなく、再現できるものを製品へ戻す。
 
 ## このROADMAPの更新ルール
