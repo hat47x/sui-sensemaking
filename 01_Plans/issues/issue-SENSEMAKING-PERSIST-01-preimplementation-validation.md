@@ -104,7 +104,7 @@ semantic artifactをruntimeへ実装する前に、ADR-0088の第一候補
 - [x] portable logical schemaとFK / constraint matrixが完成している。`02_Architecture/sensemaking_artifact_portable_schema_matrix.md`を正本候補とする。
 - [ ] Verified DB familyで表現不能なCore constraintが無いか明示されている。
 - [ ] representative fixtureが5系統以上ある。
-- [ ] Authority CAS / stale targetの競合ケースが定義されている。
+- [x] Authority CAS / stale targetの競合ケースを `sensemaking_artifact_portable_schema_matrix.md` のpseudo-flowとして定義した。実DB実証は未実施。
 - [ ] exchange importでsource Accepted / Consensus / human Reviewがlocalへ昇格しないことを検証できる。
 - [ ] SafeMode後のbundle closureを検証できる。
 - [ ] Content Store payload benchmark結果がある。
