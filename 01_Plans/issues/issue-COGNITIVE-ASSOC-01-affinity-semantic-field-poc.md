@@ -118,7 +118,10 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
     - [x] `01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/`へselected review set、human adjudication packet、generation evidenceを凍結した。
     - [x] 63件のhuman response templateと、欠落・重複・label・model-blind attestation・source SHAをfail-closed検証するfreeze utilityを用意した。
     - [ ] Maintainerが63件をmodel-blindで判定し、freeze utilityでadjudicated artifactの件数・SHA-256を凍結する。完了までsemantic baseline gateは開かない。
-- [ ] **T3 Baseline harness**: A/C/Eを同じinterfaceで実行できるoffline harnessを作る。T2d完了前はsemantic resultを生成しない。
+- [x] **T3 Baseline harness**: A/C/Eを同じinterfaceで実行できるoffline harnessを作る。T2d完了前はsemantic resultを生成しない。
+  - 成果: `01_Plans/dogfood/run_cognitive_assoc_baselines.py` / `cognitive-assoc-baseline-harness-v0.md`
+  - AはUnicode char n-gram TF-IDF、Cは固定seed疎展開 + k-WTA、Eはtext-only local vector providerとして同じpair / 2+1 interfaceへ接続した。
+  - fixed v0の`run`はfrozen adjudication artifactとEvidenceのSHA一致・gate eligibilityがなければfail-closedする。2026-09-18時点ではsynthetic fixtureだけを実行し、固定v0 semantic resultは生成していない。
 - [ ] **T4 Baseline evaluation**: deep-semantic recall / surface-decoy rejection / singleton・residual survival / wording stability / CPU budgetを比較する。
 - [ ] **T5 Learned sparse gate**: T4を根拠にDをProceed / Hold / Rejectで判断する。
 - [ ] **T6 Affinity-specific increment**: Proceed時のみFを追加し、group/separate/Critique/hold/graph/space/historyの寄与をablationする。
