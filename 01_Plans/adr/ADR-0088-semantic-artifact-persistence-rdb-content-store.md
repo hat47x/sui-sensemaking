@@ -351,4 +351,6 @@ projection / Review Capsule cacheはretention rootにしない。
 - `01_Plans/adr/ADR-0070-content-addressed-generation-dag-and-git-adapter.md`
 - `02_Architecture/sensemaking_artifact_contract_v1alpha1.md`
 - `02_Architecture/sensemaking_payload_authority_exchange_v1alpha1.md`
+- `02_Architecture/sensemaking_artifact_persistence_candidate.md`
+- `02_Architecture/sensemaking_artifact_portable_schema_matrix.md`
 - `02_Architecture/information_network_projection_contract.md`
