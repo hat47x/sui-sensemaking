@@ -2,7 +2,8 @@
 
 - Status: **Normative design contract / L0 Planned**
 - Date: 2026-09-18
-- Parent: `ADR-0085`, `ADR-0086`, `ADR-0087`
+- Parent: `ADR-0085`, `ADR-0086`, `ADR-0087`, `ADR-0088`
+- Persistence candidate: `02_Architecture/sensemaking_artifact_persistence_candidate.md`
 - Runtime implementation: **Not yet**
 - Persistence implementation: **Not yet**
 - Current `DocumentV1`: **Unchanged**
@@ -729,6 +730,10 @@ runtime / persistenceへ昇格する前に、次を検証する。
 
 ## 13. 未決事項
 
+ADR-0088でphysical persistenceの第一候補をRDB metadata/event + Content Store payload + materialized networkとした。具体的なportable schema / index / fixture / benchmarkは`SENSEMAKING-PERSIST-01`で検証する。
+
+引き続き未決なのは次である。
+
 - exact ID generation format
 - Evidence source locator共通contract
 - kind payloadのUI編集surface
@@ -736,7 +741,7 @@ runtime / persistenceへ昇格する前に、次を検証する。
 - Authority Scope parent利用方針
 - Consensus Policy具体schema
 - artifact bundle署名 / authenticity
-- physical table / index / partition
-- object/blob dedup
+- physical table / index / partitionの最終形
+- object/blob dedup benchmark結果
 - artifact exchange import UI
 - Review Capsule UI
