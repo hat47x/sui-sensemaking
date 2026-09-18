@@ -117,6 +117,7 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
     - [x] 事前登録済みU/L規則で63件（pair 32 / 2+1 31）のmodel-blind review setを確定した。
     - [x] `01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/`へselected review set、human adjudication packet、generation evidenceを凍結した。
     - [x] 63件のhuman response templateと、欠落・重複・label・model-blind attestation・source SHAをfail-closed検証するfreeze utilityを用意した。
+    - [x] 4値選択と任意reasonだけを扱うself-contained offline HTML form generatorを追加し、U/L・島・座標・relation・model出力をUIから除外した。
     - [ ] Maintainerが63件をmodel-blindで判定し、freeze utilityでadjudicated artifactの件数・SHA-256を凍結する。完了までsemantic baseline gateは開かない。
 - [x] **T3 Baseline harness**: A/C/Eを同じinterfaceで実行できるoffline harnessを作る。T2d完了前はsemantic resultを生成しない。
   - 成果: `01_Plans/dogfood/run_cognitive_assoc_baselines.py` / `cognitive-assoc-baseline-harness-v0.md`
