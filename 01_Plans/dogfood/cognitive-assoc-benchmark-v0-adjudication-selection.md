@@ -170,3 +170,26 @@ freeze utilityは次をfail-closedで検証する。
 
 成功時はadjudicated artifactと別EvidenceへSHA-256を固定する。成功はsemantic baselineを自動実行する操作ではない。Evidenceのgate状態は `eligible_for_explicit_open` とし、T3/T4側が凍結済みartifactを明示的に参照して初めて次段へ進む。
 
+## 9. Offline判定フォーム
+
+63件をMarkdownとJSONの間で手作業転記する誤りを減らすため、`build_cognitive_assoc_adjudication_form.py`でself-contained HTMLを生成できる。
+
+役割は次のように分ける。
+
+- `human-adjudication-packet.md`: 判定対象とblind境界を人間が監査する読み物
+- offline HTML form: 4値選択と任意reasonを入力する補助UI
+- `human-adjudication-response.json`: freeze utilityへ渡す判定の正本
+
+フォーム生成時にもsemantic gateは閉じたままであり、入力はselected review setとblind model inputだけを使う。
+
+```bash
+python 01_Plans/dogfood/build_cognitive_assoc_adjudication_form.py \
+  01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/selected-review-set.json \
+  /path/to/model-input.jsonl \
+  /tmp/cognitive-assoc-human-adjudication.html
+```
+
+HTMLは外部script / stylesheet / network requestを持たない。candidate ID、document ID、card ID、card本文、4値label、任意reasonだけを表示する。U/L stratum、lexical overlap、source island、座標、relation、model score / ranking / explanationは含めない。
+
+途中経過JSONは `status=in_progress` のまま保存できる。完了JSONを出力するには全63件が判定済みで、Maintainerがmodel-blind完了確認を明示的にチェックする必要がある。最終JSONは既存のfreeze utilityで再検証するため、フォーム自体を信頼境界にはしない。
+
