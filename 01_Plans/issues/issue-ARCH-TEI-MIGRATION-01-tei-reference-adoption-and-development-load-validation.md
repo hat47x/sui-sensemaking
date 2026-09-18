@@ -70,6 +70,30 @@
 - TEI利用率や生成コード量を成功指標にすること
 - Security / bugfix / compatibility maintenanceまで移管ゲートのために停止すること
 
+## 固定済みの実履歴Baseline
+
+比較基線は `01_Plans/cross-repo/2026-09-18-sui-tei-reference-adoption-baseline.md` を正本とする。
+
+最初の3 challengeは、実際にmerge済みの変更から選ぶ。
+
+| Challenge | Historical PR | Changed files | Changed lines | Pressure |
+|---|---:|---:|---:|---|
+| A 階層表示＋表札 | #235 | 11 | 338 | meaning / Projection / validation / UI |
+| B polygon頂点編集 | #286 | 5 | 219 | specialized spatial Interaction / native boundary |
+| C merge accept明示transaction | #2849 | 3 | 465 | proposal / authority / mutation boundary |
+
+補助Evidenceとして、hierarchy concernがexport / import / view metadataまで横断したPR #241（10 files / 260 changed lines）も参照する。
+
+この実履歴を、TEI版で同じchallengeを行う際の比較元とする。単純なLOC削減ではなく、同じ意味変更がいくつの層へ波及したかを読む。
+
+### 初期移管順
+
+1. **Stage 0 — native encapsulation**: 現行`DocumentV1`とCanvasをそのまま利用可能なnative assetとして扱い、TEIへ第二正本を作らない。
+2. **Stage 1 — stable semantic mapping**: Card / Island / Relation等の安定部分だけをTEIから検証・参照できる形へmappingする。
+3. **Stage 2 — Application shell / Target**: TEI TargetがReference Adoption可能になった段階で、汎用UI shell / validation / review orchestrationをTEIへ寄せる。
+4. **Stage 3 — Plugin discovery**: spatial canvas等を第二Applicationでも使える場合にだけPlugin候補へ昇格する。
+5. **Stage 4 — advanced sensemaking**: AI Workspace等の大規模高度化は、移管境界が安定した後に本格実装する。
+
 ## 開発負荷の比較指標
 
 主指標は人間の主観的な「楽だった」だけにしない。
