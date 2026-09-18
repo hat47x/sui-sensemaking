@@ -56,10 +56,11 @@ SAML / OIDC / Broker / JWT の協調認証フローに関する文書。
 | [`api.md`](api.md) | Markdown | API 仕様（全エンドポイント・認可・エラー） |
 | [`schemas.md`](schemas.md) | Markdown | データモデル・テーブル定義・型 |
 | [`data_model_operations_overview.html`](data_model_operations_overview.html) | HTML | データモデル操作俯瞰図 |
+| [`sensemaking_semantic_model.md`](sensemaking_semantic_model.md) | Markdown | Evidence / Observation / Hypothesis / Synthesis / Review / Decisionと、provenance・authority・lifecycleの概念境界（L0 Planned） |
 | [`runtime_parameter_registry.md`](runtime_parameter_registry.md) | Markdown | 全環境変数一覧（プロファイル別推奨値付き） |
 | [`hil_rs_01_a1_minimum_interface_contract.md`](hil_rs_01_a1_minimum_interface_contract.md) | Markdown | HIL-RS インターフェース契約 |
 
-**おすすめの読み順**: `api.md`（API）→ `schemas.md`（モデル）→ `runtime_parameter_registry.md`（設定）
+**おすすめの読み順**: `sensemaking_semantic_model.md`（将来の意味境界）→ `schemas.md`（現行永続モデル）→ `api.md`（API）→ `runtime_parameter_registry.md`（設定）
 
 ---
 

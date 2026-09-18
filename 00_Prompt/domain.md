@@ -24,6 +24,7 @@
 | `DOM-AIOK-*` | §7 AIが行ってよいこと |
 | `DOM-CRIT-*` | §6 Critique の種別と扱い |
 | `DOM-SHARE-*` | §8 共有物に必ず含めるもの |
+| `DOM-SM-*` | §3.3 sensemaking意味成果物・review・authorityの不変条件 |
 
 識別子は**追記のみ**とし、一度与えた番号を再利用しない。廃止する場合は項目を残して廃止と明記する。
 
@@ -110,13 +111,14 @@
 | 島 | Island | Island | 複数カードや関係を視覚的に囲む意味のまとまり。KJ法の島に相当 |
 | 代表視覚手掛かり | Representative Visual Cue | RepresentativeVisualCue（計画中） | 島または明示的に選んだ情報集合を見つけ直すため、表札や説明と併記する任意の小さな絵文字・アイコン・画像 |
 | 一次視覚資料 | Source Visual Material | SourceVisualMaterial（計画中） | 観察・取材・利用者作成で得た写真・図・スケッチなど、元の文脈や出典へ戻る必要がある定性資料 |
-| 観察 | Observation | Observation（計画中） | Evidenceから認識されたこと。元資料そのものとは区別し、生成主体と来歴を保持する |
+| 根拠資料 | Evidence | Evidence（概念。永続型は計画中） | Sensemakingの根拠として参照される資料・記録。TruthやAccepted meaningとは同義ではない |
+| 観察 | Observation | Observation（計画中） | Evidenceや対象状態から、ある主体・認知Providerが認識したこと。元資料そのものとは区別し、生成主体と来歴を保持する |
 | 関係 | Relation | Relation / Edge | カード、島、観察、仮説の間にある意味的なつながり |
 | 仮説 | Hypothesis | Hypothesis（計画中） | EvidenceやObservationをもとに形成された、反証・保留・棄却が可能な解釈 |
 | 構造 | Structure | Structure（計画中） | 島、グラフ、因果配置など、複数要素を組み合わせた意味構造の総称 |
-| 統合 | Synthesis | Synthesis（計画中） | 複数のRelation / Hypothesis / Structureをまとめた暫定的または採用済みの理解 |
-| レビュー | Review | Review（計画中） | 人間またはAIが、対象を理解・検査・異議・確認した記録。人間レビューとAIレビューを混同しない |
-| 判断 | Decision | Decision（計画中） | Sensemaking結果をもとに採用された判断。Observation / Hypothesis / Synthesisとは別概念として扱う |
+| 統合 | Synthesis | Synthesis（計画中） | 複数のRelation / Hypothesis / Structureをまとめた理解。Acceptedでない統合や競合する複数統合も保持できる |
+| レビュー | Review | Review（計画中） | 特定revisionに対して人間またはAIが理解・検査・異議・確認した記録。ReviewとAccepted / Consensusを同一視しない |
+| 判断 | Decision | Decision（計画中） | Sensemaking結果を踏まえ、あるauthorityのもとで何を採るか／何をするかを選んだ記録。Synthesis / Acceptance / Executionとは別概念 |
 | 配置図 | Layout / Map | Layout | 空間的配置を含む図解状態 |
 | 違和感 | Discomfort / Incongruity | Critique | 理由の有無を問わない否定・ツッコミ |
 | 制約 | Constraint | Constraint | Critique等から生成される再配置条件 |
@@ -147,6 +149,39 @@
 表札は分類名ではありません。その束（クラスタ・島）が何を訴えているかの代弁です。ある表札を別の束の上に置いても違和感なく成立してしまうなら、それは代弁ではなく分類名であり、書き直しが必要です。
 
 要件（転写検査を含む）の正本は `00_Prompt/sensemaking_technique.md` 第3章、AI支援としての扱いは `00_Prompt/qualitative_card_quality_requirements.md` 第5章とします。
+
+---
+
+### 3.3 sensemaking意味成果物の不変条件
+
+詳細な概念モデルは `02_Architecture/sensemaking_semantic_model.md`、設計判断は `ADR-0085` を正本とする。
+
+- **DOM-SM-01 Evidence ≠ Truth**  
+  Evidenceは根拠として参照される資料・記録であり、その内容が真であること、Acceptedであることを意味しない。相反するEvidenceや誤りを含む元資料も、来歴を保持して扱える。
+
+- **DOM-SM-02 Semantic kind ≠ Maturity state**  
+  Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionは成熟段階ではない。ObservationをHypothesisへ、HypothesisをSynthesisへin-placeで型変更しない。新しい意味成果物を作り、元成果物へ来歴関係で接続する。
+
+- **DOM-SM-03 Observation is actor-attributed**  
+  Observationは「誰／どの認知Providerが、何を入力として、何を認識したか」を外在化した記録である。同じEvidenceから複数の異なるObservationが生じてよく、不一致を一つのscoreへ自動統合しない。
+
+- **DOM-SM-04 Review ≠ Acceptance**  
+  Review済みであることはAccepted / Consensus / Truthを意味しない。AI Reviewを人間Reviewとして記録してはならず、現行`human_reviewed`は引き続き人間の明示操作だけで成立する。
+
+- **DOM-SM-05 Authority is orthogonal**  
+  Working / Candidate / Accepted / Consensus等のauthority上の位置づけは、HypothesisやSynthesis等のsemantic kindと別軸である。visibility / access controlもauthorityの代用品にしない。
+
+- **DOM-SM-06 Rejected / Superseded ≠ Deleted**  
+  後続理解へ影響した主要な棄却案、反証、置換済み成果物は参照可能に残す。棄却や置換を根拠の消去として実装しない。
+
+- **DOM-SM-07 Decision ≠ Synthesis ≠ Execution**  
+  統合された理解と、何を採るかというDecisionと、実際の外部Executionは別である。Decision Authorityは別途確認可能でなければならない。
+
+- **DOM-SM-08 Traceability ≠ private chain-of-thought retention**  
+  後から検証・再開・異議に必要な入力範囲、Evidence、actor、Provider / Method、派生関係、主要根拠・反証・代替案を保持する。一方、AI内部のtoken単位推論やprivate chain-of-thought全文を保存要件にしない。
+
+- **DOM-SM-09 Current schema ≠ future semantic model**  
+  現行`Card` / `Edge` / `EvidenceLink` / `Island` / `Narrative` / `ReviewAttribution`を、将来の意味成果物へ一対一で読み替えない。`DocumentV1`の意味はこの概念モデルだけを理由に変更しない。
 
 ---
 
