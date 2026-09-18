@@ -54,13 +54,27 @@ TEIはCanonicalな意味と決定論的なvalidation/generationを優先し、�
 
 認知結果はformal modelそのものではなく、候補・Evidence・reviewable mappingとして境界を越える。
 
-## 4. 実装方針 — Application PlaneはTEI-first、Kernel / Infrastructure Planeは個別判断
+## 4. 実装方針 — TEI適性をApplication Planeと構造化設計適性の二軸で見る
 
 プロダクト上の正本と、実装に使う共通基盤は分けて考える。
 
-今後の自作OSSでは、**UI、Interaction、業務／domain logic、Projection、Validation、Application lifecycle等を持つApplication Planeについて、TEIによる実装を第一候補とする。**
+今後の自作OSSでは、TEI適用を一つの条件だけで決めない。少なくとも次の二軸を見る。
+
+1. **Application Plane強度** — UI、Interaction、業務／domain logic、Projection、Validation、Application lifecycle等をどれだけ持つか
+2. **Structured Design Affinity（構造化設計適性）** — Data、Relation、state、rule、constraint、transformation、capability等を図・表・グラフ・モデルで整理統合し、その設計資産から実装を導きたい度合い
+
+後者が高ければ、UIをほとんど持たないCLIやheadless serviceでもTEIの射程に入る。
+
+逆にApplication Planeが大きくても、価値の中心が特殊algorithm、描画engine、compiler、model runtime等の手続き的・性能依存なkernelにある場合、TEIはshellや周辺設計に限定してよい。
+
+| | 構造化設計適性 高 | 構造化設計適性 低 |
+|---|---|---|
+| **Application Plane 高** | Broad TEI-first | TEI shell + native specialized engine |
+| **Application Plane 低** | TEI design / definition plane | Native-first |
 
 TEI-firstは、各Productの意味や価値をTEIへ移すことを意味しない。SUIのsensemaking、SEIのcognition / decision meaning、EKIのdistributed compute semanticsは各Repositoryが引き続き正本を持つ。
+
+また、「図表で整理する」とは見た目の図そのものを唯一の正本にすることではない。図・表・グラフ等は、同じCanonicalな意味を読み書きするProjection / authoring surfaceとして扱う。
 
 一方、次の領域はTEI化を自動的な既定にはしない。
 
@@ -95,7 +109,24 @@ TEIに不足が見つかった場合、SUIやSEI等の都合を直接TEI Coreへ
 
 SUI Sensemakingを最初のReference Adoptionとし、TEI移管で**開発負荷が本当に低下するか**と、実利用由来のPlugin surfaceを同時に検証する。
 
-## 4. 依存ではなく利用可能性として扱う
+SUIはこの二軸の両方が高い。Canvas / review / proposal / export等のApplication Planeを持つだけでなく、カード・島・関係・階層・Evidence・Hypothesis等の情報を図表的に外在化し、その構造を保ったまま別Projectionや実装へ接続したいProductである。そのため、TEI-firstの最初のReference Adoptionとして特に適している。
+
+### 自作OSSへの当てはめ例
+
+| 対象 | Application Plane | 構造化設計適性 | TEIの主な役割 |
+|---|---|---|---|
+| SUI Sensemaking | 高 | 高 | Broad TEI-first。Canvas等のspecialized Interactionはnative / Plugin併用可 |
+| SEIの管理・Review surface | 高 | 高 | Application / Projection / policy editor |
+| SEIの認知kernel | 低 | 低〜中 | 原則native。Capability境界だけTEIと接続 |
+| EKIのoperator / policy surface | 中〜高 | 高 | control planeのApplication / Projection |
+| EKI scheduler / worker / protocol | 低 | 低 | native-first |
+| markdown-matrix-injectorの定義・mapping・validation面 | 低〜中 | 高 | headlessなdesign / definition planeとして適用余地 |
+| 純粋なalgorithm library | 低 | 低 | native-first |
+
+同一Repositoryの中でも領域ごとに象限が異なってよい。Product単位で「TEI製／非TEI製」と二分するのではなく、**どの意味・設計・Application責務をTEIへ預けると再利用性と変更局所性が高まるか**で境界を切る。
+
+
+## 5. 依存ではなく利用可能性として扱う
 
 4製品を次の固定スタックとしては定義しない。
 
@@ -117,7 +148,7 @@ TEI ----uses----> EKI
 
 「関係が深い」ことと「必須依存」は区別する。
 
-## 5. 各リポジトリへ反映すべき要点
+## 6. 各リポジトリへ反映すべき要点
 
 ### SUI Sensemaking
 
@@ -169,7 +200,7 @@ TEI ----uses----> EKI
 - `product/value.md`
 - `product/principles.md`
 
-## 6. 専用リポジトリへの昇格条件
+## 7. 専用リポジトリへの昇格条件
 
 次のうち複数が継続的に発生したとき、横断領域を専用リポジトリへ昇格する。
 
@@ -182,7 +213,7 @@ TEI ----uses----> EKI
 
 それまでは専用リポジトリを増やさず、各Product Valueを各リポジトリで育てる。
 
-## 7. 今回の位置づけ
+## 8. 今回の位置づけ
 
 2026-09-18時点では、横断領域は独立プロダクト／独立artifactというより、各プロダクトの責務境界を明確化するための設計知識である。
 

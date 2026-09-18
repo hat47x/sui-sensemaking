@@ -273,6 +273,29 @@ Reference中の不足は必ず次で記録する。
 
 Dが多いほど良いわけではない。B / Cで健全に境界を保てるなら、それ自体がTEIの小さいCoreという価値に沿う。
 
+## 9. 構造化設計適性も比較対象にする
+
+TEI移管の価値は、単に同じ機能を少ないLOCで実装できるかだけではない。
+
+SUIでは、Card / Island / Relation / hierarchy / review / proposal等がすでに図表的・構造的な情報として存在する。そこでReference Adoptionでは、
+
+> **一度整理した構造化情報から、Validation・Projection・Target・文書・AI向けcontextをどこまで再利用して導けるか**
+
+も比較する。
+
+各challengeについて、次を記録する。
+
+- 同じ意味を複数箇所へ再記述している数
+- 一つのCanonical / authoring definitionから導出できる派生物の数
+- 図・表・グラフ等のProjectionを切り替えても意味を再入力せずに済むか
+- UI変更とdomain meaning変更を分離できるか
+- Validation / documentation / AI contextが同じ構造化情報へ戻れるか
+- custom codeでしか表現できない領域がどこに残るか
+
+この観点を **structure-to-application leverage** と呼ぶ。
+
+TEI版が優位であるとは、すべてをmodelへ押し込むことではない。**構造化して価値がある意味は一度だけ定義し、特殊挙動だけをnativeへ局所化できること**を重視する。
+
 ## 9. 比較記録フォーマット
 
 各challengeについて次を記録する。
