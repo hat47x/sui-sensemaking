@@ -94,8 +94,9 @@ jobs:
 
           packet = packet_path.read_text(encoding="utf-8")
           for forbidden in (
-              "selectionStrata", "sourceIslandId", "islandTitle", "semantic score",
-              '"similarity"', '"activation"', '"confidence"', '"ranking"',
+              "selectionStrata", "sourceIslandId", "islandTitle",
+              '"score":', '"similarity":', '"distance":', '"activation":',
+              '"confidence":', '"ranking":',
               "modelOutput", "modelExplanation",
           ):
               if forbidden in packet:
