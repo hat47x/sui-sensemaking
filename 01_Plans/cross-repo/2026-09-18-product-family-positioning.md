@@ -54,6 +54,47 @@ TEIはCanonicalな意味と決定論的なvalidation/generationを優先し、�
 
 認知結果はformal modelそのものではなく、候補・Evidence・reviewable mappingとして境界を越える。
 
+## 4. 実装方針 — Application PlaneはTEI-first、Kernel / Infrastructure Planeは個別判断
+
+プロダクト上の正本と、実装に使う共通基盤は分けて考える。
+
+今後の自作OSSでは、**UI、Interaction、業務／domain logic、Projection、Validation、Application lifecycle等を持つApplication Planeについて、TEIによる実装を第一候補とする。**
+
+TEI-firstは、各Productの意味や価値をTEIへ移すことを意味しない。SUIのsensemaking、SEIのcognition / decision meaning、EKIのdistributed compute semanticsは各Repositoryが引き続き正本を持つ。
+
+一方、次の領域はTEI化を自動的な既定にはしない。
+
+- scheduler / worker / queue / lease等の分散実行kernel
+- protocol、sandbox、resource governor、device-level agent
+- model runtime、認知アルゴリズム本体、性能クリティカルなcompute kernel
+- TEI自身のbootstrapに必要なlow-level implementation
+- native assetとして保持した方が意味・性能・安全性を保てる専門実装
+
+この区別を概念的には次のように扱う。
+
+```text
+Application Plane
+  UI / interaction / domain rule / projection / validation
+  -> TEI-first
+
+Specialized Capability
+  spatial canvas / cognition / external integration / special runtime
+  -> TEI Plugin / Adapter / Capability / native assetを優先検討
+
+Kernel / Infrastructure Plane
+  scheduler / worker / protocol / sandbox / compute engine
+  -> native-first、TEI利用は管理面等で個別評価
+```
+
+TEIに不足が見つかった場合、SUIやSEI等の都合を直接TEI Coreへ入れず、次の順で評価する。
+
+1. 既存TEI機能で表現できないか
+2. reusable Plugin / Adapter / Capabilityとして切り出せないか
+3. native asset / custom implementationとして接続できないか
+4. 複数Applicationに共通する意味上の欠落であることがEvidenceで確認できた場合だけCore / Product Requirement候補にする
+
+SUI Sensemakingを最初のReference Adoptionとし、TEI移管で**開発負荷が本当に低下するか**と、実利用由来のPlugin surfaceを同時に検証する。
+
 ## 4. 依存ではなく利用可能性として扱う
 
 4製品を次の固定スタックとしては定義しない。
