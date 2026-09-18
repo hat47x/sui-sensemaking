@@ -111,6 +111,21 @@ SUI Sensemakingを最初のReference Adoptionとし、TEI移管で**開発負荷
 
 SUIはこの二軸の両方が高い。Canvas / review / proposal / export等のApplication Planeを持つだけでなく、カード・島・関係・階層・Evidence・Hypothesis等の情報を図表的に外在化し、その構造を保ったまま別Projectionや実装へ接続したいProductである。そのため、TEI-firstの最初のReference Adoptionとして特に適している。
 
+### 自作OSSへの当てはめ例
+
+| 対象 | Application Plane | 構造化設計適性 | TEIの主な役割 |
+|---|---|---|---|
+| SUI Sensemaking | 高 | 高 | Broad TEI-first。Canvas等のspecialized Interactionはnative / Plugin併用可 |
+| SEIの管理・Review surface | 高 | 高 | Application / Projection / policy editor |
+| SEIの認知kernel | 低 | 低〜中 | 原則native。Capability境界だけTEIと接続 |
+| EKIのoperator / policy surface | 中〜高 | 高 | control planeのApplication / Projection |
+| EKI scheduler / worker / protocol | 低 | 低 | native-first |
+| markdown-matrix-injectorの定義・mapping・validation面 | 低〜中 | 高 | headlessなdesign / definition planeとして適用余地 |
+| 純粋なalgorithm library | 低 | 低 | native-first |
+
+同一Repositoryの中でも領域ごとに象限が異なってよい。Product単位で「TEI製／非TEI製」と二分するのではなく、**どの意味・設計・Application責務をTEIへ預けると再利用性と変更局所性が高まるか**で境界を切る。
+
+
 ## 5. 依存ではなく利用可能性として扱う
 
 4製品を次の固定スタックとしては定義しない。
