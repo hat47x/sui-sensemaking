@@ -1,0 +1,150 @@
+# TEI / SEI / SUI / EKI プロダクト境界 — cross-repository positioning
+
+- Status: Informative / Cross-repository
+- Date: 2026-09-18
+- Canonicality: **本書は各プロダクトのProduct Valueの正本ではない。** 各プロダクト固有の価値・非目標・要求は、それぞれのリポジトリを正本とする。
+- Purpose: 複数プロダクトを組み合わせて議論するときに、責務の重複・親子関係化・暗黙依存を避けるための共通見取り図を提供する。
+
+## 1. なぜこの文書を置くか
+
+SUI Sensemaking、SEI Cognition、TEI、EKI Fabricは、相互に利用可能な領域を持つが、一つの製品を分割したモジュールではない。
+
+クロスプロダクトの議論を各リポジトリへ複製すると、同じ概念の正本が複数生まれる。一方、現段階で専用の「製品ファミリー」リポジトリを設けると、まだ変化の大きい境界概念のために恒久的な同期・ガバナンス層を増やしてしまう。
+
+そのため当面は、
+
+1. 各プロダクト固有の価値・要件は各リポジトリに置く
+2. 横断文書は少数に留め、各正本への導線と責務境界だけを扱う
+3. 共通schema、互換性試験、family-wide release policy等が独立した変更単位になった時点で、専用リポジトリへの昇格を再検討する
+
+という運用とする。
+
+## 2. 現時点の責務境界
+
+| Product | Owns | Does not own |
+|---|---|---|
+| **SUI Sensemaking** | 未整理な材料からObservation / Relation / Hypothesis / Structure / Synthesisを形成し、意味形成の過程を保持・理解・レビュー・成熟させるsensemaking lifecycle | 認知Providerそのものの最適実装、汎用分散compute、formal application model全般 |
+| **SEI Cognition** | Observation・Question・Evidence・Unknown・Decision・Capability・Provenance等を用いて、認知と判断を構成・継続する基盤。異種Capability Providerを選択・組合せ可能にする | SUI固有の意味形成UI、TEI固有のformal model、EKI固有のworker scheduling |
+| **TEI** | 業務上の意味をCanonicalなformal modelとして保持し、native assetやtarget realizationへ接続するmetadata/model-driven platform | 未分化な意味探索そのもの、汎用認知runtime、汎用分散compute |
+| **EKI Fabric** | 一時的・異質・分散したCPU/GPU/NPU等の計算余力を、安全に利用可能なcompute resourceへ変換するexecution fabric | 認知・意味・判断の正本、SUI/SEI/TEI固有のdomain semantics |
+
+## 3. 代表的な協調
+
+### SUI × SEI
+
+SUIが「何について意味を形成するか」「何をObservation / Hypothesis / Structureとして保持するか」を所有し、SEIは必要に応じて「どのCapabilityで、どの認知処理を行うか」を支援する。
+
+SUIはSEIに依存しなければ成立しない製品にはしない。SEIを利用しないローカル処理、決定論、別Providerも許容する。
+
+### SUI × TEI
+
+SUIは未分化・曖昧・対立を含む意味形成を扱う。TEIは、十分に安定しformalizeする価値が生じた意味を、実装・検証可能なCanonical modelへ落とす。
+
+この境界は「SUIの出力を自動的にTEIの正本へ昇格する」ことを意味しない。formalizationは独立した検証・権限境界を持つ。
+
+### SEI × EKI
+
+SEIが必要なCapability、latency、privacy、trust、resource class等を決め、EKIがその計算をどこで実行するかを扱える。
+
+EKIはcognitive workloadを重要な用途として扱えるが、AI/認知専用fabricにはしない。
+
+### TEI × SEI
+
+TEIはCanonicalな意味と決定論的なvalidation/generationを優先し、曖昧なmapping、候補探索、例外検知等にSEI経由の認知Capabilityを利用できる。
+
+認知結果はformal modelそのものではなく、候補・Evidence・reviewable mappingとして境界を越える。
+
+## 4. 依存ではなく利用可能性として扱う
+
+4製品を次の固定スタックとしては定義しない。
+
+```text
+SUI -> SEI -> TEI -> EKI
+```
+
+実際には用途ごとに関係が異なる。
+
+```text
+SUI ----uses----> SEI
+ |                 |
+ | formalize       | compute
+ v                 v
+TEI ----uses----> EKI
+
+各Productは必要に応じて単独でも成立する
+```
+
+「関係が深い」ことと「必須依存」は区別する。
+
+## 5. 各リポジトリへ反映すべき要点
+
+### SUI Sensemaking
+
+- KJ法キャンバスを中核的な人間系interfaceとして保持する
+- SUI CoreをKJ法だけへ限定しない
+- Human-led → Collaborative → Delegated → Supervised autonomousのライフサイクルを支える
+- AI Workspace内の自律sensemakingと、人間承認済み状態への権限昇格を分離する
+- Evidence / provenance / hold / conflict / reversibilityを失わない
+
+正本候補:
+- `README.md`
+- `00_Prompt/domain.md`
+- `00_Prompt/cognitive_frame_and_evolution_criteria.md`
+- `00_Prompt/ai_cognitive_externalization_requirements.md`
+- `ADR-0084`
+
+### SEI Cognition
+
+- 特定AIモデルではなく、認知・判断・不確実性・根拠・来歴を継続する基盤
+- rule / classifier / embedding / associative cognition / local SLM / frontier LLM / human等をCapability Providerとして扱える
+- 「どう認知し、どう判断を構成するか」を所有し、sensemaking UIやcompute placementを所有しない
+- AI能力向上に対してProvider交換可能性とDecision Continuityを維持する
+
+正本候補:
+- `product/value/SEI_PRODUCT_VALUE.md`
+- `product/vision/SEI_PRODUCT_VISION.md`
+- `product/definition/SEI_PRODUCT_SHAPE.md`
+
+### TEI
+
+- 業務上の意味をCanonical modelとして保持する
+- source / meaning / realization / execution / observationの境界を守る
+- 認知Capabilityは、曖昧なmapping・候補・例外検知に利用してよいが、Canonical meaningを暗黙更新しない
+- SUI等で形成された意味のformalization先になり得るが、SUIを必須前段としない
+
+正本候補:
+- `product/value/TEI_PRODUCT_VALUE.md`
+- `product/vision/`
+- `product/principles/`
+
+### EKI Fabric
+
+- cognitive workloadを主要な利用候補として認める
+- ただし汎用distributed compute fabricとしての独立性を維持する
+- data locality / trust / resource requirement / user impact / costを含めて実行場所を選ぶ
+- SUI / SEI / TEIを特別扱いする専用runtimeにはしない
+
+正本候補:
+- `product/value.md`
+- `product/principles.md`
+
+## 6. 専用リポジトリへの昇格条件
+
+次のうち複数が継続的に発生したとき、横断領域を専用リポジトリへ昇格する。
+
+- どの個別製品にも所有させにくい共通schema / IDLが存在する
+- cross-product contract testsを独立CIで継続運用する
+- compatibility matrixやrelease coordinationを横断管理する必要がある
+- family-wide ADRが繰り返し発生する
+- 一つのプロダクトの内部文書に置くことで、他プロダクトが従属して見える問題が実害を生む
+- 横断成果物が文書だけでなく、versioned artifactとして配布される
+
+それまでは専用リポジトリを増やさず、各Product Valueを各リポジトリで育てる。
+
+## 7. 今回の位置づけ
+
+2026-09-18時点では、横断領域は独立プロダクト／独立artifactというより、各プロダクトの責務境界を明確化するための設計知識である。
+
+したがって本書はSUIの`01_Plans/cross-repo/`に暫定配置するが、**SUIが他3製品を所有することを意味しない。**
+
+専用リポジトリ新設は保留し、各Product Value / Visionへの反映を先行する。
