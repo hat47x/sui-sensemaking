@@ -1,12 +1,12 @@
 # Issue: SENSEMAKING-MODEL-01 sensemaking意味成果物の永続境界を設計する
 
 - Type: Feature
-- Status: Ready
+- Status: In Progress
 - Source Issue: N/A
 - Priority: P1
 - Owner: Maintainer
 - Scope: `00_Prompt/domain.md`, `01_Plans/adr/`, `02_Architecture/`
-- Related ADR/Spec: `ADR-0084`, `ADR-0085`, `02_Architecture/sensemaking_semantic_model.md`
+- Related ADR/Spec: `ADR-0084`, `ADR-0085`, `ADR-0086`, `02_Architecture/sensemaking_semantic_model.md`, `02_Architecture/sensemaking_artifact_contract_v1alpha1.md`
 - Norms: `DOM-CORE-01`, `DOM-CORE-03`, `DOM-CORE-04`, `DOM-SM-01..09`, `DOM-AI-04..11`
 - Expected verification level: docs-check / contract review
 
@@ -91,19 +91,47 @@
 - 認知Provider内部scoreをSUIのTruth / Importance / Authorityへ変換しない。
 - Review Capsuleを新しいcanonical sourceにしない。
 
+## 進捗（2026-09-18）
+
+同一workstream branch上で、対応方針1〜7の設計基線を一巡した。
+
+- Artifact identity:
+  - opaque `artifactId`（logical identity）
+  - opaque `revisionId`（exact immutable revision）
+  - `contentDigest`（integrity cross-check）
+  を分離した。
+- Provenance:
+  - actor / method / runRef / input artifact refs / source refs / scope / transformation refsを最小envelopeとして定義した。
+  - AI provider / model / promptはartifactへ複製せず、runRefから既存run recordへ辿る。
+- Review:
+  - exact revisionを対象とするappend-only `ReviewRecordV1Alpha1`を定義した。
+  - dispositionからAccepted / Consensusを除外した。
+- Authority:
+  - Working / Candidate / Accepted / Consensusをappend-only transition eventで表現する。
+  - `expectedFrom` / `scopeRef`を必須とし、review件数からConsensusを自動導出しない。
+- Review Capsule:
+  - Structural CapsuleとNarrative Explanationを分離し、Narrativeを正本にしない。
+- Retention:
+  - Candidate化、Review対象、Decision basis、主要alternative、contradiction、pin等を保護入力とし、到達不能なWorking-only microtrialはGC可能とした。
+- Current model integration:
+  - `DocumentV1`、canvas revision DAG、`RoundSnapshotV1`、`ReviewAttribution`、AI generation run、WorkingGraph / ConsensusGraphとのreference bridgeを定義した。
+  - `DocumentV1`は変更しない。
+
+残る主な未決事項は、kind-specific payload schema、Relation vocabulary最終境界、Authority Scope / Consensus participant schema、physical persistence、artifact import/export、Review Capsule UI、promotion gate実測である。
+
 ## 受入条件
 
-- [ ] semantic kindとreview / authority / lifecycle / visibilityの直交関係を、実装者が一意に読める。
-- [ ] logical identityとexact revision identityの最小契約案がある。
-- [ ] provenance envelopeの必須／任意境界が定義される。
-- [ ] ReviewとAuthority transitionが別契約として定義される。
-- [ ] Human ReviewとAI Reviewを同一状態へ畳み込めない。
-- [ ] Review Capsuleから主要Evidence・反証・代替案・未解決点へ戻れる。
-- [ ] private chain-of-thought非保存と主要代替案保持を両立する規則がある。
-- [ ] `DocumentV1`を変更する／しないの判断を明示し、変更する場合は別schema ADRへ分岐する。
-- [ ] `InquiryJourneyV1`との重複・役割分担を説明できる。
-- [ ] 現行SafeMode / proposal-only / `human_reviewed`境界を弱めない。
-- [ ] 関連文書のdocs-checkを実行するか、未実施理由を記録する。
+- [x] semantic kindとreview / authority / lifecycle / visibilityの直交関係を、実装者が一意に読める。
+- [x] logical identityとexact revision identityの最小契約案がある。
+- [x] provenance envelopeの必須／任意境界が定義される。
+- [x] ReviewとAuthority transitionが別契約として定義される。
+- [x] Human ReviewとAI Reviewを同一状態へ畳み込めない。
+- [x] Review Capsuleから主要Evidence・反証・代替案・未解決点へ戻れる。
+- [x] private chain-of-thought非保存と主要代替案保持を両立する規則がある。
+- [x] `DocumentV1`は本Issueでは変更しないと明示した。変更が必要になった場合は別schema ADRへ分岐する。
+- [x] `InquiryJourneyV1` / `RoundSnapshotV1`は探究ラウンド・不変Document成果、semantic artifactは意味成果物revisionとしてreference bridgeで接続すると整理した。
+- [x] 現行SafeMode / proposal-only / `human_reviewed`境界を弱めない。
+- [x] 関連文書の検証結果を記録した。GitHub connector上ではPR headに紐づくworkflow run / commit statusが存在せず、repository-local `01_Plans/docs_check.py` はローカルcheckoutを必要とするため未実行。代わりにmainとの差分が文書8ファイルのみであること、`DocumentV1` / runtime / API変更がないこと、ADR-0070 / ReviewAttribution / InquiryJourney / associative cognition provider contractとの意味衝突がないことをGitHub上で照合した。
 
 ## 責任分界（REQ-DEF-02）
 
@@ -128,6 +156,22 @@
 - 期待結果:
   - 実装へ進む前に、意味境界・authority・revision・provenanceを一つの設計線で説明できる。
   - schema変更の必要性がEvidenceなしに既成事実化されない。
+
+## 検証結果（2026-09-18）
+
+- PR headに関連するGitHub Actions workflow run: なし
+- commit status: なし
+- repository-local `01_Plans/docs_check.py`: GitHub connector環境にはローカルcheckout / shell実行経路がないため未実行
+- GitHub差分確認:
+  - 変更は文書8ファイルのみ
+  - `DocumentV1` field / version変更なし
+  - API / DB / runtime変更なし
+  - current SafeMode / proposal-only / `human_reviewed`変更なし
+- 契約照合:
+  - ADR-0070のcanvas revision identity / digest分離と整合
+  - `schemas_review_attribution.md`の現行document review契約を上書きしない
+  - `InquiryJourneyV1` / `RoundSnapshotV1`をsemantic artifactへ暗黙変換しない
+  - `associative_cognition_provider_contract.md`のProvider内部値をTruth / confidenceへ昇格しない原則と整合
 
 ## 補足
 

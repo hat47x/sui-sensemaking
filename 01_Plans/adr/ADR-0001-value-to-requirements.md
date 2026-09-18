@@ -201,6 +201,9 @@
 意味成果物、Review、Authority、Lifecycleの直交関係は
 `01_Plans/adr/ADR-0085-sensemaking-semantic-artifacts-and-authority-axes.md` と
 `02_Architecture/sensemaking_semantic_model.md` を正本とする。
+logical identity、exact revision、minimal provenance、append-only Review / Authority transition、Review Capsuleの詳細は
+`01_Plans/adr/ADR-0086-sensemaking-artifact-identity-provenance-authority-events.md` と
+`02_Architecture/sensemaking_artifact_contract_v1alpha1.md` を正本とする。
 
 ---
 

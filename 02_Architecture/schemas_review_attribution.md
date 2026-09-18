@@ -5,6 +5,8 @@
 本ファイルは review attribution を view.json 側へ追加するためのスキーマ提案である。  
 MVPでは未実装だが、将来の互換性のため設計段階で固定する。
 
+> **ADR-0086との境界:** 本書の `ReviewEvent` / `ReviewAttribution` は既存view/document review文脈の契約であり、将来のartifact-level `ReviewRecordV1Alpha1` と同一型ではない。artifact-level Reviewはexact artifact revisionを対象とし、Authority transitionとは分離する。移行・正本関係は別schema ADRまで未決とし、本書だけを理由に現行`human_reviewed`を導出値へ変更しない。
+
 ## Location
 - view.json (view metadata) に追加
 - document.json には追加しない（default）
