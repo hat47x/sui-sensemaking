@@ -25,7 +25,7 @@ SUI Sensemaking、SEI Cognition、TEI、EKI Fabricは、相互に利用可能な
 |---|---|---|
 | **SUI Sensemaking** | 未整理な材料からObservation / Relation / Hypothesis / Structure / Synthesisを形成し、意味形成の過程を保持・理解・レビュー・成熟させるsensemaking lifecycle | 認知Providerそのものの最適実装、汎用分散compute、formal application model全般 |
 | **SEI Cognition** | Observation・Question・Evidence・Unknown・Decision・Capability・Provenance等を用いて、認知と判断を構成・継続する基盤。異種Capability Providerを選択・組合せ可能にする | SUI固有の意味形成UI、TEI固有のformal model、EKI固有のworker scheduling |
-| **TEI** | 業務上の意味をCanonicalなformal modelとして保持し、native assetやtarget realizationへ接続するmetadata/model-driven platform | 未分化な意味探索そのもの、汎用認知runtime、汎用分散compute |
+| **TEI** | 業務・Application・Infrastructureの意味をCanonicalなformal modelとして保持し、人間向けProjection、AIによる継続開発、native asset / target realization、AI Business Actorが利用するOperational Knowledgeへ接続する基盤 | 未分化な意味探索そのもの、認知・判断の継続性そのもの、汎用認知runtime、汎用分散compute |
 | **EKI Fabric** | 一時的・異質・分散したCPU/GPU/NPU等の計算余力を、安全に利用可能なcompute resourceへ変換するexecution fabric | 認知・意味・判断の正本、SUI/SEI/TEI固有のdomain semantics |
 
 ## 3. 代表的な協調
@@ -50,9 +50,31 @@ EKIはcognitive workloadを重要な用途として扱えるが、AI/認知専�
 
 ### TEI × SEI
 
-TEIはCanonicalな意味と決定論的なvalidation/generationを優先し、曖昧なmapping、候補探索、例外検知等にSEI経由の認知Capabilityを利用できる。
+TEIは、受入済みの業務・Application・Infrastructure knowledgeと、Business Action / Capability / Authorization / Binding / Evidence等の**Operational Semantics**を主に扱う。
 
-認知結果はformal modelそのものではなく、候補・Evidence・reviewable mappingとして境界を越える。
+SEIは、Observation、Question、Unknown、Recommendation、Decision、Responsibility、Cognitive Method等の**Cognitive / Decision Semantics**を主に扱う。
+
+AIエージェントが業務を行う場合、この二つは次のように協調できる。
+
+```text
+SEI
+  何を観察し、何を問い、何を判断するか
+        ↓ optional cognition / decision context
+AI Business Actor
+        ↓ reads
+TEI
+  何が業務上可能か
+  どのAction / Capability / Constraint / Authorityがあるか
+        ↓
+Execution
+        ↓
+Observation / Evidence
+        └──────────────→ SEIへ戻せる
+```
+
+SEIがなくてもAI AgentはTEIのOperational Knowledgeを利用でき、TEIがなくてもSEIは認知・判断を保持できる。固定pipelineにはしない。
+
+また、TEIがSEIのRecommendationをCanonical meaningへ暗黙昇格させず、SEIもTEIのBusiness Procedure / Application / Capability contractをUniversal Coreへ複製しない。
 
 ## 4. 実装方針 — TEI適性をApplication Planeと構造化設計適性の二軸で見る
 
@@ -179,8 +201,11 @@ TEI ----uses----> EKI
 
 ### TEI
 
-- 業務上の意味をCanonical modelとして保持する
+- 業務・Application・Infrastructureの意味をCanonical modelとして保持する
 - source / meaning / realization / execution / observationの境界を守る
+- 生成AIが継続的にApplicationを構築・変更するためのmachine-readable development contextを提供する
+- 人間がgenerated code全体を読まずに意味・差分・影響・Evidenceを理解できるProjectionを提供する
+- AI Business Actorが、明示Authorityの範囲でBusiness Action / Capabilityを利用するOperational Knowledgeになり得る
 - 認知Capabilityは、曖昧なmapping・候補・例外検知に利用してよいが、Canonical meaningを暗黙更新しない
 - SUI等で形成された意味のformalization先になり得るが、SUIを必須前段としない
 
