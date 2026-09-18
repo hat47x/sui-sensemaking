@@ -43,6 +43,36 @@ SUI Information Network は単一Documentの入れ物ではない。人間、生
 
 情報ネットワークは「一つの正解解釈」を表さない。異論、保留、少数意見、未解決、複数主体のWorking stateを共存させる。
 
+## 2.1 Semantic artifact modelとの接続
+
+ADR-0085〜0087で定義したEvidence / Observation / Relation / Hypothesis / Structure / Synthesis / Decision等のsemantic artifactは、SUI Information Networkと競合する別の正本ではない。
+
+将来の永続層では、semantic artifact revision、Review、Authority Scope / transition、provenance等を正本として保持し、Information Networkはそれらをquery可能な形へmaterializeする。
+
+```text
+semantic artifact revisions / events
+        │
+        │ materialize by permission / authority scope / time
+        ▼
+SUI Information Network
+        │
+        ▼
+QualitativeNetworkSnapshot
+        │
+        ▼
+D0..D5 / Context Projection
+```
+
+- artifact revisionはnetwork nodeへ投影できる。
+- Relation artifactはedge / hyperedgeへ投影できる。
+- Review / Authority eventはevent / provenanceとして投影できる。
+- 同じartifact revisionが複数Authority Scopeで異なるstateを持ち得るため、単一`status`へ潰さない。
+- sourceからimportしたAuthority assertionはlocal Consensus stateへmaterializeしない。
+- unknown extension relationは破棄せず、ただしCore semanticsのside effectを与えない。
+- Query / Projection結果はcanonical artifactへ逆書込みしない。
+
+`QualitativeNetworkSnapshot`は引き続きQuery層のread modelであり、physical persistence schemaではない。
+
 ## 3. Graph planes
 
 ### 3.1 WorkingGraph
@@ -56,12 +86,15 @@ SUI Information Network は単一Documentの入れ物ではない。人間、生
 
 ### 3.2 ConsensusGraph
 
-`ConsensusGraph` は、共有状態として明示承認された差分だけを保持する統合面である。
+`ConsensusGraph` は、共有状態として明示承認された差分を、**Authority Scopeを伴って**統合表示する面である。
 
-- `proposal / patch -> human approval -> apply` だけが昇格経路
+- `proposal / patch -> human approval -> apply` だけが現行runtimeの昇格経路
 - AI / SEI / external systemによるdirect writeは禁止
 - 多数決、score、model confidenceはapprovalの代替にならない
 - disagreement / holdを消して作らない
+- source/import側のAccepted / Consensusをlocal Consensusへ自動投影しない
+- 同じrevisionでもscopeが異なればAuthority stateは異なり得る
+- ConsensusGraph自体をAuthority eventの正本にしない
 
 ### 3.3 ContextProjectionGraph
 

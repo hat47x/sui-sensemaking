@@ -204,6 +204,9 @@
 logical identity、exact revision、minimal provenance、append-only Review / Authority transition、Review Capsuleの詳細は
 `01_Plans/adr/ADR-0086-sensemaking-artifact-identity-provenance-authority-events.md` と
 `02_Architecture/sensemaking_artifact_contract_v1alpha1.md` を正本とする。
+kind-specific payload、Relation拡張、Authority Scope、Consensus participant、exchange時のauthority非継承は
+`ADR-0087` と `02_Architecture/sensemaking_payload_authority_exchange_v1alpha1.md`、
+永続化の第一候補と実装前停止線は `ADR-0088` と `02_Architecture/sensemaking_artifact_persistence_candidate.md` を正本とする。
 
 ---
 

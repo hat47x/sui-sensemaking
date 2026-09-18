@@ -1,7 +1,7 @@
 # Issue: SENSEMAKING-MODEL-01 sensemaking意味成果物の永続境界を設計する
 
 - Type: Feature
-- Status: In Progress
+- Status: Done
 - Source Issue: N/A
 - Priority: P1
 - Owner: Maintainer
@@ -172,6 +172,19 @@
   - `schemas_review_attribution.md`の現行document review契約を上書きしない
   - `InquiryJourneyV1` / `RoundSnapshotV1`をsemantic artifactへ暗黙変換しない
   - `associative_cognition_provider_contract.md`のProvider内部値をTruth / confidenceへ昇格しない原則と整合
+
+## 完了判定（2026-09-18）
+
+設計課題としての本Issueは完了とする。
+
+完了理由:
+
+- semantic kind / provenance / Review / Authority / lifecycle / visibilityの直交モデルをADR-0085で固定した。
+- artifactId / exact revision / digest / provenance / Review / Authority transition / Review Capsule / retentionをADR-0086とv1alpha1 contractで固定した。
+- kind-specific payload / Relation / Authority Scope / Consensus participant / exchange boundaryをADR-0087で固定した。
+- physical persistenceの第一候補をADR-0088でRDB metadata/event + Content Store payload + materialized networkとして選定した。
+- 現行`DocumentV1` / runtime / API / human_reviewed / SafeModeを変更していない。
+- 次段階はimplementation migrationではなく、portable schema / fixture / concurrency / import staging / GC benchmarkを先に検証する`SENSEMAKING-PERSIST-01`へ引き継ぐ。
 
 ## 補足
 

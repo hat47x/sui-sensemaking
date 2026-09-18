@@ -109,4 +109,8 @@ CandidateをVerifiedへ変更するには、対象versionを固定した実DBに
 
 ## Current next step
 
+semantic artifactについては、ADR-0088で **RDB metadata/event + Content Store payload + materialized Information Network** を第一候補とした。ただしmigrationは開始していない。`SENSEMAKING-PERSIST-01`でportable table sketch、FK / constraint matrix、Authority CAS、exchange staging、Content Store benchmark、Information Network rebuild、retention / GCを検証し、Verified DB familyで成立するEvidenceを得た後にだけ実装Go判断を行う。
+
+この検討でも、JSON演算やgraph DBをCore correctnessの前提にせず、tenant FK・exact revision・Review / Authority eventの整合はportable RDB metadataで守る。kind-specific payloadはContent Storeのcontent objectとして扱い、現行`DocumentV1`のschemaとは分離する。
+
 `DATA-GENERATION-01`でrevision／blob設計を確定し、`DATA-GENERATION-02`で全Verified DBのportable binary LOBへinline codec bytesを保存・復元し、Document GET/PUTのruntime正本をrevision DAGへ移行した。`documents.payload_json`はETag互換と切戻しのための検証付きprojectionとして当面維持し、headとの不一致はfail closedにする。外部storageのruntime接続優先度は引き続き低く保つ。新しいDB familyは具体的需要を起点にcandidate登録し、同じpromotion gateを通す。容量・複数instance共有要件が実測された環境だけ、NAS/S3等を`content_blobs`の物理backendとして`DATA-GENERATION-03`の条件で再評価する。

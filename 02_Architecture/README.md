@@ -58,10 +58,13 @@ SAML / OIDC / Broker / JWT の協調認証フローに関する文書。
 | [`data_model_operations_overview.html`](data_model_operations_overview.html) | HTML | データモデル操作俯瞰図 |
 | [`sensemaking_semantic_model.md`](sensemaking_semantic_model.md) | Markdown | Evidence / Observation / Hypothesis / Synthesis / Review / Decisionと、provenance・authority・lifecycleの概念境界（L0 Planned） |
 | [`sensemaking_artifact_contract_v1alpha1.md`](sensemaking_artifact_contract_v1alpha1.md) | Markdown | logical artifact / exact revision / provenance / Review / Authority transition / Review Capsuleのv1alpha1契約 |
+| [`sensemaking_payload_authority_exchange_v1alpha1.md`](sensemaking_payload_authority_exchange_v1alpha1.md) | Markdown | kind-specific payload / Relation / Authority Scope / Consensus participant / artifact exchangeのv1alpha1契約 |
+| [`sensemaking_artifact_persistence_candidate.md`](sensemaking_artifact_persistence_candidate.md) | Markdown | RDB metadata/event + Content Store payload + materialized networkのL0永続化候補、transaction / index / GC / fixture |
+| [`sensemaking_artifact_portable_schema_matrix.md`](sensemaking_artifact_portable_schema_matrix.md) | Markdown | semantic artifactのportable logical table / composite FK / constraint責務 / Authority CAS / import staging matrix |
 | [`runtime_parameter_registry.md`](runtime_parameter_registry.md) | Markdown | 全環境変数一覧（プロファイル別推奨値付き） |
 | [`hil_rs_01_a1_minimum_interface_contract.md`](hil_rs_01_a1_minimum_interface_contract.md) | Markdown | HIL-RS インターフェース契約 |
 
-**おすすめの読み順**: `sensemaking_semantic_model.md`（将来の意味境界）→ `sensemaking_artifact_contract_v1alpha1.md`（identity / provenance / authority）→ `schemas.md`（現行永続モデル）→ `api.md`（API）→ `runtime_parameter_registry.md`（設定）
+**おすすめの読み順**: `sensemaking_semantic_model.md`（将来の意味境界）→ `sensemaking_artifact_contract_v1alpha1.md`（identity / provenance / authority）→ `sensemaking_payload_authority_exchange_v1alpha1.md`（payload / scope / exchange）→ `sensemaking_artifact_persistence_candidate.md`（永続化候補）→ `sensemaking_artifact_portable_schema_matrix.md`（portable schema / constraint）→ `schemas.md`（現行永続モデル）→ `api.md`（API）→ `runtime_parameter_registry.md`（設定）
 
 ---
 
