@@ -6,7 +6,7 @@
 > MVPで実際に運用サポートするデータ構造、埋め込み限定の構造、契約のみの構造は `02_Architecture/data_model_operations_overview.html` を参照する。
 > ADR-0033 で定義した Support/Maintenance/Contract Boundary（L1/L1.5/L2/L2.5/L3/L0）を正本とし、本書の型定義単体で運用保証を主張しない。
 > `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生bundleは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存bundleはこのmetadataを省略する。詳細は `02_Architecture/inquiry_journey_model.html` を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、version gate、保存契約へ履歴キーを追加しない。
-> `ADR-0085` / `02_Architecture/sensemaking_semantic_model.md` は、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを将来の意味成果物として定義する。ただしこれは **L0 Plannedの概念モデル** であり、現行 `DocumentV1` へ新fieldや新配列を追加したことを意味しない。
+> `ADR-0085` / `02_Architecture/sensemaking_semantic_model.md` は、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを将来の意味成果物として定義する。`ADR-0086` / `02_Architecture/sensemaking_artifact_contract_v1alpha1.md` は、そのlogical identity・exact revision・provenance・Review・Authority transitionを定義する。ただしこれらは **L0 Plannedの概念／設計契約** であり、現行 `DocumentV1` へ新fieldや新配列を追加したことを意味しない。
 本ドキュメントは、sui-sensemaking の **MVPで扱う永続データの最小スキーマ** を定義します。
 
 - YAGNI方針に従い、MVPで標準運用しない型は「運用サポート済み」と扱いません
