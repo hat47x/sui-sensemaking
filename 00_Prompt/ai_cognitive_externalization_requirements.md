@@ -1,10 +1,10 @@
-# 生成AIの認知外在化機能としての sui-sensemaking 拡張要件
+# 人間・AI協働の認知外在化基盤としての SUI Sensemaking 拡張要件
 
 - Status: Normative
 
 **English summary**  
-This document defines sui-sensemaking as a cognitive externalization framework for human–AI collaborative reasoning.  
-Its goal is not to let AI decide for humans, but to provide an external structured workspace that enables deeper, safer, and more context-sensitive information processing than current generative AI can sustain on its own.
+This document defines SUI Sensemaking as a durable cognitive externalization and sensemaking environment for humans and artificial cognition.  
+It supports a lifecycle from human-led exploration through collaboration and delegation to supervised AI autonomy, while keeping evidence, provenance, uncertainty, review, and authority boundaries explicit.
 
 ---
 
@@ -13,8 +13,9 @@ Its goal is not to let AI decide for humans, but to provide an external structur
 本書は、今後の sui-sensemaking プロジェクトにおける **中核文書** である。  
 ここで定義するのは単なる追加機能ではない。sui-sensemaking を、
 
-- 人間のための空間的思考環境
-- 生成AIのための認知外在化フレームワーク
+- 人間のための空間的思考・KJ法キャンバス環境
+- AIのための持続的な認知外在化・探索環境
+- 人間とAIの役割分担が変化しても意味形成の来歴を継続できるsensemaking基盤
 
 として再定義するための、設計原理・射程・要件・実装方針である。
 
@@ -42,9 +43,9 @@ Its goal is not to let AI decide for humans, but to provide an external structur
 > AI が強くなるほど製品の説明が苦しくなる（`01_Plans/research/product-trajectory-research-2026-08-15.md` §2.1）。
 >
 > **正当化の正本は `00_Prompt/cognitive_frame_and_evolution_criteria.md` §1 とする** ——
-> KJ法という認知のフレームで認知を拡張し、その知識蓄積を実現する基盤である、という定義である。
-> 認知拡張は認知主体が誰であっても成立するため、生成AIがどれだけ発展しても原則として常に成立する。
-> **本書のタイトル（「生成AIの認知外在化機能としての」）は、もともとその枠組みを指している。**
+> 人間と人工認知系のsensemaking過程を外在化し、材料・仮説・構造・保留・来歴を跨セッションで蓄積する基盤である、という定義である。
+> KJ法に着想を得たキャンバスはその中核的な人間系インターフェースだが、認知主体や認知手法はそれだけに限定しない。
+> この価値はAI能力の向上によって失効せず、むしろAIへ委任できる区間の拡大として取り込める。
 >
 > 本節は引き続き有効だが、その役割は「正当化」ではなく **「フレームを適用しない場合に生じる失敗様態の記述」** である。
 
@@ -80,7 +81,7 @@ Its goal is not to let AI decide for humans, but to provide an external structur
 が、構造として保持される必要がある。
 
 この地形はセッションの外に置かれてはじめて持続する。
-したがって必要なのは、**フレームが要求する形で知識を蓄積する基盤** である
+したがって必要なのは、**sensemakingの材料・途中状態・関係・仮説・統合・来歴を、認知主体を跨いで蓄積できる基盤** である
 （`cognitive_frame_and_evolution_criteria.md` §1）。
 
 > 本節を「生成AIには維持できないから外部が要る」と読んではならない。それは §1.1 の追記で
@@ -92,21 +93,23 @@ Its goal is not to let AI decide for humans, but to provide an external structur
 
 # 2. 基本コンセプト
 
-## 2.1 sui-sensemaking の再定義
+## 2.1 SUI Sensemaking の再定義
 
-sui-sensemaking は、単なるKJ法図解ツールではない。  
+SUI Sensemaking は、単なるKJ法図解ツールではない。  
 また、単なる生成AI支援ツールでもない。
 
-sui-sensemaking は、
+SUI Sensemaking は、
 
-> **生成AIと人間が、高度な情報処理と熟慮を継続するための、構造化された認知外在化環境**
+> **人間および人工認知系が、未整理な材料から関係・仮説・構造・統合を形成し、その過程を保持しながら理解を成熟させるための、構造化されたsensemaking・認知外在化環境**
 
 である。
 
-## 2.2 「知の竹馬」という比喩
+KJ法に着想を得たキャンバスは、人間が意味形成へ深く参加する局面の中核インターフェースとする。一方、AI内部の探索方法やSUI Coreの表現を、KJ法だけに固定しない。
 
-ここでのAI拡張は、AIそのものを作り替えることではない。  
-sui-sensemaking は、生成AIに対して、人間が高度な判断に必要とする
+## 2.2 外部認知空間という位置づけ
+
+ここでの認知拡張は、AIの不足を恒久的に補うことを意味しない。  
+SUI Sensemaking は、人間とAIの双方に対して、
 
 - 構造
 - 保留
@@ -114,14 +117,14 @@ sui-sensemaking は、生成AIに対して、人間が高度な判断に必要�
 - 根拠
 - 履歴
 - 文脈の配置
+- 生成主体と承認主体
+- 未確定から採用までの状態遷移
 
-を与えることで、AIが単独では届かない地点まで **安全に到達できるよう支える補助具** として機能する。
+をセッション外へ持続させる外部認知空間として機能する。
 
-つまり、sui-sensemaking は「AIの代わりに考える」ものではなく、
+AIが十分に高度になった後も、探索過程を外在化することで、別主体による検証、再開、異議、再解釈、承認が可能になる。
 
-> **AIがまだ自前では維持しにくい思考の足場を、外部に作るもの**
-
-である。
+> **SUIはAIの弱さを補う補助具ではなく、人間とAIが同じ意味形成の地形を継続的に読み書きするための基盤である。**
 
 ---
 
@@ -143,8 +146,9 @@ sui-sensemaking は、生成AIに対して、人間が高度な判断に必要�
 
 ## 3.3 システム全体としての目標
 
-- AI出力を常に差分・候補・パッチとして扱えること
-- 人間のレビュー状態が明示されること
+- AI Workspace内の自律的な途中生成物と、共有・承認済みの意味を区別できること
+- 共有・確定面へ出るAI生成物は差分・候補・パッチとしてレビュー可能であること
+- 人間とAIそれぞれのレビュー状態・生成主体・承認主体が明示されること
 - safeMode を共有・配布時の既定とすること
 - 後から監査・差分確認・再評価ができること
 - 中間処理（分類/要約/整形/条件分岐）と最終判断（採否・統合方針）を分離し、
@@ -156,10 +160,11 @@ sui-sensemaking は、生成AIに対して、人間が高度な判断に必要�
 
 本拡張は、以下を目的としない。
 
-- AIによる最終結論の自動生成
-- AIによる自動分類・自動確定の全面委任
+- AIの自律度や生成量そのものを価値指標にすること
+- AI生成物を、来歴・レビュー・権限境界を飛び越えて人間承認済みの意味として扱うこと
+- 一つのモデル、一つのクラスタリング、一つの総合スコアへ意味形成を集約すること
 - 「もっともらしくまとまった文章」を素早く作ること自体
-- チャットUIを主とし、キャンバスを従属させること
+- KJ法キャンバスまたはチャットUIのどちらか一方を、将来の唯一の操作面として固定すること
 - 生成AIの内部モデル改善そのもの
 
 ---
@@ -180,17 +185,23 @@ AI向けコンテキストは、それらから都度構成される **投影（
 
 両者は対応してよいが、同一である必要はない。
 
-## 原則3：AIは常に「候補生成器」である
+## 原則3：AIの作業空間と承認済みの意味を分離する
 
-AIは、
+AIは、AI Workspace / WorkingGraph内では、下書きや単発候補に限らず、Observation、Relation、Hypothesis、Structure、Synthesisを複数段階にわたり生成・比較・棄却・再生成してよい。
 
-- 下書き
-- 複数候補
-- 差分案
-- パッチ提案
+ただし、AI内部で採用した作業仮説を、そのまま人間が理解・承認した意味へ昇格させてはならない。共有・Accepted・Consensus等の正規状態へ移す境界では、
 
-を返す存在として扱う。  
-Consensus Graph（旧称: Core Graph）を直接変更してはならない。
+- 生成主体
+- 根拠
+- 差分
+- provenance
+- review state
+- authority
+
+を確認できる形にする。
+
+現行runtimeでは、この権限境界を `proposal-only` と人間の明示承認で実装する。  
+Consensus Graph（旧称: Core Graph）をAIが直接変更してはならない。
 
 ### 原則3a：カードの元の意味を品質支援より優先する
 
@@ -209,6 +220,17 @@ AIは、島または利用者が明示的に選んだ情報集合を見つけ直
 ### 原則3c：表札（島タイトル）の代弁性を分類名化より優先する
 
 AIは島タイトル候補を提案してよい。ただし、その候補が別の島の上に置いても成立してしまう一般的な分類名（例：「重要な論点」「今後の課題」）になっていないかを検査し、該当する場合は書き直し案を示す。AIはタイトルを確定または自動適用してはならない。詳細は `00_Prompt/qualitative_card_quality_requirements.md` 第5章、転写検査そのものは `00_Prompt/sensemaking_technique.md` 第3章を正本とする。
+
+## 原則3d：役割分担をライフサイクルとして扱う
+
+SUIは、人間とAIの役割を一つに固定しない。対象・リスク・利用目的に応じて、少なくとも次の状態を同じ情報資産上で支えられる方向へ進化する。
+
+1. **Human-led** — 人間が意味形成を行い、AIは観察・補助を担う
+2. **Collaborative** — 人間とAIが異なるObservationやHypothesisを持ち寄る
+3. **Delegated** — 人間が目的・範囲・停止条件を与え、AIが一定区間を自律処理する
+4. **Supervised autonomous** — AIが探索・反証・統合を継続し、人間は理解・異議・承認を中心に担う
+
+これは成熟度ランキングではなく、工程ごとに選択できる役割分担である。現在の公開実装はHuman-led / Collaborativeを中心とし、より高い自律度を本書だけで有効化しない。
 
 ## 原則4：曖昧さ・対立・未解決を保持する
 
@@ -239,7 +261,8 @@ sui-sensemaking は、
 - 保留解除の提案（hold解除候補）
 - 公開前の最終 narrative 承認候補
 
-最終判断層であっても **自動確定は禁止** し、出力は常に proposal-only とする。
+現行runtimeでは、最終判断層の出力も **共有・Accepted・Consensusへ自動確定せず** proposal-only とする。
+将来AI Workspace内部の作業判断を自律化しても、この共有・承認境界とは分離する。
 
 ---
 
@@ -452,6 +475,14 @@ max-nodes 30
 - 反対視点候補
 - 欠落論点候補
 
+### 自律探索（AI Workspace / WorkingGraph）
+- Observationの生成
+- Relation候補の探索
+- Hypothesisの形成・反証・棄却
+- 複数Structureの比較
+- Synthesisの生成と再探索
+- 異なる認知器・モデル・決定論的処理の結果の並存
+
 ### 制約付き変換
 - reviewed-only からの要約
 - contradiction cluster からの論点整理
@@ -469,12 +500,14 @@ max-nodes 30
 
 ## 9.2 AIにやらせない処理
 
-- 分類の最終確定
-- 関係線の自動確定
-- 真偽判定の断定
-- reviewed 状態の自動付与
+ここで禁止するのはAI Workspace内の仮説形成ではなく、**権限境界を越えた確定・偽装・一次情報改変**である。
+
+- AI Workspaceの分類・関係・仮説を、人間承認済みの最終確定として扱うこと
+- 真偽が未確定なHypothesisをEvidenceへ書き換えること
+- `human_reviewed` 状態の自動付与
 - Consensus Graph（旧称: Core Graph）の暗黙更新
-- 未レビューのまま外部共有向け文章を正式版として出すこと
+- 人間または別主体の保留・異議を権限なく解消すること
+- 未レビューのまま外部共有向け文章を人間承認済みの正式版として出すこと
 
 ---
 
@@ -537,9 +570,11 @@ AIが出した複数案を並置し、
 
 # 11. UI / UX 要件
 
-## 11.1 キャンバス主、チャット従
+## 11.1 現在はキャンバスを中核とし、将来は複数の理解面を許容する
 
-AIとのやりとりは、チャット欄を主とするのではなく、**キャンバスに対して作用する補助操作** として設計する。
+現在の人間主導・協働フェーズでは、AIとのやりとりをチャット欄だけに閉じず、**キャンバス上の材料・配置・関係へ作用する操作** として設計する。
+
+将来AIがより広いsensemaking区間を担う場合、人間が全中間操作を追うことを前提にしない。Review View、Graph View、差分、根拠、反証、Review Capsule等の理解・承認面を追加できるようにし、キャンバスをSUI Coreそのものとは同一視しない。
 
 ## 11.2 AI由来と人間由来を明確に区別
 
@@ -612,11 +647,12 @@ AI Context Query と AI出力は、必要に応じて
 
 この方向性に沿う機能かどうかは、次の問いで判定する。
 
-1. これは人間の思考を雑にしないか
-2. これはAIに早すぎる収束を与えないか
-3. これは保留・対立・未レビューを保持できるか
-4. これは差分・監査・レビューに載るか
+1. これは人間またはAIのsensemakingを、根拠を失う方向へ雑にしないか
+2. これは早すぎる収束を強制しないか
+3. これは保留・対立・未レビュー・反証を保持できるか
+4. これは生成主体・差分・監査・レビュー・承認を辿れるか
 5. これは人間向け文脈とAI向け文脈を混同していないか
+6. AI Workspace内の自律処理と、共有・承認済み状態への権限昇格を混同していないか
 
 いずれかに強く反するなら、採用しない。
 
@@ -638,20 +674,20 @@ AI Context Query と AI出力は、必要に応じて
 
 # 16. 結論
 
-sui-sensemaking のAI拡張の本質は、AIを賢くすることではない。  
+SUI Sensemaking のAI拡張の本質は、AIを賢くすることだけではない。  
 本質は、
 
-> **高度な文脈・対立・保留・根拠の構造を、認知主体を跨いで共有できる外部思考空間として保持すること**
+> **材料・Observation・Relation・Hypothesis・Structure・Synthesis・保留・反証・根拠・来歴を、認知主体を跨いで継続できる外部sensemaking空間として保持すること**
 
 にある。
 
-この方向性において、sui-sensemaking は単なる図解ツールではなく、
+この方向性において、SUI Sensemaking は単なる図解ツールではなく、
 
-> **KJ法という認知のフレームを適用し、その知識蓄積を担う基盤**
+> **人間と人工認知系が役割分担を変えながら意味を形成し、その過程を理解・検証・承認し直せる知識蓄積基盤**
 
 である（`cognitive_frame_and_evolution_criteria.md` §1）。
 
-として位置づけられる。
+KJ法に着想を得たキャンバスは、その中で人間が深く意味形成へ参加するための中核インターフェースとして位置づける。
 
 ---
 
@@ -659,6 +695,7 @@ sui-sensemaking のAI拡張の本質は、AIを賢くすることではない。
 
 | 日付 | 変更 | 理由 |
 |---|---|---|
+| 2026-09-18 | ADR-0084に基づき、人間主導から監督付きAI自律までのsensemakingライフサイクルと、AI Workspace / 承認済み状態の権限境界を追加した | AI能力の向上を取り込みつつ、現行SafeMode・proposal-only・human_reviewed境界を長期ビジョンと混同しないため |
 | 2026-08-15 | §1.1 の正当化を `cognitive_frame_and_evolution_criteria.md` §1 へ移した | 欠損ベースの正当化はAI能力の向上で失効する |
 | 2026-08-16 | §1.2 末尾と §16 に残っていた欠損ベースの記述を是正した | 同書 §1.2 が禁じている形式が憲法層に残っていた |
 | 2026-08-16 | §7.0 から Stream B の衝突検知閾値を除き、正本を ADR-0028 CE-0 とした | 実装ストリームの運用値であり、憲法の条項ではない |
