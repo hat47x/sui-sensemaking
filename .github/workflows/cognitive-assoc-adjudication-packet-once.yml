@@ -3,7 +3,7 @@ name: cognitive-assoc-adjudication-packet-once
 on:
   push:
     branches:
-      - research/cognitive-assoc-01-adjudication-packet-20260917
+      - research/cognitive-assoc-01-adjudication-packet-20260918
     paths:
       - .github/workflows/cognitive-assoc-adjudication-packet-once.yml
 
@@ -25,6 +25,7 @@ jobs:
         working-directory: 01_Plans/dogfood
         run: |
           python -m unittest -v \
+            test_materialize_cognitive_assoc_frozen_sources.py \
             test_prepare_cognitive_assoc_benchmark.py \
             test_select_cognitive_assoc_adjudication_set.py \
             test_build_cognitive_assoc_adjudication_packet.py
@@ -35,12 +36,18 @@ jobs:
           work="${RUNNER_TEMP}/cognitive-assoc-v0"
           out="01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication"
           rm -rf "$work" "$out"
-          mkdir -p "$work" "$out"
+          frozen_root="$work/frozen-root"
+          mkdir -p "$work" "$out" "$frozen_root"
+
+          python 01_Plans/dogfood/materialize_cognitive_assoc_frozen_sources.py \
+            01_Plans/dogfood/cognitive-assoc-benchmark-v0-source-manifest.json \
+            "$frozen_root" \
+            --repo-root .
 
           python 01_Plans/dogfood/prepare_cognitive_assoc_benchmark.py \
             01_Plans/dogfood/cognitive-assoc-benchmark-v0-source-manifest.json \
             "$work/prepared" \
-            --repo-root .
+            --repo-root "$frozen_root"
 
           python 01_Plans/dogfood/select_cognitive_assoc_adjudication_set.py \
             "$work/prepared/model-input.jsonl" \
@@ -97,7 +104,7 @@ jobs:
           evidence = {
               "schema": "sui.cognitive-assoc-pre-adjudication-evidence/v1",
               "benchmarkId": selected["benchmarkId"],
-              "generatedAt": "2026-09-17",
+              "generatedAt": "2026-09-18",
               "state": "human_adjudication_packet_generated",
               "semanticBaselineGate": "closed",
               "modelOutputsAllowed": False,
