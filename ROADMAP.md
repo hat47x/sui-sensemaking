@@ -73,6 +73,23 @@ SUI Sensemaking は、まとまりきらない定性資料や観察を、早す�
 
 比較実験や第三者利用より先に、新しい機能一覧を埋めること自体を進捗とはみなしません。
 
+### TEI移管ゲート — 大規模な機能高度化の前に検証する
+
+現在のSUI実装へ新しい高度機能を積み上げ続ける前に、TEIをApplication Implementation Layerとして利用するReference Adoptionを行います。
+
+目的はTEI利用そのものではなく、**同じSUI Product Valueを維持したまま、変更・検証・保守の負荷が実際に大きく下がるかを測ること**です。
+
+- 現行SUIで代表的なchange challengeを固定する。
+- TEI上の最小vertical sliceへ同じ変更を適用する。
+- hand-written差分、変更箇所数、test / schema /文書同期、変更増幅率を比較する。
+- TEIに足りない機能は、まずPlugin / Adapter / Capabilityとして一般化できるかを検討する。
+- SUI固有で性能・Interaction上の理由がある部分はnative implementationとして残せるようにする。
+- 比較Evidenceが揃うまでは、TEI CoreをSUI専用要求で拡張しない。
+
+詳細は `01_Plans/issues/issue-ARCH-TEI-MIGRATION-01-tei-reference-adoption-and-development-load-validation.md` を正本とします。
+
+Security fix、bug fix、互換性維持、価値検証は継続しますが、AI Workspace、Review Capsule、複数認知器統合などの**大きな新規実装へ進む前に、この移管ゲートの判断を通す**ことを原則とします。
+
 ## 証拠によって昇格する将来候補
 
 以下は設計上の可能性として保持しますが、ここに並んでいる順序を実装約束とはしません。実使用の摩擦、比較評価、第三者価値実証、保守負担、安全性を見て、昇格・延期・縮小・棄却します。
