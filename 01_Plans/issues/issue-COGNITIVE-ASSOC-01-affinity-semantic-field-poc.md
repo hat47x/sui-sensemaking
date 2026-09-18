@@ -123,6 +123,9 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - AはUnicode char n-gram TF-IDF、Cは固定seed疎展開 + k-WTA、Eはtext-only local vector providerとして同じpair / 2+1 interfaceへ接続した。
   - fixed v0の`run`はfrozen adjudication artifactとEvidenceのSHA一致・gate eligibilityがなければfail-closedする。2026-09-18時点ではsynthetic fixtureだけを実行し、固定v0 semantic resultは生成していない。
 - [ ] **T4 Baseline evaluation**: deep-semantic recall / surface-decoy rejection / singleton・residual survival / wording stability / CPU budgetを比較する。
+  - [x] T4a: challenge positive retrieval、set coherence、singleton absorption pressure、U/L・pair/2+1別contrast集計を行うevaluation harnessを実装した。
+  - [x] T4a: v0に事前登録paraphraseがないためR5 wording stabilityは`not_measured_in_v0`とし、結果を見てから例を追加しない境界を固定した。
+  - [ ] T4b: T2d完了後に固定v0でA/C/E probeを実行し、単一winnerやcomposite scoreへ畳まず結果を凍結する。
 - [ ] **T5 Learned sparse gate**: T4を根拠にDをProceed / Hold / Rejectで判断する。
 - [ ] **T6 Affinity-specific increment**: Proceed時のみFを追加し、group/separate/Critique/hold/graph/space/historyの寄与をablationする。
 - [ ] **T7 Cognitive dogfood**: 候補提示あり/なしで探索の増分とanchoringを比較する。
