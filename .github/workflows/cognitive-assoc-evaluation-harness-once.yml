@@ -66,3 +66,5 @@ jobs:
           print("DOCS_CHECK: only two pre-existing main errors remain")
           PY
           fi
+
+# rerun: synthetic label expectation fixed
