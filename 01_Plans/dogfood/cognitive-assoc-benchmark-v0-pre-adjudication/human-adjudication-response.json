@@ -1,0 +1,329 @@
+{
+  "schema": "sui.cognitive-assoc-human-adjudication/v1",
+  "benchmarkId": "cognitive-assoc-benchmark-v0",
+  "status": "in_progress",
+  "sourceSelectedReviewSetSha256": "5b582e144fb6316f6cd5f0308b4a88a859d29a82bd2fdc423370183dbd35cec3",
+  "semanticBaselineGate": "closed",
+  "modelOutputsAllowed": false,
+  "attestation": {
+    "completedByRole": "Maintainer",
+    "semanticModelOutputsViewedBeforeCompletion": null
+  },
+  "judgements": [
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g1:c01+c02+c07",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g1:c01+c03+c17",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g1:c02+c03+c07",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g1:c02+c03+c09",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g1:c02+c04+c07",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g1:c02+c04+c08",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g1:c03+c04+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c07+c02",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c07+c04",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c07+c06",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c08+c01",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c08+c03",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c08+c06",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c09+c06",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c05+c09+c14",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c07+c08+c02",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c07+c08+c16",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c07+c09+c02",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c07+c09+c13",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g2:c08+c09+c13",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g3:c06+c17+c05",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g4:c10+c11+c05",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g4:c10+c11+c14",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g4:c10+c11+c15",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g4:c10+c12+c14",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g5:c13+c14+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:2plus1:g5:c14+c15+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c01+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c01+c11",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c01+c13",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c01+c14",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c01+c17",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c02+c07",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c03+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c03+c11",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c03+c13",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c03+c15",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c03+c16",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c04+c12",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c05+c06",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c05+c11",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c05+c12",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c05+c17",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c06+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c06+c11",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c06+c15",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c07+c14",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c09+c15",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c09+c16",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c10+c13",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_cognitive_dogfood_meta_r1:pair:c10+c14",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:2plus1:g3:c07+c08+c12",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:2plus1:g3:c07+c09+c02",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:2plus1:g3:c07+c09+c12",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:2plus1:g3:c08+c09+c11",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c01+c07",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c04+c12",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c05+c07",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c06+c09",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c07+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c07+c12",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c09+c10",
+      "label": "",
+      "reason": ""
+    },
+    {
+      "candidateId": "doc_kj_atlas_dogfood_r3:pair:c10+c12",
+      "label": "",
+      "reason": ""
+    }
+  ]
+}

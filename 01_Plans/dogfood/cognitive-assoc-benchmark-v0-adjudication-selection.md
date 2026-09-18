@@ -129,3 +129,44 @@ UとLで同じcandidateが選ばれた場合は一件へ統合する。
 4. 判定artifactのSHA-256と件数が凍結されている。
 
 判定後に例を追加したくなった場合はv0を変更せず、v1または別のstress suiteへ追加する。
+
+## 8. 人間判定後の凍結手順
+
+T2dの人間判定は `cognitive-assoc-benchmark-v0-pre-adjudication/human-adjudication-response.json` に記録する。
+
+判定中は次を維持する。
+
+- `status = in_progress`
+- `semanticBaselineGate = closed`
+- `modelOutputsAllowed = false`
+- 各 `label` は空欄または4つの事前登録labelのいずれか
+- reasonは任意であり、言語化できないことを欠陥としない
+- semantic model / embedding / FlyHash候補など、後段で比較する出力を判定前に見ない
+
+63件すべての判定が終わったMaintainerだけが、次を明示的に変更する。
+
+1. `status = complete`
+2. `attestation.semanticModelOutputsViewedBeforeCompletion = false`
+3. 各candidateへ4値labelのいずれかを設定する
+
+その後、次のfreeze utilityを実行する。
+
+```bash
+python 01_Plans/dogfood/freeze_cognitive_assoc_adjudication.py freeze \
+  01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/selected-review-set.json \
+  01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/human-adjudication-response.json \
+  01_Plans/dogfood/cognitive-assoc-benchmark-v0-adjudicated.json \
+  01_Plans/dogfood/cognitive-assoc-benchmark-v0-adjudication-evidence.json
+```
+
+freeze utilityは次をfail-closedで検証する。
+
+- selected review setのraw byte SHA-256一致
+- candidate集合が63件と完全一致し、欠落・重複・追加がない
+- 4値label以外を含まない
+- score / similarity / activation / confidence / ranking / model output等を含まない
+- Maintainer roleによるmodel-blind attestationが成立している
+- pair / 2+1件数とlabel件数を機械的に集計できる
+
+成功時はadjudicated artifactと別EvidenceへSHA-256を固定する。成功はsemantic baselineを自動実行する操作ではない。Evidenceのgate状態は `eligible_for_explicit_open` とし、T3/T4側が凍結済みartifactを明示的に参照して初めて次段へ進む。
+
