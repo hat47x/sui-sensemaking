@@ -181,18 +181,26 @@
   - `UX-10-1`: 人間由来、AI由来、共同編集、未レビュー、人間レビュー済みを、利用者が必要な粒度で区別できる。
   - `UX-10-2`: AIへ一定範囲の探索・仮説形成・構造化を委任した場合でも、人間は主要根拠、反証、未解決点、差分を確認して理解・異議・承認できる。
   - `UX-10-3`: 人間主導、協働、委任、監督付き自律の役割分担を、プロジェクト全体の一律設定ではなく工程・操作ごとに選べる余地を持つ。
+  - `UX-10-4`: AIが大きな探索区間を担った場合、人間は全中間試行を読むことを要求されず、Review Capsule等から主要Evidence、反証、代替案、未解決点、生成主体を確認し、元成果物へ戻れる。
 - Data
   - `DATA-10-1`: Evidence、AI由来のObservation / Hypothesis / Structure / Synthesis、Review、Accepted / Consensus状態を概念上区別し、生成主体と来歴を保持できる。
   - `DATA-10-2`: AI Workspace / WorkingGraphの途中状態と、人間承認済みの正規状態を同一フィールドの暗黙上書きで表現しない。
   - `DATA-10-3`: AIが自律的に複数段階を進めても、元Evidence、保留、反証、棄却した主要代替案への参照を失わない。
+  - `DATA-10-4`: Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionのsemantic kindを成熟度として扱わず、kindが変わる意味形成は新artifact + provenance relationとして表現する。
+  - `DATA-10-5`: review、authority、lifecycle、visibility / access、provenanceをsemantic kindとは別軸に保持でき、Reviewed / Accepted / Consensus / Publicを同一状態へ畳み込まない。
+  - `DATA-10-6`: Review / authority transition / Decisionは対象artifactのlogical identityだけでなく、対象revisionを特定可能にする。
 - AI
   - `AI-10-1`: AIは権限境界の内側で、Observation → Relation → Hypothesis → Structure → Synthesisの複数段階を自律実行できる。
   - `AI-10-2`: AI内部の作業判断を、人間による理解・レビュー・承認と同一視しない。
   - `AI-10-3`: `human_reviewed`、Accepted / Consensus、人間の異議・承認をAIが偽装または自動付与しない。
   - `AI-10-4`: KJ法に着想を得た手順以外の認知方法を利用する場合でも、Evidence保全、可逆性、保留、来歴、権限境界を維持する。
+  - `AI-10-5`: AI内部のprivate chain-of-thought保存を要求せず、検証に必要な入力範囲、Provider / Method、派生成果物、主要根拠・反証・代替案を外在化する。
 
 長期的な役割分担と現行SafeMode / proposal-onlyの境界は
 `01_Plans/adr/ADR-0084-sensemaking-lifecycle-and-authority-boundary.md` を正本とする。
+意味成果物、Review、Authority、Lifecycleの直交関係は
+`01_Plans/adr/ADR-0085-sensemaking-semantic-artifacts-and-authority-axes.md` と
+`02_Architecture/sensemaking_semantic_model.md` を正本とする。
 
 ---
 
