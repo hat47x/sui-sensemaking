@@ -6,6 +6,7 @@
 > MVPで実際に運用サポートするデータ構造、埋め込み限定の構造、契約のみの構造は `02_Architecture/data_model_operations_overview.html` を参照する。
 > ADR-0033 で定義した Support/Maintenance/Contract Boundary（L1/L1.5/L2/L2.5/L3/L0）を正本とし、本書の型定義単体で運用保証を主張しない。
 > `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生bundleは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存bundleはこのmetadataを省略する。詳細は `02_Architecture/inquiry_journey_model.html` を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、version gate、保存契約へ履歴キーを追加しない。
+> `ADR-0085` / `02_Architecture/sensemaking_semantic_model.md` は、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを将来の意味成果物として定義する。ただしこれは **L0 Plannedの概念モデル** であり、現行 `DocumentV1` へ新fieldや新配列を追加したことを意味しない。
 本ドキュメントは、sui-sensemaking の **MVPで扱う永続データの最小スキーマ** を定義します。
 
 - YAGNI方針に従い、MVPで標準運用しない型は「運用サポート済み」と扱いません
@@ -37,6 +38,43 @@ MVPでは以下を成立させます。
 - 分割、言い換え、補足は proposal-only とし、採用前の本文を変更しない。
 
 提案の見送り状態、品質確認結果、確認担当者などを永続化する場合は、必須化せず、後方互換、import validation、共有範囲、SafeModeを定める内部issueまたはADRを先行する。
+
+### 1.0.1 Sensemaking semantic model boundary（ADR-0085 / L0 Planned）
+
+将来のAI Workspace / WorkingGraphで扱う意味成果物について、次の概念境界を採用する。
+
+```text
+semantic kind
+  != review state
+  != authority state
+  != lifecycle state
+  != visibility / access
+```
+
+semantic kindとしては、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを区別する。
+
+ただし、現行schemaへの対応は**一対一ではない**。
+
+| Current structure | Semantic model上の位置づけ |
+|---|---|
+| `Card` / `claimType` | Evidence / Observation / Hypothesis等を表現し得るが完全なkind識別子ではない |
+| `Edge` | Canvas Structure上のRelation表現 |
+| `EvidenceLink` | supports / contradicts関係であり、Evidence entityではない |
+| `Island` / `Cluster` | StructureのProjectionになり得る |
+| `Narrative` / `RelationSummary` | Synthesis / Relation説明のProjectionになり得る |
+| `ReviewAttribution` | 現行Document単位のreview metadata |
+| `WorkingGraph` / `ConsensusGraph` | work / authority surfaceでありsemantic kindではない |
+
+この概念モデルだけを理由として、次を行ってはならない。
+
+- `DocumentV1.version`を変更する
+- `DocumentV1`へ新しい必須fieldを追加する
+- `Card.claimType`の既存意味を変更する
+- `EvidenceLink`を汎用Relationへ読み替える
+- `ReviewAttribution`を汎用Review logへ自動migrationする
+- 既存データをObservation / Hypothesis等へ推測分類する
+
+永続schemaへ降ろす場合は、logical artifact identity / revision identity、provenance envelope、Review / Authority transition、migration、support levelを別issue / ADRで先に定義する。
 
 ### 1.1 CE0 責務境界メタ契約
 
