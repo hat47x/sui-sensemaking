@@ -1,0 +1,78 @@
+name: cognitive-assoc-adjudication-freeze-once
+
+on:
+  push:
+    branches:
+      - research/cognitive-assoc-01-adjudication-freeze-20260918
+    paths:
+      - .github/workflows/cognitive-assoc-adjudication-freeze-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify adjudication pipeline tests
+        working-directory: 01_Plans/dogfood
+        run: |
+          python -m unittest -v \
+            test_materialize_cognitive_assoc_frozen_sources.py \
+            test_prepare_cognitive_assoc_benchmark.py \
+            test_select_cognitive_assoc_adjudication_set.py \
+            test_build_cognitive_assoc_adjudication_packet.py \
+            test_freeze_cognitive_assoc_adjudication.py
+
+      - name: Verify committed response template
+        run: |
+          set -euo pipefail
+          tmp="${RUNNER_TEMP}/human-adjudication-response.json"
+          python 01_Plans/dogfood/freeze_cognitive_assoc_adjudication.py template \
+            01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/selected-review-set.json \
+            "$tmp"
+          python - "$tmp" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          generated = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          committed = json.loads(pathlib.Path(
+              "01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/"
+              "human-adjudication-response.json"
+          ).read_text(encoding="utf-8"))
+          assert generated == committed
+          assert len(committed["judgements"]) == 63
+          assert committed["status"] == "in_progress"
+          assert committed["semanticBaselineGate"] == "closed"
+          assert committed["modelOutputsAllowed"] is False
+          assert committed["attestation"]["semanticModelOutputsViewedBeforeCompletion"] is None
+          assert all(j["label"] == "" for j in committed["judgements"])
+          forbidden = {
+              "selectionStrata", "sourceIslandId", "score", "similarity",
+              "distance", "activation", "confidence", "ranking",
+              "modelOutput", "modelExplanation",
+          }
+          def walk(v):
+              if isinstance(v, dict):
+                  assert not (forbidden & set(v))
+                  for child in v.values():
+                      walk(child)
+              elif isinstance(v, list):
+                  for child in v:
+                      walk(child)
+          walk(committed)
+          print("HUMAN_RESPONSE_TEMPLATE: VALID")
+          print("CANDIDATE_COUNT: 63")
+          print("SEMANTIC_BASELINE_GATE: CLOSED")
+          PY
+
+      - name: Documentation and diff checks
+        run: |
+          python 01_Plans/docs_check.py
+          git diff --check
