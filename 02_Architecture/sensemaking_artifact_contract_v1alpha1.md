@@ -2,7 +2,8 @@
 
 - Status: **Normative design contract / L0 Planned**
 - Date: 2026-09-18
-- Parent: `ADR-0085`, `ADR-0086`
+- Parent: `ADR-0085`, `ADR-0086`, `ADR-0087`
+- Payload / Authority Scope / Exchange: `02_Architecture/sensemaking_payload_authority_exchange_v1alpha1.md`
 - Runtime implementation: **Not yet**
 - Persistence implementation: **Not yet**
 - Current `DocumentV1`: **Unchanged**
@@ -580,15 +581,16 @@ v1alpha1からruntime契約へ昇格する前に、少なくとも次を満た�
 
 ## 14. 未決事項
 
-次はv1alpha1で意図的に固定しない。
+ADR-0087 / `sensemaking_payload_authority_exchange_v1alpha1.md`により、kind-specific payload、Relationのclosed core + namespaced extension、Authority Scope、Consensus participant snapshot、artifact exchange bundleの設計基線は追加した。
+
+引き続き意図的に未決なのは次である。
 
 - UUIDv7等の具体ID生成方式
-- kind-specific semantic payload schema
-- Relation vocabularyの最終closed/open boundary
-- Authority Scopeの具体型
-- Consensus participant snapshot schema
+- Evidence source locator共通contract
 - Review finding schema
+- Consensus Policyの具体schema
 - physical DB schema / index
 - Content Store共用可否
-- artifact-level import / export bundle schema
+- artifact bundle署名 / authenticity
 - Review CapsuleのUI表現
+- artifact exchange import UI
