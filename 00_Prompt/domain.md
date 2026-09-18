@@ -183,6 +183,15 @@
 - **DOM-SM-09 Current schema ≠ future semantic model**  
   現行`Card` / `Edge` / `EvidenceLink` / `Island` / `Narrative` / `ReviewAttribution`を、将来の意味成果物へ一対一で読み替えない。`DocumentV1`の意味はこの概念モデルだけを理由に変更しない。
 
+- **DOM-SM-10 Authority Scope ≠ Permission / Visibility**  
+  Accepted / Consensus等のAuthorityは、どの意味上のscopeで成立したかを明示する。閲覧可能、公開済み、同じworkspaceに属する、といった事実をAuthorityへ読み替えない。parent scopeのAuthorityも子・兄弟・外部scopeへ自動継承しない。
+
+- **DOM-SM-11 Imported Authority ≠ Local Authority**  
+  別workspace / network / systemからimportしたAccepted / Consensus / Human Reviewは、source contextの来歴として保持できるが、local Accepted / Consensus / `human_reviewed`を自動成立させない。local authorityへ昇格する場合はlocal scopeで新しいReview / Authority操作を行う。
+
+- **DOM-SM-12 Extension Relation ≠ Core Semantics**  
+  domain / method / experiment固有のRelationを保持できるが、明示policyがないextension relationをAuthority、Consensus、Permission、Truth、Importance、retention rootへ利用しない。未知relationは破棄せずopaque relationとして保持できる。
+
 ---
 
 ## 4. Cluster と Island の違い
@@ -316,6 +325,15 @@ AI は以下を **行ってはならない**：
 ## 10. 変更記録
 
 §9 に従い、思想に関わる変更の理由と影響範囲を記録する。
+
+### 2026-09-18 Authority Scope・import authority・Relation拡張境界
+
+ADR-0087に基づき、Accepted / Consensusの成立scopeをpermission / visibilityから分離し、
+外部からimportしたAuthority / Human Reviewをlocal authorityへ自動継承しないこと、
+およびextension RelationをCore semanticsへ暗黙昇格しないことを
+`DOM-SM-10..12`として追加した。
+
+これはAI・人間いずれの成果物でも、別文脈への持込み時に権威を洗い替えないための境界である。
 
 ### 2026-09-18 sensemakingライフサイクルとAI権限境界の分離
 
