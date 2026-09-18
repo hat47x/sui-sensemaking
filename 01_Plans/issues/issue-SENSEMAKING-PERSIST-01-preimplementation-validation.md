@@ -1,7 +1,7 @@
 # Issue: SENSEMAKING-PERSIST-01 semantic artifact永続化の実装前検証
 
 - Type: Feature
-- Status: Ready
+- Status: In Progress
 - Source Issue: SENSEMAKING-MODEL-01
 - Priority: P1
 - Owner: Maintainer
@@ -91,9 +91,17 @@ semantic artifactをruntimeへ実装する前に、ADR-0088の第一候補
 - Review / Authorityを一つのstatus columnへ統合しない。
 - private chain-of-thoughtをfixtureへ保存しない。
 
+## 進捗（2026-09-18）
+
+- ADR-0088でphysical persistenceの第一候補をRDB metadata/event + Content Store payload + materialized Information Networkとして採択した。
+- `sensemaking_artifact_persistence_candidate.md`でtransaction、index、GC、fixture、materializer候補を整理した。
+- `sensemaking_artifact_portable_schema_matrix.md`でlogical record class、composite FK、DB / transaction / validator責務、Authority CAS、Review target drift、import stagingを具体化した。
+- まだmigrationは開始していない。
+- 次はrepresentative fixtureとportable constraint実証、Content Store / network rebuild benchmarkへ進む。
+
 ## 受入条件
 
-- [ ] portable logical schemaとFK / constraint matrixが完成している。
+- [x] portable logical schemaとFK / constraint matrixが完成している。`02_Architecture/sensemaking_artifact_portable_schema_matrix.md`を正本候補とする。
 - [ ] Verified DB familyで表現不能なCore constraintが無いか明示されている。
 - [ ] representative fixtureが5系統以上ある。
 - [ ] Authority CAS / stale targetの競合ケースが定義されている。
