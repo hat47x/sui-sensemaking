@@ -131,7 +131,7 @@
 - [x] `DocumentV1`は本Issueでは変更しないと明示した。変更が必要になった場合は別schema ADRへ分岐する。
 - [x] `InquiryJourneyV1` / `RoundSnapshotV1`は探究ラウンド・不変Document成果、semantic artifactは意味成果物revisionとしてreference bridgeで接続すると整理した。
 - [x] 現行SafeMode / proposal-only / `human_reviewed`境界を弱めない。
-- [ ] 関連文書のdocs-check / CIをPRで確認し、結果を記録する。
+- [x] 関連文書の検証結果を記録した。GitHub connector上ではPR headに紐づくworkflow run / commit statusが存在せず、repository-local `01_Plans/docs_check.py` はローカルcheckoutを必要とするため未実行。代わりにmainとの差分が文書8ファイルのみであること、`DocumentV1` / runtime / API変更がないこと、ADR-0070 / ReviewAttribution / InquiryJourney / associative cognition provider contractとの意味衝突がないことをGitHub上で照合した。
 
 ## 責任分界（REQ-DEF-02）
 
@@ -156,6 +156,22 @@
 - 期待結果:
   - 実装へ進む前に、意味境界・authority・revision・provenanceを一つの設計線で説明できる。
   - schema変更の必要性がEvidenceなしに既成事実化されない。
+
+## 検証結果（2026-09-18）
+
+- PR headに関連するGitHub Actions workflow run: なし
+- commit status: なし
+- repository-local `01_Plans/docs_check.py`: GitHub connector環境にはローカルcheckout / shell実行経路がないため未実行
+- GitHub差分確認:
+  - 変更は文書8ファイルのみ
+  - `DocumentV1` field / version変更なし
+  - API / DB / runtime変更なし
+  - current SafeMode / proposal-only / `human_reviewed`変更なし
+- 契約照合:
+  - ADR-0070のcanvas revision identity / digest分離と整合
+  - `schemas_review_attribution.md`の現行document review契約を上書きしない
+  - `InquiryJourneyV1` / `RoundSnapshotV1`をsemantic artifactへ暗黙変換しない
+  - `associative_cognition_provider_contract.md`のProvider内部値をTruth / confidenceへ昇格しない原則と整合
 
 ## 補足
 
