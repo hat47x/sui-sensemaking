@@ -3,6 +3,7 @@
 - Status: **Design candidate / L0 Planned**
 - Date: 2026-09-18
 - Parent: `ADR-0088`
+- Portable schema matrix: `02_Architecture/sensemaking_artifact_portable_schema_matrix.md`
 - Runtime implementation: **None**
 - Migration: **None**
 - Purpose: portable schema / transaction / projection design before implementation issue
