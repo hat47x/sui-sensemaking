@@ -110,7 +110,13 @@
 | 島 | Island | Island | 複数カードや関係を視覚的に囲む意味のまとまり。KJ法の島に相当 |
 | 代表視覚手掛かり | Representative Visual Cue | RepresentativeVisualCue（計画中） | 島または明示的に選んだ情報集合を見つけ直すため、表札や説明と併記する任意の小さな絵文字・アイコン・画像 |
 | 一次視覚資料 | Source Visual Material | SourceVisualMaterial（計画中） | 観察・取材・利用者作成で得た写真・図・スケッチなど、元の文脈や出典へ戻る必要がある定性資料 |
-| 関係 | Relation | Relation / Edge | カード、島、仮説の間にある意味的なつながり |
+| 観察 | Observation | Observation（計画中） | Evidenceから認識されたこと。元資料そのものとは区別し、生成主体と来歴を保持する |
+| 関係 | Relation | Relation / Edge | カード、島、観察、仮説の間にある意味的なつながり |
+| 仮説 | Hypothesis | Hypothesis（計画中） | EvidenceやObservationをもとに形成された、反証・保留・棄却が可能な解釈 |
+| 構造 | Structure | Structure（計画中） | 島、グラフ、因果配置など、複数要素を組み合わせた意味構造の総称 |
+| 統合 | Synthesis | Synthesis（計画中） | 複数のRelation / Hypothesis / Structureをまとめた暫定的または採用済みの理解 |
+| レビュー | Review | Review（計画中） | 人間またはAIが、対象を理解・検査・異議・確認した記録。人間レビューとAIレビューを混同しない |
+| 判断 | Decision | Decision（計画中） | Sensemaking結果をもとに採用された判断。Observation / Hypothesis / Synthesisとは別概念として扱う |
 | 配置図 | Layout / Map | Layout | 空間的配置を含む図解状態 |
 | 違和感 | Discomfort / Incongruity | Critique | 理由の有無を問わない否定・ツッコミ |
 | 制約 | Constraint | Constraint | Critique等から生成される再配置条件 |
@@ -167,9 +173,11 @@
 本節は責務の境界を定めます。**概念として定義済みであることと、型として実装済みであることは別です。**
 実装状況を併記します（§3 の「（計画中）」と同じ記法）。
 
-- `WorkingGraph`（**計画中**）は、探索中の配置、仮説、未確定の関係を保持します。
-  「主体ごと」に分かれるのは複数主体運用が成立した後であり、現時点では単一主体を前提とします
+- `WorkingGraph`（**計画中**）は、探索中の配置、Observation、Hypothesis、Structure、未確定の関係を保持します。
+  将来は人間とAIそれぞれの作業面、またはAIが複数段階の探索を行う **AI Workspace** の論理的な保持先として利用できるようにします。
+  「主体ごと」に分かれるのは複数主体運用が成立した後であり、現時点の実装は単一主体を前提とします
   （複数主体は `02_Architecture/post-mvp-business-scope-design-program.html` 第3反復の範囲）。
+  AI WorkspaceはAccepted / Consensusと同義ではなく、内部で複数段階の仮説形成や棄却を行っても、そのことだけでは人間承認済み状態へ昇格しません。
 - `ContextProjectionGraph`（**実装済み**）は、問い合わせ目的に合わせて読み取り専用で作る投影です。永続的な正本ではありません。
 - `Consensus Graph`（**計画中**）は、`patch + approval` 済みの差分だけを保持します。
 - `Core Graph` は旧称です。履歴説明以外では契約語彙として再導入しません。
@@ -213,9 +221,12 @@
 
 ---
 
-## 7. AI（LLM）の役割定義（ドメイン観点）
+## 7. AI（LLM・その他の人工認知系）の役割定義（ドメイン観点）
 
 > §2 の `DOM-CORE-*` はAIにも適用される。本節はそれに**追加**される、AI固有の規定である。
+> **AI内部の探索権限と、人間承認済みの意味へ昇格する権限を分ける。**
+> 現行runtimeのSafeMode・proposal-only・`human_reviewed`境界は維持するが、
+> proposal-onlyを「AIは一段階の候補しか生成できない」という意味には解釈しない（ADR-0084）。
 
 AI は以下を **行ってよい**：
 
@@ -225,19 +236,23 @@ AI は以下を **行ってよい**：
 - **DOM-AIOK-04** 制約を反映した再提案
 - **DOM-AIOK-05** `WorkingGraph` 上の候補や `ContextProjectionGraph` のプレビュー生成
 - **DOM-AIOK-06** 島または利用者が選んだ情報集合に対する、代表視覚手掛かりの候補提示
+- **DOM-AIOK-07** AI Workspace / WorkingGraph内で、Observation → Relation → Hypothesis → Structure → Synthesisの複数段階を自律的に探索し、別解生成・反証・棄却・再探索を行う
+- **DOM-AIOK-08** KJ法に着想を得た手順以外の認知方法を用い、異なる認知器・モデル・決定論的処理の結果を並存させる
+- **DOM-AIOK-09** 自身の途中生成物を次の探索入力として利用する。ただし元Evidence、生成主体、来歴、未確定状態を失わない
 
 AI は以下を **行ってはならない**：
 
-- **DOM-AI-01** 単一の正解クラスタを断定する
+- **DOM-AI-01** AI Workspace内の作業仮説を、共有・承認面で単一の正解として断定する
 - **DOM-AI-02** 違和感を無視・正当化する（`DOM-CORE-02`）
-- **DOM-AI-03** 保留状態を勝手に解消する（`DOM-CORE-01`）
+- **DOM-AI-03** 人間または別主体が保持している保留状態を、権限なく解消する（`DOM-CORE-01`）
 - **DOM-AI-04** `Consensus Graph` を直接更新する
 - **DOM-AI-05** `human_reviewed` を自動付与する
-- **DOM-AI-06** 人間承認なしに提案を適用する
+- **DOM-AI-06** 人間承認を要する共有・Accepted・Consensus状態へ、AI生成物を人間の明示操作なしに昇格する
 - **DOM-AI-07** カード品質を点数・順位・合否で評価する（`DOM-CORE-04` のAI経路での現れ。**非AI経路にも `DOM-CORE-04` が適用される**）
-- **DOM-AI-08** 出典、話者、日時、因果関係、語り手の意図を推測して補う
+- **DOM-AI-08** 出典、話者、日時、因果関係、語り手の意図を推測してEvidenceへ補う
 - **DOM-AI-09** 少数意見や矛盾をノイズとして自動削除する
 - **DOM-AI-10** 代表視覚手掛かりを自動採用し、画像だけで意味・分類・根拠を確定する
+- **DOM-AI-11** AIによる検査・推論・採択を、人間が理解・レビュー・承認したものとして記録する
 
 ---
 
@@ -266,6 +281,17 @@ AI は以下を **行ってはならない**：
 ## 10. 変更記録
 
 §9 に従い、思想に関わる変更の理由と影響範囲を記録する。
+
+### 2026-09-18 sensemakingライフサイクルとAI権限境界の分離
+
+ADR-0084に基づき、SUIの長期射程を人間主導のKJ法キャンバスだけに固定せず、
+AI Workspaceでの自律的なObservation / Hypothesis / Structure / Synthesis形成を許容する方向へ拡張した。
+一方、`human_reviewed`、Accepted / Consensus、元Evidenceの改変は別の権限操作として分離し、
+現行runtimeのSafeMode・proposal-only運用は変更していない。
+
+この変更は「AIが人間承認なしに確定できる」という規範変更ではなく、
+**AI内部の探索を逐次承認させる必要はないことと、人間承認済み状態への昇格を同一視しない**
+ための境界整理である。
 
 ### 2026-08-15 識別子の付与と `DOM-CORE-04` の追加
 
@@ -306,10 +332,13 @@ AI は以下を **行ってはならない**：
 
 本アプリケーションは、
 
-> **意味を確定させるためのツールではなく、
-> 意味が揺れている状態に耐えるためのツール**
+> **意味を一度で確定させるためのツールではなく、
+> 人間とAIが意味を形成し、揺らぎや反証を残したまま成熟させるための基盤**
 
 です。
+
+現在は人間がレビュー・承認の中心を担いますが、将来AIがより広いsensemaking区間を担っても、
+Evidence・来歴・保留・権限境界を失わず、人間が必要な粒度で理解し直せることを目指します。
 
 domain.md は、その揺れの範囲と前提を定めるための、
 最も重要な文書です。
