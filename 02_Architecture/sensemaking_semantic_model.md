@@ -2,7 +2,8 @@
 
 - Status: **Normative conceptual baseline / L0 Planned**
 - Date: 2026-09-18
-- Related ADR: `ADR-0084`, `ADR-0085`
+- Related ADR: `ADR-0084`, `ADR-0085`, `ADR-0086`
+- Detailed contract: `02_Architecture/sensemaking_artifact_contract_v1alpha1.md`
 - Runtime impact: **None in this change**
 - Schema impact: **None in this change**
 - Current persistence contract: `DocumentV1` remains unchanged
@@ -454,20 +455,51 @@ Review Capsuleはcanonical artifactではなく、Review Surface向けの再構�
 11. SafeModeで許可されない内容をReview CapsuleやAI Workspace経由で漏らさない。
 12. `SUI_LLM_PROVIDER=none`でもHuman-ledな主要操作が成立する。
 
+## 12. Identity / Review / Authority contract
+
+ADR-0086により、意味成果物を将来永続化するときのidentityとevent境界を次で固定する。
+
+```text
+artifactId
+  = logical identity
+
+revisionId
+  = exact immutable revision identity
+
+contentDigest
+  = integrity cross-check only
+```
+
+Review / Authority transition / Decisionはexact revisionを参照し、新revisionへ自動継承しない。
+
+Reviewはappend-only record、Authorityはappend-only transition eventとして扱う。ConsensusはReview件数から自動導出しない。
+
+Review Capsuleは、
+
+1. canonical ref集合から再構築するStructural Capsule
+2. それを説明する任意のNarrative Explanation
+
+へ分ける。Narrativeを正本にしない。
+
+AI内部の全trialは保存せず、Candidate化、Review対象、Decision basis、主要alternative、強いcontradiction、pin等の条件を満たす外在化成果物をretention保護候補とする。
+
+詳細contractは `sensemaking_artifact_contract_v1alpha1.md` を参照する。
+
 ## 12. 次の設計課題
 
 実装へ進む前に、少なくとも次を別Issueで詰める。
 
-- logical artifact ID / revision identity
-- minimal provenance envelope
-- generic relation vocabularyのclosed/open boundary
-- authority transition event
-- Review recordの最小schema
-- Review Capsuleの再構築規則
-- 「主要代替案」を保存するselection policy
-- retention / GCとrejected artifactの扱い
-- DocumentV1 / InquiryJourneyV1との接続方法
-- import / export bundleへの表現
-- multi-user Consensus policy
+ADR-0086 / v1alpha1で、logical artifact ID / exact revision ID、minimal provenance envelope、Review record、Authority transition、Review Capsule、主要代替案のretention条件、DocumentV1 / InquiryJourneyV1へのreference bridgeまでは設計基線化した。
+
+引き続き未決なのは次である。
+
+- kind-specific semantic payload schema
+- generic relation vocabularyの最終closed/open boundary
+- Authority Scopeの具体型
+- multi-user Consensus participant snapshot / policy
+- physical DB schema / index / Content Store共用可否
+- artifact-level import / export bundle
+- Review CapsuleのUI表現
+- representative fixture / concurrency / GCによるpromotion gate検証
 
 この順序を飛ばして`DocumentV1`へfieldを追加しない。
