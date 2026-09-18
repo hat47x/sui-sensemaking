@@ -41,6 +41,8 @@
 - **P-06: 視点制御（俯瞰 ↔ 詳細）**
 - **P-07: Self-host / ローカルLLM親和 / プライバシーデフォルト**
 - **P-08: 定性情報への忠実性と再解釈可能性**
+- **P-09: 累積的探究と中間成果の非破壊性**
+- **P-10: 人間・AIの役割可変なsensemakingライフサイクル**
 
 ---
 
@@ -57,7 +59,7 @@
   - `DATA-01-1`: 要素の確定/未確定状態を表現できる。
   - `DATA-01-2`: 破棄可能なDraft案を識別できる（案ID/世代）。
 - AI
-  - `AI-01-1`: AIは確定判断をせず候補としてのみ提案する。
+  - `AI-01-1`: AIはAI Workspace / WorkingGraph内で作業仮説や構造を自律形成してよいが、それを権限確認なしに共有・Accepted・Consensus等の承認済み状態へ昇格しない。
   - `AI-01-2`: 「唯一の意味」を既定出力にしない。
 
 ### P-02 単一正解の否定 / 反スコアリング
@@ -172,6 +174,25 @@
   - `AI-09-3`: `SUI_LLM_PROVIDER=none` で作成、引継ぎ、停止・再開、分岐、比較を完了できる。
 
 詳細要件は `00_Prompt/w_type_iterative_inquiry_requirements.md`、データ境界は `02_Architecture/inquiry_journey_model.html`、設計判断は `ADR-0057` を正本とする。
+
+### P-10 人間・AIの役割可変なsensemakingライフサイクル
+
+- UX
+  - `UX-10-1`: 人間由来、AI由来、共同編集、未レビュー、人間レビュー済みを、利用者が必要な粒度で区別できる。
+  - `UX-10-2`: AIへ一定範囲の探索・仮説形成・構造化を委任した場合でも、人間は主要根拠、反証、未解決点、差分を確認して理解・異議・承認できる。
+  - `UX-10-3`: 人間主導、協働、委任、監督付き自律の役割分担を、プロジェクト全体の一律設定ではなく工程・操作ごとに選べる余地を持つ。
+- Data
+  - `DATA-10-1`: Evidence、AI由来のObservation / Hypothesis / Structure / Synthesis、Review、Accepted / Consensus状態を概念上区別し、生成主体と来歴を保持できる。
+  - `DATA-10-2`: AI Workspace / WorkingGraphの途中状態と、人間承認済みの正規状態を同一フィールドの暗黙上書きで表現しない。
+  - `DATA-10-3`: AIが自律的に複数段階を進めても、元Evidence、保留、反証、棄却した主要代替案への参照を失わない。
+- AI
+  - `AI-10-1`: AIは権限境界の内側で、Observation → Relation → Hypothesis → Structure → Synthesisの複数段階を自律実行できる。
+  - `AI-10-2`: AI内部の作業判断を、人間による理解・レビュー・承認と同一視しない。
+  - `AI-10-3`: `human_reviewed`、Accepted / Consensus、人間の異議・承認をAIが偽装または自動付与しない。
+  - `AI-10-4`: KJ法に着想を得た手順以外の認知方法を利用する場合でも、Evidence保全、可逆性、保留、来歴、権限境界を維持する。
+
+長期的な役割分担と現行SafeMode / proposal-onlyの境界は
+`01_Plans/adr/ADR-0084-sensemaking-lifecycle-and-authority-boundary.md` を正本とする。
 
 ---
 
