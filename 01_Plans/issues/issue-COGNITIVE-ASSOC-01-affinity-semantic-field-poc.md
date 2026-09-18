@@ -11,7 +11,7 @@
 - Related ADR/Spec: `ADR-0047`, `ADR-0046`, `ADR-0067`, `00_Prompt/domain.md`, `00_Prompt/sensemaking_technique.md`, `00_Prompt/cognitive_frame_and_evolution_criteria.md`, `00_Prompt/ai_sensemaking_execution_procedures.md`, `COGNITIVE-EVAL-01`, `COGNITIVE-DOGFOOD-01`
 - Norms: `DOM-CORE-01`, `DOM-CORE-02`, `DOM-CORE-03`, `DOM-CORE-04`
 - Expected verification level: docs-check + reproducible offline benchmark
-- Working branch: `research/cognitive-assoc-01-kj-semantic-field-20260910`
+- Working branch: `main`（作業branchは最新mainから切り、完了時にmainへ収束させる）
 - Research record: `01_Plans/research/fly-inspired-affinity-semantic-field-research-2026-09-10.md`
 
 `kj_*`を含む既存パスやworking branch名は技術識別子であり、本issueで用いる技法の一般名称ではない。
@@ -113,6 +113,10 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - [x] T2b: cross-island pair 173件 / 2+1 candidate 346件の生成規則と期待件数を固定した。
   - [x] T2c: 座標・島タイトル・edge・source等をmodel inputから除外し、未レビューcardやblob driftをfail-closedにする準備器とunit testを追加した。
   - [ ] T2d: bounded contrast review setをモデル出力を見る前にMaintainerが`hard_negative / related_but_separate / ambiguous_or_held / exclude`へ判定し、adjudicated revisionとして凍結する。
+    - [x] frozen source blobから実source prepを再現し、29 blind cards / 173 pair / 346件の2+1をend-to-endで再生成した。
+    - [x] 事前登録済みU/L規則で63件（pair 32 / 2+1 31）のmodel-blind review setを確定した。
+    - [x] `01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/`へselected review set、human adjudication packet、generation evidenceを凍結した。
+    - [ ] Maintainerが63件をmodel-blindで判定し、判定artifactの件数・SHA-256を凍結する。完了までsemantic baseline gateは開かない。
 - [ ] **T3 Baseline harness**: A/C/Eを同じinterfaceで実行できるoffline harnessを作る。T2d完了前はsemantic resultを生成しない。
 - [ ] **T4 Baseline evaluation**: deep-semantic recall / surface-decoy rejection / singleton・residual survival / wording stability / CPU budgetを比較する。
 - [ ] **T5 Learned sparse gate**: T4を根拠にDをProceed / Hold / Rejectで判断する。
@@ -152,7 +156,9 @@ Gate Aでは表層類似を越えたか、Gate BではFly-inspired方式に独�
 - Meta R1は5つの複数カード島 + 1つの単独島、R3は4つの複数カード島 + 1つの単独島としてsource blobを確認した。
 - model-visible fieldは`documentId / cardId / text`だけに固定した。
 - synthetic unit testでblind field限定、未レビュー拒否、blob SHA不一致拒否、co-island pair除外、異なるsingleton間のcontrast維持、challenge setの島跨ぎ拒否、membership漏れ拒否を確認した。
-- この実行環境からGitHubへのDNS解決ができずremote branchをcloneできなかったため、実sourceを用いたCLI end-to-end実行は未実施。source blob自体はGitHub connectorで正本を確認した。T2d後のbaseline開始前に通常の開発環境で実source prepを再実行する。
+- 初期確認環境ではGitHubへのDNS解決ができず実source CLIを走らせられなかったが、2026-09-18にGitHub Actions上でfrozen Git blobを再構成してend-to-end実行した。29 blind cards、173 pair、346件の2+1を期待件数どおり再現し、U/L抽出後のreview setは63件（pair 32 / 2+1 31）となった。
+- 生成証跡は`cognitive-assoc-benchmark-v0-pre-adjudication/generation-evidence.json`に固定した。selected review set SHA-256は`5b582e144fb6316f6cd5f0308b4a88a859d29a82bd2fdc423370183dbd35cec3`、human adjudication packet SHA-256は`e52a0b16203e5895814c5f7d20ad741ecd3ea847f9d22aab2fb7cfb0c0d041ce`である。
+- human adjudication packetにはselection stratum、source island、座標、relation、model-derived score/rankingを含めていない。63件はすべて`PENDING`で、human judgementはまだ入っていない。
 - **semantic baseline / embedding / FlyHash候補はまだ一度も生成していない。** benchmark labelはmodel-blindのままである。
 
 ## 12. 管理情報
