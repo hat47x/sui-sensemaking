@@ -1,0 +1,41 @@
+{
+  "schema": "sui.cognitive-assoc-pre-adjudication-evidence/v1",
+  "benchmarkId": "cognitive-assoc-benchmark-v0",
+  "generatedAt": "2026-09-18",
+  "state": "human_adjudication_packet_generated",
+  "semanticBaselineGate": "closed",
+  "modelOutputsAllowed": false,
+  "humanJudgementsPresent": false,
+  "sourceManifestGitBlobSha": "57c681f039262436c835e6fd4416f814519516fa",
+  "counts": {
+    "modelInputCards": 29,
+    "fullPairCandidates": 173,
+    "fullTwoPlusOneCandidates": 346,
+    "selectedPairCandidates": 32,
+    "selectedTwoPlusOneCandidates": 31,
+    "selectedTotal": 63
+  },
+  "sha256": {
+    "ephemeralModelInput": "c634caa1ace94caa18515d391c536cef8c42dcbf4bfa08e1f4d1fc1b413b1fb7",
+    "ephemeralFullContrastPool": "e8f687982592e1549c2b6bb0886593590747c3c120dc82a29d1beabe8399b793",
+    "selectedReviewSet": "5b582e144fb6316f6cd5f0308b4a88a859d29a82bd2fdc423370183dbd35cec3",
+    "humanAdjudicationPacket": "e52a0b16203e5895814c5f7d20ad741ecd3ea847f9d22aab2fb7cfb0c0d041ce"
+  },
+  "selectionProtocol": {
+    "version": "cognitive-assoc-v0-u16-l16",
+    "uniform": {
+      "countPerCandidateType": 16,
+      "ordering": "sha256(candidate.id) ascending"
+    },
+    "lexicalStress": {
+      "countPerCandidateType": 16,
+      "normalization": "Unicode NFKC; keep alphanumeric Unicode characters only",
+      "feature": "character trigram set",
+      "pair": "Jaccard overlap",
+      "twoPlusOne": "max Jaccard(outsider, each in-island member)",
+      "tieBreak": "candidate.id ascending"
+    },
+    "humanPacketHidesSelectionStrata": true
+  },
+  "nextRequiredGate": "Maintainer must complete model-blind human adjudication and freeze the adjudicated artifact before any semantic baseline is run."
+}
