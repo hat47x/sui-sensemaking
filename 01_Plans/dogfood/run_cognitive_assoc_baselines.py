@@ -33,6 +33,12 @@ ADJUDICATION_EVIDENCE_SCHEMA = (
 )
 EMBEDDING_REQUEST_SCHEMA = "sui.cognitive-assoc-embedding-request/v1"
 EMBEDDING_RESPONSE_SCHEMA = "sui.cognitive-assoc-embedding-response/v1"
+REFERENCE_LABELS = {
+    "hard_negative",
+    "related_but_separate",
+    "ambiguous_or_held",
+    "exclude",
+}
 
 BASELINES = {
     "A": {
@@ -203,11 +209,25 @@ def validate_frozen_gate(
             raise ValueError(f"duplicate adjudicated candidate: {candidate_id}")
         if candidate_id not in candidates:
             raise ValueError(f"unknown adjudicated candidate: {candidate_id}")
-        if not isinstance(label, str) or not label:
+        if label not in REFERENCE_LABELS:
             raise ValueError(f"candidate {candidate_id} has invalid human label")
         labels[candidate_id] = label
     if set(labels) != set(candidates):
         raise ValueError("adjudicated candidate set does not match selected review set")
+
+    pair_count = sum(
+        1 for candidate in candidates.values()
+        if candidate["candidateType"] == "pair"
+    )
+    expected_counts = {
+        "total": len(candidates),
+        "pair": pair_count,
+        "twoPlusOne": len(candidates) - pair_count,
+    }
+    if adjudicated.get("candidateCounts") != expected_counts:
+        raise ValueError("adjudicated candidateCounts do not match selected review set")
+    if evidence.get("candidateCounts") != expected_counts:
+        raise ValueError("adjudication evidence candidateCounts do not match")
     return labels
 
 
