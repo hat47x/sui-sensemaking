@@ -136,6 +136,10 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - [x] T6a: frozen T5 Proceed + D research artifact + strictly-pre-target source manifestが揃う場合だけablation planを生成するvalidatorを実装した。
   - [ ] T6b: T5b ProceedかつD実験完了後、pre-target履歴sourceを凍結して16 variantを実行する。十分なpre-target履歴がなければtarget状態から補完せずtemporal benchmark v1へHoldする。
 - [ ] **T7 Cognitive dogfood**: 候補提示あり/なしで探索の増分とanchoringを比較する。
+  - [x] T7a: unseen・non-self-referential・reviewed 30+ cardsのmatched task pair、study-seeded crossover、unaided/intervention/origin-blind reviewの3 phaseを事前登録した。
+  - [x] T7a: candidate layerをresearch-only / autoApply=false / scoreOrRankingVisible=falseに固定し、R8をnewly-considered material / structure revision / residual-hold transitions / attention redistribution / candidate disposition / origin-blind retention / costへ分解した。
+  - [x] T7a: task carryover、既視task、SUI自己言及task、条件間のdifficulty/card-count不整合をfail-closedにするdogfood plan generatorを実装した。
+  - [ ] T7b: T6b完了後に外部題材のtask manifestを凍結し、control / candidate-assisted両条件を実施してR8 Evidenceを固定する。
 - [ ] **T8 Architecture decision**: `no adoption / retrieval-only / candidate-cognition layer / ADR trigger` のいずれかへ変換する。
 
 ## 9. 評価軸と判定ゲート
