@@ -128,6 +128,9 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - [x] T4a: v0に事前登録paraphraseがないためR5 wording stabilityは`not_measured_in_v0`とし、結果を見てから例を追加しない境界を固定した。
   - [ ] T4b: T2d完了後に固定v0でA/C/E probeを実行し、単一winnerやcomposite scoreへ畳まず結果を凍結する。
 - [ ] **T5 Learned sparse gate**: T4を根拠にDをProceed / Hold / Rejectで判断する。
+  - [x] T5a: T4結果を見る前に、Dを試す独立理由・不足Evidence・Proceed/Hold/Rejectの意味とdriver categoryを事前登録した。
+  - [x] T5a: T4 summaryからwinner/composite scoreを作らずmodel-free decision packetを生成し、Maintainer判断とSHA-256をfreezeするutilityを実装した。
+  - [ ] T5b: T4b完了後にpacketを生成し、MaintainerがProceed / Hold / Rejectを判定してdecision artifactを凍結する。
 - [ ] **T6 Affinity-specific increment**: Proceed時のみFを追加し、group/separate/Critique/hold/graph/space/historyの寄与をablationする。
 - [ ] **T7 Cognitive dogfood**: 候補提示あり/なしで探索の増分とanchoringを比較する。
 - [ ] **T8 Architecture decision**: `no adoption / retrieval-only / candidate-cognition layer / ADR trigger` のいずれかへ変換する。
