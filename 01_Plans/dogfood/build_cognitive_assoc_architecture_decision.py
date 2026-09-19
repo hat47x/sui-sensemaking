@@ -129,6 +129,9 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
     t5_decision = t5.get("decision")
     if t5_decision not in ("Proceed", "Reject"):
         raise ValueError("final T8 decision is blocked while T5 is Hold/unresolved")
+    if t5_decision == "Reject":
+        if t6["status"] != "not_applicable" or t7["status"] != "not_applicable":
+            raise ValueError("T5 Reject requires T6/T7 to remain not_applicable")
 
     observations = manifest.get("observations")
     if not isinstance(observations, dict):
@@ -339,8 +342,9 @@ def freeze_decision(
         "drivers": sorted(drivers),
         "rationale": rationale.strip(),
         "automaticDecision": False,
-        "productionAdoptionAuthorized": decision
+        "integrationDirectionSelected": decision
         in ("retrieval_only", "candidate_cognition_layer"),
+        "productionAdoptionAuthorized": False,
         "automaticSemanticAuthorityAuthorized": False,
         "nextStep": {
             "no_adoption": "Close the research line and preserve evidence.",
