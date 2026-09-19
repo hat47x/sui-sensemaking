@@ -33,8 +33,8 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def stable_bit(study_id: str, pair_id: str) -> int:
-    digest = hashlib.sha256(f"{study_id}|{pair_id}".encode("utf-8")).digest()
+def study_offset(study_id: str) -> int:
+    digest = hashlib.sha256(study_id.encode("utf-8")).digest()
     return digest[0] & 1
 
 
@@ -136,10 +136,13 @@ def build_plan(source_raw: bytes, source: dict[str, Any]) -> dict[str, Any]:
     sessions: list[dict[str, Any]] = []
     control_first = 0
     assisted_first = 0
-    for pair in sorted(source["taskPairs"], key=lambda item: item["pairId"]):
+    offset = study_offset(study_id)
+    for index, pair in enumerate(
+        sorted(source["taskPairs"], key=lambda item: item["pairId"])
+    ):
         pair_id = pair["pairId"]
         tasks = sorted(pair["tasks"], key=lambda item: item["taskId"])
-        bit = stable_bit(study_id, pair_id)
+        bit = (index + offset) & 1
 
         if bit == 0:
             assignment = [
@@ -186,7 +189,7 @@ def build_plan(source_raw: bytes, source: dict[str, Any]) -> dict[str, Any]:
         "sourceManifestSha256": sha256_bytes(source_raw),
         "participantRole": "Maintainer",
         "candidateLayer": source["candidateLayer"],
-        "assignmentMethod": "sha256(studyId|pairId)-bit deterministic crossover",
+        "assignmentMethod": "study-seeded alternating deterministic crossover",
         "sessions": sessions,
         "counterbalance": {
             "pairCount": len(source["taskPairs"]),
