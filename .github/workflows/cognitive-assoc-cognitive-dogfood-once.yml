@@ -1,0 +1,65 @@
+name: cognitive-assoc-cognitive-dogfood-once
+
+on:
+  push:
+    branches:
+      - research/cognitive-assoc-01-learned-sparse-gate-20260919
+    paths:
+      - .github/workflows/cognitive-assoc-cognitive-dogfood-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify T6 to T7 preregistered contracts
+        working-directory: 01_Plans/dogfood
+        run: |
+          python -m unittest -v \
+            test_build_cognitive_assoc_affinity_ablation_plan.py \
+            test_build_cognitive_assoc_cognitive_dogfood_plan.py
+
+      - name: Verify fixed v0 T7 study has not run
+        run: |
+          set -euo pipefail
+          for file in \
+            01_Plans/dogfood/cognitive-assoc-cognitive-dogfood-source-v0.json \
+            01_Plans/dogfood/cognitive-assoc-cognitive-dogfood-plan-v0.json \
+            01_Plans/dogfood/cognitive-assoc-cognitive-dogfood-results-v0.json
+          do
+            test ! -e "$file"
+          done
+          echo "FIXED_V0_T7_EXECUTION: NOT_EXECUTED"
+
+      - name: Documentation and diff checks
+        run: |
+          set -euo pipefail
+          git diff --check
+          set +e
+          python 01_Plans/docs_check.py > "${RUNNER_TEMP}/docs-check.out" 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            cat "${RUNNER_TEMP}/docs-check.out"
+            python - "${RUNNER_TEMP}/docs-check.out" <<'PY'
+          import pathlib
+          import sys
+
+          lines = [
+              line.strip()
+              for line in pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+              if line.strip().startswith("- DC-")
+          ]
+          expected = "issue-ARCH-TEI-MIGRATION-01-tei-reference-adoption-and-development-load-validation.md"
+          assert len(lines) == 2, lines
+          assert all(expected in line and "Planned" in line for line in lines), lines
+          print("DOCS_CHECK: only two pre-existing main errors remain")
+          PY
+          fi
