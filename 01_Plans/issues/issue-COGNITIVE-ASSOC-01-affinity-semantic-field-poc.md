@@ -132,6 +132,9 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - [x] T5a: T4 summaryからwinner/composite scoreを作らずmodel-free decision packetを生成し、Maintainer判断とSHA-256をfreezeするutilityを実装した。
   - [ ] T5b: T4b完了後にpacketを生成し、MaintainerがProceed / Hold / Rejectを判定してdecision artifactを凍結する。
 - [ ] **T6 Affinity-specific increment**: Proceed時のみFを追加し、group/separate/Critique/hold/graph/space/historyの寄与をablationする。
+  - [x] T6a: T5/T6結果を見る前に、7 channelの研究用意味、target leakage禁止、add-one / leave-one-outの16 variant、R6評価、欠損channel時のHold境界を事前登録した。
+  - [x] T6a: frozen T5 Proceed + D research artifact + strictly-pre-target source manifestが揃う場合だけablation planを生成するvalidatorを実装した。
+  - [ ] T6b: T5b ProceedかつD実験完了後、pre-target履歴sourceを凍結して16 variantを実行する。十分なpre-target履歴がなければtarget状態から補完せずtemporal benchmark v1へHoldする。
 - [ ] **T7 Cognitive dogfood**: 候補提示あり/なしで探索の増分とanchoringを比較する。
 - [ ] **T8 Architecture decision**: `no adoption / retrieval-only / candidate-cognition layer / ADR trigger` のいずれかへ変換する。
 
