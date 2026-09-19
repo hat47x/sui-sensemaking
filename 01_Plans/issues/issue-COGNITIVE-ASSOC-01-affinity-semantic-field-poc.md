@@ -141,6 +141,10 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - [x] T7a: task carryover、既視task、SUI自己言及task、条件間のdifficulty/card-count不整合をfail-closedにするdogfood plan generatorを実装した。
   - [ ] T7b: T6b完了後に外部題材のtask manifestを凍結し、control / candidate-assisted両条件を実施してR8 Evidenceを固定する。
 - [ ] **T8 Architecture decision**: `no adoption / retrieval-only / candidate-cognition layer / ADR trigger` のいずれかへ変換する。
+  - [x] T8a: 4択decisionの意味、必要Evidence、T5 Hold時の停止、T6/T7 not_applicable整合、research boundaryを結果前に事前登録した。
+  - [x] T8a: evidence manifestからmodel-free decision packetを生成し、Maintainerのdecision / driver / rationaleをSHA-256付きでfreezeするutilityを実装した。
+  - [x] T8a: retrieval-only / candidate-cognition layerを選んでもproductionAdoptionAuthorized=false、automaticSemanticAuthorityAuthorized=falseのままに固定した。
+  - [ ] T8b: T2〜T7の実Evidence完了後にevidence manifestを凍結し、Maintainerが4択decisionを確定する。
 
 ## 9. 評価軸と判定ゲート
 
