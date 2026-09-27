@@ -1,11 +1,43 @@
 # SUI → TEI Reference Adoption 比較基線
 
-- Status: Baseline / Migration planning
+- Status: Baseline / Stage 0 synchronized (2026-09-27)
 - Date: 2026-09-18
 - Parent: `issue-ARCH-TEI-MIGRATION-01-tei-reference-adoption-and-development-load-validation.md`
 - TEI counterpart: `tei-platform/plan/issue/000052-sui-reference-adoption-and-plugin-surface-evaluation.md`
 - Runtime impact: None
 - Purpose: TEI移管による開発負荷低減を、既存SUIの実変更履歴と同一change challengeで比較可能にする
+
+## 0. 2026-09-27 Stage 0 freshness sync
+
+TEI Stage 0はrepository-wide revisionではなく、実際にshadowするSUI contract / handoff / test blobをfreshness dependencyとして扱う。
+
+2026-09-27時点:
+
+- SUI main: `c9d3e07df896078c8bb06aa1f587d69327a37498`
+- TEI main: `72318c1691a2f1277ed32430a52f64db823c1652`
+- TEI probe: `tools/reference-sui-adoption`
+- TEI fixtures: `reference/sui-adoption/`
+
+次の4依存blobはTEI pinned valueとcurrent SUI mainで一致している。
+
+| Source dependency | Blob SHA | Freshness |
+|---|---|---|
+| `island_contracts.ts` | `5d63cbec446abf0dd8054a5c498f726377c51a9f` | current |
+| `island_hierarchy_handoff.ts` | `9bf17490a8d5936b4b7679370da861439e90a8ab` | current |
+| `island_contracts.test.ts` | `4c91399cbc2da4526171812178ecdf98f9272027` | current |
+| `island_hierarchy_handoff.test.ts` | `e069871a13c932dbb1c11cbed5e08e318f93be8c` | current |
+
+したがって、SUI mainがbaseline時点のnavigation revisionから進んでいても、Stage 0のactual dependencyはstaleではない。無関係なSUI変更でReferenceを再実行対象へ戻さない。
+
+一方、Stage 0の到達点は限定する。
+
+- hierarchy handoffをread-onlyでshadowできる
+- SUI instanceをTEI Canonicalへ昇格しない
+- parent single-valued shapeは観測できる
+- nullable parent presenceは未表現
+- hierarchy consistency / cycle等はTEI native validationではなくReference-local shadow
+
+次のChallenge Aではplacardを同じcontractへ直ちに追加せず、domain meaning / Projection metadata / separate handoff projectionの三候補を先に比較する。
 
 ## 1. この文書の役割
 
