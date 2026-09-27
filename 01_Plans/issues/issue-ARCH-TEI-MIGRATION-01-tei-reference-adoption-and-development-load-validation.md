@@ -1,7 +1,7 @@
 # Issue: ARCH-TEI-MIGRATION-01 TEI Reference Adoptionと開発負荷低減の検証
 
 - Type: Process / Architecture / Migration
-- Status: Planned — TEI側Reference Adoption準備と同期
+- Status: In Progress — TEI Stage 0 read-only probe実装済み、current-source freshness確認済み（2026-09-27）
 - Source Issue: N/A
 - Priority: P0（大規模な機能高度化へ進む前の移管ゲート）
 - Owner: Maintainer
@@ -70,6 +70,36 @@
 - TEI利用率や生成コード量を成功指標にすること
 - Security / bugfix / compatibility maintenanceまで移管ゲートのために停止すること
 
+## 2026-09-27 Stage 0 同期結果
+
+TEI側のread-only Reference probeがcurrent mainに存在することと、probeが依存するSUI source contractのfreshnessを再確認した。
+
+- TEI main: `72318c1691a2f1277ed32430a52f64db823c1652`
+- SUI main: `c9d3e07df896078c8bb06aa1f587d69327a37498`
+- TEI側probe: `tools/reference-sui-adoption`
+- TEI側固定fixture: `reference/sui-adoption/`
+
+Stage 0がfreshness dependencyとして固定した4 blobは、2026-09-27のSUI mainでもすべて一致した。
+
+| Dependency | Current SUI main blob | TEI pinned blob | Result |
+|---|---|---|---|
+| `island_contracts.ts` | `5d63cbec446abf0dd8054a5c498f726377c51a9f` | same | fresh |
+| `island_hierarchy_handoff.ts` | `9bf17490a8d5936b4b7679370da861439e90a8ab` | same | fresh |
+| `island_contracts.test.ts` | `4c91399cbc2da4526171812178ecdf98f9272027` | same | fresh |
+| `island_hierarchy_handoff.test.ts` | `e069871a13c932dbb1c11cbed5e08e318f93be8c` | same | fresh |
+
+このため、SUI repository全体のrevision差だけを理由にStage 0をstale扱いしない。現時点でcurrent-source conformanceは維持されている。
+
+ただし、Stage 0が証明したのはhierarchy handoffに対するread-only shadow conformanceであり、TEIへのlossless migrationではない。rootのnullable parent presence semanticsは引き続きunresolvedであり、duplicate / existence / parent-child consistency / cycleはReference-local shadowとして扱う。
+
+次の高情報量作業はChallenge Aを一段進め、**hierarchy meaning**と**placard representation**を分離して分類することとする。placardを既存handoffへ追加する前に、
+
+1. SUI domain meaningか、
+2. Canvas Projection metadataか、
+3. 別handoff projectionとして扱うべきか
+
+をSUI側正本で決める。移管都合だけで既存contractを拡張しない。
+
 ## 固定済みの実履歴Baseline
 
 比較基線は `01_Plans/cross-repo/2026-09-18-sui-tei-reference-adoption-baseline.md` を正本とする。
@@ -121,7 +151,7 @@ TEI移管後にこの増幅が継続的に小さくなることを、負荷低�
 
 ## 受入条件
 
-- [ ] 現行SUIの比較基線と少なくとも3種類のchange challengeが固定されている。
+- [x] 現行SUIの比較基線と少なくとも3種類のchange challengeが固定されている。
 - [ ] TEI-based Reference sliceがSUI Product Valueを壊さず動作する。
 - [ ] 同一change challengeについて現行実装とTEI-based実装の比較Evidenceがある。
 - [ ] TEI gapがA〜Dへ分類され、Plugin候補とCore gap候補が混同されていない。
