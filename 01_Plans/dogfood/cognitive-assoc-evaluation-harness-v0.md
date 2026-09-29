@@ -7,7 +7,7 @@
 
 ## 1. 位置づけ
 
-本書はT4の評価方法を固定する下位仕様である。固定v0に対するsemantic baseline実行そのものは、T2dのmodel-blind human adjudicationがfreezeされるまで行わない。
+本書はT4の評価方法を固定する下位仕様である。固定v0に対するsemantic baseline実行そのものは、T2dのreference adjudication（model-blind human v1、またはユーザー明示指示によるAI-proxy v2）がfreezeされるまで行わない。
 
 T4では「一つの高いscore」を作らず、親和図作業に必要な性質を別々に観察する。
 
@@ -28,7 +28,7 @@ source manifestで事前登録済みの `challengePositiveSets` だけを用い�
 
 ## 3. R2 Surface-decoy rejection
 
-63件のhuman-adjudicated contrastだけを用いる。
+63件のfrozen reference-adjudicated contrastだけを用いる。
 
 - `hard_negative`
 - `related_but_separate`
@@ -41,7 +41,7 @@ source manifestで事前登録済みの `challengePositiveSets` だけを用い�
 
 - pair / 2+1
 - U / L selection stratum
-- human label
+- reference label
 
 U/L overlap caseは両stratumへ現れてよい。これは母比率推定ではなく、事前登録したstress面を別々に観察するためである。
 
@@ -112,11 +112,12 @@ T4の役割は、各方式がどの評価面でどの性質を示したかを分
 
 probe実行はT3と同じ凍結gateを再検証する。
 
-- frozen human adjudication artifact
+- frozen reference adjudication artifact
 - adjudication Evidence
+- reference authority / state（human / AI-proxyを区別）
 - selected review set SHA-256
 - adjudicated artifact SHA-256
 - blind model input
 - source manifest / benchmark ID一致
 
-synthetic fixtureによる実装検証はT2d前でも許可するが、固定v0 sourceに対するA/C/E probe artifactはT2d完了まで生成しない。
+synthetic fixtureによる実装検証はT2d前でも許可するが、固定v0 sourceに対するA/C/E probe artifactはT2d完了まで生成しない。probeはreference authorityを保持し、summaryはA/C/E間でauthority/stateが一致しない場合にfail-closeする。

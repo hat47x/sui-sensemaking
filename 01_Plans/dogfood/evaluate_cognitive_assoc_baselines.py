@@ -3,7 +3,7 @@
 
 This module intentionally separates evaluation-only ranking from product
 behaviour. Retrieval ranks are used only to measure preregistered challenge
-positive recall after the model-blind human adjudication gate is frozen.
+positive recall after the frozen reference-adjudication gate is opened.
 
 No single composite score, winner, or production recommendation is emitted.
 """
@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from run_cognitive_assoc_baselines import (
+    ADJUDICATION_SCHEMA,
+    AI_ADJUDICATION_SCHEMA,
     RUN_SCHEMA,
     build_representations,
     canonical_json_bytes,
@@ -351,6 +353,27 @@ def build_probe_artifact(
     finally:
         tracemalloc.stop()
 
+    if adjudicated.get("schema") == ADJUDICATION_SCHEMA:
+        reference_adjudication = {
+            "authority": "human_model_blind",
+            "state": adjudicated.get("state"),
+            "humanAdjudicationObserved": True,
+            "semanticBaselineBlind": adjudicated.get("modelBlind"),
+            "strictModelBlind": adjudicated.get("modelBlind"),
+        }
+    elif adjudicated.get("schema") == AI_ADJUDICATION_SCHEMA:
+        reference_adjudication = {
+            "authority": "user_authorized_ai_proxy",
+            "state": adjudicated.get("state"),
+            "humanAdjudicationObserved": adjudicated.get(
+                "humanAdjudicationObserved"
+            ),
+            "semanticBaselineBlind": adjudicated.get("semanticBaselineBlind"),
+            "strictModelBlind": adjudicated.get("strictModelBlind"),
+        }
+    else:
+        raise ValueError("validated adjudication schema is not recognized")
+
     return {
         "schema": PROBE_SCHEMA,
         "benchmarkId": selected.get("benchmarkId"),
@@ -361,6 +384,7 @@ def build_probe_artifact(
             "adjudicatedArtifactSha256": sha256_bytes(adjudicated_raw),
             "modelInputSha256": sha256_bytes(model_input_path.read_bytes()),
         },
+        "referenceAdjudication": reference_adjudication,
         "evaluationOnly": True,
         "productRankingProduced": False,
         "singleCompositeScoreProduced": False,
@@ -485,10 +509,24 @@ def build_summary(probes: list[dict[str, Any]]) -> dict[str, Any]:
         for probe in probes
     }
     baseline_ids = [probe.get("baseline", {}).get("id") for probe in probes]
+    reference_adjudications = [
+        probe.get("referenceAdjudication") for probe in probes
+    ]
     if len(benchmark_ids) != 1:
         raise ValueError("probe benchmark ids do not match")
     if len(source_keys) != 1:
         raise ValueError("probe source digests do not match")
+    if any(
+        not isinstance(reference, dict) or not reference.get("authority")
+        for reference in reference_adjudications
+    ):
+        raise ValueError("probe reference adjudication is missing")
+    reference_keys = {
+        canonical_json_bytes(reference)
+        for reference in reference_adjudications
+    }
+    if len(reference_keys) != 1:
+        raise ValueError("probe reference adjudications do not match")
     if len(set(baseline_ids)) != len(baseline_ids):
         raise ValueError("duplicate baseline probe")
     if not set(baseline_ids).issubset(ALLOWED_BASELINES):
@@ -497,6 +535,7 @@ def build_summary(probes: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "schema": SUMMARY_SCHEMA,
         "benchmarkId": next(iter(benchmark_ids)),
+        "referenceAdjudication": reference_adjudications[0],
         "comparisonPolicy": {
             "singleCompositeScore": False,
             "winnerSelected": False,

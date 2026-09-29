@@ -182,6 +182,18 @@ class CognitiveAssocEvaluationHarnessTests(unittest.TestCase):
         self.assertIs(probe["evaluationOnly"], True)
         self.assertIs(probe["productRankingProduced"], False)
         self.assertIs(probe["singleCompositeScoreProduced"], False)
+        self.assertEqual(
+            probe["referenceAdjudication"]["authority"],
+            "human_model_blind",
+        )
+        self.assertIs(
+            probe["referenceAdjudication"]["humanAdjudicationObserved"],
+            True,
+        )
+        self.assertIs(
+            probe["referenceAdjudication"]["strictModelBlind"],
+            True,
+        )
 
         challenge = probe["challengePositive"][0]
         self.assertEqual(challenge["setCoherence"]["memberCount"], 3)
@@ -213,6 +225,10 @@ class CognitiveAssocEvaluationHarnessTests(unittest.TestCase):
         self.assertIs(summary["comparisonPolicy"]["baselineRankingProduced"], False)
         self.assertTrue(summary["comparisonPolicy"]["UAndLReportedSeparately"])
         self.assertEqual(
+            summary["referenceAdjudication"]["authority"],
+            "human_model_blind",
+        )
+        self.assertEqual(
             [item["baselineId"] for item in summary["baselines"]], ["A", "C"]
         )
         for baseline in summary["baselines"]:
@@ -235,6 +251,25 @@ class CognitiveAssocEvaluationHarnessTests(unittest.TestCase):
         right = self.build_probe("C")
         right["source"]["modelInputSha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "source digests do not match"):
+            build_summary([left, right])
+
+    def test_summary_refuses_mismatched_reference_adjudication(self) -> None:
+        left = self.build_probe("A")
+        right = self.build_probe("C")
+        right["referenceAdjudication"] = dict(right["referenceAdjudication"])
+        right["referenceAdjudication"]["authority"] = "user_authorized_ai_proxy"
+        with self.assertRaisesRegex(
+            ValueError, "reference adjudications do not match"
+        ):
+            build_summary([left, right])
+
+    def test_summary_refuses_missing_reference_adjudication(self) -> None:
+        left = self.build_probe("A")
+        right = self.build_probe("C")
+        right.pop("referenceAdjudication")
+        with self.assertRaisesRegex(
+            ValueError, "reference adjudication is missing"
+        ):
             build_summary([left, right])
 
     def test_manifest_challenge_must_be_observed_positive_subset(self) -> None:
