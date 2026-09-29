@@ -163,6 +163,18 @@ class CognitiveAssocBaselineHarnessTests(unittest.TestCase):
             5.0,
         )
         self.assertEqual(result["candidateCount"], 2)
+        self.assertEqual(
+            result["referenceAdjudication"]["authority"],
+            "user_authorized_ai_proxy",
+        )
+        self.assertIs(
+            result["referenceAdjudication"]["humanAdjudicationObserved"],
+            False,
+        )
+        self.assertIs(
+            result["referenceAdjudication"]["strictModelBlind"],
+            False,
+        )
 
         artifact["userAuthorizedHumanSubstitution"] = False
         self.adjudicated_path.write_bytes(canonical_json_bytes(artifact))
@@ -190,6 +202,10 @@ class CognitiveAssocBaselineHarnessTests(unittest.TestCase):
         self.assertEqual(result["schema"], RUN_SCHEMA)
         self.assertEqual(result["baseline"]["id"], "A")
         self.assertEqual(result["candidateCount"], 2)
+        self.assertEqual(
+            result["referenceAdjudication"]["authority"],
+            "human_model_blind",
+        )
         self.assertIs(result["rankingProduced"], False)
         self.assertIs(result["aggregateMetricProduced"], False)
         self.assertEqual(
