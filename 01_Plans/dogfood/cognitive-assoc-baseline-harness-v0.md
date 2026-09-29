@@ -75,6 +75,24 @@ response:
 
 providerへ渡すのはcard本文だけであり、candidate ID、human label、U/L stratum、島、座標、relationは渡さない。
 
+### E-v0 provider freeze (2026-09-29)
+
+最初のE実測より前に、比較用providerを次で固定する。
+
+- model: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+- revision: `e8f8c211226b894fcb81acc59f3b34ba3efd5f42`
+- embedding dimension: 384
+- device class: CPU
+- encode: SentenceTransformer.encode / normalize_embeddings=false
+- similarity: downstream cosine
+- query/passage prefix: なし
+- provider input: card本文のみ
+- config: `cognitive-assoc-baseline-E-provider-v0.json`
+
+選定条件は日本語明示対応、sentence-similarity用途、local CPUで現実的な規模、許容的license、対称card-to-card比較でquery/passage prefixを要しないこと、immutable revisionを固定できることである。
+
+A/C部分結果は選定時点で既に観測済みであるため、完全な結果前preregistrationとは主張しない。ただしE自身の出力は未観測であり、A/Cの数値優劣を選定条件には用いていない。この順序はT4解釈上の制約として保持する。
+
 ## 6. 出力境界
 
 各runはcandidate ID昇順でscoreを記録するが、次を生成しない。
