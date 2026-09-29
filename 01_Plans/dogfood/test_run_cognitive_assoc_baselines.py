@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import sys
@@ -96,11 +97,85 @@ class CognitiveAssocBaselineHarnessTests(unittest.TestCase):
         plan = plan_payload()
         self.assertEqual([b["id"] for b in plan["baselines"]], ["A", "C", "E"])
         self.assertEqual(
-            plan["fixedBenchmarkRunGate"]["requiredAdjudicationState"],
-            "human_adjudication_frozen",
+            set(plan["fixedBenchmarkRunGate"]["acceptedAdjudicationStates"]),
+            {"human_adjudication_frozen", "ai_proxy_adjudication_frozen"},
+        )
+        self.assertIs(
+            plan["fixedBenchmarkRunGate"]["aiProxyRequiresUserAuthorization"],
+            True,
         )
         self.assertIs(plan["evaluationSeparation"]["rankingProduced"], False)
         self.assertIs(plan["evaluationSeparation"]["aggregateMetricProduced"], False)
+
+    def test_ai_proxy_gate_is_explicit_and_user_authorized(self) -> None:
+        selected_sha = hashlib.sha256(self.selected_raw).hexdigest()
+        artifact = {
+            "schema": "sui.cognitive-assoc-adjudication/v2",
+            "benchmarkId": self.selected["benchmarkId"],
+            "state": "ai_proxy_adjudication_frozen",
+            "adjudicationMode": "generative_ai_proxy",
+            "humanAdjudicationObserved": False,
+            "userAuthorizedHumanSubstitution": True,
+            "semanticBaselineBlind": True,
+            "strictModelBlind": False,
+            "contaminationDisclosed": True,
+            "sourceSelectedReviewSetSha256": selected_sha,
+            "candidateCounts": {"total": 2, "pair": 1, "twoPlusOne": 1},
+            "judgements": [
+                {
+                    "candidateId": "doc:2plus1:g1:c01+c02+c03",
+                    "label": "related_but_separate",
+                    "reason": "synthetic",
+                },
+                {
+                    "candidateId": "doc:pair:c01+c02",
+                    "label": "hard_negative",
+                    "reason": "synthetic",
+                },
+            ],
+        }
+        artifact_raw = canonical_json_bytes(artifact)
+        evidence = {
+            "schema": "sui.cognitive-assoc-adjudication-freeze-evidence/v2",
+            "benchmarkId": self.selected["benchmarkId"],
+            "state": "ai_proxy_adjudication_frozen",
+            "semanticBaselineGate": "eligible_for_explicit_open",
+            "referenceAuthority": "user_authorized_ai_proxy",
+            "humanAdjudicationObserved": False,
+            "aiProxyAdjudicationObserved": True,
+            "userAuthorizedHumanSubstitution": True,
+            "semanticBaselineBlind": True,
+            "contaminationDisclosed": True,
+            "sourceSelectedReviewSetSha256": selected_sha,
+            "adjudicatedArtifactSha256": hashlib.sha256(artifact_raw).hexdigest(),
+            "candidateCounts": {"total": 2, "pair": 1, "twoPlusOne": 1},
+        }
+        self.adjudicated_path.write_bytes(artifact_raw)
+        self.evidence_path.write_bytes(canonical_json_bytes(evidence))
+
+        result = run_baseline(
+            "A",
+            self.selected_path,
+            self.model_input_path,
+            self.adjudicated_path,
+            self.evidence_path,
+            None,
+            5.0,
+        )
+        self.assertEqual(result["candidateCount"], 2)
+
+        artifact["userAuthorizedHumanSubstitution"] = False
+        self.adjudicated_path.write_bytes(canonical_json_bytes(artifact))
+        with self.assertRaisesRegex(ValueError, "not user-authorized"):
+            run_baseline(
+                "A",
+                self.selected_path,
+                self.model_input_path,
+                self.adjudicated_path,
+                self.evidence_path,
+                None,
+                5.0,
+            )
 
     def test_a_runs_after_frozen_gate_and_preserves_candidate_order(self) -> None:
         result = run_baseline(
