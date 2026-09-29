@@ -21,7 +21,7 @@ T3の目的は、A/C/Eを同じ候補集合・同じpair / 2+1評価面で実行
 4. Evidenceの `semanticBaselineGate` が `eligible_for_explicit_open` である。
 5. adjudicated artifactのraw SHA-256がEvidenceと一致する。
 6. candidate集合・pair / 2+1件数がselected review setと一致する。
-7. human labelが事前登録済み4値だけである。
+7. reference labelが事前登録済み4値だけである。
 8. model inputが `documentId / cardId / text` だけを含むblind inputである。
 
 このgateは「自動的にbaselineを走らせる」ものではない。明示的な `run` 呼出しがあって初めて実行する。
@@ -102,3 +102,8 @@ python 01_Plans/dogfood/run_cognitive_assoc_baselines.py plan
 T2d完了後、frozen sourceからblind model inputを再生成し、同一selected review set / adjudicated artifact / Evidenceを指定してA/C/Eを個別にrunする。
 
 T4ではrun artifactを入力に、R1〜R5とCPU/memoryを別軸で比較する。U/L stratumは人間判定時には隠したまま、評価集計時にmachine-readable selected review setから復元して別々に報告する。
+
+
+## AI proxy substitution
+
+ユーザー明示指示により人手判定を生成AIへ代行する場合、human Evidenceとして保存しない。adjudication artifact/evidenceはAI proxy authority、humanAdjudicationObserved=false、user authorization、semantic-baseline blindness、既知のcontamination/limitationを保持する。baseline run artifactもreference authorityを引き継ぐ。

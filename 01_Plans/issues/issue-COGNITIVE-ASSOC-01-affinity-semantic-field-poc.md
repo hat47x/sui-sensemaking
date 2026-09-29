@@ -108,17 +108,19 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
 
 - [x] **T1 Research**: FlyHash / BioHash / FlyVec / Comply / APL局所抑制と、親和図法が要求する認知能力との差を整理する。
   - 成果: `01_Plans/research/fly-inspired-affinity-semantic-field-research-2026-09-10.md`
-- [ ] **T2 Benchmark freeze**: dogfoodからsmall-set benchmark v0をmodel実行前に固定する。
+- [x] **T2 Benchmark freeze**: dogfoodからsmall-set benchmark v0をmodel実行前に固定する。
   - [x] T2a: `textReviewed=true`のMeta R1 / R3をblob SHAで固定し、29枚のblind input、既存複数カード島、単独島、challenge positiveを事前登録した。
   - [x] T2b: cross-island pair 173件 / 2+1 candidate 346件の生成規則と期待件数を固定した。
   - [x] T2c: 座標・島タイトル・edge・source等をmodel inputから除外し、未レビューcardやblob driftをfail-closedにする準備器とunit testを追加した。
-  - [ ] T2d: bounded contrast review setをモデル出力を見る前にMaintainerが`hard_negative / related_but_separate / ambiguous_or_held / exclude`へ判定し、adjudicated revisionとして凍結する。
+  - [x] T2d: bounded contrast review setをsemantic baseline出力を見る前にreference adjudicatorが`hard_negative / related_but_separate / ambiguous_or_held / exclude`へ判定し、adjudicated revisionとして凍結する。Maintainer人手経路に加え、ユーザー明示指示による高能力生成AI proxyを許可する。
     - [x] frozen source blobから実source prepを再現し、29 blind cards / 173 pair / 346件の2+1をend-to-endで再生成した。
     - [x] 事前登録済みU/L規則で63件（pair 32 / 2+1 31）のmodel-blind review setを確定した。
     - [x] `01_Plans/dogfood/cognitive-assoc-benchmark-v0-pre-adjudication/`へselected review set、human adjudication packet、generation evidenceを凍結した。
     - [x] 63件のhuman response templateと、欠落・重複・label・model-blind attestation・source SHAをfail-closed検証するfreeze utilityを用意した。
     - [x] 4値選択と任意reasonだけを扱うself-contained offline HTML form generatorを追加し、U/L・島・座標・relation・model出力をUIから除外した。
-    - [ ] Maintainerが63件をmodel-blindで判定し、freeze utilityでadjudicated artifactの件数・SHA-256を凍結する。完了までsemantic baseline gateは開かない。
+    - [x] 2026-09-29、ユーザー明示指示により人手判定をOpenAI GPT-5.6 Sol（high reasoning）の生成AI proxyへ代行し、63件を凍結した。内訳は related_but_separate=41 / hard_negative=13 / exclude=5 / ambiguous_or_held=4。
+    - [x] AI proxy artifactは `cognitive-assoc-benchmark-v0-ai-adjudication/` に別schemaで保持し、human adjudication observed=false / userAuthorizedHumanSubstitution=true を固定した。semantic baseline出力は未閲覧。
+    - [x] 判定前のselected-review-set確認で sampling `selectionStrata` が偶発曝露したため strict model-blind=false として明示し、判定根拠には凍結packet本文のみを用いた。従ってこれはhuman consensusでも厳密なpacket-only blind Evidenceでもなく、user-authorized AI proxy referenceとしてT4を開く。
 - [x] **T3 Baseline harness**: A/C/Eを同じinterfaceで実行できるoffline harnessを作る。T2d完了前はsemantic resultを生成しない。
   - 成果: `01_Plans/dogfood/run_cognitive_assoc_baselines.py` / `cognitive-assoc-baseline-harness-v0.md`
   - AはUnicode char n-gram TF-IDF、Cは固定seed疎展開 + k-WTA、Eはtext-only local vector providerとして同じpair / 2+1 interfaceへ接続した。
@@ -130,7 +132,7 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
 - [ ] **T5 Learned sparse gate**: T4を根拠にDをProceed / Hold / Rejectで判断する。
   - [x] T5a: T4結果を見る前に、Dを試す独立理由・不足Evidence・Proceed/Hold/Rejectの意味とdriver categoryを事前登録した。
   - [x] T5a: T4 summaryからwinner/composite scoreを作らずmodel-free decision packetを生成し、Maintainer判断とSHA-256をfreezeするutilityを実装した。
-  - [ ] T5b: T4b完了後にpacketを生成し、MaintainerがProceed / Hold / Rejectを判定してdecision artifactを凍結する。
+  - [ ] T5b: T4b完了後にpacketを生成し、Maintainerまたはユーザー明示指示の高能力生成AI proxyがProceed / Hold / Rejectを判定してdecision artifactを凍結する。AI代行時はhuman decisionと表記しない。
 - [ ] **T6 Affinity-specific increment**: Proceed時のみFを追加し、group/separate/Critique/hold/graph/space/historyの寄与をablationする。
   - [x] T6a: T5/T6結果を見る前に、7 channelの研究用意味、target leakage禁止、add-one / leave-one-outの16 variant、R6評価、欠損channel時のHold境界を事前登録した。
   - [x] T6a: frozen T5 Proceed + D research artifact + strictly-pre-target source manifestが揃う場合だけablation planを生成するvalidatorを実装した。
@@ -139,12 +141,12 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - [x] T7a: unseen・non-self-referential・reviewed 30+ cardsのmatched task pair、study-seeded crossover、unaided/intervention/origin-blind reviewの3 phaseを事前登録した。
   - [x] T7a: candidate layerをresearch-only / autoApply=false / scoreOrRankingVisible=falseに固定し、R8をnewly-considered material / structure revision / residual-hold transitions / attention redistribution / candidate disposition / origin-blind retention / costへ分解した。
   - [x] T7a: task carryover、既視task、SUI自己言及task、条件間のdifficulty/card-count不整合をfail-closedにするdogfood plan generatorを実装した。
-  - [ ] T7b: T6b完了後に外部題材のtask manifestを凍結し、control / candidate-assisted両条件を実施してR8 Evidenceを固定する。
+  - [ ] T7b: T6b完了後に外部題材のtask manifestを凍結し、control / candidate-assisted両条件を実施してR8 Evidenceを固定する。判定作業はユーザー明示指示により生成AI proxyへ代行できるが、AI proxy結果をactual human usability / human cognitive effectとは呼ばない。
 - [ ] **T8 Architecture decision**: `no adoption / retrieval-only / candidate-cognition layer / ADR trigger` のいずれかへ変換する。
   - [x] T8a: 4択decisionの意味、必要Evidence、T5 Hold時の停止、T6/T7 not_applicable整合、research boundaryを結果前に事前登録した。
   - [x] T8a: evidence manifestからmodel-free decision packetを生成し、Maintainerのdecision / driver / rationaleをSHA-256付きでfreezeするutilityを実装した。
   - [x] T8a: retrieval-only / candidate-cognition layerを選んでもproductionAdoptionAuthorized=false、automaticSemanticAuthorityAuthorized=falseのままに固定した。
-  - [ ] T8b: T2〜T7の実Evidence完了後にevidence manifestを凍結し、Maintainerが4択decisionを確定する。
+  - [ ] T8b: T2〜T7の実Evidence完了後にevidence manifestを凍結し、Maintainerまたはユーザー明示指示の高能力生成AI proxyが4択decisionを確定する。AI代行時はdecision authorityをAI proxyとして保持する。
 
 ## 9. 評価軸と判定ゲート
 
@@ -161,7 +163,7 @@ Gate Aでは表層類似を越えたか、Gate BではFly-inspired方式に独�
 
 ## 10. 受入条件
 
-- [ ] model出力を見る前にsmall-set benchmark v0のcontrast判定までcommitで固定されている。
+- [x] semantic baseline出力を見る前にsmall-set benchmark v0のcontrast reference判定までcommitで固定されている。現行reference authorityはuser-authorized AI proxy。
 - [ ] A/C/Eが同じsnapshot・同じ候補数条件で比較できる。
 - [ ] hard positiveだけでなくhard negative / held-or-ambiguous / singletonを含む結果が残る。
 - [ ] pairwise retrievalと2〜3枚set-level評価を区別している。
