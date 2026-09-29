@@ -562,7 +562,12 @@ def plan_payload() -> dict[str, Any]:
         "schema": "sui.cognitive-assoc-baseline-plan/v1",
         "baselines": [BASELINES[key] for key in ("A", "C", "E")],
         "fixedBenchmarkRunGate": {
-            "requiredAdjudicationState": "human_adjudication_frozen",
+            "acceptedAdjudicationStates": [
+                "human_adjudication_frozen",
+                "ai_proxy_adjudication_frozen",
+            ],
+            "aiProxyRequiresUserAuthorization": True,
+            "aiProxyMustNotClaimHumanObservation": True,
             "requiredEvidenceGate": "eligible_for_explicit_open",
             "artifactSha256MustMatchEvidence": True,
             "selectedReviewSetSha256MustMatch": True,
@@ -588,7 +593,7 @@ def main() -> int:
     plan_parser.add_argument("--output", type=Path)
 
     run_parser = subparsers.add_parser(
-        "run", help="Run one baseline after frozen human adjudication is validated."
+        "run", help="Run one baseline after frozen reference adjudication is validated."
     )
     run_parser.add_argument("--baseline", choices=("A", "C", "E"), required=True)
     run_parser.add_argument("--selected-review-set", type=Path, required=True)
