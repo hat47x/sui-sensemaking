@@ -9,15 +9,15 @@
 
 この文書はT3の実行契約だけを固定する下位仕様である。親和図作業の目的、認知要件、方式選定理由は上位Issue・research record・preregistrationを正本とする。
 
-T3の目的は、A/C/Eを同じ候補集合・同じpair / 2+1評価面で実行できるoffline harnessを用意することである。**T3の実装完了はv0 benchmarkのsemantic result生成を意味しない。** T2dのmodel-blind human adjudicationがfreezeされるまで固定v0のrunは拒否する。
+T3の目的は、A/C/Eを同じ候補集合・同じpair / 2+1評価面で実行できるoffline harnessを用意することである。**T3の実装完了はv0 benchmarkのsemantic result生成を意味しない。** 固定v0のrunは、human v1またはユーザー明示指示によるAI-proxy v2のreference adjudicationがfreezeされるまで拒否する。
 
 ## 2. 共通run gate
 
 `run_cognitive_assoc_baselines.py run` は、次をすべて満たす場合だけ処理を進める。
 
 1. selected review setのraw byte SHA-256がadjudicated artifactと一致する。
-2. adjudicated artifactが `human_adjudication_frozen` である。
-3. adjudication Evidenceが `human_adjudication_frozen` である。
+2. adjudicated artifactが許可済みstate（`human_adjudication_frozen` または `ai_proxy_adjudication_frozen`）である。
+3. AI proxyの場合はuser authorization、`humanAdjudicationObserved=false`、semantic-baseline blindness、既知contaminationの明示をすべて満たす。
 4. Evidenceの `semanticBaselineGate` が `eligible_for_explicit_open` である。
 5. adjudicated artifactのraw SHA-256がEvidenceと一致する。
 6. candidate集合・pair / 2+1件数がselected review setと一致する。
