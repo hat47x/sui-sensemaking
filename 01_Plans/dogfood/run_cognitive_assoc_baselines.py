@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Offline A/C/E baseline harness for COGNITIVE-ASSOC-01.
 
-The fixed benchmark may not be scored until model-blind human adjudication is
-frozen. This module therefore separates:
+The fixed benchmark may not be scored until a frozen reference adjudication is
+available. The original path is model-blind human adjudication; a
+user-authorized generative-AI proxy may substitute when its provenance and
+limitations are retained explicitly. This module therefore separates:
 
 - plan: describe the A/C/E interface without reading benchmark data;
 - run: validate the frozen adjudication artifact/evidence first, then score.
@@ -30,6 +32,10 @@ RUN_SCHEMA = "sui.cognitive-assoc-baseline-run/v1"
 ADJUDICATION_SCHEMA = "sui.cognitive-assoc-adjudication/v1"
 ADJUDICATION_EVIDENCE_SCHEMA = (
     "sui.cognitive-assoc-adjudication-freeze-evidence/v1"
+)
+AI_ADJUDICATION_SCHEMA = "sui.cognitive-assoc-adjudication/v2"
+AI_ADJUDICATION_EVIDENCE_SCHEMA = (
+    "sui.cognitive-assoc-adjudication-freeze-evidence/v2"
 )
 EMBEDDING_REQUEST_SCHEMA = "sui.cognitive-assoc-embedding-request/v1"
 EMBEDDING_RESPONSE_SCHEMA = "sui.cognitive-assoc-embedding-response/v1"
@@ -170,24 +176,57 @@ def validate_frozen_gate(
 ) -> dict[str, str]:
     candidates = validate_selected_review_set(selected)
 
-    if adjudicated.get("schema") != ADJUDICATION_SCHEMA:
-        raise ValueError("adjudicated artifact schema is invalid")
-    if adjudicated.get("state") != "human_adjudication_frozen":
-        raise ValueError("human adjudication is not frozen")
-    if adjudicated.get("modelBlind") is not True:
-        raise ValueError("adjudicated artifact must be modelBlind")
     selected_sha = sha256_bytes(selected_raw)
+    schema = adjudicated.get("schema")
+    evidence_schema = evidence.get("schema")
+
+    if schema == ADJUDICATION_SCHEMA:
+        if adjudicated.get("state") != "human_adjudication_frozen":
+            raise ValueError("human adjudication is not frozen")
+        if adjudicated.get("modelBlind") is not True:
+            raise ValueError("human adjudication must be modelBlind")
+        if evidence_schema != ADJUDICATION_EVIDENCE_SCHEMA:
+            raise ValueError("human adjudication evidence schema is invalid")
+        if evidence.get("state") != "human_adjudication_frozen":
+            raise ValueError("human adjudication evidence is not frozen")
+        if evidence.get("modelBlind") is not True:
+            raise ValueError("human adjudication evidence must be modelBlind")
+    elif schema == AI_ADJUDICATION_SCHEMA:
+        if adjudicated.get("state") != "ai_proxy_adjudication_frozen":
+            raise ValueError("AI proxy adjudication is not frozen")
+        if adjudicated.get("adjudicationMode") != "generative_ai_proxy":
+            raise ValueError("AI adjudication mode is invalid")
+        if adjudicated.get("humanAdjudicationObserved") is not False:
+            raise ValueError("AI proxy must not claim human adjudication")
+        if adjudicated.get("userAuthorizedHumanSubstitution") is not True:
+            raise ValueError("AI proxy substitution was not user-authorized")
+        if adjudicated.get("semanticBaselineBlind") is not True:
+            raise ValueError("AI proxy must remain blind to semantic baseline outputs")
+        if adjudicated.get("contaminationDisclosed") is not True:
+            raise ValueError("AI proxy contamination boundary must be disclosed")
+        if evidence_schema != AI_ADJUDICATION_EVIDENCE_SCHEMA:
+            raise ValueError("AI adjudication evidence schema is invalid")
+        if evidence.get("state") != "ai_proxy_adjudication_frozen":
+            raise ValueError("AI adjudication evidence is not frozen")
+        if evidence.get("referenceAuthority") != "user_authorized_ai_proxy":
+            raise ValueError("AI adjudication reference authority is invalid")
+        if evidence.get("aiProxyAdjudicationObserved") is not True:
+            raise ValueError("AI adjudication evidence must identify AI proxy observation")
+        if evidence.get("humanAdjudicationObserved") is not False:
+            raise ValueError("AI adjudication evidence must not claim human observation")
+        if evidence.get("userAuthorizedHumanSubstitution") is not True:
+            raise ValueError("AI adjudication evidence lacks user authorization")
+        if evidence.get("semanticBaselineBlind") is not True:
+            raise ValueError("AI adjudication evidence must remain semantic-baseline blind")
+        if evidence.get("contaminationDisclosed") is not True:
+            raise ValueError("AI adjudication evidence must disclose contamination boundary")
+    else:
+        raise ValueError("adjudicated artifact schema is invalid")
+
     if adjudicated.get("sourceSelectedReviewSetSha256") != selected_sha:
         raise ValueError("adjudicated artifact selected-review-set SHA mismatch")
-
-    if evidence.get("schema") != ADJUDICATION_EVIDENCE_SCHEMA:
-        raise ValueError("adjudication evidence schema is invalid")
-    if evidence.get("state") != "human_adjudication_frozen":
-        raise ValueError("adjudication evidence is not frozen")
     if evidence.get("semanticBaselineGate") != "eligible_for_explicit_open":
         raise ValueError("semantic baseline gate is not eligible for explicit open")
-    if evidence.get("modelBlind") is not True:
-        raise ValueError("adjudication evidence must be modelBlind")
     if evidence.get("sourceSelectedReviewSetSha256") != selected_sha:
         raise ValueError("adjudication evidence selected-review-set SHA mismatch")
     if evidence.get("adjudicatedArtifactSha256") != sha256_bytes(adjudicated_raw):
@@ -210,7 +249,7 @@ def validate_frozen_gate(
         if candidate_id not in candidates:
             raise ValueError(f"unknown adjudicated candidate: {candidate_id}")
         if label not in REFERENCE_LABELS:
-            raise ValueError(f"candidate {candidate_id} has invalid human label")
+            raise ValueError(f"candidate {candidate_id} has invalid reference label")
         labels[candidate_id] = label
     if set(labels) != set(candidates):
         raise ValueError("adjudicated candidate set does not match selected review set")
