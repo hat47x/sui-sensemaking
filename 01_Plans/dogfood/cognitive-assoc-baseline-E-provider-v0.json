@@ -1,0 +1,46 @@
+{
+  "schema": "sui.cognitive-assoc-baseline-e-provider/v1",
+  "baselineId": "E",
+  "selectionState": "frozen_before_first_E_result",
+  "selectionDate": "2026-09-29",
+  "model": {
+    "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+    "task": "sentence-similarity",
+    "framework": "sentence-transformers",
+    "parameters": 117654272,
+    "embeddingDimension": 384,
+    "license": "apache-2.0",
+    "japaneseExplicitlySupported": true
+  },
+  "execution": {
+    "device": "cpu",
+    "encodeMethod": "SentenceTransformer.encode",
+    "normalizeEmbeddings": false,
+    "similarityMetric": "cosine",
+    "inputTransformation": "none",
+    "queryOrPassagePrefix": false,
+    "providerInputFields": [
+      "text"
+    ],
+    "candidateMetadataVisible": false
+  },
+  "selectionCriteria": [
+    "explicit Japanese/multilingual support",
+    "sentence-similarity / sentence-transformers direct use",
+    "small enough to remain a realistic local CPU reference",
+    "permissive license",
+    "no query/passage prefix policy needed for symmetric card-to-card comparison",
+    "established public model with stable immutable revision"
+  ],
+  "selectionProvenance": {
+    "AAndCResultsAlreadyObserved": true,
+    "EResultObservedBeforeSelection": false,
+    "selectedUsingACPerformance": false,
+    "limitation": "E model selection occurred after A/C partial results were visible; selection was constrained to exogenous operational/model-card criteria and is retained as a T4 interpretation limitation."
+  },
+  "authority": {
+    "productionAdoptionAuthorized": false,
+    "automaticSemanticAuthorityAuthorized": false
+  }
+}

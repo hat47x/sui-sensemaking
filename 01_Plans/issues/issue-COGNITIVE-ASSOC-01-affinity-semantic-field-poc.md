@@ -130,7 +130,8 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
   - [x] T4a: v0に事前登録paraphraseがないためR5 wording stabilityは`not_measured_in_v0`とし、結果を見てから例を追加しない境界を固定した。
   - [ ] T4b: T2d完了後に固定v0でA/C/E probeを実行し、単一winnerやcomposite scoreへ畳まず結果を凍結する。
     - [x] 2026-09-29、A/Cを固定source・固定63件AI-proxy referenceに対して決定論的に部分実行し、`cognitive-assoc-t4b-ai-proxy-ac/`へprobe/summary/Evidenceを凍結した。A recall@5平均=0.67647、C=0.29412。これは既存Python harnessのアルゴリズムをChatGPT Code Mode V8へ独立再実装したcross-checkであり、Python harness直接実行とは表記しない。
-    - [ ] A/Cをrepository Python harnessで再照合し、Eを事前固定したlocal sentence encoderで実行する。E完了前はT4b完了・winner・T5b判断を認めない。
+    - [x] E-v0 providerを最初のE実測前に `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2@e8f8c211226b894fcb81acc59f3b34ba3efd5f42` へ固定した。A/C結果は既に見えていたため完全な事前登録とはせず、E出力未観測・外生的な運用/model-card基準による選定という制約をEvidenceへ残す。
+    - [ ] A/Cをrepository Python harnessで再照合し、固定済みE providerをCPUで実行する。E完了前はT4b完了・winner・T5b判断を認めない。
 - [ ] **T5 Learned sparse gate**: T4を根拠にDをProceed / Hold / Rejectで判断する。
   - [x] T5a: T4結果を見る前に、Dを試す独立理由・不足Evidence・Proceed/Hold/Rejectの意味とdriver categoryを事前登録した。
   - [x] T5a: T4 summaryからwinner/composite scoreを作らずmodel-free decision packetを生成し、Maintainer判断とSHA-256をfreezeするutilityを実装した。
