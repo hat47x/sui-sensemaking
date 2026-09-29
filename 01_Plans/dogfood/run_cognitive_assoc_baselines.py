@@ -544,12 +544,36 @@ def run_baseline(
         representations,
     )
 
+    reference_authority = (
+        "human_model_blind"
+        if adjudicated.get("schema") == ADJUDICATION_SCHEMA
+        else "user_authorized_ai_proxy"
+    )
     return {
         "schema": RUN_SCHEMA,
         "benchmarkId": selected.get("benchmarkId"),
         "baseline": baseline_metadata,
         "sourceSelectedReviewSetSha256": sha256_bytes(selected_raw),
         "sourceAdjudicatedArtifactSha256": sha256_bytes(adjudicated_raw),
+        "referenceAdjudication": {
+            "authority": reference_authority,
+            "state": adjudicated.get("state"),
+            "humanAdjudicationObserved": (
+                True
+                if reference_authority == "human_model_blind"
+                else adjudicated.get("humanAdjudicationObserved")
+            ),
+            "semanticBaselineBlind": (
+                adjudicated.get("modelBlind")
+                if reference_authority == "human_model_blind"
+                else adjudicated.get("semanticBaselineBlind")
+            ),
+            "strictModelBlind": (
+                adjudicated.get("modelBlind")
+                if reference_authority == "human_model_blind"
+                else adjudicated.get("strictModelBlind")
+            ),
+        },
         "candidateCount": len(results),
         "rankingProduced": False,
         "aggregateMetricProduced": False,
