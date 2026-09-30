@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import math
+import sys
+import types
 import unittest
+from unittest import mock
 
 from run_cognitive_assoc_e_provider import (
     EXPECTED_DIMENSION,
@@ -11,6 +14,7 @@ from run_cognitive_assoc_e_provider import (
     REQUEST_SCHEMA,
     RESPONSE_SCHEMA,
     build_response,
+    load_model,
     normalize_vectors,
     validate_request,
 )
@@ -39,6 +43,32 @@ class CognitiveAssocEProviderTests(unittest.TestCase):
             "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
         )
         self.assertEqual(MODEL_REF, f"{MODEL_ID}@{MODEL_REVISION}")
+
+    def test_load_model_pins_revision_and_cpu(self) -> None:
+        calls = []
+
+        class FakeSentenceTransformer:
+            def __init__(self, model_id, **kwargs):
+                calls.append((model_id, dict(kwargs)))
+
+        module = types.SimpleNamespace(
+            SentenceTransformer=FakeSentenceTransformer
+        )
+        with mock.patch.dict(
+            sys.modules, {"sentence_transformers": module}
+        ):
+            model = load_model()
+
+        self.assertIsInstance(model, FakeSentenceTransformer)
+        self.assertEqual(
+            calls,
+            [
+                (
+                    MODEL_ID,
+                    {"revision": MODEL_REVISION, "device": "cpu"},
+                )
+            ],
+        )
 
     def test_request_accepts_only_schema_and_texts(self) -> None:
         texts = validate_request(
