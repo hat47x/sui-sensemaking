@@ -25,6 +25,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from run_cognitive_assoc_e_provider import validate_runtime_versions
+
 
 RECEIPT_SCHEMA = "sui.cognitive-assoc-t4b-fixed-run-receipt/v1"
 BENCHMARK_ID = "cognitive-assoc-benchmark-v0"
@@ -146,7 +148,12 @@ def require_frozen_blobs(repo_root: Path, manifest: dict[str, Any]) -> None:
             )
 
 
-def require_python_runtime() -> dict[str, str]:
+def require_python_runtime() -> dict[str, Any]:
+    try:
+        pinned_runtime = validate_runtime_versions()
+    except RuntimeError as exc:
+        raise FixedT4bError(str(exc)) from exc
+
     probe = (
         "import json, sentence_transformers, torch, transformers;"
         "print(json.dumps({"
@@ -169,6 +176,7 @@ def require_python_runtime() -> dict[str, str]:
     return {
         "python": platform.python_version(),
         "platform": platform.platform(),
+        "pinnedRuntime": pinned_runtime,
         **versions,
     }
 
