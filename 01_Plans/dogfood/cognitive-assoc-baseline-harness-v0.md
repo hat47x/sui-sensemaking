@@ -142,7 +142,7 @@ python 01_Plans/dogfood/run_cognitive_assoc_baselines.py run \
 
 必要依存は上記の固定runtime stackと固定revisionのmodel bytesである。Python/package version、依存、model bytesのいずれかが揃わない環境ではproviderは失敗し、別version・別modelへ自動fallbackしない。
 
-2026-09-30時点で、model downloadを伴わないprovider contract testは7件通過している。これはprotocol/constructor/fail-closed挙動の検証であり、E embedding実測ではない。
+2026-09-30、runtime Evidence / runtime freeze追加前のprovider contract testは7件通過した。その後に追加したruntime系テストは本Web実行環境では未実行であり、実行済みとは扱わない。いずれもE embedding実測とは別である。
 
 ## 6. 出力境界
 
