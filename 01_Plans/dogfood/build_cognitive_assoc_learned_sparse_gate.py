@@ -145,8 +145,16 @@ def _external_provider_runtime(
     runtime = baseline.get("R7_continuousLocalBudget")
     if not isinstance(runtime, dict):
         raise ValueError("R7 runtime evidence is required")
+    included = runtime.get("externalProviderMemoryIncluded")
+    if included not in (True, False):
+        raise ValueError("R7 externalProviderMemoryIncluded must be boolean")
+
     provider = runtime.get("externalProvider")
     if provider is None:
+        if included is True:
+            raise ValueError(
+                "R7 externalProviderMemoryIncluded=true requires externalProvider evidence"
+            )
         return None
     if not isinstance(provider, dict):
         raise ValueError("R7 externalProvider evidence must be an object")
@@ -186,7 +194,6 @@ def _external_provider_runtime(
     if scope == "provider-process-peak-rss-unavailable" and peak is not None:
         raise ValueError("R7 externalProvider unavailable scope must use null peakRssBytes")
 
-    included = runtime.get("externalProviderMemoryIncluded")
     if included is True and peak is None:
         raise ValueError(
             "R7 externalProviderMemoryIncluded=true requires provider peak RSS"
