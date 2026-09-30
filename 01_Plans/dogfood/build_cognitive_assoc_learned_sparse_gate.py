@@ -139,6 +139,72 @@ def _runtime(baseline: dict[str, Any], key: str) -> Any:
     return runtime.get(key)
 
 
+def _external_provider_runtime(
+    baseline: dict[str, Any],
+) -> dict[str, float | int | str | bool | None] | None:
+    runtime = baseline.get("R7_continuousLocalBudget")
+    if not isinstance(runtime, dict):
+        raise ValueError("R7 runtime evidence is required")
+    provider = runtime.get("externalProvider")
+    if provider is None:
+        return None
+    if not isinstance(provider, dict):
+        raise ValueError("R7 externalProvider evidence must be an object")
+
+    wall = _finite(
+        provider.get("wallMilliseconds"),
+        "R7.externalProvider.wallMilliseconds",
+    )
+    if wall < 0:
+        raise ValueError("R7 externalProvider.wallMilliseconds must be non-negative")
+
+    peak_raw = provider.get("peakRssBytes")
+    peak: int | None
+    if peak_raw is None:
+        peak = None
+    else:
+        peak_number = _finite(
+            peak_raw,
+            "R7.externalProvider.peakRssBytes",
+        )
+        if peak_number < 0:
+            raise ValueError("R7 externalProvider.peakRssBytes must be non-negative")
+        peak = int(peak_number)
+
+    scope = provider.get("memoryScope")
+    if scope not in {
+        "provider-process-peak-rss",
+        "provider-process-peak-rss-unavailable",
+    }:
+        raise ValueError("R7 externalProvider.memoryScope is invalid")
+    if provider.get("includesModelLoad") is not True:
+        raise ValueError("R7 externalProvider must include model load")
+    if provider.get("includesEncode") is not True:
+        raise ValueError("R7 externalProvider must include encode")
+    if scope == "provider-process-peak-rss" and peak is None:
+        raise ValueError("R7 externalProvider peak RSS scope requires peakRssBytes")
+    if scope == "provider-process-peak-rss-unavailable" and peak is not None:
+        raise ValueError("R7 externalProvider unavailable scope must use null peakRssBytes")
+
+    included = runtime.get("externalProviderMemoryIncluded")
+    if included is True and peak is None:
+        raise ValueError(
+            "R7 externalProviderMemoryIncluded=true requires provider peak RSS"
+        )
+    if included is False and peak is not None:
+        raise ValueError(
+            "R7 provider peak RSS requires externalProviderMemoryIncluded=true"
+        )
+
+    return {
+        "wallMilliseconds": wall,
+        "peakRssBytes": peak,
+        "memoryScope": scope,
+        "includesModelLoad": True,
+        "includesEncode": True,
+    }
+
+
 def _hard_negative_map(baseline: dict[str, Any]) -> dict[tuple[str, str], float]:
     rows = baseline.get("R2_surfaceDecoyContrast")
     if not isinstance(rows, list):
@@ -227,6 +293,8 @@ def build_gate_packet(summary: dict[str, Any], summary_raw: bytes) -> dict[str, 
         if baseline_id == "E" and runtime.get("externalProviderMemoryIncluded") is not True:
             missing_evidence.append("E:external_provider_memory_not_measured")
 
+    e_provider_runtime = _external_provider_runtime(e)
+
     observations = {
         "R1_recallAt3Mean": r1,
         "R1_EminusA": _delta(r1["E"], r1["A"]),
@@ -249,6 +317,15 @@ def build_gate_packet(summary: dict[str, Any], summary_raw: bytes) -> dict[str, 
             baseline_id: bool(_runtime(item, "externalProviderMemoryIncluded"))
             for baseline_id, item in mapped.items()
         },
+        "R7_EProviderWallMilliseconds": (
+            None if e_provider_runtime is None else e_provider_runtime["wallMilliseconds"]
+        ),
+        "R7_EProviderPeakRssBytes": (
+            None if e_provider_runtime is None else e_provider_runtime["peakRssBytes"]
+        ),
+        "R7_EProviderMemoryScope": (
+            None if e_provider_runtime is None else e_provider_runtime["memoryScope"]
+        ),
     }
 
     return {
