@@ -175,8 +175,10 @@ def _external_provider_runtime(
             peak_raw,
             "R7.externalProvider.peakRssBytes",
         )
-        if peak_number < 0:
-            raise ValueError("R7 externalProvider.peakRssBytes must be non-negative")
+        if peak_number < 0 or not peak_number.is_integer():
+            raise ValueError(
+                "R7 externalProvider.peakRssBytes must be a non-negative integer"
+            )
         peak = int(peak_number)
 
     scope = provider.get("memoryScope")
