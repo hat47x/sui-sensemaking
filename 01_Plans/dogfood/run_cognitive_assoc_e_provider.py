@@ -9,6 +9,7 @@ the request schema and therefore rejected.
 
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import math
 import sys
@@ -22,6 +23,52 @@ MODEL_ID = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 MODEL_REVISION = "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
 MODEL_REF = f"{MODEL_ID}@{MODEL_REVISION}"
 EXPECTED_DIMENSION = 384
+EXPECTED_PYTHON_MAJOR_MINOR = (3, 12)
+EXPECTED_PACKAGE_VERSIONS = {
+    "sentence-transformers": "6.1.0",
+    "transformers": "5.17.0",
+    "torch": "2.14.0",
+}
+
+
+
+def validate_runtime_versions(
+    *,
+    version_getter: Callable[[str], str] = importlib.metadata.version,
+    python_version: tuple[int, int] | None = None,
+) -> dict[str, Any]:
+    observed_python = (
+        tuple(sys.version_info[:2])
+        if python_version is None
+        else tuple(python_version)
+    )
+    if observed_python != EXPECTED_PYTHON_MAJOR_MINOR:
+        expected = ".".join(str(part) for part in EXPECTED_PYTHON_MAJOR_MINOR)
+        observed = ".".join(str(part) for part in observed_python)
+        raise RuntimeError(
+            f"baseline E requires Python {expected}; observed {observed}"
+        )
+
+    observed_packages: dict[str, str] = {}
+    for package, expected in EXPECTED_PACKAGE_VERSIONS.items():
+        try:
+            observed = version_getter(package)
+        except importlib.metadata.PackageNotFoundError as exc:
+            raise RuntimeError(
+                f"baseline E requires {package}=={expected}; package is missing"
+            ) from exc
+        if observed != expected:
+            raise RuntimeError(
+                f"baseline E requires {package}=={expected}; observed {observed}"
+            )
+        observed_packages[package] = observed
+
+    return {
+        "pythonMajorMinor": ".".join(
+            str(part) for part in EXPECTED_PYTHON_MAJOR_MINOR
+        ),
+        "packages": observed_packages,
+    }
 
 
 def peak_rss_bytes() -> int | None:
@@ -57,6 +104,7 @@ def validate_request(value: Any) -> list[str]:
 
 
 def load_model():
+    validate_runtime_versions()
     try:
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:
