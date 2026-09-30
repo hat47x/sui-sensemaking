@@ -210,6 +210,17 @@ class LearnedSparseGateTests(unittest.TestCase):
             "provider-process-peak-rss",
         )
 
+    def test_packet_rejects_memory_included_without_provider_evidence(self) -> None:
+        summary = copy.deepcopy(self.summary)
+        e = next(item for item in summary["baselines"] if item["baselineId"] == "E")
+        e["R7_continuousLocalBudget"]["externalProviderMemoryIncluded"] = True
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "requires externalProvider evidence",
+        ):
+            build_gate_packet(summary, summary_bytes(summary))
+
     def test_response_template_is_uncommitted(self) -> None:
         response = build_response_template(self.packet, self.packet_raw)
         self.assertEqual(response["schema"], RESPONSE_SCHEMA)
