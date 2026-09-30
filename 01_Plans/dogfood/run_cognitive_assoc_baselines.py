@@ -394,6 +394,7 @@ def validate_provider_runtime_evidence(value: Any) -> dict[str, Any] | None:
         or isinstance(peak, bool)
         or not math.isfinite(float(peak))
         or float(peak) < 0
+        or not float(peak).is_integer()
     ):
         raise ValueError("local encoder runtimeEvidence peakRssBytes is invalid")
 
