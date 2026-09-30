@@ -388,12 +388,12 @@ def main() -> int:
 
     preflight_parser = subparsers.add_parser("preflight")
     preflight_parser.add_argument("--repo-root", type=Path, default=Path.cwd())
-    preflight_parser.add_argument("--expected-source-git-sha")
+    preflight_parser.add_argument("--expected-source-git-sha", required=True)
 
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     run_parser.add_argument("--output-dir", type=Path, required=True)
-    run_parser.add_argument("--expected-source-git-sha")
+    run_parser.add_argument("--expected-source-git-sha", required=True)
     run_parser.add_argument("--encoder-timeout", type=float, default=600.0)
 
     args = parser.parse_args()
