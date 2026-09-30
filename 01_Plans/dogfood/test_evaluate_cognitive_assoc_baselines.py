@@ -149,6 +149,13 @@ class CognitiveAssocEvaluationHarnessTests(unittest.TestCase):
                     "schema": {EMBEDDING_RESPONSE_SCHEMA!r},
                     "model": "synthetic-semantic",
                     "vectors": vectors,
+                    "runtimeEvidence": {{
+                        "wallMilliseconds": 12.5,
+                        "peakRssBytes": 123456,
+                        "memoryScope": "provider-process-peak-rss",
+                        "includesModelLoad": True,
+                        "includesEncode": True,
+                    }},
                 }}, sys.stdout)
                 """
             ).strip()
@@ -288,11 +295,21 @@ class CognitiveAssocEvaluationHarnessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not eligible"):
             self.build_probe("A")
 
-    def test_runtime_scope_does_not_claim_provider_memory(self) -> None:
+    def test_runtime_scope_keeps_provider_memory_separate(self) -> None:
         probe = self.build_probe("E")
         runtime = probe["runtimeEvidence"]
         self.assertEqual(runtime["memoryScope"], "python-harness-process-only")
-        self.assertIs(runtime["externalProviderMemoryIncluded"], False)
+        self.assertIs(runtime["externalProviderMemoryIncluded"], True)
+        self.assertEqual(
+            runtime["externalProvider"],
+            {
+                "wallMilliseconds": 12.5,
+                "peakRssBytes": 123456,
+                "memoryScope": "provider-process-peak-rss",
+                "includesModelLoad": True,
+                "includesEncode": True,
+            },
+        )
         self.assertGreaterEqual(runtime["wallMilliseconds"], 0.0)
         self.assertGreater(runtime["pythonHarnessPeakBytes"], 0)
 

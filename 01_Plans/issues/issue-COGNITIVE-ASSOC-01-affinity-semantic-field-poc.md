@@ -133,6 +133,7 @@ Fly-inspired方式はそのための候補の一つにすぎず、採用する�
     - [x] E-v0 providerを最初のE実測前に `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2@e8f8c211226b894fcb81acc59f3b34ba3efd5f42` へ固定した。A/C結果は既に見えていたため完全な事前登録とはせず、E出力未観測・外生的な運用/model-card基準による選定という制約をEvidenceへ残す。
     - [x] 固定E provider `run_cognitive_assoc_e_provider.py` を実装し、model/revision/CPU、text-only request、384次元、finite値、非正規化encodeをfail-closedで固定した。model downloadなしのfocused unit testは7/7通過。
     - [x] `run_cognitive_assoc_t4b_fixed.py` を追加し、exact source Git SHA、frozen blob materialization、blind model-input SHA、A/C/E同一harness、固定E model identity、summary artifact digestを一つのreceiptへ束ねる実行経路を用意した。preflightはmodel load/inferenceを成功扱いしない。
+    - [x] E provider自身のmodel load + encode wall timeとpeak RSSをoptional runtime Evidenceとして返し、transport検証後にT4 R7へ独立保持し、T5 packetへ実値を渡せる経路を追加した。RSS未取得時は従来どおり不足EvidenceとしてHold要因に残す。
     - [ ] A/Cをrepository Python harnessで再照合し、固定済みE providerを実model bytesでCPU実行する。E完了前はT4b完了・winner・T5b判断を認めない。
 - [ ] **T5 Learned sparse gate**: T4を根拠にDをProceed / Hold / Rejectで判断する。
   - [x] T5a: T4結果を見る前に、Dを試す独立理由・不足Evidence・Proceed/Hold/Rejectの意味とdriver categoryを事前登録した。

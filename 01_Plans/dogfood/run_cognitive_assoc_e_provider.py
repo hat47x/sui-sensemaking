@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import math
 import sys
+import time
 from typing import Any, Callable
 
 
@@ -21,6 +22,25 @@ MODEL_ID = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 MODEL_REVISION = "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
 MODEL_REF = f"{MODEL_ID}@{MODEL_REVISION}"
 EXPECTED_DIMENSION = 384
+
+
+def peak_rss_bytes() -> int | None:
+    """Return this provider process peak RSS in bytes when the OS exposes it."""
+    try:
+        import resource
+    except ImportError:
+        return None
+
+    value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    numeric = float(value)
+    if not math.isfinite(numeric) or numeric < 0:
+        return None
+
+    # Darwin reports bytes; Linux and the target CPU job hosts report KiB.
+    multiplier = 1 if sys.platform == "darwin" else 1024
+    return int(numeric * multiplier)
 
 
 def validate_request(value: Any) -> list[str]:
@@ -85,6 +105,7 @@ def build_response(
     model_factory: Callable[[], Any] = load_model,
 ) -> dict[str, Any]:
     texts = validate_request(request)
+    started = time.perf_counter()
     model = model_factory()
     raw_vectors = model.encode(
         texts,
@@ -93,10 +114,23 @@ def build_response(
         show_progress_bar=False,
     )
     vectors = normalize_vectors(raw_vectors, len(texts))
+    peak_rss = peak_rss_bytes()
+    runtime_evidence = {
+        "wallMilliseconds": (time.perf_counter() - started) * 1000.0,
+        "peakRssBytes": peak_rss,
+        "memoryScope": (
+            "provider-process-peak-rss"
+            if peak_rss is not None
+            else "provider-process-peak-rss-unavailable"
+        ),
+        "includesModelLoad": True,
+        "includesEncode": True,
+    }
     return {
         "schema": RESPONSE_SCHEMA,
         "model": MODEL_REF,
         "vectors": vectors,
+        "runtimeEvidence": runtime_evidence,
     }
 
 
