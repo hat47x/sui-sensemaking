@@ -69,9 +69,18 @@ response:
 {
   "schema": "sui.cognitive-assoc-embedding-response/v1",
   "model": "local-model-identifier",
-  "vectors": [[0.1, 0.2]]
+  "vectors": [[0.1, 0.2]],
+  "runtimeEvidence": {
+    "wallMilliseconds": 12.5,
+    "peakRssBytes": 123456,
+    "memoryScope": "provider-process-peak-rss",
+    "includesModelLoad": true,
+    "includesEncode": true
+  }
 }
 ```
+
+`runtimeEvidence` はoptionalであり、存在する場合はtransport層で型・有限値・memory scope・model load/encode包含を検証する。RSS取得不能時は `peakRssBytes=null` / `memoryScope=provider-process-peak-rss-unavailable` とする。provider memoryはharness側tracemallocへ混ぜない。
 
 providerへ渡すのはcard本文だけであり、candidate ID、human label、U/L stratum、島、座標、relationは渡さない。
 
