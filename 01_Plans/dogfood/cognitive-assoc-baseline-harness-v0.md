@@ -99,6 +99,17 @@ providerへ渡すのはcard本文だけであり、candidate ID、human label、
 - config: `cognitive-assoc-baseline-E-provider-v0.json`
 - executable provider: `run_cognitive_assoc_e_provider.py`
 
+実モデル出力を一度も観測していない2026-09-30時点で、固定runのruntimeも同configへ追加凍結した。
+
+- Python: 3.12
+- `sentence-transformers==6.1.0`
+- `transformers==5.17.0`
+- `torch==2.14.0`
+- provider / fixed T4b preflightはこの組合せからのdriftをfail-closedにする
+- 実行receiptにはPython patch版と実際のpackage versionも残す
+
+runtime版の選定はA/C性能値ではなく、E結果未観測のまま現行安定版・CPU実行可能性を基準に行った。これもmodel selectionと同様にT4 Evidenceへ残す。
+
 選定条件は日本語明示対応、sentence-similarity用途、local CPUで現実的な規模、許容的license、対称card-to-card比較でquery/passage prefixを要しないこと、immutable revisionを固定できることである。
 
 A/C部分結果は選定時点で既に観測済みであるため、完全な結果前preregistrationとは主張しない。ただしE自身の出力は未観測であり、A/Cの数値優劣を選定条件には用いていない。この順序はT4解釈上の制約として保持する。
@@ -129,7 +140,7 @@ python 01_Plans/dogfood/run_cognitive_assoc_baselines.py run \
   --output <baseline-E.json>
 ```
 
-必要依存は `sentence-transformers` と固定revisionのmodel bytesである。依存またはmodel bytesを取得できない環境ではproviderは失敗し、代替modelへ自動fallbackしない。
+必要依存は上記の固定runtime stackと固定revisionのmodel bytesである。Python/package version、依存、model bytesのいずれかが揃わない環境ではproviderは失敗し、別version・別modelへ自動fallbackしない。
 
 2026-09-30時点で、model downloadを伴わないprovider contract testは7件通過している。これはprotocol/constructor/fail-closed挙動の検証であり、E embedding実測ではない。
 
