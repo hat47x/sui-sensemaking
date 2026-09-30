@@ -898,3 +898,11 @@ Updated: 2026-08-03
   - ハイフン連結の識別子を含む場合、スペース区切りの表示名（`SUI Sensemaking`）とハイフン形（`Sui-Sensemaking`）を**別のマッピングとして**扱う。表示名のあとにハイフンが来ることはないので、`<表示名>-` は常に壊れた識別子。
   - 改名後は必ず「production定数とtest送信値」をペアで grep 突き合わせる（`git grep -nE 'Sui-Sensemaking-[A-Za-z-]+'` で全wire契約名を一覧化して一意性を確認）。
   - `git restore <file>` はpass適用済みの未コミット変更も巻き戻す。CRLFファイルへのEdit後にdiffがCRLFノイズで膨れたら、`git restore` ではなく `sed -i`（CRLF保持）で該当行だけ再適用する。
+
+
+## 2026-09-30: COGNITIVE-ASSOC-01 T4b実モデル実行が現行ChatGPT実行環境で開始できない
+
+- 事象: 固定E providerのactual CPU実測を行うため、ローカルcloneと外部CPU Jobの2経路を試した。ローカル側は `github.com` の名前解決に失敗し、外部CPU Jobは起動要求時点で `402 Payment Required` となり、どちらもmodel load/inference開始前に停止した。
+- 原因: 前者は当該containerの外向きDNS/ネットワーク制約、後者は接続済みcompute側の課金・利用資格境界。E model/providerの品質失敗ではない。
+- 対応: T4b完了・E実測・winner・T5b判断を一切主張せず、exact Git SHA・frozen source・model-input SHA・A/C/E・artifact digestを一括検証する `run_cognitive_assoc_t4b_fixed.py` を同じ研究branchへ追加した。
+- 再発防止: 外部model実測はprovider/model評価と実行基盤可用性を分離する。Jobがprovider起動前に課金/資格で拒否された場合はmodel failureへ読み替えず、同一固定runnerを利用可能なCPU hostへ持ち替える。
