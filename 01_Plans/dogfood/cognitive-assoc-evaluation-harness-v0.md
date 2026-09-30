@@ -83,10 +83,11 @@ v0にはモデル実行前に凍結されたparaphrase caseが存在しない。
 
 probe実行時に次を記録する。
 
-- wall time
+- probe全体のwall time
 - Python harness processのpeak traced memory
+- E providerが明示的に返した場合のみ、provider processのwall time / peak RSS / memory scope
 
-外部local encoderのmemoryはPython側のtracemallocには含まれないため、`externalProviderMemoryIncluded=false` と明示する。Eの実memory比較にはprovider側の独立Evidenceが必要である。
+Python側のtracemallocと外部providerのRSSは別の測定系なので合算しない。E providerが `peakRssBytes` を返し、transport validationを通過した場合だけ `externalProviderMemoryIncluded=true` とし、`runtimeEvidence.externalProvider` に独立Evidenceとして保持する。provider側でRSSを取得できない環境では従来どおりfalseのままにし、T5では不足Evidenceとして扱う。
 
 ## 8. R6 / R8
 
