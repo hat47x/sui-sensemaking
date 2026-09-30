@@ -20,6 +20,7 @@ import json
 import platform
 import subprocess
 import sys
+import shlex
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -203,7 +204,7 @@ def build_probe_command(
         command.extend(
             [
                 "--encoder-command",
-                f"{sys.executable} {repo_root / PROVIDER_REL}",
+                shlex.join([sys.executable, str(repo_root / PROVIDER_REL)]),
                 "--encoder-timeout",
                 str(encoder_timeout),
             ]
