@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +12,7 @@ import run_cognitive_assoc_t4b_fixed as mod
 
 class FixedT4bRunnerTests(unittest.TestCase):
     def test_e_probe_command_pins_only_fixed_provider(self) -> None:
-        root = Path("/repo")
+        root = Path("/repo with space")
         model_input = Path("/tmp/model-input.jsonl")
 
         a = mod.build_probe_command(
@@ -32,7 +33,12 @@ class FixedT4bRunnerTests(unittest.TestCase):
         self.assertNotIn("--encoder-command", a)
         self.assertIn("--encoder-command", e)
         at = e.index("--encoder-command")
-        self.assertIn("run_cognitive_assoc_e_provider.py", e[at + 1])
+        provider_argv = shlex.split(e[at + 1])
+        self.assertEqual(provider_argv[0], mod.sys.executable)
+        self.assertEqual(
+            provider_argv[1],
+            str(root / mod.PROVIDER_REL),
+        )
         self.assertEqual(e[e.index("--encoder-timeout") + 1], "123.0")
 
     def test_clean_checkout_rejects_source_sha_drift(self) -> None:
