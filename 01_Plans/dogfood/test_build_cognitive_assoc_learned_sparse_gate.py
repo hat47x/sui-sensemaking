@@ -36,7 +36,27 @@ def baseline(
     hard_l: float,
     wall_ms: float,
     provider_memory: bool,
+    provider_peak_bytes: int | None = None,
+    provider_wall_ms: float | None = None,
 ) -> dict:
+    runtime = {
+        "wallMilliseconds": wall_ms,
+        "pythonHarnessPeakBytes": 4096,
+        "memoryScope": "python-harness-process-only",
+        "externalProviderMemoryIncluded": provider_memory,
+    }
+    if provider_wall_ms is not None:
+        runtime["externalProvider"] = {
+            "wallMilliseconds": provider_wall_ms,
+            "peakRssBytes": provider_peak_bytes,
+            "memoryScope": (
+                "provider-process-peak-rss"
+                if provider_peak_bytes is not None
+                else "provider-process-peak-rss-unavailable"
+            ),
+            "includesModelLoad": True,
+            "includesEncode": True,
+        }
     return {
         "baselineId": baseline_id,
         "R1_deepSemanticCandidateRecall": {
@@ -78,12 +98,7 @@ def baseline(
             "status": "not_measured_in_v0",
             "reason": "no preregistered paraphrase cases",
         },
-        "R7_continuousLocalBudget": {
-            "wallMilliseconds": wall_ms,
-            "pythonHarnessPeakBytes": 4096,
-            "memoryScope": "python-harness-process-only",
-            "externalProviderMemoryIncluded": provider_memory,
-        },
+        "R7_continuousLocalBudget": runtime,
         "notMeasuredHere": {
             "R6_affinityFeedbackIncrement": "requires T6",
             "R8_cognitiveControlIncrement": "requires T7",
@@ -163,6 +178,37 @@ class LearnedSparseGateTests(unittest.TestCase):
         self.assertIn("Proceed", self.packet["decisionSemantics"])
         self.assertIn("Hold", self.packet["decisionSemantics"])
         self.assertIn("Reject", self.packet["decisionSemantics"])
+
+    def test_packet_carries_measured_e_provider_memory(self) -> None:
+        summary = copy.deepcopy(self.summary)
+        e = next(item for item in summary["baselines"] if item["baselineId"] == "E")
+        e["R7_continuousLocalBudget"]["externalProviderMemoryIncluded"] = True
+        e["R7_continuousLocalBudget"]["externalProvider"] = {
+            "wallMilliseconds": 15.25,
+            "peakRssBytes": 987654,
+            "memoryScope": "provider-process-peak-rss",
+            "includesModelLoad": True,
+            "includesEncode": True,
+        }
+
+        packet = build_gate_packet(summary, summary_bytes(summary))
+
+        self.assertNotIn(
+            "E:external_provider_memory_not_measured",
+            packet["missingEvidence"],
+        )
+        self.assertEqual(
+            packet["observations"]["R7_EProviderPeakRssBytes"],
+            987654,
+        )
+        self.assertAlmostEqual(
+            packet["observations"]["R7_EProviderWallMilliseconds"],
+            15.25,
+        )
+        self.assertEqual(
+            packet["observations"]["R7_EProviderMemoryScope"],
+            "provider-process-peak-rss",
+        )
 
     def test_response_template_is_uncommitted(self) -> None:
         response = build_response_template(self.packet, self.packet_raw)
