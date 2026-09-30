@@ -117,9 +117,9 @@ def require_clean_checkout(
         raise FixedT4bError(
             f"source Git SHA drift: expected {expected_source_git_sha}, got {source_sha}"
         )
-    dirty = git_output(repo_root, "status", "--porcelain", "--untracked-files=no")
+    dirty = git_output(repo_root, "status", "--porcelain")
     if dirty:
-        raise FixedT4bError("tracked working tree changes are not allowed for fixed T4b")
+        raise FixedT4bError("working tree must be clean, including untracked files, for fixed T4b")
     return source_sha
 
 
