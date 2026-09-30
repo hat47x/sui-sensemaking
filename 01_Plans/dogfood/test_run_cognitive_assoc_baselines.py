@@ -258,6 +258,13 @@ class CognitiveAssocBaselineHarnessTests(unittest.TestCase):
                     "schema": {EMBEDDING_RESPONSE_SCHEMA!r},
                     "model": "synthetic-local-encoder",
                     "vectors": vectors,
+                    "runtimeEvidence": {{
+                        "wallMilliseconds": 9.5,
+                        "peakRssBytes": 65536,
+                        "memoryScope": "provider-process-peak-rss",
+                        "includesModelLoad": True,
+                        "includesEncode": True,
+                    }},
                 }}, sys.stdout)
                 """
             ).strip()
@@ -279,6 +286,16 @@ class CognitiveAssocBaselineHarnessTests(unittest.TestCase):
         )
         self.assertEqual(result["baseline"]["id"], "E")
         self.assertEqual(result["baseline"]["model"], "synthetic-local-encoder")
+        self.assertEqual(
+            result["baseline"]["providerRuntimeEvidence"],
+            {
+                "wallMilliseconds": 9.5,
+                "peakRssBytes": 65536,
+                "memoryScope": "provider-process-peak-rss",
+                "includesModelLoad": True,
+                "includesEncode": True,
+            },
+        )
         self.assertEqual(result["candidateCount"], 2)
 
     def test_e_requires_encoder_command(self) -> None:
@@ -381,6 +398,43 @@ class CognitiveAssocBaselineHarnessTests(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(ValueError, "wrong vector count"):
+            run_baseline(
+                "E",
+                self.selected_path,
+                self.model_input_path,
+                self.adjudicated_path,
+                self.evidence_path,
+                f"{sys.executable} {path}",
+                5.0,
+            )
+
+
+    def test_external_encoder_bad_runtime_evidence_fails_closed(self) -> None:
+        path = self.root / "bad_runtime_encoder.py"
+        path.write_text(
+            textwrap.dedent(
+                f"""
+                import json
+                import sys
+                request = json.load(sys.stdin)
+                json.dump({{
+                    "schema": {EMBEDDING_RESPONSE_SCHEMA!r},
+                    "model": "bad-runtime",
+                    "vectors": [[1.0, 0.0, 0.0] for _ in request["texts"]],
+                    "runtimeEvidence": {{
+                        "wallMilliseconds": 1.0,
+                        "peakRssBytes": -1,
+                        "memoryScope": "provider-process-peak-rss",
+                        "includesModelLoad": True,
+                        "includesEncode": True,
+                    }},
+                }}, sys.stdout)
+                """
+            ).strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "peakRssBytes is invalid"):
             run_baseline(
                 "E",
                 self.selected_path,
