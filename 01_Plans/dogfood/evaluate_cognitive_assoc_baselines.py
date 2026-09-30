@@ -333,6 +333,7 @@ def build_probe_artifact(
         representations, baseline_metadata = build_representations(
             baseline, cards, encoder_command, encoder_timeout
         )
+        provider_runtime = baseline_metadata.pop("providerRuntimeEvidence", None)
         raw_contrast = score_candidates(
             baseline,
             candidates,
@@ -374,6 +375,18 @@ def build_probe_artifact(
     else:
         raise ValueError("validated adjudication schema is not recognized")
 
+    runtime_evidence = {
+        "wallMilliseconds": (time.perf_counter() - started) * 1000.0,
+        "pythonHarnessPeakBytes": peak,
+        "memoryScope": "python-harness-process-only",
+        "externalProviderMemoryIncluded": bool(
+            isinstance(provider_runtime, dict)
+            and provider_runtime.get("peakRssBytes") is not None
+        ),
+    }
+    if provider_runtime is not None:
+        runtime_evidence["externalProvider"] = provider_runtime
+
     return {
         "schema": PROBE_SCHEMA,
         "benchmarkId": selected.get("benchmarkId"),
@@ -391,12 +404,7 @@ def build_probe_artifact(
         "contrast": contrast,
         "challengePositive": challenge_results,
         "singleton": singleton_results,
-        "runtimeEvidence": {
-            "wallMilliseconds": (time.perf_counter() - started) * 1000.0,
-            "pythonHarnessPeakBytes": peak,
-            "memoryScope": "python-harness-process-only",
-            "externalProviderMemoryIncluded": False,
-        },
+        "runtimeEvidence": runtime_evidence,
     }
 
 
