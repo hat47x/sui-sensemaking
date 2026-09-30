@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
 import math
 import sys
 import types
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from run_cognitive_assoc_e_provider import (
     EXPECTED_DIMENSION,
+    EXPECTED_PACKAGE_VERSIONS,
+    EXPECTED_PYTHON_MAJOR_MINOR,
     MODEL_ID,
     MODEL_REF,
     MODEL_REVISION,
@@ -17,6 +21,7 @@ from run_cognitive_assoc_e_provider import (
     load_model,
     normalize_vectors,
     validate_request,
+    validate_runtime_versions,
 )
 
 
@@ -44,6 +49,45 @@ class CognitiveAssocEProviderTests(unittest.TestCase):
         )
         self.assertEqual(MODEL_REF, f"{MODEL_ID}@{MODEL_REVISION}")
 
+    def test_runtime_versions_are_pinned_and_match_config(self) -> None:
+        observed = validate_runtime_versions(
+            version_getter=EXPECTED_PACKAGE_VERSIONS.__getitem__,
+            python_version=EXPECTED_PYTHON_MAJOR_MINOR,
+        )
+        self.assertEqual(observed["pythonMajorMinor"], "3.12")
+        self.assertEqual(observed["packages"], EXPECTED_PACKAGE_VERSIONS)
+
+        config = json.loads(
+            (
+                Path(__file__).with_name(
+                    "cognitive-assoc-baseline-E-provider-v0.json"
+                )
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(config["runtimeFreeze"]["pythonMajorMinor"], "3.12")
+        self.assertEqual(
+            config["runtimeFreeze"]["packages"],
+            EXPECTED_PACKAGE_VERSIONS,
+        )
+
+    def test_runtime_version_drift_fails_closed(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "requires Python 3.12"):
+            validate_runtime_versions(
+                version_getter=EXPECTED_PACKAGE_VERSIONS.__getitem__,
+                python_version=(3, 13),
+            )
+
+        versions = dict(EXPECTED_PACKAGE_VERSIONS)
+        versions["transformers"] = "0.0.0"
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "requires transformers==5.17.0",
+        ):
+            validate_runtime_versions(
+                version_getter=versions.__getitem__,
+                python_version=EXPECTED_PYTHON_MAJOR_MINOR,
+            )
+
     def test_load_model_pins_revision_and_cpu(self) -> None:
         calls = []
 
@@ -54,11 +98,14 @@ class CognitiveAssocEProviderTests(unittest.TestCase):
         module = types.SimpleNamespace(
             SentenceTransformer=FakeSentenceTransformer
         )
-        with mock.patch.dict(
+        with mock.patch(
+            "run_cognitive_assoc_e_provider.validate_runtime_versions"
+        ) as runtime_check, mock.patch.dict(
             sys.modules, {"sentence_transformers": module}
         ):
             model = load_model()
 
+        runtime_check.assert_called_once_with()
         self.assertIsInstance(model, FakeSentenceTransformer)
         self.assertEqual(
             calls,
