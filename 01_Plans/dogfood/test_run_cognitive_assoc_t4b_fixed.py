@@ -50,14 +50,15 @@ class FixedT4bRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(mod.FixedT4bError, "source Git SHA drift"):
                 mod.require_clean_checkout(Path("/repo"), "expected-sha")
 
-    def test_clean_checkout_rejects_tracked_changes(self) -> None:
-        with mock.patch.object(
-            mod,
-            "git_output",
-            side_effect=["same-sha", " M tracked.py"],
-        ):
-            with self.assertRaisesRegex(mod.FixedT4bError, "tracked working tree"):
-                mod.require_clean_checkout(Path("/repo"), "same-sha")
+    def test_clean_checkout_rejects_tracked_or_untracked_changes(self) -> None:
+        for status in (" M tracked.py", "?? scratch.py"):
+            with self.subTest(status=status), mock.patch.object(
+                mod,
+                "git_output",
+                side_effect=["same-sha", status],
+            ):
+                with self.assertRaisesRegex(mod.FixedT4bError, "working tree must be clean"):
+                    mod.require_clean_checkout(Path("/repo"), "same-sha")
 
     def test_verify_model_input_matches_generation_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as td:
