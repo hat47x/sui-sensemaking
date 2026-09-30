@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shlex
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -88,6 +89,41 @@ class FixedT4bRunnerTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(mod.FixedT4bError, "model-input SHA-256 drift"):
                 mod.verify_model_input(root, model_input)
+
+    def test_require_python_runtime_records_pinned_identity(self) -> None:
+        pinned = {
+            "pythonMajorMinor": "3.12",
+            "packages": {
+                "sentence-transformers": "6.1.0",
+                "transformers": "5.17.0",
+                "torch": "2.14.0",
+            },
+        }
+        completed = types.SimpleNamespace(
+            stdout=json.dumps(
+                {
+                    "sentenceTransformers": "6.1.0",
+                    "torch": "2.14.0",
+                    "transformers": "5.17.0",
+                }
+            )
+        )
+        with mock.patch.object(
+            mod,
+            "validate_runtime_versions",
+            return_value=pinned,
+        ) as validate, mock.patch.object(
+            mod,
+            "run_checked",
+            return_value=completed,
+        ):
+            runtime = mod.require_python_runtime()
+
+        validate.assert_called_once_with()
+        self.assertEqual(runtime["pinnedRuntime"], pinned)
+        self.assertEqual(runtime["sentenceTransformers"], "6.1.0")
+        self.assertEqual(runtime["transformers"], "5.17.0")
+        self.assertEqual(runtime["torch"], "2.14.0")
 
     def test_preflight_does_not_claim_model_execution(self) -> None:
         with mock.patch.object(
