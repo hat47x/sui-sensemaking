@@ -88,10 +88,41 @@ providerへ渡すのはcard本文だけであり、candidate ID、human label、
 - query/passage prefix: なし
 - provider input: card本文のみ
 - config: `cognitive-assoc-baseline-E-provider-v0.json`
+- executable provider: `run_cognitive_assoc_e_provider.py`
 
 選定条件は日本語明示対応、sentence-similarity用途、local CPUで現実的な規模、許容的license、対称card-to-card比較でquery/passage prefixを要しないこと、immutable revisionを固定できることである。
 
 A/C部分結果は選定時点で既に観測済みであるため、完全な結果前preregistrationとは主張しない。ただしE自身の出力は未観測であり、A/Cの数値優劣を選定条件には用いていない。この順序はT4解釈上の制約として保持する。
+
+### E-v0 concrete provider
+
+固定model/revisionを実行するproviderは `run_cognitive_assoc_e_provider.py` とする。
+
+providerは次をfail-closedで検証する。
+
+- stdin requestは `schema / texts` だけを許可する。
+- model ID / revision / CPU deviceはコード側で固定する。
+- `normalize_embeddings=false` とし、cosineは既存harness側で計算する。
+- 応答vector数は入力text数と一致する。
+- 各vectorは384次元かつfiniteな数値のみとする。
+- 応答model fieldは `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2@e8f8c211226b894fcb81acc59f3b34ba3efd5f42` とする。
+
+実行例:
+
+```bash
+python 01_Plans/dogfood/run_cognitive_assoc_baselines.py run \
+  --baseline E \
+  --selected-review-set <selected-review-set.json> \
+  --model-input <model-input.jsonl> \
+  --adjudicated <adjudicated.json> \
+  --adjudication-evidence <evidence.json> \
+  --encoder-command "python 01_Plans/dogfood/run_cognitive_assoc_e_provider.py" \
+  --output <baseline-E.json>
+```
+
+必要依存は `sentence-transformers` と固定revisionのmodel bytesである。依存またはmodel bytesを取得できない環境ではproviderは失敗し、代替modelへ自動fallbackしない。
+
+2026-09-30時点で、model downloadを伴わないprovider contract testは7件通過している。これはprotocol/constructor/fail-closed挙動の検証であり、E embedding実測ではない。
 
 ## 6. 出力境界
 
