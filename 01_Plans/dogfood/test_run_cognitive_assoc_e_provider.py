@@ -103,16 +103,12 @@ class CognitiveAssocEProviderTests(unittest.TestCase):
         self.assertEqual(response["model"], MODEL_REF)
         self.assertEqual(len(response["vectors"]), 2)
         self.assertEqual(len(response["vectors"][0]), EXPECTED_DIMENSION)
-        self.assertEqual(
-            response["runtimeEvidence"],
-            {
-                "wallMilliseconds": 25.000000000000355,
-                "peakRssBytes": 123456,
-                "memoryScope": "provider-process-peak-rss",
-                "includesModelLoad": True,
-                "includesEncode": True,
-            },
-        )
+        runtime = response["runtimeEvidence"]
+        self.assertAlmostEqual(runtime["wallMilliseconds"], 25.0)
+        self.assertEqual(runtime["peakRssBytes"], 123456)
+        self.assertEqual(runtime["memoryScope"], "provider-process-peak-rss")
+        self.assertIs(runtime["includesModelLoad"], True)
+        self.assertIs(runtime["includesEncode"], True)
 
         texts, kwargs = model.calls[0]
         self.assertEqual(texts, ["a", "b"])
