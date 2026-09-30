@@ -360,11 +360,76 @@ def dense_centroid(vectors: list[list[float]]) -> list[float]:
     ]
 
 
+def validate_provider_runtime_evidence(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("local encoder runtimeEvidence must be an object")
+
+    required = {
+        "wallMilliseconds",
+        "peakRssBytes",
+        "memoryScope",
+        "includesModelLoad",
+        "includesEncode",
+    }
+    if set(value) != required:
+        raise ValueError(
+            "local encoder runtimeEvidence must contain only "
+            "wallMilliseconds/peakRssBytes/memoryScope/includesModelLoad/includesEncode"
+        )
+
+    wall = value.get("wallMilliseconds")
+    if (
+        not isinstance(wall, (int, float))
+        or isinstance(wall, bool)
+        or not math.isfinite(float(wall))
+        or float(wall) < 0
+    ):
+        raise ValueError("local encoder runtimeEvidence wallMilliseconds is invalid")
+
+    peak = value.get("peakRssBytes")
+    if peak is not None and (
+        not isinstance(peak, (int, float))
+        or isinstance(peak, bool)
+        or not math.isfinite(float(peak))
+        or float(peak) < 0
+    ):
+        raise ValueError("local encoder runtimeEvidence peakRssBytes is invalid")
+
+    scope = value.get("memoryScope")
+    if scope not in {
+        "provider-process-peak-rss",
+        "provider-process-peak-rss-unavailable",
+    }:
+        raise ValueError("local encoder runtimeEvidence memoryScope is invalid")
+
+    includes_model = value.get("includesModelLoad")
+    includes_encode = value.get("includesEncode")
+    if includes_model is not True or includes_encode is not True:
+        raise ValueError(
+            "local encoder runtimeEvidence must include model load and encode"
+        )
+
+    if scope == "provider-process-peak-rss" and peak is None:
+        raise ValueError("provider peak RSS scope requires peakRssBytes")
+    if scope == "provider-process-peak-rss-unavailable" and peak is not None:
+        raise ValueError("unavailable provider peak RSS scope must use null peakRssBytes")
+
+    return {
+        "wallMilliseconds": float(wall),
+        "peakRssBytes": None if peak is None else int(peak),
+        "memoryScope": scope,
+        "includesModelLoad": True,
+        "includesEncode": True,
+    }
+
+
 def run_external_encoder(
     command: str,
     ordered_cards: list[tuple[tuple[str, str], str]],
     timeout_seconds: float,
-) -> tuple[dict[tuple[str, str], list[float]], str]:
+) -> tuple[dict[tuple[str, str], list[float]], str, dict[str, Any] | None]:
     argv = shlex.split(command)
     if not argv:
         raise ValueError("encoder command is empty")
@@ -415,7 +480,10 @@ def run_external_encoder(
         elif len(vector) != dimension:
             raise ValueError("local encoder vectors have inconsistent dimensions")
         normalized[key] = vector
-    return normalized, model
+    runtime_evidence = validate_provider_runtime_evidence(
+        response.get("runtimeEvidence")
+    )
+    return normalized, model, runtime_evidence
 
 
 def build_representations(
@@ -444,11 +512,13 @@ def build_representations(
         if not encoder_command:
             raise ValueError("baseline E requires --encoder-command")
         ordered = sorted(cards.items(), key=lambda item: item[0])
-        vectors, model = run_external_encoder(
+        vectors, model, provider_runtime = run_external_encoder(
             encoder_command, ordered, encoder_timeout
         )
         metadata = dict(BASELINES["E"])
         metadata["model"] = model
+        if provider_runtime is not None:
+            metadata["providerRuntimeEvidence"] = provider_runtime
         return vectors, metadata
     raise ValueError(f"unsupported baseline: {baseline}")
 
