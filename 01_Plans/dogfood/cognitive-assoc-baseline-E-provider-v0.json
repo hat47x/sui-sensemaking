@@ -42,5 +42,16 @@
   "authority": {
     "productionAdoptionAuthorized": false,
     "automaticSemanticAuthorityAuthorized": false
+  },
+  "runtimeFreeze": {
+    "state": "frozen_before_first_E_result",
+    "date": "2026-09-30",
+    "pythonMajorMinor": "3.12",
+    "packages": {
+      "sentence-transformers": "6.1.0",
+      "transformers": "5.17.0",
+      "torch": "2.14.0"
+    },
+    "selectionBasis": "Current stable PyPI releases selected before any baseline-E embedding/result was observed; package selection did not use A/C performance values."
   }
 }
