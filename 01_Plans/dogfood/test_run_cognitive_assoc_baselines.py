@@ -20,6 +20,7 @@ from run_cognitive_assoc_baselines import (
     RUN_SCHEMA,
     plan_payload,
     run_baseline,
+    validate_provider_runtime_evidence,
 )
 
 
@@ -297,6 +298,27 @@ class CognitiveAssocBaselineHarnessTests(unittest.TestCase):
             },
         )
         self.assertEqual(result["candidateCount"], 2)
+
+    def test_provider_runtime_evidence_is_optional_and_can_report_unavailable_rss(self) -> None:
+        self.assertIsNone(validate_provider_runtime_evidence(None))
+        self.assertEqual(
+            validate_provider_runtime_evidence(
+                {
+                    "wallMilliseconds": 7.25,
+                    "peakRssBytes": None,
+                    "memoryScope": "provider-process-peak-rss-unavailable",
+                    "includesModelLoad": True,
+                    "includesEncode": True,
+                }
+            ),
+            {
+                "wallMilliseconds": 7.25,
+                "peakRssBytes": None,
+                "memoryScope": "provider-process-peak-rss-unavailable",
+                "includesModelLoad": True,
+                "includesEncode": True,
+            },
+        )
 
     def test_e_requires_encoder_command(self) -> None:
         with self.assertRaisesRegex(ValueError, "requires --encoder-command"):
