@@ -87,15 +87,32 @@ class CognitiveAssocEProviderTests(unittest.TestCase):
 
     def test_build_response_uses_cpu_contract_without_normalization(self) -> None:
         model = FakeModel()
-        response = build_response(
-            {"schema": REQUEST_SCHEMA, "texts": ["a", "b"]},
-            model_factory=lambda: model,
-        )
+        with mock.patch(
+            "run_cognitive_assoc_e_provider.peak_rss_bytes",
+            return_value=123456,
+        ), mock.patch(
+            "run_cognitive_assoc_e_provider.time.perf_counter",
+            side_effect=[10.0, 10.025],
+        ):
+            response = build_response(
+                {"schema": REQUEST_SCHEMA, "texts": ["a", "b"]},
+                model_factory=lambda: model,
+            )
 
         self.assertEqual(response["schema"], RESPONSE_SCHEMA)
         self.assertEqual(response["model"], MODEL_REF)
         self.assertEqual(len(response["vectors"]), 2)
         self.assertEqual(len(response["vectors"][0]), EXPECTED_DIMENSION)
+        self.assertEqual(
+            response["runtimeEvidence"],
+            {
+                "wallMilliseconds": 25.000000000000355,
+                "peakRssBytes": 123456,
+                "memoryScope": "provider-process-peak-rss",
+                "includesModelLoad": True,
+                "includesEncode": True,
+            },
+        )
 
         texts, kwargs = model.calls[0]
         self.assertEqual(texts, ["a", "b"])
