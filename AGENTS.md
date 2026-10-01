@@ -155,6 +155,7 @@ AIが自律的に判断できる範囲を4段階で定義する。現在のセ�
 
 現段階は個人OSS・プレリリースであり、`ADR-0039` を適用します。
 
+- **開発体制の前提（2026-10-01）: 1人の開発者が生成AIを用いて開発する。** 外部協力者・複数人レビュー・第三者の確保を完了条件にする制約は置かない。実在の第三者証拠（T1）は追加入力であり、ゲートではない（`VALUE-REALNESS-01` の証拠階層を参照）。SafeMode等の安全不変条件（§7）はこの前提で緩和しない。
 - 意思決定者と実行者は `Maintainer` に集約する。
 - issue memoは `Type / Status / Source Issue / Priority / Scope / Related ADR / Expected verification level / Acceptance / Validation` を最小項目とする。
 - ADRは、長期的・横断的・破壊的な契約変更、安全境界変更、複数の合理的選択肢が残る場合に限る。

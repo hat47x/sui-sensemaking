@@ -147,7 +147,8 @@ KJ統合では、これらを単に「未完成なもの」として並べるの
 
 - `01_Plans/issues/issue-VALUE-REALNESS-01-third-party-beachhead-validation.md`
   - 本Issueの未完受入条件である「第三者観察による支持・修正・棄却」と、初見利用者による説明確認の実証元。
-  - 内部dogfood、架空サンプル、自動テストで代替しない。`VALUE-REALNESS-01` が完了するまでは、本Issueを最終完了扱いにしない。
+  - 2026-10-01の体制前提（1人＋生成AI）により、`VALUE-REALNESS-01` の証拠階層T1/T2/T3のいずれでも判断してよい。ただしT3（生成AI模擬）のみに基づく支持・修正・棄却は `provisional` と明記する。
+  - 内部dogfood（SUI自身を題材にしたもの）、架空サンプル、自動テストは、引き続き第三者観察の代替として数えない。`VALUE-REALNESS-01` の完了までは、本Issueを最終完了扱いにしない。
 
 ## 受入条件
 
