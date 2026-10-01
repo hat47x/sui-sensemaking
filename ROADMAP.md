@@ -27,5 +27,5 @@ KJキャンバス、島・関係・保留、SafeModeのshare/export、import har
 ## 将来候補（約束ではない）
 
 - 大規模な質的統合（類似カード統合、島の階層化、鳥観と詳細の往復）
-- AI・認知器による認知支援（`ADR-0090`）。決定論的構造方式 → 軽量統計/疎方式 → semantic方式の順で、下位方式では埋まらない認知上の欠落がT2/T3 Evidenceで確認されたときだけ昇格する。SafeMode・Evidence・Provenanceは方式と独立に維持する
+- AI・認知器による認知支援（`ADR-0090`）。決定論的構造方式 → 軽量統計/疎方式 → semantic方式の順で検討し、T3は探索上の provisional Evidence、T2で同じ認知上の欠落・増分が再現されたときに製品候補へ昇格する。SafeMode・Evidence・Provenanceは方式と独立に維持する
 - 定額/オフラインAIとの協働（外部AIへ文脈を書き出し、結果を構造化提案として受け取る）
