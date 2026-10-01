@@ -263,7 +263,7 @@ def test_structural_cluster_score_stays_internal_to_ir() -> None:
             "cluster_id": "cc-0001",
             "card_ids": ["c-office", "c-remote"],
             "basis": "relation",
-            "score": 1.0,
+            "score": 0.5,
         }
     ]
 
