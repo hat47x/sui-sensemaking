@@ -1,69 +1,13 @@
-## 概要 / Summary
+## 概要
 
-- このPRで何を変更したか
-- なぜ必要か
+- 何を変更したか / なぜ必要か
 
-## 変更内容 / Changes
+## テスト
 
-- [ ] ドキュメント更新
-- [ ] フロントエンド変更
-- [ ] バックエンド変更
-- [ ] CI / ワークフロー変更
+- 実行したコマンドと結果（未実施は理由とともに明記）
 
-## テスト / Testing
+## チェックリスト
 
-ローカルとCIで再現できるよう、実行証跡を記載してください。未実施の場合も理由と再開条件を空欄にせず、該当しない項目は `N/A` とします。
-
-```md
-- command: `python 01_Plans/docs_check.py`
-- result: pass | fail | not executed（要約またはCI run URL）
-- not_executed_reason: N/A | 未実施の理由
-- resume_condition: N/A | 実行を再開できる条件
-```
-
-必要なコマンドが複数ある場合は、この4項目をコマンドごとに複製してください。
-
-### 複雑性・性能予算 / UQ次元（UI・性能影響時）
-
-UI の操作や常設表示、または性能に影響する変更を行う場合は、該当する予算を記載してください。影響がない場合は `N/A` とします。
-
-```md
-- 複雑性予算（`ADR-0043`）
-  - 初期表示への純増: なし | +N（理由）
-  - 保留・違和感操作の距離: 不変 | 改善 | 悪化（理由）
-  - 取り消し・復帰導線: あり | N/A
-- 性能予算（`ADR-0046`）
-  - 代表規模での主要操作: 不変 | 改善 | 悪化（理由）
-  - 100ms超の同期処理: なし | worker化済み | 悪化（理由）
-- 触れるUQ次元（`ADR-0044`）: UQ-1..6のうち該当するもの、または N/A
-```
-
-### AUTH verification log（AUTH関連変更時は必須）
-
-```md
-- classification: Smoke | Core | Safety
-
-- Level 1 (required): pass | fail
-  - command:
-    - `cd 03_Implement/frontend && npx playwright test -g "auth" --reporter=line`
-    - `cd 03_Implement/backend && pytest tests/test_auth_jit_provisioning.py -m auth_level1`
-  - result:
-
-- Level 2 (conditional): pass | fail | skipped
-  - trigger matched: yes | no
-  - trigger reason:
-    - `AUTH-IMPL-01: <schema only | auth boundary changed>`
-    - `AUTH-API-02: <contract changed | boundary unchanged | not in scope>`
-  - command:
-    - `cd 03_Implement/backend && AUTH_PROVIDER_PROFILE_DIR=tests/federation/profiles tests/scripts/run_auth_level2.sh`
-  - fixture (required when executed): `tests/federation/profiles/google_oidc.json`
-  - result:
-  - skip reason (if skipped):
-```
-
-## チェックリスト / Checklist
-
-- [ ] 関連Issueをリンクした
 - [ ] 破壊的変更の有無を明記した
-- [ ] diff / merge / import に影響する変更ならテストを追加・更新した
-- [ ] セキュリティ影響がある場合は `SECURITY.md` に沿って対応した
+- [ ] 契約（API・スキーマ・環境変数）を変えた場合は `02_Architecture/` を更新した
+- [ ] 安全不変条件（SafeMode・proposal-only・`human_reviewed`・share/export・import）を緩和していない

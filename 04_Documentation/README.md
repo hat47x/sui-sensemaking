@@ -18,8 +18,7 @@
 | 一般利用者向け公開入口 | `public_index.md` | Gist や外部共有の先頭に使う |
 | 一般利用者/運用者向け公開文書 | `getting_started.md`, `installation.md`, `configuration.md`, `data_handling.md`, `operations.md`, `security.md`, `security_operational_guidelines.md`, `acceptance_check.md`, `ui_catalog.md`, `diagnostics.md`, `canonicalization.md`, `ce2_low_risk_ai_assist.md`, `local_llm_ops_guide.md`, `narratives.md`, `external_agent_workflow.md`, `observability.md` | 公開候補。実装済み事実、安全境界、手動確認に限定する |
 | 04文書保守者向け | `README.md`, `release.md` | 公開準備やリリース確認の管理用。Gist本文には原則含めない |
-| 開発者/AIエージェント向け | `codex_skill_operations.md`（移転案内のみ）, `e2e_testing.md`（移転案内のみ）, `e2e_verification_log_2026-03-03.md`（移転案内のみ） | 公開利用ガイドには含めず、開発・検証・AI運用の文脈で参照する。正本は `00_Prompt/codex_skill_operations.md`、`01_Plans/issues/e2e_verification_logs/e2e_verification_log_2026-03-03.md`、`03_Implement/frontend/docs/e2e_testing.md`（2026-08-07移転） |
-| 内部計画/判断ログ | `../01_Plans/issues/*.md`, `../01_Plans/adr/*.md`, `../00_Prompt/*.md` | 公開本文へ混入しない。必要な場合も利用者向けに確定済み事実へ要約してから別途反映する |
+| 内部計画/判断ログ | `../01_Plans/adr/*.md`, `../00_Prompt/*.md` | 公開本文へ混入しない。必要な場合も利用者向けに確定済み事実へ要約してから別途反映する |
 
 分類に迷う場合は、一般利用者が安全に操作するための確定済み手順か、開発・保守・内部判断のための記録かで判定します。未承認仕様、内部 issue、ADR の詳細、AIエージェント作業ログは公開入口へ入れません。
 
@@ -60,9 +59,7 @@
 
 - この README。
 - [assets/screenshots/README.md](assets/screenshots/README.md)。
-- [codex_skill_operations.md](codex_skill_operations.md)（移転案内のみ。正本は `../00_Prompt/codex_skill_operations.md`）。
 - [e2e_testing.md](e2e_testing.md)（移転案内のみ。正本は `../03_Implement/frontend/docs/e2e_testing.md`）。
-- [e2e_verification_log_2026-03-03.md](e2e_verification_log_2026-03-03.md)（移転案内のみ。正本は `../01_Plans/issues/e2e_verification_logs/e2e_verification_log_2026-03-03.md`）。
 - 公開作業の manifest、commit hash、PR、issue、ADR、内部作業ログ。
 
 ## 画面例の管理

@@ -43,8 +43,7 @@ git diff --check
 3. 手動smoke testで利用者の主要操作を確認する。
 4. security、SafeMode、外部サービスとの共有の安全境界が後退していないことを確認する。
 5. data handlingの観点でexport、share、ログ、外部サービスとの共有の扱いを確認する。
-6. `01_Plans/issues/done/issue-PRODUCT-QA-01-release-readiness-quality-gates.md` のG0〜G7と価値ゲートに未解消のBlockerがないことを確認する。
-7. rollback方針を確認する。
+6. rollback方針を確認する。
 
 frontend:
 
@@ -71,12 +70,6 @@ docker compose up --build -d
 curl -fsS http://localhost:8080/api/healthz
 ```
 
-文書契約:
-
-```bash
-python 01_Plans/docs_check.py
-python 01_Plans/dogfood/validate_dogfood_docs.py
-```
 
 ## タグ作成手順
 

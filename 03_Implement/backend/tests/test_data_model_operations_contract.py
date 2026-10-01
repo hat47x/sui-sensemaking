@@ -7,11 +7,6 @@ DATA_MODEL_OVERVIEW = ROOT / "02_Architecture/data_model_operations_overview.htm
 SCHEMAS = ROOT / "02_Architecture/schemas.md"
 API = ROOT / "02_Architecture/api.md"
 ADR_0033 = ROOT / "01_Plans/adr/ADR-0033-mvp-data-support-and-maintenance-boundary.md"
-DATA_MODEL_ISSUE = (
-    ROOT
-    / "01_Plans/issues/done/"
-    / "issue-DATA-MODEL-OPS-01-mvp-data-model-overview-and-crud-boundary.md"
-)
 
 SUPPORT_LEVELS = {"L1", "L1.5", "L2", "L2.5", "L3", "L0"}
 
@@ -212,9 +207,8 @@ def test_data_model_contract_references_are_wired_across_design_docs() -> None:
     schemas = _read(SCHEMAS)
     api = _read(API)
     adr = _read(ADR_0033)
-    issue = _read(DATA_MODEL_ISSUE)
 
-    for text in (overview, schemas, adr, issue):
+    for text in (overview, schemas, adr):
         for support_level in SUPPORT_LEVELS:
             assert support_level in text
 

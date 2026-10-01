@@ -104,7 +104,6 @@ docker compose up --build
 ### 4) このリポジトリでの相談・報告窓口
 
 - バグ候補・機能案: [`CONTRIBUTING.md`](CONTRIBUTING.md) の現行手順に沿ってDiscussionsで共有し、実行可能な作業は内部issue memoへ整理
-- 相談・運用知見の共有: [`DISCUSSIONS.md`](DISCUSSIONS.md)
 - 脆弱性報告: [`SECURITY.md`](SECURITY.md)
 - 一般的なサポート導線: [`SUPPORT.md`](SUPPORT.md)
 
@@ -157,7 +156,6 @@ SUI Sensemaking は、
 |---|---|---|
 | [README.md](README.md) | プロジェクト概要・開発原則・文書案内の入口 | 方針変更、文書構成変更、初見利用者向け導線変更時 |
 | [ROADMAP.md](ROADMAP.md) | 今後の開発方針（短期・中期・長期）を示す公開計画 | リリース計画変更、優先度見直し、非目標更新時 |
-| [DISCUSSIONS.md](DISCUSSIONS.md) | GitHub Discussions の運用窓口 | 議論カテゴリや運用ルール変更時 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 貢献フロー・レビュー基準 | 開発フロー・レビュー要件更新時 |
 | [SECURITY.md](SECURITY.md) | 脆弱性報告と対応ポリシー | 報告窓口やSLA変更時 |
 | [SUPPORT.md](SUPPORT.md) | 問い合わせ・サポート窓口 | 連絡経路や対応範囲変更時 |

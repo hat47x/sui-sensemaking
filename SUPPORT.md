@@ -31,7 +31,7 @@ sui-sensemaking の使い方、障害調査、セキュリティ連絡の入口�
 
 判断に迷う場合は、まず [データ取り扱い](04_Documentation/data_handling.md) を確認してください。
 
-GitHub Issuesは現在運用していません。開始時は`CONTRIBUTING.md`と`01_Plans/issues/README.md`を同時更新して案内します。セキュリティ問題を公開Discussionsへ投稿しないでください。
+GitHub Issuesは現在運用していません。セキュリティ問題を公開Discussionsへ投稿しないでください。
 
 ## 障害時の最初の確認
 

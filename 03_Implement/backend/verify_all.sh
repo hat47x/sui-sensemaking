@@ -127,12 +127,6 @@ check "LLM integration tests (mock — all 6 AI tasks)" \
     -m "not ollama" -q
 
 # ------------------------------------------------------------------
-# 8. Docs check
-# ------------------------------------------------------------------
-check "Documentation contract checks" \
-  $VENV_PYTHON "$(git rev-parse --show-toplevel 2>/dev/null || echo '/mnt/d/GIT/sui-sensemaking')/01_Plans/docs_check.py"
-
-# ------------------------------------------------------------------
 # 9. API/MCP verification (non-Web paths)
 # ------------------------------------------------------------------
 # These curl/tsx-based checks exercise the admin CLI/API and MCP paths an
