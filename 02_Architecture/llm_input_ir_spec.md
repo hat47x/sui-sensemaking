@@ -328,6 +328,7 @@ A2 contract test では次を機械判定する。
 2. spatial-based 候補: 座標距離の近傍グラフ（k=3）で連結な集合を列挙。`coordinates` が無い IR（§2.2.1 で非要求のエンドポイント）では spatial 候補を生成しない。
 3. 同一 `card_ids` は `basis` を統合し1件にする（`relation` 優先）。
 4. `score` は `round(min(1.0, density + cohesion) / 2, 4)`。
+   - `score` はrelation/spatialグラフの**構造上の密度・凝集度を再現するための内部診断値**であり、カード内容の意味的類似度、重要度、確信度、採用順位ではない。IR/監査には保持できるが、AI promptや利用者向け候補へ数値として露出してsemantic authorityへ読み替えない（`ADR-0090`）。
 
 **ir_version 1.1 での明文化**（AC-2「曖昧語なし」を満たすため。1.0 は `density` / `cohesion` / `cluster_id` の採番順・候補の粒度を定義しておらず、決定論的に再現できなかった）:
 
