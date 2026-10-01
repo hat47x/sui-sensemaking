@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-"""Run the KJ-operation quality evaluation for issue-AI-EVAL-01 (L2 criterion ③).
+"""Run a bounded AI-operation smoke/quality probe on the synthetic KJ fixture.
 
-Executes the DeepSeek real-API evaluation once SUI_DEEPSEEK_API_KEY
-is set. With --dry-run it uses a stub provider to verify the pipeline.
+The script exercises real FastAPI routes. --dry-run replaces only the provider
+call with a deterministic stub and is contract smoke evidence, not content-quality
+evidence. A real provider run still uses a synthetic fixture: it is neither
+ADR-0089 T1/T2 evidence nor evidence of human cognitive increment.
+
+Results are printed to stdout. This script does not maintain a result ledger or
+turn qualitative observations into a composite pass/fail score.
 
 Usage:
-  # Pipeline check without API key (stub provider)
+  # Contract/pipeline smoke without an API key
   python run_ai_eval.py --dry-run
 
-  # Real-API evaluation (requires SUI_DEEPSEEK_API_KEY)
+  # Provider quality probe on the same synthetic fixture
   export SUI_LLM_PROVIDER=deepseek
   export SUI_DEEPSEEK_API_KEY=<key>
   python run_ai_eval.py
-
-Output: results printed to stdout in the ai_eval_results.md table format.
 """
 
 from __future__ import annotations
@@ -86,7 +89,7 @@ def main() -> int:
     (_build_refine_card_text_prompt etc.) are exercised — the same
     prompt instructions a production client receives.
     """
-    parser = argparse.ArgumentParser(description="KJ-operation quality evaluation (AI-EVAL-01)")
+    parser = argparse.ArgumentParser(description="Synthetic KJ AI-operation smoke/quality probe")
     parser.add_argument("--dry-run", action="store_true", help="Use stub provider (no API key needed)")
     parser.add_argument("--refine-count", type=int, default=10, help="Number of cards to refine (default 10)")
     args = parser.parse_args()
@@ -97,8 +100,14 @@ def main() -> int:
 
     doc = DocumentV1.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
     mode = "DRY-RUN (stub)" if args.dry_run else "REAL-API (DeepSeek)"
-    print(f"=== AI Evaluation ({mode}) ===")
+    print(f"=== AI Operation Probe ({mode}) ===")
     print(f"Document: {doc.id} ({len(doc.cards)} cards, {len(doc.islands)} islands)")
+    print(
+        "Evidence boundary: synthetic fixture; not ADR-0089 T1/T2 and "
+        "not evidence of human cognitive increment."
+    )
+    if args.dry_run:
+        print("Dry-run boundary: contract/pipeline smoke only; content quality is not evaluated.")
 
     # Dry-run: swap the routes' generate_with_fallback with a stub so the
     # real endpoint flow is exercised without calling the API.
@@ -160,10 +169,10 @@ def _run_eval(client_app, doc: DocumentV1, refine_count: int) -> None:
             print(f"| {i} | {island.id} ({len(island.cardIds)}枚) | {summary[:60]} | 要確認 |")
         print(f"\n成功: {summary_passed}/{len(doc.islands)}（3軸の定性判定は人間が実施）")
 
-    print("\n=== 手順 ===")
-    print("1. 3軸（名詞止め解除・元意味保持/代弁性・過剰言い換えなし）で定性判定")
-    print("2. 結果を 01_Plans/dogfood/ai_eval_results.md のテーブルへ記録")
-    print("3. 2軸以上合格で「実用可」。L2基準③は2操作以上で実用可なら達成")
+    print("\n=== 解釈境界 ===")
+    print("1. 各出力は定性軸ごとに観察し、単一scoreやwinnerへ畳まない")
+    print("2. 必要なEvidenceはPR/commitの理由へ要約し、別の結果台帳は作らない")
+    print("3. このfixtureだけで一次利用価値や認知増分、製品既定への昇格を主張しない")
     return 0
 
 
