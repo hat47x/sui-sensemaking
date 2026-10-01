@@ -1,6 +1,6 @@
 # ADR-0003-phase0-bootstrap: Phase 0: プロジェクト骨格
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-02-24
 - Deciders: Project Maintainers
 - Scope: `01_Plans/`

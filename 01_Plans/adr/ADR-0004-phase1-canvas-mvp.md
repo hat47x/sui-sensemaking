@@ -1,6 +1,6 @@
 # ADR-0004-phase1-canvas-mvp: Phase 1: Canvas MVP
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-02-24
 - Deciders: Project Maintainers
 - Scope: `01_Plans/`

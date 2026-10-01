@@ -1,6 +1,6 @@
 # ADR-0045: 三エージェント（Cowork / Claude Code / Codex）の責務分担と協働プロトコル
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-06-10
 - Deciders: Maintainer（委譲された意思決定権限）
 - Scope: `00_Prompt/`, `01_Plans/`, リポジトリ運用

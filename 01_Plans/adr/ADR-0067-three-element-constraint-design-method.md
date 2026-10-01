@@ -1,6 +1,6 @@
 # ADR-0067: 三要素分析法に基づく設計方法論の採用
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Type: Process / Architecture
 - Date: 2026-08-08
 - Accepted: 2026-08-13

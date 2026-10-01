@@ -1,6 +1,6 @@
 # ADR-0022: DOC-OPS-04 情報設計I/F（用語・見出し・判定メタ）
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-03-08
 - Deciders: Platform Architecture Owner, Plan Owner, Architecture Owner
 - Scope: `01_Plans/`, `02_Architecture/`, `04_Documentation/`

@@ -1,6 +1,6 @@
 # ADR-0023: DOC-OPS-04 Readability Baseline
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-03-09
 - Deciders: Plan Owner, Documentation Owner, Architecture Owner
 - Scope: `01_Plans/` / `02_Architecture/` / `04_Documentation/`（文書可読性の最小基線のみ）

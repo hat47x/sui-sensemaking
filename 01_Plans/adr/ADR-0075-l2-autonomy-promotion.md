@@ -1,6 +1,6 @@
 # ADR-0075: L2自律性（検証）への昇格判定
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-08-12
 - Deciders: Maintainer（四半期判定、AGENTS.md §1.3に基づく）
 - Scope: `AGENTS.md §1.3`, 自律性レベル, 設計プロセス

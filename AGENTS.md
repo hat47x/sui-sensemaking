@@ -31,7 +31,8 @@ sui-sensemaking の生成AI向け入口。体制は **1人の開発者＋生成A
 | LLM | `02_Architecture/llm_*.md` |
 | 全体構成 | `02_Architecture/architecture.html` |
 | 脅威・SafeMode | `THREAT_MODEL.md` と対象ポリシー実装 |
-| 長期的な設計判断 | `01_Plans/adr/` |
+| 価値の定義・価値とADRの対応 | `01_Plans/adr/ADR-0089-product-value-canon.md` |
+| 長期的な設計判断 | `01_Plans/adr/`（新規ADRは「価値への寄与」を書く） |
 | 利用者向け手順 | `04_Documentation/public_index.md` |
 
 ## 変更時の追随

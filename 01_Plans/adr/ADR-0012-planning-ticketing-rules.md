@@ -1,6 +1,6 @@
 # ADR-0012: フェーズ計画・チケット化規則（ADR-0001分割）
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-02-24
 - Deciders: Project Maintainers
 - Scope: `01_Plans/`

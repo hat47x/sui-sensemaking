@@ -1,6 +1,6 @@
 # ADR-0025: DOC-OPS-04 変更統治と例外承認の責務境界
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-03-09
 - Deciders: Platform Architecture Owner, Plan Owner, Architecture Owner
 - Scope: `01_Plans/`, `02_Architecture/`, `04_Documentation/`

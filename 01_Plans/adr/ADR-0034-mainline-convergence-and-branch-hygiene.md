@@ -1,6 +1,6 @@
 # ADR-0034: 最新main収束とブランチ衛生の運用統治
 
-- Status: Proposed
+- Status: Superseded by ADR-0089（2026-10-01。旧: Proposed）
 - Date: 2026-05-21
 - Deciders: Project Maintainers
 - Scope: `01_Plans/`, repository branch/PR workflow

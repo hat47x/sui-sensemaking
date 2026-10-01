@@ -1,6 +1,6 @@
 # ADR-0024: DOC-OPS-04 Quality Gates Boundary（docs-check / CI 境界）
 
-- Status: Accepted
+- Status: Superseded by ADR-0089（2026-10-01。旧: Accepted）
 - Date: 2026-03-09
 - Deciders: Project Maintainers
 - Scope: root documentation, `01_Plans/`, `02_Architecture/`, `04_Documentation/`, docs-check CI
