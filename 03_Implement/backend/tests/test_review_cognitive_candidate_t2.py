@@ -59,6 +59,18 @@ def test_candidate_phase_excludes_held_cluster() -> None:
     assert "c04:" in rendered
 
 
+def test_baseline_marks_hold_inside_existing_island() -> None:
+    value = json.loads(DEFAULT_FIXTURE.read_text(encoding="utf-8"))
+    held = next(card for card in value["cards"] if card["id"] == "c10")
+    held["holdState"] = "held"
+    document = DocumentV1.model_validate(value)
+
+    rendered = render_baseline(document)
+
+    assert "c10 [hold=held]" in rendered
+    assert "買い物弱者を支える仕組みが十分でない" in rendered
+
+
 def test_baseline_marks_unassigned_hold_without_promoting_it() -> None:
     value = json.loads(DEFAULT_FIXTURE.read_text(encoding="utf-8"))
     held = next(card for card in value["cards"] if card["id"] == "c10")
