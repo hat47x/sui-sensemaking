@@ -39,8 +39,10 @@ def test_synthetic_fixture_exposes_cross_island_structure_without_scores_or_text
         "candidateCount": 2,
         "exactExistingIslandCandidateCount": 0,
         "crossIslandCandidateCount": 2,
-        "candidatesWithNovelCoMembershipCount": 2,
-        "novelCoMembershipPairCount": 8,
+        "candidatesWithNotAlreadyCoIslandedPairsCount": 2,
+        "notAlreadyCoIslandedPairCount": 8,
+        "candidatesWithIndirectRegroupingCount": 1,
+        "indirectRegroupingPairCount": 2,
     }
 
     by_cards = {
@@ -51,11 +53,16 @@ def test_synthetic_fixture_exposes_cross_island_structure_without_scores_or_text
     assert first["basis"] == "relation"
     assert first["touchedExistingIslandIds"] == ["i1", "i4"]
     assert first["crossesExistingIslandBoundary"] is True
-    assert len(first["novelCoMembershipPairs"]) == 3
+    assert len(first["notAlreadyCoIslandedPairs"]) == 3
+    assert first["indirectRegroupingPairs"] == []
 
     second = by_cards[("c04", "c06", "c09", "c12")]
     assert second["touchedExistingIslandIds"] == ["i2", "i3", "i4"]
-    assert len(second["novelCoMembershipPairs"]) == 5
+    assert len(second["notAlreadyCoIslandedPairs"]) == 5
+    assert second["indirectRegroupingPairs"] == [
+        {"left": "c04", "right": "c09"},
+        {"left": "c06", "right": "c09"},
+    ]
 
     serialized = json.dumps(result, ensure_ascii=False)
     assert '"score"' not in serialized
@@ -79,8 +86,10 @@ def test_overlapping_island_fixture_has_two_provisional_cross_island_cues() -> N
         "candidateCount": 2,
         "exactExistingIslandCandidateCount": 0,
         "crossIslandCandidateCount": 2,
-        "candidatesWithNovelCoMembershipCount": 2,
-        "novelCoMembershipPairCount": 2,
+        "candidatesWithNotAlreadyCoIslandedPairsCount": 2,
+        "notAlreadyCoIslandedPairCount": 2,
+        "candidatesWithIndirectRegroupingCount": 1,
+        "indirectRegroupingPairCount": 1,
     }
 
     by_cards = {
@@ -89,12 +98,16 @@ def test_overlapping_island_fixture_has_two_provisional_cross_island_cues() -> N
     }
     remote_side = by_cards[("c-commute", "c-remote", "c-tooling")]
     office_side = by_cards[("c-office", "c-onboarding")]
-    assert remote_side["novelCoMembershipPairs"] == [
+    assert remote_side["notAlreadyCoIslandedPairs"] == [
         {"left": "c-commute", "right": "c-tooling"}
     ]
-    assert office_side["novelCoMembershipPairs"] == [
+    assert remote_side["indirectRegroupingPairs"] == [
+        {"left": "c-commute", "right": "c-tooling"}
+    ]
+    assert office_side["notAlreadyCoIslandedPairs"] == [
         {"left": "c-office", "right": "c-onboarding"}
     ]
+    assert office_side["indirectRegroupingPairs"] == []
 
 
 def test_hold_state_filters_raw_cluster_before_measurement() -> None:
@@ -138,4 +151,5 @@ def test_candidate_equal_to_existing_island_is_not_structurally_novel() -> None:
     assert candidate["exactExistingIslandIds"] == ["i1"]
     assert candidate["containingExistingIslandIds"] == ["i1"]
     assert candidate["crossesExistingIslandBoundary"] is False
-    assert candidate["novelCoMembershipPairs"] == []
+    assert candidate["notAlreadyCoIslandedPairs"] == []
+    assert candidate["indirectRegroupingPairs"] == []
