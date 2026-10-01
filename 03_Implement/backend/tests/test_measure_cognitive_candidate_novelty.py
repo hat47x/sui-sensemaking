@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from scripts.measure_cognitive_candidate_novelty import (
     DEFAULT_FIXTURE,
