@@ -32,6 +32,8 @@ def test_synthetic_fixture_exposes_cross_island_structure_without_scores_or_text
     assert result["projection"] == {
         "truncated": False,
         "reasonCodes": [],
+        "withheldCardIds": [],
+        "rawClusterCandidateCount": 2,
     }
     assert result["summary"] == {
         "candidateCount": 2,
@@ -59,6 +61,61 @@ def test_synthetic_fixture_exposes_cross_island_structure_without_scores_or_text
     assert '"score"' not in serialized
     for card in document.cards:
         assert card.text not in serialized
+
+
+def test_overlapping_island_fixture_has_two_provisional_cross_island_cues() -> None:
+    fixture = DEFAULT_FIXTURE.with_name("llm_input_ir_document.json")
+    raw = fixture.read_bytes()
+    document = DocumentV1.model_validate_json(raw)
+
+    result = measure_document(
+        document,
+        source_sha256=sha256_bytes(raw),
+        include_spatial=False,
+    )
+
+    assert result["projection"]["withheldCardIds"] == ["c-isolated"]
+    assert result["summary"] == {
+        "candidateCount": 2,
+        "exactExistingIslandCandidateCount": 0,
+        "crossIslandCandidateCount": 2,
+        "candidatesWithNovelCoMembershipCount": 2,
+        "novelCoMembershipPairCount": 2,
+    }
+
+    by_cards = {
+        tuple(item["cardIds"]): item
+        for item in result["candidates"]
+    }
+    remote_side = by_cards[("c-commute", "c-remote", "c-tooling")]
+    office_side = by_cards[("c-office", "c-onboarding")]
+    assert remote_side["novelCoMembershipPairs"] == [
+        {"left": "c-commute", "right": "c-tooling"}
+    ]
+    assert office_side["novelCoMembershipPairs"] == [
+        {"left": "c-office", "right": "c-onboarding"}
+    ]
+
+
+def test_hold_state_filters_raw_cluster_before_measurement() -> None:
+    value = json.loads(DEFAULT_FIXTURE.read_text(encoding="utf-8"))
+    held = next(card for card in value["cards"] if card["id"] == "c10")
+    held["holdState"] = "held"
+    document = DocumentV1.model_validate(value)
+
+    result = measure_document(
+        document,
+        source_sha256="synthetic-held",
+        include_spatial=False,
+    )
+
+    assert result["projection"]["rawClusterCandidateCount"] == 2
+    assert result["projection"]["withheldCardIds"] == ["c10"]
+    assert result["summary"]["candidateCount"] == 1
+    assert all(
+        "c10" not in candidate["cardIds"]
+        for candidate in result["candidates"]
+    )
 
 
 def test_candidate_equal_to_existing_island_is_not_structurally_novel() -> None:

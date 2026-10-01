@@ -27,6 +27,7 @@ from typing import Any
 
 from sui_sensemaking_api.llm_input_ir import (
     build_llm_input_ir,
+    held_card_ids,
     source_from_document,
 )
 from sui_sensemaking_api.models import DocumentV1
@@ -131,13 +132,20 @@ def measure_document(
     islands = _island_sets(document)
     co_island_pairs = _co_island_pairs(islands)
 
+    withheld = set(held_card_ids(ir))
+    raw_candidates = list(ir.get("cluster_candidates", []))
+    eligible_candidates = [
+        candidate
+        for candidate in raw_candidates
+        if not (set(candidate["card_ids"]) & withheld)
+    ]
     candidates = [
         _measure_candidate(
             candidate,
             islands=islands,
             co_island_pairs=co_island_pairs,
         )
-        for candidate in ir.get("cluster_candidates", [])
+        for candidate in eligible_candidates
     ]
 
     return {
@@ -157,6 +165,8 @@ def measure_document(
         "projection": {
             "truncated": bool(ir.get("truncation", {}).get("truncated")),
             "reasonCodes": list(ir.get("truncation", {}).get("reason_codes", [])),
+            "withheldCardIds": sorted(withheld),
+            "rawClusterCandidateCount": len(raw_candidates),
         },
         "summary": {
             "candidateCount": len(candidates),
@@ -175,10 +185,12 @@ def measure_document(
         },
         "candidates": candidates,
         "interpretationBoundary": (
-            "Structural characterization only. Cross-island or novel co-membership "
-            "means the deterministic candidate is not already represented by one "
-            "existing island membership; it does not establish semantic correctness, "
-            "human cognitive increment, importance, ranking, or product adoption."
+            "Structural characterization only. Candidates containing a held/pending/"
+            "shelved card are withheld to match the suggest-card-groups boundary. "
+            "Cross-island or novel co-membership means an eligible deterministic "
+            "candidate is not already represented by one existing island membership; "
+            "it does not establish semantic correctness, human cognitive increment, "
+            "importance, ranking, or product adoption."
         ),
     }
 
