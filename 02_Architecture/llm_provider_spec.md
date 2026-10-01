@@ -88,7 +88,7 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 
 ## 4. Interface 契約（`LLMRequest`/`LLMResponse`）
 
-> **PROV-CONTRACT-01（2026-07-06・ADR-0050 D3）で是正**: 本節はかつて `inputs`/`output_schema`/構造化`usage`/`provider_meta` 直接受け渡しを「正規形に固定」と記載していたが、これらは実装（`03_Implement/backend/src/sui_sensemaking_api/llm/provider.py`）に配線されていなかった。以下は**現在実装済みの最小契約**を正確に記述したものであり、未配線の拡張フィールドは §4.4「Phase-2（未配線）」に分離した。
+> **PROV-CONTRACT-01（2026-07-06・ADR-0050 D3）で是正**: 本節はかつて `inputs`/`output_schema`/構造化`usage`/`provider_meta` 直接受け渡しを「正規形に固定」と記載していた。現在は `LLMRequest.inputs` だけが**内部の監査用IR保持フィールド**として配線済みで、HTTP provider transportへは送信しない。その他の未配線拡張は §4.4 に分離する。
 
 ### 4.1 `LLMRequest`（実装済み・`provider.py` の `LLMRequest` dataclass 準拠）
 
@@ -104,6 +104,7 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 - `task` は自由文字列（例: `re_layout`・`merge_cards` 等、呼び出し元ルートが指定する）。
 - HTTP送信時の`task`は128文字以下のlowercase canonical ID、`prompt`は非空文字列とする。JSON envelope全体はUTF-8で1MiB以下とし、超過時はprovider transportを呼ばず`provider_validation`で停止する。prompt本文をerrorへ反射しない。
 - `temperature`・`max_tokens` は既定値を持つ optional フィールド。HTTP送信時はfiniteな`0 <= temperature <= 2`と`1 <= max_tokens <= 32768`だけを受理し、JSONの`NaN`/`Infinity`拡張表現を送信しない。
+- `inputs` は `llm_input_ir_spec.md` の構造化IRをroute→provider境界まで保持する内部フィールドであり、IR移行済みrouteだけが設定する。HTTP transportのJSON envelopeには含めず、providerが読むのはIRからrender済みの `prompt` である。したがって `cluster_candidates.score` 等の内部構造値は、prompt rendererが明示的に採用しない限りproviderへ送られない（`ADR-0090` の「内部計算と意味づけの分離」）。
 
 ### 4.2 `LLMResponse`（実装済み・`provider.py` の `LLMResponse`/`LLMCallMetadata` dataclass 準拠）
 
@@ -139,7 +140,6 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 
 以下は `llm_input_ir_spec.md` 等で仕様は存在するが、`LLMRequest`/`LLMResponse` への実配線はまだ無い。実装時期は未定であり、本節の記載は「仕様が先行して存在する」ことを示すに留める。
 
-- `LLMRequest.inputs`: `02_Architecture/llm_input_ir_spec.md` の IR schema を構造化データとして直接渡す経路。現状は呼び出し元ルートがプロンプト文字列へ事前に埋め込んでいる。
 - `LLMRequest.output_schema`: JSON Schema を渡し provider にスキーマ準拠出力を強制させる経路。現状はルート側で受信後にパース・検証している。
 - `LLMRequest.options.timeout_ms`/`seed`: 決定論的再現・タイムアウト制御の明示指定。
 - `LLMRequest.context.trace_id`/`safe_mode`: 呼び出し側からの trace_id 引き継ぎ・safe_mode フラグの明示伝播（現状 `trace_id` は provider 層が `_new_metadata()` で新規採番する）。
