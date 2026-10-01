@@ -240,6 +240,39 @@ def test_request_carries_the_ir_and_the_prompt_shows_the_context() -> None:
     assert "negate: c-remote -> c-office" in prompt
 
 
+def test_structural_cluster_score_stays_internal_to_ir() -> None:
+    """ADR-0090: structural score is audit evidence, not semantic guidance."""
+    doc = _doc()
+    doc["edges"] = [
+        {
+            "id": "e1",
+            "fromId": "c-remote",
+            "toId": "c-office",
+            "type": "related",
+        }
+    ]
+
+    with TestClient(app) as client:
+        resp = client.post("/ai/suggest-card-groups", json=_payload(doc))
+
+    assert resp.status_code == 200, resp.text
+    llm_request = _CAPTURED[0]
+    clusters = llm_request.inputs["cluster_candidates"]
+    assert clusters == [
+        {
+            "cluster_id": "cc-0001",
+            "card_ids": ["c-office", "c-remote"],
+            "basis": "relation",
+            "score": 0.5,
+        }
+    ]
+
+    prompt = llm_request.prompt
+    assert "cc-0001: c-office,c-remote (basis=relation)" in prompt
+    assert "score=" not in prompt
+    assert '"score"' not in prompt
+
+
 def test_candidate_card_lines_keep_the_mock_adapter_format() -> None:
     """`deploy/tools/mock_local_llm.py` parses the prompt with
     `^\\s*- id="([^"]+)", text="([^"]*)"`; the business-flow E2E depends on it."""

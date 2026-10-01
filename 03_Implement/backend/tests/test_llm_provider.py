@@ -109,6 +109,57 @@ def test_local_provider_returns_trace_fields(monkeypatch: pytest.MonkeyPatch) ->
         settings.local_llm_model = original_model
 
 
+def test_local_provider_keeps_structured_inputs_internal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ADR-0090: audit IR may retain structural scores, HTTP transport may not."""
+    original_url = settings.local_llm_base_url
+    original_model = settings.local_llm_model
+    settings.local_llm_base_url = "http://local-llm.test"
+    settings.local_llm_model = "test-model"
+
+    def _fake_urlopen(req, timeout_seconds=60):
+        payload = json.loads(req.data.decode("utf-8"))
+        assert set(payload) == {
+            "task",
+            "prompt",
+            "temperature",
+            "max_tokens",
+            "model",
+        }
+        assert "inputs" not in payload
+        assert "cluster_candidates" not in req.data.decode("utf-8")
+        assert '"score"' not in req.data.decode("utf-8")
+        return _StubHTTPResponse('{"text":"ok"}')
+
+    monkeypatch.setattr(
+        "sui_sensemaking_api.llm.provider.open_trusted_http",
+        _fake_urlopen,
+    )
+
+    try:
+        response = LocalProvider().generate(
+            LLMRequest(
+                task="suggest_card_groups",
+                prompt="structural observation without numeric score",
+                inputs={
+                    "cluster_candidates": [
+                        {
+                            "cluster_id": "cc-0001",
+                            "card_ids": ["c1", "c2"],
+                            "basis": "relation",
+                            "score": 0.9,
+                        }
+                    ]
+                },
+            )
+        )
+        assert response.raw_text == "ok"
+    finally:
+        settings.local_llm_base_url = original_url
+        settings.local_llm_model = original_model
+
+
 def test_local_provider_handles_http_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     original_url = settings.local_llm_base_url
     settings.local_llm_base_url = "http://local-llm.test"
