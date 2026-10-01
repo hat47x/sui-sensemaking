@@ -14,33 +14,13 @@ V2「構造化」とV3「レビュー」に寄与する。特に `ADR-0010` の�
 
 SUIの一次利用仕事は、まとまりきらない定性資料を早すぎる分類・要約・合意で潰さず、根拠・異論・保留・人間の判断権を残したまま構造化することである。
 
-認知支援には複数の実現方式がある。
+認知支援には、決定論的な関係・空間・履歴アルゴリズム、文字n-gramやTF-IDF等の軽量統計、FlyHash / WTA / learned sparse representation等の疎表現、sentence embedding等のsemantic encoder、local / 外部LLMまで複数の実現方式がある。
 
-- 決定論的な関係・空間・履歴アルゴリズム
-- 文字n-gramやTF-IDF等の軽量な統計方式
-- FlyHash / WTA / learned sparse representation等の疎表現
-- sentence embedding等のsemantic encoder
-- local LLM / 外部LLM
-
-高度な方式ほど常に価値が高いわけではない。SUIでは、モデルが賢くなること自体よりも、
-
-- 利用者が新しい材料や関係に気づけるか
-- 少数意見・矛盾・保留を吸収しないか
-- 候補を見ても利用者自身の判断が残るか
-- local/offlineや `SUI_LLM_PROVIDER=none` の主要価値を壊さないか
-
-が重要である。
+高度な方式ほど常に価値が高いわけではない。SUIでは、利用者が新しい材料や関係に気づけること、少数意見・矛盾・保留を吸収しないこと、利用者自身の判断が残ること、local/offlineや `SUI_LLM_PROVIDER=none` の主要価値を壊さないことを、モデルの高度さより優先する。
 
 2026-09には COGNITIVE-ASSOC 系の探索で、A/C/E等を比較する評価ハーネス、疎表現候補、固定semantic provider等を検討した。しかし2026-10-01の管理文書整理で、それらdogfood/研究成果物は正本から削除された。git履歴には残るが、現時点で固定semantic baseline Eの実モデル実行は完了しておらず、方式のwinner・製品採用判断は成立していない。
 
-一方、現行正本には既に次がある。
-
-- `llm_input_ir_spec.md`: relation/spatial由来の決定論的 `cluster_candidates`
-- `domain.md`: AIの内部探索権限と、人間承認済み意味への昇格権限の分離
-- `ai_sensemaking_execution_procedures.md`: proposal-only / 反スコアリング / SafeMode
-- `ADR-0043`: 認知負荷を増やしすぎない複雑性予算
-- `ADR-0069`: AI入力を意味保全されたIRへ限定する境界
-- `ADR-0084`: proposal-onlyを「AIは一段しか探索できない」とは解釈しない
+一方、現行正本には既に、`llm_input_ir_spec.md` の決定論的 `cluster_candidates`、`domain.md` の探索権限と昇格権限の分離、`ai_sensemaking_execution_procedures.md` のproposal-only / 反スコアリング / SafeMode、`ADR-0043` の複雑性予算、`ADR-0069` の意味保全IR、`ADR-0084` の多段探索許容がある。
 
 したがって、認知系の次の課題は新しい研究管理体系を復活させることではなく、**どの方式を、どの証拠で、どこまで製品経路へ昇格させるか**を簡潔に固定することである。
 
@@ -50,14 +30,7 @@ SUIの一次利用仕事は、まとまりきらない定性資料を早すぎ�
 
 認知器は、確定構造ではなく利用者の注意を再配分する候補を生成する。
 
-候補にできるものは、例えば次である。
-
-- 近いかもしれないカード集合
-- 一緒に見ると意味が変わるカード
-- 既存の島から漏れている残余
-- 対立・矛盾・反証の可能性
-- 別の切り口
-- 既存構造を壊さず比較できる仮配置
+候補には、近いかもしれないカード集合、一緒に見ると意味が変わるカード、既存の島から漏れている残余、対立・矛盾・反証の可能性、別の切り口、既存構造を壊さず比較できる仮配置を含められる。
 
 候補は Accepted / Consensus / `human_reviewed` を成立させない。保留中のカードを権限なく新しいまとまりへ吸収しない。
 
