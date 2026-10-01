@@ -45,6 +45,10 @@ def _card_text_by_id(document: DocumentV1) -> dict[str, str]:
 
 def render_baseline(document: DocumentV1) -> str:
     by_id = _card_text_by_id(document)
+    hold_by_id = {
+        card.id: getattr(card, "holdState", None)
+        for card in document.cards
+    }
     lines = [
         "# Cognitive T2 review — baseline",
         "",
@@ -62,7 +66,9 @@ def render_baseline(document: DocumentV1) -> str:
         for card_id in island.cardIds:
             island_card_ids.add(card_id)
             text = by_id.get(card_id, "(missing card)")
-            lines.append(f"  - {card_id}: {text}")
+            hold = hold_by_id.get(card_id)
+            hold_note = f" [hold={hold}]" if hold else ""
+            lines.append(f"  - {card_id}{hold_note}: {text}")
 
     unassigned = [
         card
@@ -154,7 +160,7 @@ def render_candidates(
             "- 候補がノイズ、先入観、早すぎる収束を生んだか",
             "- 候補が無くても同じ見直しに到達したと思うか",
             "",
-            "判定境界: この観察を単一scoreへ畳まない。"
+            "判定境界: この観察を単一の数値評価へ畳まない。"
             "T2で認知増分が再現しなければ製品候補へ昇格しない。",
         ]
     )
