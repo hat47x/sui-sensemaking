@@ -69,7 +69,6 @@ def render_baseline(
             "## Current islands",
         ]
     )
-    ]
 
     island_card_ids: set[str] = set()
     for island in document.islands:
