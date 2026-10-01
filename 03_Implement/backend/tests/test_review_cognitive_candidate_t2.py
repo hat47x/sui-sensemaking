@@ -6,6 +6,7 @@ from scripts.measure_cognitive_candidate_novelty import DEFAULT_FIXTURE
 from scripts.review_cognitive_candidate_t2 import (
     render_baseline,
     render_candidates,
+    render_review,
 )
 from sui_sensemaking_api.models import DocumentV1
 
@@ -24,6 +25,24 @@ def test_baseline_does_not_reveal_machine_candidates() -> None:
     assert "候補を見る前に" in rendered
     assert "cc-0001" not in rendered
     assert "indirectRegrouping" not in rendered
+
+
+def test_two_phases_expose_the_same_source_digest() -> None:
+    document = _document()
+
+    baseline = render_review(
+        document,
+        phase="baseline",
+        source_sha256="same-source",
+    )
+    candidates = render_review(
+        document,
+        phase="candidates",
+        source_sha256="same-source",
+    )
+
+    assert "Source SHA-256: same-source" in baseline
+    assert "Source SHA-256: same-source" in candidates
 
 
 def test_candidate_phase_shows_text_without_score_or_ranking() -> None:
