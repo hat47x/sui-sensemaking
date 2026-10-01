@@ -14,8 +14,7 @@ Usage:
   python run_ai_eval.py --dry-run
 
   # Provider quality probe on the same synthetic fixture
-  export SUI_LLM_PROVIDER=deepseek
-  export SUI_DEEPSEEK_API_KEY=<key>
+  # Configure any supported provider/model first, then:
   python run_ai_eval.py
 """
 
@@ -32,9 +31,7 @@ from sui_sensemaking_api.llm.provider import (
     LLMCallMetadata,
     LLMRequest,
     LLMResponse,
-    ProviderDisabledError,
     ProviderRequestError,
-    generate_with_fallback,
 )
 from sui_sensemaking_api.main import app
 from sui_sensemaking_api.models import DocumentV1
@@ -54,10 +51,10 @@ def _stub_generate(req: LLMRequest) -> LLMResponse:
     card as groundingId so the backend member-card validation passes.
     """
     metadata = LLMCallMetadata(
-        provider_kind="deepseek",
-        provider_name="deepseek",
-        model_id="deepseek-v4-flash",
-        transport="http",
+        provider_kind="fixture",
+        provider_name="fixture",
+        model_id="ai-eval-dryrun-fixture",
+        transport="in-process",
         requested_at="2026-08-12T00:00:00Z",
         trace_id="llm-eval-dryrun",
     )
@@ -99,7 +96,7 @@ def main() -> int:
         return 1
 
     doc = DocumentV1.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
-    mode = "DRY-RUN (stub)" if args.dry_run else "REAL-API (DeepSeek)"
+    mode = "DRY-RUN (fixture)" if args.dry_run else "CONFIGURED PROVIDER"
     print(f"=== AI Operation Probe ({mode}) ===")
     print(f"Document: {doc.id} ({len(doc.cards)} cards, {len(doc.islands)} islands)")
     print(
@@ -133,7 +130,8 @@ def _run_eval(client_app, doc: DocumentV1, refine_count: int) -> None:
     with TestClient(client_app) as client:
         # --- refine_card_text (10 samples) via real endpoint ---
         print("\n## 評価1: refine_card_text（POST /ai/refine-card-text）")
-        print("| # | 入力 | 出力 | 3軸判定 |")
+        print("定性軸: " + " / ".join(REFINE_AXES))
+        print("| # | 入力 | 出力 | 定性判定 |")
         print("|---|------|------|---------|")
         passed = 0
         for i, card in enumerate(doc.cards[: refine_count], start=1):
@@ -148,11 +146,12 @@ def _run_eval(client_app, doc: DocumentV1, refine_count: int) -> None:
             else:
                 refined = f"(HTTP {resp.status_code})"
             print(f"| {i} | {card.text[:30]} | {refined[:50]} | 要確認 |")
-        print(f"\n成功: {passed}/{refine_count}（3軸の定性判定は人間が実施）")
+        print(f"\nHTTP成功: {passed}/{refine_count}（内容の定性判定とは別）")
 
         # --- suggest_island_summary (4 islands) via real endpoint ---
         print("\n## 評価2: suggest_island_summary（POST /ai/suggest-island-summary）")
-        print("| # | 島 | 出力表札 | 3軸判定 |")
+        print("定性軸: " + " / ".join(SUMMARY_AXES))
+        print("| # | 島 | 出力表札 | 定性判定 |")
         print("|---|----|---------|---------|")
         summary_passed = 0
         for i, island in enumerate(doc.islands, start=1):
@@ -167,7 +166,7 @@ def _run_eval(client_app, doc: DocumentV1, refine_count: int) -> None:
             else:
                 summary = f"(HTTP {resp.status_code})"
             print(f"| {i} | {island.id} ({len(island.cardIds)}枚) | {summary[:60]} | 要確認 |")
-        print(f"\n成功: {summary_passed}/{len(doc.islands)}（3軸の定性判定は人間が実施）")
+        print(f"\nHTTP成功: {summary_passed}/{len(doc.islands)}（内容の定性判定とは別）")
 
     print("\n=== 解釈境界 ===")
     print("1. 各出力は定性軸ごとに観察し、単一scoreやwinnerへ畳まない")
