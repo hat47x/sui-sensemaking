@@ -43,7 +43,11 @@ def _card_text_by_id(document: DocumentV1) -> dict[str, str]:
     return {card.id: card.text for card in document.cards}
 
 
-def render_baseline(document: DocumentV1) -> str:
+def render_baseline(
+    document: DocumentV1,
+    *,
+    source_sha256: str | None = None,
+) -> str:
     by_id = _card_text_by_id(document)
     hold_by_id = {
         card.id: getattr(card, "holdState", None)
@@ -56,8 +60,15 @@ def render_baseline(document: DocumentV1) -> str:
         "この出力自体はT2 Evidenceではない。",
         "",
         f"Document: {document.title or document.id}",
-        "",
-        "## Current islands",
+    ]
+    if source_sha256 is not None:
+        lines.append(f"Source SHA-256: {source_sha256}")
+    lines.extend(
+        [
+            "",
+            "## Current islands",
+        ]
+    )
     ]
 
     island_card_ids: set[str] = set()
@@ -111,6 +122,7 @@ def render_candidates(
         "",
         "候補は提案であり、採用・順位・確信度を表さない。",
         "held/pending/shelved を含む候補は表示しない。",
+        f"Source SHA-256: {source_sha256}",
         "",
     ]
 
@@ -174,7 +186,10 @@ def render_review(
     source_sha256: str,
 ) -> str:
     if phase == "baseline":
-        return render_baseline(document)
+        return render_baseline(
+            document,
+            source_sha256=source_sha256,
+        )
     return render_candidates(document, source_sha256=source_sha256)
 
 
