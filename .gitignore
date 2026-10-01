@@ -232,3 +232,6 @@ _local/
 
 # Local-only files (user credentials, tokens, scratch)
 local/
+
+# Local secrets (API keys etc.)
+.local/

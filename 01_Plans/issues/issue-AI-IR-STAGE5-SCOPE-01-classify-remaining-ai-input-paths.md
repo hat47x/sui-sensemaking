@@ -88,6 +88,23 @@ AIの仕事に必要な意味からrequired setを逆算する。IRに存在す�
   - `check-narrative` の全体照合を維持できるscale投影方式とnamed provider/modelの実token予算を確定する実証元。
   - `AI-IR-SCALE-01` の結果が出る前に、固定上限への切り捨てや形式的なIR移行で本Issueを完了扱いにしない。
 
+## 2026-09-30: 無料枠モデルでの入力token実測（参考値）
+
+`measure_ai_route_provider_tokens.py` を、OpenRouter無料枠の `nvidia/nemotron-3-super-120b-a12b:free`（context 262,144）で実行した。送信したのは300カード・30島の合成データだけである。provider報告の `usage.prompt_tokens` は次のとおり。
+
+| route | 入力token（provider報告） | prompt UTF-8 bytes |
+|---|---:|---:|
+| suggest-card-groups | 14,934 | 38,044 |
+| suggest-card-groups-route-b | 18,127 | 48,791 |
+| generate-narrative | 66,622 | 89,331 |
+| suggest-layout | 84,254 | 117,389 |
+| suggest-layout-route-b | 90,388 | 128,562 |
+| **check-narrative（現行・全量）** | **141,853**（再送3回で同値） | 198,092 |
+
+- `check-narrative` は比較対象で最大で、このモデルのcontextの約54%を占める。全量方式はこの条件では収まったが、無料枠の単一モデルでの結果にすぎない。
+- 無料枠は429・503（過負荷）が出やすい。初回測定では `check-narrative` が503となり、単発再送で取得した。`max_tokens=1` のため出力品質は測っていない。
+- **方式（全量維持/分割）の決定には使わない。** 本番で使うnamed provider/modelの実測は未実施で、下記の未完条件は変わらない。判断材料として、全量方式の規模は約14万tokenである。
+
 ## 受入条件
 
 - [x] Stage 5対象7経路を、Document-backed / caller-limited grounding / no-documentで分類した。
