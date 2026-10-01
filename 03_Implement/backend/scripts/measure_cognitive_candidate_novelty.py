@@ -3,8 +3,8 @@
 
 This is a provider-free structural measurement for ADR-0090. It answers only
 whether the current deterministic cluster candidates repeat existing island
-membership or cross boundaries that the current island structure does not
-already co-locate.
+membership, merely re-present an already explicit direct relation, or expose a
+transitive regrouping cue that is not already co-islanded or directly linked.
 
 It does NOT measure human cognitive increment, semantic correctness, candidate
 importance, or a winner. Internal cluster scores are deliberately omitted from
@@ -42,7 +42,7 @@ DEFAULT_FIXTURE = (
     / "fixtures"
     / "ai_eval_kj_document.json"
 )
-MEASUREMENT_ID = "deterministic-candidate-island-novelty-v1"
+MEASUREMENT_ID = "deterministic-candidate-island-regrouping-v2"
 
 
 def sha256_bytes(raw: bytes) -> str:
@@ -71,6 +71,7 @@ def _measure_candidate(
     *,
     islands: dict[str, frozenset[str]],
     co_island_pairs: set[tuple[str, str]],
+    direct_relation_pairs: set[tuple[str, str]],
 ) -> dict[str, Any]:
     card_ids = sorted(str(card_id) for card_id in candidate["card_ids"])
     members = frozenset(card_ids)
@@ -95,11 +96,13 @@ def _measure_candidate(
     ) if touched else set()
     unassigned = sorted(members - assigned)
 
-    candidate_pairs = {
-        pair
-        for pair in combinations(card_ids, 2)
-    }
-    novel_pairs = sorted(candidate_pairs - co_island_pairs)
+    candidate_pairs = set(combinations(card_ids, 2))
+    not_co_islanded_pairs = sorted(candidate_pairs - co_island_pairs)
+    indirect_regrouping_pairs = (
+        sorted(set(not_co_islanded_pairs) - direct_relation_pairs)
+        if candidate["basis"] == "relation"
+        else []
+    )
 
     return {
         "clusterId": candidate["cluster_id"],
@@ -110,9 +113,13 @@ def _measure_candidate(
         "touchedExistingIslandIds": touched,
         "crossesExistingIslandBoundary": len(touched) >= 2,
         "unassignedCardIds": unassigned,
-        "novelCoMembershipPairs": [
+        "notAlreadyCoIslandedPairs": [
             {"left": left, "right": right}
-            for left, right in novel_pairs
+            for left, right in not_co_islanded_pairs
+        ],
+        "indirectRegroupingPairs": [
+            {"left": left, "right": right}
+            for left, right in indirect_regrouping_pairs
         ],
     }
 
@@ -131,6 +138,12 @@ def measure_document(
     )
     islands = _island_sets(document)
     co_island_pairs = _co_island_pairs(islands)
+    direct_relation_pairs = {
+        tuple(sorted((relation["from"], relation["to"])))
+        for relation in ir.get("relations", [])
+        if relation["type"] in {"related", "causal"}
+        and relation["from"] != relation["to"]
+    }
 
     withheld = set(held_card_ids(ir))
     raw_candidates = list(ir.get("cluster_candidates", []))
@@ -144,6 +157,7 @@ def measure_document(
             candidate,
             islands=islands,
             co_island_pairs=co_island_pairs,
+            direct_relation_pairs=direct_relation_pairs,
         )
         for candidate in eligible_candidates
     ]
@@ -176,21 +190,29 @@ def measure_document(
             "crossIslandCandidateCount": sum(
                 bool(item["crossesExistingIslandBoundary"]) for item in candidates
             ),
-            "candidatesWithNovelCoMembershipCount": sum(
-                bool(item["novelCoMembershipPairs"]) for item in candidates
+            "candidatesWithNotAlreadyCoIslandedPairsCount": sum(
+                bool(item["notAlreadyCoIslandedPairs"]) for item in candidates
             ),
-            "novelCoMembershipPairCount": sum(
-                len(item["novelCoMembershipPairs"]) for item in candidates
+            "notAlreadyCoIslandedPairCount": sum(
+                len(item["notAlreadyCoIslandedPairs"]) for item in candidates
+            ),
+            "candidatesWithIndirectRegroupingCount": sum(
+                bool(item["indirectRegroupingPairs"]) for item in candidates
+            ),
+            "indirectRegroupingPairCount": sum(
+                len(item["indirectRegroupingPairs"]) for item in candidates
             ),
         },
         "candidates": candidates,
         "interpretationBoundary": (
             "Structural characterization only. Candidates containing a held/pending/"
             "shelved card are withheld to match the suggest-card-groups boundary. "
-            "Cross-island or novel co-membership means an eligible deterministic "
-            "candidate is not already represented by one existing island membership; "
-            "it does not establish semantic correctness, human cognitive increment, "
-            "importance, ranking, or product adoption."
+            "Cross-island and notAlreadyCoIslandedPairs only show that a grouping is "
+            "not already represented by one existing island. For relation-based "
+            "candidates, indirectRegroupingPairs further excludes card pairs already "
+            "connected by a direct related/causal edge, exposing only transitive "
+            "regrouping cues. None of these establish semantic correctness, human "
+            "cognitive increment, importance, ranking, or product adoption."
         ),
     }
 
