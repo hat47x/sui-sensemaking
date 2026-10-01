@@ -1,11 +1,13 @@
 # ADR-0028: 認知外在化AI要件の文書体系統合と次フェーズ実行計画
 
-- Status: Accepted
+- Status: Superseded by `ADR-0090` (2026-10-01)
 - Date: 2026-04-10
 - Deciders: Project Maintainers
 - Scope: `00_Prompt/`, `01_Plans/adr/`, `02_Architecture/`, `03_Implement/frontend/`, `03_Implement/backend/`, `04_Documentation/`
 - Source Spec: `00_Prompt/ai_cognitive_externalization_requirements.md`
 - Related: `ADR-0001`, `ADR-0007`, `ADR-0026`, `ADR-0027`, `02_Architecture/llm_input_ir_spec.md`, `02_Architecture/llm_quality_strategy.md`
+
+> **Current reading note (2026-10-01):** 本ADRのCEフェーズ、Issue分割、Decision Queue、完了ゲートは現在の「1人の開発者＋生成AI」運用では使用しない。認知支援の現行方針は `ADR-0090`、価値と証拠階層は `ADR-0089`、安全境界は現行 `domain.md` / LLM Architectureを正本とする。本書は履歴として保持する。
 
 ## Context
 
