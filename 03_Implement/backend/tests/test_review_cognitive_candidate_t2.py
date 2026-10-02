@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-DEFAULT_FIXTURE = Path(__file__).parent / "fixtures" / "ai_eval_kj_document.json"
 from scripts.review_cognitive_candidate_t2 import (
     render_baseline,
     render_candidates,
@@ -15,6 +14,9 @@ from sui_sensemaking_api.attention_candidates import (
     build_attention_ir,
 )
 from sui_sensemaking_api.models import DocumentV1
+
+
+DEFAULT_FIXTURE = Path(__file__).parent / "fixtures" / "ai_eval_kj_document.json"
 
 
 def _document() -> DocumentV1:
