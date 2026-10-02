@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from sui_sensemaking_api.attention_candidates import MAX_ATTENTION_FOCUS_PAIRS
 from sui_sensemaking_api.main import app
 from sui_sensemaking_api.routes import ai
 from sui_sensemaking_api.settings import settings
@@ -159,7 +160,7 @@ def test_focus_pair_budget_keeps_small_actionable_candidate_visible() -> None:
     assert response.status_code == 200, response.text
     candidates = response.json()["candidates"]
     assert len(candidates) == 1
-    assert len(candidates[0]["focusPairs"]) <= ai.MAX_ATTENTION_FOCUS_PAIRS
+    assert len(candidates[0]["focusPairs"]) <= MAX_ATTENTION_FOCUS_PAIRS
 
 
 def test_source_digest_tracks_candidate_relevant_projection() -> None:
