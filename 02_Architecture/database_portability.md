@@ -1,116 +1,116 @@
-# Database portability
+# DBの可搬性
 
-DB対応の正本は本書とする。SQLAlchemyがdialectを提供していることは、sui-sensemakingがそのDBを正式対応していることを意味しない。
+DBへの対応についての正本は、この文書です。SQLAlchemyがそのDBの方言（dialect）を提供していても、sui-sensemakingがそのDBに正式に対応していることにはなりません。
 
-## Support matrix
+## 対応表
 
-| Database | SQLAlchemy backend | Family | 状態 | Migration strategy | Single-tenant | Shared-schema SaaS |
+| DB | SQLAlchemyのバックエンド | ファミリー | 状態 | マイグレーションの方式 | single-tenant | 共有スキーマのSaaS |
 | --- | --- | --- | --- | --- | --- | --- |
-| SQLite | sqlite | sqlite | Verified | table rebuild | 対応 | 非対応 |
-| PostgreSQL 16 | postgresql | postgresql | Verified | named constraint DDL + RLS | 対応 | 対応 |
-| MySQL 8.4 | mysql | mysql | Verified | named constraint DDL | 対応 | 非対応 |
-| MariaDB 11.4 | mariadb | mysql | Verified | named constraint DDL | 対応 | 非対応 |
-| SQL Server 2022 | mssql | mssql | Verified | named constraint DDL | 対応 | 非対応 |
-| CockroachDB 26.2.3 | cockroachdb | cockroachdb | Verified | named constraint DDL + atomic PK replacement | 対応 | 非対応 |
-| Oracle AI Database Free 23.26.2 | oracle | oracle | Verified | named constraint DDL | 対応 | 非対応 |
+| SQLite | sqlite | sqlite | Verified | テーブルの再構築 | 対応 | 非対応 |
+| PostgreSQL 16 | postgresql | postgresql | Verified | 名前付き制約のDDL、RLS | 対応 | 対応 |
+| MySQL 8.4 | mysql | mysql | Verified | 名前付き制約のDDL | 対応 | 非対応 |
+| MariaDB 11.4 | mariadb | mysql | Verified | 名前付き制約のDDL | 対応 | 非対応 |
+| SQL Server 2022 | mssql | mssql | Verified | 名前付き制約のDDL | 対応 | 非対応 |
+| CockroachDB 26.2.3 | cockroachdb | cockroachdb | Verified | 名前付き制約のDDL、主キーの原子的な置き換え | 対応 | 非対応 |
+| Oracle AI Database Free 23.26.2 | oracle | oracle | Verified | 名前付き制約のDDL | 対応 | 非対応 |
 
-`Candidate`はロードマップ上の分類であり、接続許可や互換性保証ではない。candidate URLはengine生成・migration開始前に拒否する。
+`Candidate`（候補）は、ロードマップ上の分類です。接続を許可するものでも、互換性を保証するものでもありません。候補のURLは、エンジンを作る前、マイグレーションを始める前に拒否します。
 
-## Complexity boundary
+## 複雑さの境界
 
-- backend名ではなくfamilyを再利用単位にする。MySQL/MariaDBは、差が確認されるまで同じfamilyとして扱う。
-- repositoryとAPIはDB非依存に保つ。DB差分は能力レジストリ、migration strategy、実DB fixtureへ閉じ込める。
-- migration strategyは少数のclosed setとし、新DBごとにアプリ全体へbooleanや条件分岐を増やさない。
-- optional dependency、pytest marker、実DBtest、復旧test、CI実行、公開support matrixは能力レジストリとの静的契約testで同期し、一覧文字列を手書きで複製しない。
-- Verifiedの検証対象名とCI imageも能力レジストリへ保持する。対応表のversion表記やCI tagだけを単独更新できないよう契約testで照合する。
-- SQLAlchemy backendだけでなく、検証済み同期driverと受理するdrivernameも能力レジストリで管理する。driver省略URLと既存async URLは検証済み同期driverへ正規化し、未導入・未検証driverの明示指定はengine生成前に拒否する。
-- identifier/index対象文字列、検索・表示用のbounded text、本文・bundle等のcontent objectを区別する。可搬性のために本文を不必要に短いVARCHARへ変換しない。
-- SQL方言のコンパイル成功だけでVerifiedへ昇格しない。
+- 再利用の単位は、バックエンドの名前ではなく、ファミリーにする。MySQLとMariaDBは、差が確認されるまで、同じファミリーとして扱う。
+- リポジトリとAPIは、DBに依存しないように保つ。DBごとの差は、能力レジストリ、マイグレーションの方式、実際のDBを使うフィクスチャに閉じ込める。
+- マイグレーションの方式は、数の限られた閉じた集合にする。新しいDBが増えるたびに、アプリ全体へ真偽値や条件分岐を増やさない。
+- オプションの依存パッケージ、pytestのマーカー、実際のDBでのテスト、復旧のテスト、CIでの実行、公開する対応表は、能力レジストリとの静的な契約テストで同期する。一覧の文字列を、手で複製しない。
+- Verifiedの検証対象の名前とCIのイメージも、能力レジストリに保持する。対応表のバージョンの表記や、CIのタグだけを、単独で更新できないように、契約テストで照合する。
+- SQLAlchemyのバックエンドだけでなく、検証済みの同期ドライバと、受け付けるドライバ名も、能力レジストリで管理する。ドライバを省略したURLと、既存の非同期URLは、検証済みの同期ドライバに読み替える。導入されていないドライバや、検証されていないドライバを明示したときは、エンジンを作る前に拒否する。
+- 識別子や索引の対象の文字列、検索や表示に使う長さに上限のあるテキスト、本文やバンドルなどの内容のオブジェクトを区別する。可搬性のために、本文を、不必要に短いVARCHARに変換しない。
+- SQLの方言として、コンパイルに成功しただけでは、Verifiedに昇格させない。
 
-## Data shape and content storage boundary
+## データの形と、内容の保存の境界
 
-DB可搬性を理由に、現行の全`TEXT`列へ一律の桁数を設定しない。各列は次の3種類へ棚卸ししてから物理型を決める。
+DBの可搬性を理由に、現在のすべての `TEXT` 列に、一律の桁数を設定することはしない。各列を、次の3種類に仕分けしてから、物理的な型を決める。
 
 | 種類 | 例 | 方針 |
 | --- | --- | --- |
-| Identifier / key | tenant ID、document ID、principal ID、外部subject | ID生成規則・外部プロトコル・複合indexのbyte上限から意味別の最大長を定義し、bounded portable型にする |
-| Bounded descriptive text | 表示名、email、URI、状態値 | 入力契約と業務上限を先に定義し、検索・索引要件に応じた型にする |
-| Content object | `documents.payload_json`、inquiry bundle、判断ログpayload | 内容を切り詰めない。サイズ上限はDoS対策・運用容量として別途定義し、DB列長と混同しない |
+| 識別子とキー | テナントID、文書ID、本人のID、外部のsubject | IDの生成規則、外部のプロトコル、複合索引のバイト数の上限から、意味ごとの最大の長さを定義し、上限のある可搬な型にする。 |
+| 上限のある説明のテキスト | 表示名、メールアドレス、URI、状態の値 | 入力の契約と業務上の上限を先に定義し、検索と索引の要件に合わせた型にする。 |
+| 内容のオブジェクト | `documents.payload_json`、問い合わせのバンドル、判断ログのペイロード | 内容を切り詰めない。サイズの上限は、DoS対策と運用上の容量として別に定義し、DBの列の長さと混同しない。 |
 
-現行ORMの永続文字列列は列単位で`persistence_shapes.py`へ分類し、新しい文字列列が未分類ならテストで停止する。内部ID 128、外部発行ID 512、URI 2048、email 320、表示名255、timestamp 40、closed-set state 32文字を基準とし、OIDC複合lookupはissuer 512＋audience 255をAPI受入上限とする。content object以外は同カタログから`VARCHAR(n)`へ変換し、SQLite/PostgreSQL/MySQL/MariaDBのmodelとmigrationで重複定義しない。
+現在のORMにある、永続化する文字列の列は、列ごとに `persistence_shapes.py` で分類する。新しい文字列の列が未分類のときは、テストで停止する。基準は、内部IDが128、外部が発行するIDが512、URIが2048、メールアドレスが320、表示名が255、タイムスタンプが40、閉じた集合の状態が32の、それぞれの文字数である。OIDCの複合検索は、発行者が512と、audienceが255を、APIが受け付ける上限とする。内容のオブジェクト以外は、このカタログから `VARCHAR(n)` に変換し、SQLite、PostgreSQL、MySQL、MariaDBのモデルとマイグレーションで、重複して定義しない。
 
-content objectはSQLite/PostgreSQL/CockroachDBで`TEXT`、MySQL/MariaDBで`LONGTEXT`、SQL Serverで`VARCHAR(MAX)`、Oracleで`CLOB`へ写像する。全Verified DBの実DBで1 MiB超のDocument roundtripを確認済みであり、これらのDBを理由にNAS/S3を必須化しない。
+内容のオブジェクトは、SQLite、PostgreSQL、CockroachDBでは `TEXT`、MySQLとMariaDBでは `LONGTEXT`、SQL Serverでは `VARCHAR(MAX)`、Oracleでは `CLOB` に対応させる。すべてのVerifiedのDBで、実際のDBを使い、1 MiBを超える文書の往復を確認済みである。これらのDBを理由に、NASやS3を必須にすることはしない。
 
-MySQL familyの昇格matrixはfresh、upgrade/downgrade、tenant複合FK、case-insensitive IdP unique、1 MiB超LOB、logical backup/restoreを含む。2026-08-10のMySQL 8.4とMariaDB 11.4で、復元先の2文書と最大1,048,587文字のpayloadを照合した。このmatrixはDB family単位のparameterized testとし、将来candidateの検証契約に再利用する。
+MySQLファミリーの昇格のマトリクスには、新規作成、アップグレードとダウングレード、テナントの複合外部キー、大文字小文字を区別しないIdPの一意制約、1 MiBを超えるLOB、論理バックアップと復元を含む。2026-08-10に、MySQL 8.4とMariaDB 11.4で、復元先の2つの文書と、最大1,048,587文字のペイロードを照合した。このマトリクスは、DBのファミリー単位のパラメータ化したテストとし、将来の候補の検証の契約に再利用する。
 
-SQL Server 2022も同じpromotion gateでfresh、guarded downgrade/re-upgrade、tenant複合FK、CI collation上のIdP unique、transaction rollbackとpool再利用、1 MiB超`VARCHAR(MAX)`、native backup/restoreを検証する。SQLの差分は`NO ACTION`、check expression、LOB型のportable DDL変換に閉じ込め、repository/APIにSQL Server分岐を持ち込まない。
+SQL Server 2022も、同じ昇格の関門で、次を検証する。新規作成。保護付きのダウングレードと再アップグレード。テナントの複合外部キー。CIの照合順序での、IdPの一意制約。トランザクションのロールバックと、コネクションプールの再利用。1 MiBを超える `VARCHAR(MAX)`。ネイティブのバックアップと復元。SQLの差は、`NO ACTION`、チェック式、LOB型の、可搬なDDLの変換に閉じ込め、リポジトリとAPIに、SQL Server向けの分岐を持ち込まない。
 
-CockroachDB 26.2.3も同じpromotion gateを通過した。主キーdrop/addの原子的実行とtable schema lock解除だけを能力・DDL層へ閉じ込め、fresh、guarded downgrade/re-upgrade、tenant複合FK、式indexによるcase-insensitive identity unique、transaction/pool、1 MiB超`TEXT`、native backup/restoreを検証する。分散DBであることだけからshared-schema SaaS対応は推論しない。
+CockroachDB 26.2.3も、同じ昇格の関門を通過した。主キーの削除と追加の原子的な実行と、テーブルのスキーマロックの解除だけを、能力とDDLの層に閉じ込める。検証したのは、新規作成、保護付きのダウングレードと再アップグレード、テナントの複合外部キー、式の索引による、大文字小文字を区別しないIDの一意制約、トランザクションとコネクションプール、1 MiBを超える `TEXT`、ネイティブのバックアップと復元である。分散DBであることだけから、共有スキーマのSaaSに対応していると推論しない。
 
-Oracle AI Database Free 23.26.2も同じpromotion gateを通過した。明示的な`ON DELETE NO ACTION`を省略するcompiler変換と、fresh schemaで既にboundedな0020の物理no-opだけを共通DDL/migration境界へ閉じ込める。Thin mode接続、fresh、guarded downgrade/re-upgrade、tenant複合FK、function-based unique index、transaction/pool、1 MiB超`CLOB`、Data Pumpによるschema export/importを検証する。
+Oracle AI Database Free 23.26.2も、同じ昇格の関門を通過した。明示的な `ON DELETE NO ACTION` を省略するコンパイラの変換と、新規のスキーマでは、すでに上限がある0020の、物理的に何もしない処理だけを、共通のDDLとマイグレーションの境界に閉じ込める。検証したのは、Thinモードでの接続、新規作成、保護付きのダウングレードと再アップグレード、テナントの複合外部キー、関数ベースの一意索引、トランザクションとコネクションプール、1 MiBを超える `CLOB`、Data Pumpによるスキーマのエクスポートとインポートである。
 
-外部IdPのsubject、audience、external tenant reference等は外部仕様が任意長を許し得るが、本製品が無制限入力を索引へ格納することまでは意味しない。超過時のhash代替は同一性・監査表示を損なうため暗黙には行わず、受入上限をAPIで明示して拒否する。内部生成IDと外部発行IDを同じ型aliasへ統合しない。
+外部のIdPのsubject、audience、外部テナントの参照などは、外部の仕様が任意の長さを許すことがある。しかし、この製品が、無制限の入力を索引に格納することまでは意味しない。上限を超えたときに、ハッシュで代用すると、同一性と監査での表示を損なうため、黙って行うことはしない。受け付ける上限を、APIで明示して、超えたものを拒否する。内部で生成したIDと、外部が発行したIDを、同じ型の別名にまとめない。
 
-Content objectの保存先はrepositoryから直接選ばない。将来の`ContentStore` portを介し、少なくとも次の実装候補を同じ契約で扱う。
+内容のオブジェクトの保存先は、リポジトリが直接選ばない。将来の `ContentStore` のポートを通して、少なくとも次の実装の候補を、同じ契約で扱う。
 
-- `database`: 現行互換の既定。本文をDB transaction内に保持する。
-- `nas`: NASまたは管理対象file service。DBにはserver-managed相対pathを保持し、共有rootや資格情報をlocatorへ含めない。
-- `s3`: S3互換object storage。DBにはbucket設定と分離したserver-managed object keyを保持し、署名URLや資格情報を永続化しない。
-- `hybrid`は独立した第三の永続方式にせず、size・tenant policy等により上記実装へ委譲するrouterとしてのみ検討する。
+- `database`: 現行との互換のための既定。本文を、DBのトランザクションの中に保持する。
+- `nas`: NAS、または管理対象のファイルサービス。DBには、サーバーが管理する相対パスを保持し、共有のルートや認証情報を、ロケーターに含めない。
+- `s3`: S3互換のオブジェクトストレージ。DBには、バケットの設定と分けた、サーバーが管理するオブジェクトキーを保持し、署名付きURLや認証情報を永続化しない。
+- `hybrid`: 独立した第三の永続化の方式にはせず、サイズやテナントのポリシーなどに応じて、上の実装に振り分けるルーターとしてだけ検討する。
 
-DB能力レジストリはinline content対応を`verified`／`candidate`／`unsupported`で表す。保存方式は次の順で決定する。
+DBの能力レジストリは、内容をインラインで持つ対応を、`verified`、`candidate`、`unsupported` で表す。保存の方式は、次の順に決める。
 
-1. runtime DB自体がVerifiedでなければ、外部保存を選んでもDB backendは起動許可しない。metadata、constraint、transactionの検証は依然必要である。
-2. `database`はinline content能力がVerifiedの場合だけ選択できる。
-3. inline contentがUnsupportedのDBを将来Verifiedへ昇格する場合、`nas`または`s3`を必須構成とする。
-4. `nas`／`s3`は保存adapter、資格情報、暗号化、health check、backup/restore、障害演習が完了するまで設定値として公開しない。
-5. 自動fallbackで保存先を変えない。障害時にDBからNAS/S3へ暗黙退避すると正本・retention・監査境界が変わるため、fail closedとする。
+1. 実行時のDB自体がVerifiedでなければ、外部の保存を選んでも、そのDBのバックエンドの起動を許可しない。メタデータ、制約、トランザクションの検証は、変わらず必要である。
+2. `database` は、インラインで内容を持つ能力がVerifiedのときだけ、選べる。
+3. インラインで内容を持つ能力がUnsupportedのDBを、将来Verifiedに昇格するときは、`nas` か `s3` を必須の構成にする。
+4. `nas` と `s3` は、保存のアダプタ、認証情報、暗号化、ヘルスチェック、バックアップと復元、障害の演習が完了するまで、設定値として公開しない。
+5. 保存先を、自動で切り替えない（フォールバックしない）。障害のときに、DBからNASやS3へ黙って退避すると、正本、保持期間、監査の境界が変わるため、安全側で失敗させる。
 
-NAS／S3のlocatorは`tenant_id`と`content_id`それぞれのSHA-256から決定的に生成し、生の識別子をpath/keyへ露出させない。locatorをAPI入力として受理せず、DB値が改変されても絶対path、`..`、管理root外symlinkを拒否する。NAS書込は同一directoryの一時fileへwrite・flush・fsyncした後にatomic replaceし、途中fileを公開しない。S3 adapterはbucketをruntime設定として保持し、DB locatorにはobject keyだけを保存する。
+NASとS3のロケーターは、`tenant_id` と `content_id` それぞれのSHA-256から、決定的に生成し、生の識別子を、パスやキーに露出させない。ロケーターをAPIの入力としては受け付けない。DBの値が改変されても、絶対パス、`..`、管理しているルートの外へのシンボリックリンクを拒否する。NASへの書き込みは、同じディレクトリの一時ファイルに、書き込み、フラッシュ、fsyncしたあとに、原子的に置き換え、途中のファイルを公開しない。S3のアダプタは、バケットを実行時の設定として保持し、DBのロケーターには、オブジェクトキーだけを保存する。
 
-読取時はNAS/S3から得たUTF-8 bytesについてbyte sizeとSHA-256をDB metadataと照合し、一致しなければ本文を返さない。S3 object metadataのdigestが存在する場合もDB digestと一致させる。削除は冪等に扱うが、object不在をDB metadata削除成功と自動解釈しない。DB状態遷移と監査確定は後続coordinatorが担当する。
+読み取るときは、NASやS3から得たUTF-8のバイト列について、バイト数とSHA-256を、DBのメタデータと照合し、一致しなければ本文を返さない。S3のオブジェクトのメタデータにダイジェストがあるときも、DBのダイジェストと一致させる。削除は、冪等に扱う。ただし、オブジェクトがないことを、DBのメタデータの削除が成功したものとして、自動で解釈しない。DBの状態の遷移と、監査の確定は、後続のコーディネーターが担当する。
 
-S3実装は特定SDKをContent Storeへ直結せず、`put_object`／`get_object`／`delete_object`のclient portを介する。AWS S3、MinIO等のS3互換製品、テストdoubleの差をこのportのadapterへ閉じ込め、core packageへ必須cloud dependencyを追加しない。
+S3の実装は、特定のSDKをContent Storeに直接結び付けず、`put_object`、`get_object`、`delete_object` のクライアントのポートを通す。AWS S3、MinIOなどのS3互換の製品、テスト用の代替の差は、このポートのアダプタに閉じ込める。中心となるパッケージに、クラウドへの必須の依存を追加しない。
 
-Content Store上の編集世代は物理backendと分離し、`ADR-0070`で採択したcontent-addressed revision DAGで扱う。論理revisionは共有可能な`tenant + digest` blobを参照し、database／NAS／S3／Gitはその物理backend候補とする。Git commit／branchをDB metadata、tenant認可、human reviewの正本にしない。schema version、ETag、Inquiry round snapshot、merge decision log、編集revisionは別概念を維持する。
+Content Storeでの編集の世代は、物理的なバックエンドと分け、`ADR-0070` で採択した、内容アドレス方式のリビジョンDAGで扱う。論理的なリビジョンは、共有できる `tenant + digest` のblobを参照する。database、NAS、S3、Gitは、その物理的なバックエンドの候補とする。Gitのコミットやブランチを、DBのメタデータ、テナントの認可、人間のレビューの正本にしない。スキーマのバージョン、ETag、問い合わせのラウンドのスナップショット、マージの判断ログ、編集のリビジョンは、別の概念として維持する。
 
-Firestore／DynamoDB等のDocument DBは、SQLAlchemy RDB backendやrevision blob backendとして扱わない。document/item上限が代表canvasより小さく、分割保存は既存revision DAGとchunk／manifest／GCを二重化するためである。採用価値はpresence、cursor、最近使った文書、検索候補等の再構築可能な派生projectionに限定する。RDB transaction内outboxから非同期反映し、同期dual write、projectionからの正本逆生成、provider側ruleだけに依存した認可を禁止する。詳細は`ADR-0071`を正本とする。
+FirestoreやDynamoDBなどのドキュメントDBは、SQLAlchemyのRDBのバックエンドとしても、リビジョンのblobのバックエンドとしても扱わない。ドキュメントや項目の上限が、代表的なキャンバスより小さく、分割して保存すると、既存のリビジョンDAGと、チャンク、マニフェスト、GCが二重になるためである。採用する価値があるのは、プレゼンス、カーソル、最近使った文書、検索の候補など、再構築できる派生の投影に限る。RDBのトランザクションの中のアウトボックスから、非同期に反映する。同期した二重の書き込み、投影からの正本の逆生成、プロバイダ側のルールだけに依存した認可は、禁止する。詳細は、`ADR-0071` を正本とする。
 
-Content Storeの操作契約は一つの汎用CRUDへ統合せず、次の3 portに分離する。
+Content Storeの操作の契約は、1つの汎用のCRUDにまとめず、次の3つのポートに分ける。
 
-| Port | 更新特性 | DB実装の責務 |
+| ポート | 更新の特性 | DBの実装の責務 |
 | --- | --- | --- |
-| `VersionedDocumentContentStore` | version付きcreate/update、ETagによる楽観的競合制御 | tenant-scoped rowのload/save。ETag判定とcommitはapplication側 |
-| `ReplaceableBundleContentStore` | journey単位の全置換と明示削除 | tenant-scoped rowのload/replace/delete。削除監査とcommitは同じapplication transaction |
-| `AppendOnlyLogContentStore` | immutable appendとgroup/snapshot別列挙 | append/listのみ。update/deleteを契約へ持たせない |
+| `VersionedDocumentContentStore` | バージョン付きの作成と更新、ETagによる楽観的な競合の制御 | テナントごとの行の読み込みと保存。ETagの判定とコミットは、アプリケーション側が行う。 |
+| `ReplaceableBundleContentStore` | 問い合わせの単位での全置換と、明示的な削除 | テナントごとの行の読み込み、置換、削除。削除の監査とコミットは、同じアプリケーションのトランザクションで行う。 |
+| `AppendOnlyLogContentStore` | 不変の追記と、グループやスナップショットごとの列挙 | 追記と列挙だけ。更新と削除を、契約に持たせない。 |
 
-各portはUTF-8 byte sizeとSHA-256 digestを持つ`ContentBlob`を受け渡す。現行DB実装ではinline本文から都度算出し、schema migrationを発生させない。外部保存へ昇格するときはdigest、byte size、schema version、storage stateをDB metadataへ永続化する。adapterはtransactionをcommitせず、認可対象の更新、監査証跡、content metadataをapplication側が一つの処理単位として確定できるようにする。
+各ポートは、UTF-8のバイト数とSHA-256のダイジェストを持つ `ContentBlob` を受け渡す。現在のDBの実装では、インラインの本文から、そのつど算出し、スキーマのマイグレーションを発生させない。外部の保存に昇格するときは、ダイジェスト、バイト数、スキーマのバージョン、保存の状態を、DBのメタデータに永続化する。アダプタは、トランザクションをコミットしない。認可の対象の更新、監査の証跡、内容のメタデータを、アプリケーション側が、1つの処理の単位として確定できるようにする。
 
-外部化検討時の暫定`content_object_references`はruntime未使用であることを確認し、`20260811_0022`で撤去した。既存行がある環境ではupgradeをfail closedに停止し、`content_blobs`への個別移行または実験データ削除の確認を要求する。以後、database／NAS／S3／Git候補の物理metadataは`content_blobs`だけに置き、別のcontent ID正本を再導入しない。
+外部への保存を検討していたときの暫定の `content_object_references` は、実行時に使われていないことを確認し、`20260811_0022` で撤去した。既存の行がある環境では、アップグレードを、安全側で停止し、`content_blobs` への個別の移行か、実験データの削除の確認を求める。以後、database、NAS、S3、Gitの候補の物理的なメタデータは、`content_blobs` にだけ置き、別のcontent IDの正本を、再び導入しない。
 
-状態は`pending -> ready|failed`、`ready -> deleting|failed`、`failed -> pending|deleting`を許可する。`deleting`からの物理削除完了は行削除とcontent-free監査証跡で表し、`deleting -> ready`の復活は許さない。NAS/S3への書込成功後にDB確定が失敗したobject、またはDB参照がなくなったobjectはorphan候補とし、tenant・content ID prefixと保留期間を確認する回収処理以外から削除しない。
+状態の遷移は、`pending -> ready|failed`、`ready -> deleting|failed`、`failed -> pending|deleting` を許可する。`deleting` からの物理的な削除の完了は、行の削除と、内容を含まない監査の証跡で表す。`deleting -> ready` への復活は許さない。NASやS3への書き込みが成功したあとに、DBでの確定に失敗したオブジェクトと、DBからの参照がなくなったオブジェクトは、孤立の候補とする。テナントとcontent IDのプレフィックス、保留の期間を確認する回収の処理以外からは、削除しない。
 
-外部保存へ切り替える場合もDB metadataを認可・整合性の正本とし、object keyを利用者入力から直接組み立てない。tenant context欠落時はfail closed、読取時はdigestとschema versionを検証し、DB更新とobject操作の不一致を補償できる状態遷移・回収処理を必須とする。署名URL、暗号化、retention、backup/restore、orphan回収、SafeMode付きexportは実装前のpromotion gateで検証する。
+外部の保存に切り替えるときも、DBのメタデータを、認可と整合性の正本とし、オブジェクトキーを、利用者の入力から直接組み立てない。テナントの文脈が欠けているときは、安全側で失敗させる。読み取るときは、ダイジェストとスキーマのバージョンを検証する。DBの更新とオブジェクトの操作の不一致を、補償できる状態の遷移と回収の処理を、必須とする。署名付きURL、暗号化、保持期間、バックアップと復元、孤立したオブジェクトの回収、SafeModeを伴う書き出しは、実装の前の昇格の関門で検証する。
 
-## Promotion gate
+## 昇格の関門
 
-CandidateをVerifiedへ変更するには、対象versionを固定した実DBに対して次をすべて満たす。
+候補（Candidate）をVerifiedに変更するには、バージョンを固定した実際のDBに対して、次のすべてを満たす。
 
-1. fresh DBへのAlembic upgrade head
-2. 対応対象revisionのupgrade/downgrade roundtrip
-3. primary key、複合foreign key、unique、check、index、cascade/restrictの実制約検証
-4. Documentと主要tenant従属データのCRUD roundtrip
-5. transaction rollback、connection pool再利用、backup/restoreの代表演習
-6. optional driver、受理URLと同期driverの正規化契約、CI、installation/configuration文書の同期
+1. 新規のDBに対して、Alembicのupgrade headが成功する。
+2. 対応の対象のリビジョンについて、アップグレードとダウングレードの往復が成功する。
+3. 主キー、複合外部キー、一意制約、チェック制約、索引、cascadeとrestrictの、実際の制約を検証する。
+4. 文書と、主要なテナントに従属するデータの、CRUDの往復を検証する。
+5. トランザクションのロールバック、コネクションプールの再利用、バックアップと復元の代表的な演習を行う。
+6. オプションのドライバ、受け付けるURLと同期ドライバの正規化の契約、CI、導入と設定の文書を、同期する。
 
-この同期自体もpromotion後の保守契約である。Verified backendをレジストリへ追加したのにdriver extra、marker、実DBtest、CI command、公開表のいずれかが欠ける場合、通常のunit test段階で失敗させる。
+この同期自体も、昇格したあとの保守の契約である。Verifiedのバックエンドをレジストリに追加したのに、ドライバのextra、マーカー、実際のDBでのテスト、CIのコマンド、公開する表のどれかが欠けているときは、通常の単体テストの段階で失敗させる。
 
-共有schema SaaSへの昇格は別判定とし、DB側tenant guard、contextなしdeny、tenant A/B越境、pool context残留のnegative matrixを追加で必須とする。single-tenant対応からSaaS対応を推論しない。
+共有スキーマのSaaSへの昇格は、別の判定とし、DB側のテナントの保護、文脈がないときの拒否、テナントAとBの越境、コネクションプールに文脈が残ることについての、否定のテストの表を、追加で必須とする。single-tenantに対応していることから、SaaSに対応していると推論しない。
 
-## Current next step
+## 現在の次の段階
 
-semantic artifactについては、ADR-0088で **RDB metadata/event + Content Store payload + materialized Information Network** を第一候補とした。ただしmigrationは開始していない。`SENSEMAKING-PERSIST-01`でportable table sketch、FK / constraint matrix、Authority CAS、exchange staging、Content Store benchmark、Information Network rebuild、retention / GCを検証し、Verified DB familyで成立するEvidenceを得た後にだけ実装Go判断を行う。
+意味の成果物（semantic artifact）については、ADR-0088で、「RDBのメタデータとイベント、Content Storeのペイロード、マテリアライズした情報ネットワーク」を、第一の候補とした。ただし、マイグレーションは始めていない。`SENSEMAKING-PERSIST-01` で、可搬なテーブルのスケッチ、外部キーと制約のマトリクス、権限のCAS、交換のステージング、Content Storeのベンチマーク、情報ネットワークの再構築、保持とGCを検証する。Verifiedの、DBファミリーで成立する証拠を得たあとにだけ、実装を始めるかを判断する。
 
-この検討でも、JSON演算やgraph DBをCore correctnessの前提にせず、tenant FK・exact revision・Review / Authority eventの整合はportable RDB metadataで守る。kind-specific payloadはContent Storeのcontent objectとして扱い、現行`DocumentV1`のschemaとは分離する。
+この検討でも、JSONの演算やグラフDBを、中核の正しさの前提にしない。テナントの外部キー、正確なリビジョン、レビューと権限のイベントの整合は、可搬なRDBのメタデータで守る。種類ごとのペイロードは、Content Storeの内容のオブジェクトとして扱い、現在の `DocumentV1` のスキーマとは分ける。
 
-`DATA-GENERATION-01`でrevision／blob設計を確定し、`DATA-GENERATION-02`で全Verified DBのportable binary LOBへinline codec bytesを保存・復元し、Document GET/PUTのruntime正本をrevision DAGへ移行した。`documents.payload_json`はETag互換と切戻しのための検証付きprojectionとして当面維持し、headとの不一致はfail closedにする。外部storageのruntime接続優先度は引き続き低く保つ。新しいDB familyは具体的需要を起点にcandidate登録し、同じpromotion gateを通す。容量・複数instance共有要件が実測された環境だけ、NAS/S3等を`content_blobs`の物理backendとして`DATA-GENERATION-03`の条件で再評価する。
+`DATA-GENERATION-01` で、リビジョンとblobの設計を確定した。`DATA-GENERATION-02` で、すべてのVerifiedのDBの、可搬なバイナリLOBに、インラインのコーデックのバイト列を保存して復元し、文書のGETとPUTの、実行時の正本を、リビジョンDAGに移した。`documents.payload_json` は、ETagとの互換と、切り戻しのための、検証付きの投影として、当面は維持する。headと一致しないときは、安全側で失敗させる。外部の保存と、実行時に接続する優先度は、引き続き低く保つ。新しいDBのファミリーは、具体的な需要を起点に、候補として登録し、同じ昇格の関門を通す。容量や、複数のインスタンスでの共有の要件が、実測された環境だけ、NASやS3などを、`content_blobs` の物理的なバックエンドとして、`DATA-GENERATION-03` の条件で、再評価する。
