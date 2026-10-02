@@ -58,6 +58,7 @@ def test_transitive_relation_exposes_attention_without_score_or_provider() -> No
             {
                 "candidateId": "cc-0001",
                 "cardIds": ["c1", "c2", "c3"],
+                "focusPairs": [["c1", "c3"]],
                 "basis": "relation",
                 "cue": "indirect_relation",
             }
