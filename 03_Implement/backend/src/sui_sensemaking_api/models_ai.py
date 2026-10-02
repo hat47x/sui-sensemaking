@@ -492,6 +492,7 @@ class SuggestAttentionCandidatesRequest(BaseModel):
 class SuggestAttentionCandidatesResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    sourceDigest: str = Field(pattern=r"^[0-9a-f]{64}$")
     candidates: list[AttentionCandidate]
     excludedCardIds: list[str] = Field(default_factory=list)
     truncated: bool = False
