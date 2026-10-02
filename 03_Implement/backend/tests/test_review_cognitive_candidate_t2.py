@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
-from scripts.measure_cognitive_candidate_novelty import DEFAULT_FIXTURE
+DEFAULT_FIXTURE = Path(__file__).parent / "fixtures" / "ai_eval_kj_document.json"
 from scripts.review_cognitive_candidate_t2 import (
     render_baseline,
     render_candidates,
@@ -29,7 +30,8 @@ def test_baseline_does_not_reveal_machine_candidates() -> None:
     assert "## Current islands" in rendered
     assert "候補を見る前に" in rendered
     assert "cc-0001" not in rendered
-    assert "indirectRegrouping" not in rendered
+    assert "注目組:" not in rendered
+    assert "indirect_relation" not in rendered
 
 
 def test_two_phases_expose_the_same_source_digest() -> None:
@@ -114,7 +116,6 @@ def test_baseline_marks_unassigned_hold_without_promoting_it() -> None:
 
     assert "c10 [hold=pending]" in rendered
     assert "買い物弱者を支える仕組みが十分でない" in rendered
-
 
 
 def test_candidate_phase_matches_product_candidate_contract() -> None:
