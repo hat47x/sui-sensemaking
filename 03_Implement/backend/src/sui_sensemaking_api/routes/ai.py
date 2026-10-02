@@ -11,7 +11,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from sui_sensemaking_api.attention_candidates import (
-    MAX_ATTENTION_FOCUS_PAIRS,
     attention_candidates_from_ir,
     attention_source_digest,
     build_attention_ir,
