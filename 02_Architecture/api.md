@@ -452,9 +452,30 @@ Polygon auto-fitのbackend接続準備として、A2比較キーの最小契約�
 - tenant-scoped precondition必須（§10参照）
 - proposal-only: AI出力は候補生成に留まり、人間の明示操作なしに文書へ反映されない
 - **SafeModeはAPI境界で強制（SEC-AI-SAFEMODE-01 / ADR-0068）**: 文書を伴う全エンドポイント（suggest-layout / suggest-merges / suggest-island-summary / generate-narrative / check-narrative / proposals/island-summary）は、未レビューカード（`textReviewed ≠ true`）を含む場合に **422 `unreviewed_text_not_allowed`** で拒否する。`allowUnreviewedText=true` かつprofileの `SUI_ALLOW_UNREVIEWED_AI_TEXT=true` のときのみ緩和（監査へ記録）
-- `SUI_LLM_PROVIDER=none` 時は全エンドポイントが503（provider disabled）を返す。AI-MODEL-GOVERNANCE-03以降もこれは無条件のkill switchであり、registryに他のproviderが設定済みでも動的dispatchは一切行われない
+- `SUI_LLM_PROVIDER=none` は、LLM providerを呼び出す生成エンドポイントに対する無条件のkill switchである。registryに他のproviderが設定済みでも動的dispatchは行わず、503（provider disabled）を返す。決定論的な `/ai/suggest-attention-candidates` はproviderを呼び出さないため、この制約の対象外とする。
 - **AI-MODEL-GOVERNANCE-03（動的dispatch）**: `model` を受け取るエンドポイント（suggest-island-summary / propose-opposing-viewpoint / generate-narrative / refine-card-text / suggest-card-groups / suggest-document-title）は、そのmodelがregistry上で登録された `providerId` の `providerKind` へ直接dispatchする（`ProviderRegistry.resolve(providerKind)`）。`SUI_LLM_PROVIDER` とmodelの `providerKind` が異なっていても、その `providerKind` 自身の設定が完全なら実行できる。`model` を受け取らないエンドポイント（suggest-layout / suggest-merges / check-narrative / detect-contradiction）は従来どおり `SUI_LLM_PROVIDER` の既定transportを使う。`apiKeyRef` は登録時の参照検証（AC-4）を経た上で、実際の資格情報は引き続き `SUI_*_API_KEY` 環境変数から解決する（registry行の値を直接使う経路は追加しない）
 - モデル選択は操作別モデルレベル定義（AGENTS.md §1.2）に従う
+
+**POST** `/ai/suggest-attention-candidates`
+
+- Request: `SuggestAttentionCandidatesRequest`
+  - `doc: DocumentV1` — 現在の文書全体
+  - `includeSpatial?: boolean` — 空間配置を候補生成へ使うか。既定は `false`
+  - `allowUnreviewedText?: boolean` — 未レビュー本文の扱いはSafeMode境界に従う
+- Response: `SuggestAttentionCandidatesResponse`
+  - `sourceDigest: string` — 候補生成に使った投影断面のSHA-256
+  - `candidates: AttentionCandidate[]` — 文書を書き換えない注意候補
+    - `candidateId: string`
+    - `cardIds: string[]`
+    - `focusPairs: [string, string][]` — 実際に見比べる対象のカード対
+    - `basis: "relation" | "spatial"`
+    - `cue: "cross_island" | "indirect_relation" | "unassigned"`
+  - `excludedCardIds: string[]` — held / pending / shelved により候補から除外したカード
+  - `truncated: boolean` — IR切り詰めの有無
+- providerを呼び出さない決定論的な候補APIであり、`SUI_LLM_PROVIDER=none` でも利用できる。出力は注意の向け先を示すだけで、島への採用、重要度、確信度、順位を決定しない。
+- relation候補は、既存島への同居や既存の直接relationをそのまま再提示せず、まだ直接表現されていない跨島の組だけを `focusPairs` として返す。空間候補は `includeSpatial=true` の場合だけ有効になる。
+- 1候補の `focusPairs` が8組を超える場合は、根拠のない順位付けや任意切り捨てをせず、その候補を返さない。
+- `sourceDigest` はIR version、文書識別、投影後のカード、relation、島、および空間候補を使う場合の正規化座標から決定論的に算出する。通常モードではカードの画面移動だけでは変化しない。利用側は文書更新後に古い候補を保持し続けないための断面識別子として使える。
 
 **POST** `/ai/suggest-layout`
 
