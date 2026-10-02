@@ -132,7 +132,7 @@ Review recordには概念上、
 
 Review dispositionにはAuthorityを意味する`accepted` / `consensus`を入れない。
 
-例:
+例は次のとおりです。
 
 - noted
 - no_objection
@@ -168,7 +168,7 @@ Accepted
 Consensus
 ```
 
-代表的な遷移:
+代表的な遷移は次のとおりです。
 
 ```text
 Working   -> Candidate

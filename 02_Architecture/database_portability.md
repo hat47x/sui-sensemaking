@@ -37,7 +37,7 @@ DB可搬性を理由に、現行の全`TEXT`列へ一律の桁数を設定しな
 | Bounded descriptive text | 表示名、email、URI、状態値 | 入力契約と業務上限を先に定義し、検索・索引要件に応じた型にする |
 | Content object | `documents.payload_json`、inquiry bundle、判断ログpayload | 内容を切り詰めない。サイズ上限はDoS対策・運用容量として別途定義し、DB列長と混同しない |
 
-現行ORMの永続文字列列は列単位で`persistence_shapes.py`へ分類し、新しい文字列列が未分類ならテストで停止する。内部ID 128、外部発行ID 512、URI 2048、email 320、表示名 255、timestamp 40、closed-set state 32文字を基準とし、OIDC複合lookupはissuer 512＋audience 255をAPI受入上限とする。content object以外は同カタログから`VARCHAR(n)`へ変換し、SQLite/PostgreSQL/MySQL/MariaDBのmodelとmigrationで重複定義しない。
+現行ORMの永続文字列列は列単位で`persistence_shapes.py`へ分類し、新しい文字列列が未分類ならテストで停止する。内部ID 128、外部発行ID 512、URI 2048、email 320、表示名255、timestamp 40、closed-set state 32文字を基準とし、OIDC複合lookupはissuer 512＋audience 255をAPI受入上限とする。content object以外は同カタログから`VARCHAR(n)`へ変換し、SQLite/PostgreSQL/MySQL/MariaDBのmodelとmigrationで重複定義しない。
 
 content objectはSQLite/PostgreSQL/CockroachDBで`TEXT`、MySQL/MariaDBで`LONGTEXT`、SQL Serverで`VARCHAR(MAX)`、Oracleで`CLOB`へ写像する。全Verified DBの実DBで1 MiB超のDocument roundtripを確認済みであり、これらのDBを理由にNAS/S3を必須化しない。
 

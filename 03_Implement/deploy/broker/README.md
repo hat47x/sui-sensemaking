@@ -1,7 +1,7 @@
 # Identity Broker Setup (Phase 2)
 
-このディレクトリは sui-sensemaking の SaaS マルチテナント認証に必要な
-identity broker のセットアップ参考手順を提供する。
+このディレクトリはsui-sensemakingのSaaSマルチテナント認証に必要な
+identity brokerのセットアップ参考手順を提供する。
 
 ## アーキテクチャ
 
@@ -12,8 +12,8 @@ identity broker のセットアップ参考手順を提供する。
 └──────────┘             └──────────┘               └──────────┘
 ```
 
-- **Keycloak**: 複数 IdP を集約し、SAML→OIDC 変換、JWT 発行、tenant claim 注入
-- **sui-sensemaking**: JWT 検証、tenant 解決、認可
+- **Keycloak**: 複数IdPを集約し、SAML→OIDC変換、JWT発行、tenant claim注入
+- **sui-sensemaking**: JWT検証、tenant解決、認可
 
 ## 1. Keycloak 起動
 
@@ -27,11 +27,11 @@ docker-compose up -d
 
 ## 2. Realm 作成
 
-1. Keycloak 管理コンソールにログイン
+1. Keycloak管理コンソールにログイン
 2. "Create Realm" → Realm name: `sui-sensemaking`
 3. Realm 設定:
-   - **Login** タブ: "User registration" = OFF
-   - **Tokens** タブ: "Default Signature Algorithm" = RS256
+   - Login タブ: "User registration" = OFF
+   - Tokens タブ: "Default Signature Algorithm" = RS256
 
 ## 3. Client 作成 (sui-sensemaking Backend)
 
@@ -46,16 +46,16 @@ docker-compose up -d
    - **Web Origins**: `http://localhost:5173`
 5. Advanced:
    - **Proof Key for Code Exchange (PKCE) Code Challenge Method**: S256
-6. Save → Credentials タブで Client Secret を控える
+6. Save → CredentialsタブでClient Secretを控える
 
 ## 4. Tenant Claim マッパー設定
 
-sui-sensemaking は JWT の `tenant_ref` claim でテナントを識別する。
-Keycloak でこの claim を発行するマッパーを設定する:
+sui-sensemakingはJWTの `tenant_ref` claimでテナントを識別する。
+Keycloakでこのclaimを発行するマッパーを設定する。
 
 1. Client `sui-sensemaking-backend` → Client scopes
 2. `sui-sensemaking-backend-dedicated` → Add mapper → "By configuration"
-3. Mapper type: **User Attribute**
+3. Mapper type: User Attribute
 4. Settings:
    - Name: `tenant_ref`
    - User Attribute: `tenant_ref`
@@ -70,33 +70,33 @@ Keycloak でこの claim を発行するマッパーを設定する:
 1. Users → Add user
    - Username: `alice`
    - Email: `alice@example.com`
-2. 作成後、Attributes タブで `tenant_ref` = `org-123` を追加
-3. Credentials タブでパスワードを設定（Temporary = OFF）
+2. 作成後、Attributesタブで `tenant_ref` = `org-123` を追加
+3. Credentialsタブでパスワードを設定（Temporary = OFF）
 
 ## 6. Google OAuth 2.0 / OIDC 連携 (Identity Provider)
 
-1. Google Cloud Console で OAuth 2.0 Client ID を作成
+1. Google Cloud ConsoleでOAuth 2.0 Client IDを作成
    - Authorized redirect URIs: `http://localhost:18080/realms/sui-sensemaking/broker/google/endpoint`
-2. Keycloak Realm `sui-sensemaking` → Identity Providers → Add provider → **Google**
+2. Keycloak Realm `sui-sensemaking` → Identity Providers → Add provider → Google
 3. Settings:
-   - Client ID: (Google から取得)
-   - Client Secret: (Google から取得)
+   - Client ID: (Googleから取得)
+   - Client Secret: (Googleから取得)
    - Enabled: ON
    - Store Tokens: ON
    - Stored Tokens Readable: ON
 4. Mappers タブ:
-   - Add mapper: **Attribute Importer**
+   - Add mapper: Attribute Importer
    - Claim: `hd` (Google hosted domain)
    - User Attribute: `tenant_ref`
    - または `email` からマッピングルールを設定
 
 ## 7. SAML IdP 連携
 
-1. Realm `sui-sensemaking` → Identity Providers → Add provider → **SAML v2.0**
+1. Realm `sui-sensemaking` → Identity Providers → Add provider → SAML v2.0
 2. Settings:
    - Alias: `saml-customer`
    - Service Provider Entity ID: `sui-sensemaking`
-   - Single Sign-On Service URL: (SAML IdP から取得)
+   - Single Sign-On Service URL: (SAML IdPから取得)
    - NameID Policy Format: `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
 3. Mappers タブ:
    - NameID → `email` にマップ
@@ -183,11 +183,11 @@ curl http://localhost:18000/docs/shared-doc \
 
 ## 10. Level 3 E2E テスト（将来計画）
 
-実 Keycloak broker を含む E2E テストは、以下の理由で別 ADR/Phase で扱う:
+実Keycloak brokerを含むE2Eテストは、以下の理由で別ADR/Phaseで扱う:
 
-1. Keycloak の起動には 10-30 秒かかり、CI ではセットアップ時間が課題
-2. Keycloak の状態管理（realm, client, user の自動作成）が必要
-3. テスト間の分離（realm の reset）の設計が必要
-4. Docker-in-Docker または service container の構成が必要
+1. Keycloakの起動には10-30秒かかり、CIではセットアップ時間が課題
+2. Keycloakの状態管理（realm, client, userの自動作成）が必要
+3. テスト間の分離（realmのreset）の設計が必要
+4. Docker-in-Dockerまたはservice containerの構成が必要
 
 一時的な検証には上記の手動手順を使用する。

@@ -73,7 +73,7 @@ frontendは次のcapability名を利用者へ直接表示せず、ローカラ�
 - タイトル変更は文書を開いた編集文脈で行う。一覧のインライン変更は、タイトル専用の競合安全な契約が定義されるまで描かない。
 - 一覧には削除、アーカイブ、所有者移管、複製、bulk selectionを置かない。
 
-想定状態:
+想定状態は次のとおりです。
 
 | 状態 | 表示と挙動 |
 | --- | --- |
@@ -110,7 +110,7 @@ Adminは通常のWorkspaceとは別サーフェスとする。現行のアクセ
 
 入口の表示制御は認可の代わりにならない。各面のcapabilityをbackendで検証できない構成では該当Admin面を提供せず、APIもfail-closedにする。現行strict provisioning APIの認可主体を固定するまではアクセス登録UIを、trusted SaaS auth/capability adapterとruntime binding resolverが揃うまでは文書アクセス設定UIを実装しない。
 
-推奨する管理面の区分:
+推奨する管理面の区分は次のとおりです。
 
 1. **アクセス登録**: strict provisioningフォーム。現契約では登録だけを提供し、ユーザー一覧や無効化があるように見せない。
 2. **文書アクセス設定（future SaaS）**: active tenantのdocIdに対するvisibilityと非秘密policy binding metadata。管理API scaffoldとtransactional auditは実装済みだが、trusted auth edge・実capability/binding resolver・PDP配線後だけ有効化する。

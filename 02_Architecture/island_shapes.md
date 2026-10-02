@@ -3,7 +3,7 @@
 本ドキュメントは、Islandの形状を矩形以外へ拡張するための設計案を定義する。  
 対象は **形状表現・生成・描画・互換移行** に限定し、実装コードは扱わない。
 
-上位整合:
+上位整合は次のとおりです。
 - `00_Prompt/system_prompt.md`（階層遵守）
 - `01_Plans/adr/ADR-0002-internal-roadmap.md`（A型図解優先 / 段階導入）
 - `01_Plans/adr/ADR-0001-value-to-requirements.md`（反スコアリング / review flags）
@@ -19,7 +19,7 @@ Islandがサポートする形状は以下の3種。
 - `RoundedRect`
 - `Polygon`
 
-方針:
+方針は次のとおりです。
 - MVP互換の既定形は `Rect`。
 - `RoundedRect` は `Rect` の視認性改善版として扱う。
 - `Polygon` はカード分布に追従する非矩形表現として扱う。
@@ -28,7 +28,7 @@ Islandがサポートする形状は以下の3種。
 
 ## 2. Data model proposal
 
-`schemas.md` の `Island` 拡張として、`shape` を optional で導入する。
+`schemas.md` の `Island` 拡張として、`shape` をoptionalで導入する。
 
 ```ts
 export type Point = { x: number; y: number };
@@ -65,7 +65,7 @@ export type Island = {
 };
 ```
 
-最小バリデーション:
+最小バリデーションは次のとおりです。
 - `rect` / `rounded_rect`
   - `width > 0`, `height > 0`
   - `radius >= 0 && radius <= min(width, height)/2`
@@ -76,7 +76,7 @@ export type Island = {
 review flags整合（重要）:
 - AIが提案した形状情報は `unreviewed` で開始する。
 - `human_reviewed` への遷移は人間操作のみで許可する。
-- バッチ再生成・自動補正が review 状態を自律変更してはならない。
+- バッチ再生成・自動補正がreview状態を自律変更してはならない。
 - 形状の「正解度」や「採点」フィールドは追加しない。
 
 ---
@@ -87,31 +87,31 @@ review flags整合（重要）:
 
 1. `cardIds` に対応するカード座標を収集。
 2. 点集合を作る（初期はカード中心点、将来はカード矩形頂点を選択可）。
-3. 点集合から convex hull を計算。
-4. hull 外側へ一様 padding を適用。
+3. 点集合からconvex hullを計算。
+4. hull外側へ一様paddingを適用。
 5. 結果を `shape.kind = "polygon"` として保存。
 
-既定値:
+既定値は次のとおりです。
 - `padding = 24`（world座標）
-- 範囲制約: `8 <= padding <= 64`
+- 範囲制約: `8 <= padding <= 64`は次のとおりです。
 
-実装上の注意（仕様レベル）:
+実装上の注意（仕様レベル）は次のとおりです。
 - 同一入力で同一出力になる決定的生成にする（非ランダム）。
-- smoothing は任意・軽量（無効でも動作可能）とする。
+- smoothingは任意・軽量（無効でも動作可能）とする。
 - AI提案形状でも自動確定せず、人間採用を前提とする。
 
 ---
 
 ## 4. Manual editing（vertex handles）
 
-Polygon 形状では、最小UIとして頂点ハンドルによる編集を許可する。
+Polygon形状では、最小UIとして頂点ハンドルによる編集を許可する。
 
 - 頂点ハンドル表示
 - 頂点ドラッグ移動（開始/移動/確定/キャンセル）
-- Alt+Click 辺: 頂点追加
-- Alt+Click 頂点: 頂点削除（最小3点維持）
+- Alt+Click辺: 頂点追加
+- Alt+Click頂点: 頂点削除（最小3点維持）
 
-イベント仕様（頂点移動）:
+イベント仕様（頂点移動）は次のとおりです。
 
 1. `drag start`
    - 対象頂点を確定し、編集セッションを開始する。
@@ -123,22 +123,22 @@ Polygon 形状では、最小UIとして頂点ハンドルによる編集を許�
    - 確定時検証に失敗した場合は保存拒否し、ドラッグ前状態を維持する。
 4. `drag cancel`
    - ポインタキャンセル時は保存しない。
-   - 直前の確定済み shape を維持する。
+   - 直前の確定済みshapeを維持する。
 
-制約:
-- 最小頂点数 3 を強制
+制約は次のとおりです。
+- 最小頂点数3を強制
 - 自己交差を禁止
 - 不正形状操作時は保存拒否（安全フォールバック: 直前状態を維持）
 
 FB-P2C-04 受入条件（固定）:
-- AC-2C-6: polygon 編集中はドラッグ確定時のみ `shape.points` を永続化し、drag move はプレビュー専用とする。
+- AC-2C-6: polygon編集中はドラッグ確定時のみ `shape.points` を永続化し、drag moveはプレビュー専用とする。
 - AC-2C-7: `points.length < 3` になる操作は拒否し、直前の確定済み `shape.points` を保持する。
-- AC-2C-8: 自己交差 polygon になる操作は拒否し、直前の確定済み `shape.points` を保持する。
+- AC-2C-8: 自己交差polygonになる操作は拒否し、直前の確定済み `shape.points` を保持する。
 - AC-2C-9: 同一入力（同一点群 + 同一移動量）で同一保存結果になるよう、座標は小数第2位で丸めて決定論を維持する。
 
-互換/保存時バリデーション:
-- import 互換読込では不正 polygon をフォールバック可能だが、保存系（strict validate / export）は不正 polygon を受理しない。
-- manual edit の拒否動作は `save時エラーに依存せず` UI時点で成立させる（保存時にも二重で拒否される）。
+互換/保存時バリデーションは次のとおりです。
+- import互換読込では不正polygonをフォールバック可能だが、保存系（strict validate / export）は不正polygonを受理しない。
+- manual editの拒否動作は `save時エラーに依存せず` UI時点で成立させる（保存時にも二重で拒否される）。
 
 ---
 
@@ -178,14 +178,14 @@ FB-P2C-04 受入条件（固定）:
 5. Polygon自動生成を機能フラグで段階導入。
 
 API互換（`api.md` 整合）:
-- 初期は `DocumentV1` のまま optional field 追加で互換を維持する。
+- 初期は `DocumentV1` のままoptional field追加で互換を維持する。
 - 破壊的変更が必要な段階でのみ `version` 更新を検討する。
 
-受け入れ条件（最小）:
+受け入れ条件（最小）は次のとおりです。
 - 旧ドキュメント（shape欠損）を表示・保存できる。
 - 新規ドキュメントで3形状を破壊なく往復保存できる。
 - 正解/ランキング/採点をUI・APIに導入しない。
-- 人間操作なしで review 状態を変更しない。
+- 人間操作なしでreview状態を変更しない。
 
 ---
 

@@ -53,7 +53,7 @@ created_by_actor_kind
 created_by_actor_ref?
 ```
 
-不変条件:
+不変条件は次のとおりです。
 
 - `tenant_id + artifact_id` unique
 - semantic kind immutable
@@ -88,7 +88,7 @@ created_at
 - source refs
 - transformation refs
 
-不変条件:
+不変条件は次のとおりです。
 
 - `tenant_id + revision_id` unique
 - `tenant_id + artifact_id + revision_id`整合
@@ -237,13 +237,13 @@ Review / Authority / Decision / retained relation等からの参照はderived pr
 
 ### 3.1 Payload boundary
 
-Content Storeへ置くもの:
+Content Storeへ置くもの。
 
 - Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Decision payload
 - Review findingの長文が必要な場合の本文
 - source assertionの安全なopaque payloadが必要な場合
 
-RDB bounded columnへ置くもの:
+RDB bounded columnへ置くもの。
 
 - IDs
 - enum / state
@@ -285,7 +285,7 @@ CanvasRevision ID
 
 ## 4. Portable indexes
 
-最低限の候補:
+最低限の候補は次のとおりです。
 
 ### Canonical identity
 
@@ -366,7 +366,7 @@ Authority transition transactionではCAS targetとして利用できる。
 
 Relation artifact payloadをqueryごとにContent Storeから全件decodeしないため、derived indexを持てる。
 
-候補:
+候補は次のとおりです。
 
 ```text
 tenant_id
@@ -473,7 +473,7 @@ staging parse
 
 第一候補はtransactional outbox + idempotent materializer。
 
-理由:
+理由は次のとおりです。
 
 - canonical transactionとgraph/search更新を同期dual-writeしない
 - graph / vector / sparse index障害でcanonical writeを失敗させない
@@ -502,7 +502,7 @@ canonical commit
 
 ### 8.1 Mark roots
 
-少なくとも:
+少なくともは次のとおりです。
 
 - artifact current heads / retained revision policy
 - Review targets

@@ -7,7 +7,7 @@
 > ADR-0033 で定義した Support/Maintenance/Contract Boundary（L1/L1.5/L2/L2.5/L3/L0）を正本とし、本書の型定義単体で運用保証を主張しない。
 > `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生bundleは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存bundleはこのmetadataを省略する。詳細は `02_Architecture/inquiry_journey_model.html` を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、version gate、保存契約へ履歴キーを追加しない。
 > `ADR-0085` / `02_Architecture/sensemaking_semantic_model.md` は、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを将来の意味成果物として定義する。`ADR-0086` / `02_Architecture/sensemaking_artifact_contract_v1alpha1.md` は、そのlogical identity・exact revision・provenance・Review・Authority transitionを定義し、`ADR-0087` / `sensemaking_payload_authority_exchange_v1alpha1.md` はpayload・scope・exchange境界を定義する。`ADR-0088`は永続化の第一候補を選んだが、**migration / runtime schemaは未実装**である。これらはすべて **L0 Plannedの概念／設計契約** であり、現行 `DocumentV1` へ新fieldや新配列を追加したことを意味しない。
-本ドキュメントは、sui-sensemaking の **MVPで扱う永続データの最小スキーマ** を定義します。
+本ドキュメントは、sui-sensemakingの **MVPで扱う永続データの最小スキーマ** を定義します。
 
 - YAGNI方針に従い、MVPで標準運用しない型は「運用サポート済み」と扱いません
 - `DocumentV1` では、出自情報（記録者・記録時間など）を保持しません
@@ -35,7 +35,7 @@ MVPでは以下を成立させます。
 - `Card.meta.source` は外部の元記録へ戻る任意の手がかりであり、統合元カード、起票者、レビュー者を表さない。
 - `holdState` と `critique` は、不明な文脈、矛盾、違和感を解消せず保持するために利用できる。
 - 品質上の指摘は導出された提案であり、カード内容に関する真実の属性として保存しない。
-- 分割、言い換え、補足は proposal-only とし、採用前の本文を変更しない。
+- 分割、言い換え、補足はproposal-onlyとし、採用前の本文を変更しない。
 
 提案の見送り状態、品質確認結果、確認担当者などを永続化する場合は、必須化せず、後方互換、import validation、共有範囲、SafeModeを定める内部issueまたはADRを先行する。
 
@@ -78,28 +78,28 @@ semantic kindとしては、Evidence / Observation / Relation / Hypothesis / Str
 
 ### 1.1 CE0 責務境界メタ契約
 
-CE-0 の責務境界として、実装型に先行して次のメタ契約を定義する。
+CE-0の責務境界として、実装型に先行して次のメタ契約を定義する。
 
 - Input Contract Snapshot（固定）:
   - `snapshot_id = ce0-contract-freeze-2026-04-27`
   - `freeze_mode = contract-only`
   - `downstream_policy = read-only reference`
 
-- `CE0-CTX-IF`:
-  - ContextQuery 必須キー: `goal/scope/depth/constraints/reviewFilter/safeModePolicy/outputMode`
-  - ContextBundle 必須キー: `bundleHash`（deterministic）
-  - 禁止: Query Preview bypass / 非決定論 bundle
-- `CE0-SAFEMODE-IF`:
-  - safeMode 既定ON時は `allowUnreviewedText=false` を既定適用
+- `CE0-CTX-IF`は次のとおりです。
+  - ContextQuery必須キー: `goal/scope/depth/constraints/reviewFilter/safeModePolicy/outputMode`
+  - ContextBundle必須キー: `bundleHash`（deterministic）
+  - 禁止: Query Preview bypass / 非決定論bundle
+- `CE0-SAFEMODE-IF`は次のとおりです。
+  - safeMode既定ON時は `allowUnreviewedText=false` を既定適用
   - 禁止: 未レビュー本文のAI入力混入、safeMode既定緩和
-- `CE0-REVIEW-IF`:
-  - review state は `unreviewed | human_reviewed`
+- `CE0-REVIEW-IF`は次のとおりです。
+  - review stateは `unreviewed | human_reviewed`
   - `human_reviewed` への昇格は人手操作のみ
-  - 禁止: AIによる review 自動昇格
-- `CG-01..05`:
-  - Working / ContextProjection / Consensus を分離
+  - 禁止: AIによるreview自動昇格
+- `CG-01..05`は次のとおりです。
+  - Working / ContextProjection / Consensusを分離
   - `Working -> Consensus` は `patch + approval` のみ
-  - `mode=autonomous` でも proposal-only（auto-apply禁止）
+  - `mode=autonomous` でもproposal-only（auto-apply禁止）
   - 監査4点セット（`query/bundle/proposal/apply`）欠損は成功扱い禁止
 
 | Contract ID | Must | Must Not |
@@ -121,7 +121,7 @@ CE-0 の責務境界として、実装型に先行して次のメタ契約を定
 
 ### 1.2 CE1/CE2/CE4 型契約（実装非依存）
 
-CE-1/CE-2/CE-4 は実装着手前に次の最小I/Fを固定する（mock-first、依存切断）。
+CE-1/CE-2/CE-4は実装着手前に次の最小I/Fを固定する（mock-first、依存切断）。
 
 #### CE1-CONTEXT-FOUNDATION
 
@@ -169,15 +169,15 @@ export type ContextBundleV1 = {
 判定根拠: `ContextQueryV1` / `ContextBundleV1`の型正本、backend response model、frontend logical bundle fixtureを一致させる。旧API形成記録のbundle response `queryId`は、logical typeにも稼働中responseにも存在しないtype再掲上の誤帰属としてInformativeに留める。この判定はfieldの追加・削除やcanonical hash入力の変更ではなく、現行v1の層所属を明文化するものである。
 
 - `previewConfirmed=false` は契約違反（`422 preview_required`）。
-- 同一 canonical query で `bundleHash` 不一致は fail 判定。
-- CE1 v1 の契約エラー語彙は `preview_required` / `unknown_contract_key` / `nondeterministic_bundle` に固定し、安全境界エラーとして `invalid_constraints` を追加する。transport 共通の `json_nesting_too_deep` は logical type の語彙には含めない。
-- CE1 v1 は **最小I/F固定** とし、`ContextQueryV1` / `ContextBundleV1` への未定義キー追加を禁止する（拡張は v2 でのみ許可）。
-- CE1 v1 は closed-world 契約とし、Contract Test/Stub API の双方で unknown key reject（`400 unknown_contract_key`）を同一意味で扱う。
+- 同一canonical queryで `bundleHash` 不一致はfail判定。
+- CE1 v1の契約エラー語彙は `preview_required` / `unknown_contract_key` / `nondeterministic_bundle` に固定し、安全境界エラーとして `invalid_constraints` を追加する。transport共通の `json_nesting_too_deep` はlogical typeの語彙には含めない。
+- CE1 v1は **最小I/F固定** とし、`ContextQueryV1` / `ContextBundleV1` への未定義キー追加を禁止する（拡張はv2でのみ許可）。
+- CE1 v1はclosed-world契約とし、Contract Test/Stub APIの双方でunknown key reject（`400 unknown_contract_key`）を同一意味で扱う。
 - `constraints` はJSON互換値だけを許可し、rootを0とした深さ8以下、総ノード数1024以下、canonical JSONのUTF-8表現64 KiB以下に制限する。違反は入力値を反射しない `400 invalid_constraints` とする。この制約はfield追加・削除、canonicalization規則、hash入力を変更しない。
-- backend の `application/json` / `application/*+json` request body はJSON parserの前段で構造ネスト64以下に制限し、超過を入力値を反射しない `400 json_nesting_too_deep` とする。これはtransport安全境界であり、CE1 logical typeやversionを変更しない。
-- CE2/CE4 は backend 実装完了待ちを行わず、mock `ContextQuery/ContextBundle` 契約で先行検証する（mock-first）。
-- CE2/CE4 への連携は read-only handoff とし、契約更新は CE1 再起票でのみ許可する。
-- CE2/CE4 側で `sourceBundleHash === bundleHash` を照合できない場合は fail-closed（適用停止）とする。
+- backendの `application/json` / `application/*+json` request bodyはJSON parserの前段で構造ネスト64以下に制限し、超過を入力値を反射しない `400 json_nesting_too_deep` とする。これはtransport安全境界であり、CE1 logical typeやversionを変更しない。
+- CE2/CE4はbackend実装完了待ちを行わず、mock `ContextQuery/ContextBundle` 契約で先行検証する（mock-first）。
+- CE2/CE4への連携はread-only handoffとし、契約更新はCE1再起票でのみ許可する。
+- CE2/CE4側で `sourceBundleHash === bundleHash` を照合できない場合はfail-closed（適用停止）とする。
 
 CE1 A2 stub contract（検証専用）:
 
@@ -193,29 +193,29 @@ CE1 A2 stub contract（検証専用）:
 Contract test観点（CE1 v1）:
 
 1. `previewConfirmed=false` は常に `422 preview_required`。
-2. 同一 canonical query 3回再実行で `queryCanonicalHash` / `bundleHash` が3/3一致。
+2. 同一canonical query 3回再実行で `queryCanonicalHash` / `bundleHash` が3/3一致。
 3. 未定義キーは常に `400 unknown_contract_key`。
 4. `constraints` のresource bound違反は常に `400 invalid_constraints`、JSON bodyの構造ネスト64超過は常に `400 json_nesting_too_deep`。
-5. CE2/CE4 連携キー `sourceBundleHash === bundleHash` を比較可能。
+5. CE2/CE4連携キー `sourceBundleHash === bundleHash` を比較可能。
 
 
 Mock Validation Plan（implementation-decoupled）:
 - Plan: `ContextQueryV1` / `ContextBundleV1` の固定fixture（A2-minimal-v1）を使用して契約検証のみ実施。
 - Execute: backend未実装でも `POST /context/query` / `POST /context/bundle` の入出力語彙をmockで検証。
-- Verify: deterministic hash（3/3一致）、preview gate、unknown key reject を契約テストで確認。
+- Verify: deterministic hash（3/3一致）、preview gate、unknown key rejectを契約テストで確認。
 - Proceed: CE2/CE4へ `queryCanonicalHash` / `bundleHash` / `sourceBundleHash` をread-only handoff。
 
 Mock適用方針（CE1 v1 固定）:
 - 可能: `A2-minimal-v1` を用いた契約テスト（型/語彙/hash）
 - 不可: 実DB・実LLM・worker依存を混在させる検証
-- 条件付: 下流への引き渡しは read-only（契約変更は CE1 再起票時のみ）
+- 条件付: 下流への引き渡しはread-only（契約変更はCE1再起票時のみ）
 
 後方互換観点（CE1 v1）:
 
 
 #### CE0/CE1 downstream signature catalog（Phase 4 fixed output）
 
-CE0/CE1 の下流実装が参照すべき固定シグネチャ一覧を次で凍結する（mock-first / 実装非依存）。
+CE0/CE1の下流実装が参照すべき固定シグネチャ一覧を次で凍結する（mock-first / 実装非依存）。
 
 - `ContextQueryV1`（Contract ID: `CE1-CTXQ-IF`）
 - `ContextBundleV1`（Contract ID: `CE1-CTXB-IF`）
@@ -225,9 +225,9 @@ CE0/CE1 の下流実装が参照すべき固定シグネチャ一覧を次で凍
 - `HilRsDocSyncCheckV1`（Contract ID: `HIL-RS-DOCSYNC-IF`）
 
 互換ルール（v1固定）:
-- v1 の必須キー集合と契約エラー意味論（`preview_required` / `unknown_contract_key` / `nondeterministic_bundle`）は変更しない。安全境界エラー（`invalid_constraints` / `json_nesting_too_deep`）はfield構造・hash規則・versionを変更しない。
-- 拡張は v2 追加でのみ許可し、v1 の `sameQuery && sameBundle` 判定は維持する。
-- Contract Freeze 中は、上記シグネチャに対する破壊的変更・改名・削除を禁止する。
+- v1の必須キー集合と契約エラー意味論（`preview_required` / `unknown_contract_key` / `nondeterministic_bundle`）は変更しない。安全境界エラー（`invalid_constraints` / `json_nesting_too_deep`）はfield構造・hash規則・versionを変更しない。
+- 拡張はv2追加でのみ許可し、v1の `sameQuery && sameBundle` 判定は維持する。
+- Contract Freeze中は、上記シグネチャに対する破壊的変更・改名・削除を禁止する。
 
 HIL-RS bridge signatures（A1->A2->A3 handoff固定）:
 
@@ -250,16 +250,16 @@ export type HilRsDocSyncCheckV1 = {
 ```
 
 
-- v1 は契約エラーコード意味論（`preview_required` / `nondeterministic_bundle` / `unknown_contract_key`）を固定し、変更しない。安全境界エラー（`invalid_constraints` / `json_nesting_too_deep`）はfield構造・hash規則・versionを変更しない。
-- 拡張時は v2 を追加し、v1 の必須キーと判定式 `sameQuery && sameBundle` を維持する。
+- v1は契約エラーコード意味論（`preview_required` / `nondeterministic_bundle` / `unknown_contract_key`）を固定し、変更しない。安全境界エラー（`invalid_constraints` / `json_nesting_too_deep`）はfield構造・hash規則・versionを変更しない。
+- 拡張時はv2を追加し、v1の必須キーと判定式 `sameQuery && sameBundle` を維持する。
 
 `bundleHash` 契約（`CE1-HASH-DET-IF` / bundleHash関連節）:
 1. `ContextBundle` から `generatedAt` / `traceId` / `providerLatencyMs` など非決定論フィールドを除外する。
 2. 配列順序は `selected=id asc`, `relations=(type,from,to) asc`, `evidence=cardId asc`, `contradictions=(weight desc,id asc)` に正規化する。
-3. オブジェクトキーは UTF-8 バイト列辞書順で整列し canonical JSON を生成する。
+3. オブジェクトキーはUTF-8バイト列辞書順で整列しcanonical JSONを生成する。
 4. `sha256(canonical_json)` を16進小文字で出力し `bundleHash` とする。
-5. `ContextQuery` も同一規則で canonical 化し、`queryCanonicalHash` を算出する。
-6. Verify 判定は `sameQuery && sameBundle`（`queryCanonicalHash` 一致かつ `bundleHash` 一致）を必須とし、`sameQuery && !sameBundle` は fail-closed とする。
+5. `ContextQuery` も同一規則でcanonical化し、`queryCanonicalHash` を算出する。
+6. Verify判定は `sameQuery && sameBundle`（`queryCanonicalHash` 一致かつ `bundleHash` 一致）を必須とし、`sameQuery && !sameBundle` はfail-closedとする。
 7. Verify自己修復は最大3回までとし、4回目相当は停止する（推測継続禁止）。
 
 #### CE2-LOW-RISK-AI-ASSIST
@@ -280,10 +280,10 @@ export type ProposalPatchV1 = {
 };
 ```
 
-- Auto-apply は禁止（proposal-only）。
+- Auto-applyは禁止（proposal-only）。
 - `reviewState=human_reviewed` は人手操作のみ許可し、AI自動遷移を禁止。
 - CE1契約との差異検知時は `held` へ遷移し、Verify自己修復は最大3回まで。
-- CE1/CE2/CE4 は backend 実装待機を禁止し、mock 契約で依存切断した検証を継続する。
+- CE1/CE2/CE4はbackend実装待機を禁止し、mock契約で依存切断した検証を継続する。
 
 #### CE4-API-CLI-AUDIT
 
@@ -313,14 +313,14 @@ export type AuditEventV1 = {
 ### 2.1 ID
 
 - すべてのエンティティは `id: string` を持つ
-- ID生成はクライアント（UUID v4 等）で行う
+- ID生成はクライアント（UUID v4等）で行う
 - APIは基本的にIDを透過し、衝突時のみエラー
 
 ### 2.2 座標系
 
 - world座標は任意の連続値（浮動小数）を許容
 - 画面（screen）への変換は `Transform` で表現
-- 単位は px 相当を想定（厳密な意味は持たせない）
+- 単位はpx相当を想定（厳密な意味は持たせない）
 
 ---
 
@@ -367,13 +367,13 @@ export type Card = {
 };
 ```
 
-`holdState`、`meta`、`ka` はすべて optional であり、欠落時は従来の通常カードとして扱う。各fieldの意味、安全境界、取り込み規則は §14、§15、§17を参照する。
+`holdState`、`meta`、`ka` はすべてoptionalであり、欠落時は従来の通常カードとして扱う。各fieldの意味、安全境界、取り込み規則は §14、§15、§17を参照する。
 
 > 備考：MVPでは `w/h` は固定でもよい。必要になったら追加する。
 
 ### 3.3 Edge
 
-DOMAIN-KJ-01（ADR-0048 D3 採択）で、KJ法原典の関係記号に対応する語彙へ**追加的に**拡張した。`version: 2` を維持し、既存データの意味は変えない。
+DOMAIN-KJ-01（ADR-0048 D3採択）で、KJ法原典の関係記号に対応する語彙へ**追加的に**拡張した。`version: 2` を維持し、既存データの意味は変えない。
 
 ```ts
 export type KnownEdgeType =
@@ -412,26 +412,26 @@ export type Edge = {
 
 - **`causal` のみ有向**とし、`fromId`（原因）→ `toId`（結果）を意味方向とする。
 - `related` / `negate` / `mutual` / `equivalence` および未知種別は**無方向**であり、描画・集約・エクスポートで端点順序に意味を持たせない。
-- 集約（島間派生エッジ・abstract map の関係行）では、無方向種別はペアを正規化してよいが、**`causal` はペア正規化を行わず方向を保存**する。
+- 集約（島間派生エッジ・abstract mapの関係行）では、無方向種別はペアを正規化してよいが、**`causal` はペア正規化を行わず方向を保存**する。
 
 #### 3.3.2 語彙境界（DOMAIN-KJ-01 T1 確定）
 
-1. **対立 vs `negate`（Edge）vs `contradicts`（EvidenceLink）**
-   - `negate` は KJ法の「対立」の**永続値**である。新たな `opposition` 値は追加しない（重複語彙の禁止）。UI 表示名は「否定」から「対立」へ改める。既存文書は無変更のまま新表示に乗る。
+1. **対立vs `negate`（Edge）vs `contradicts`（EvidenceLink）**
+   - `negate` はKJ法の「対立」の**永続値**である。新たな `opposition` 値は追加しない（重複語彙の禁止）。UI表示名は「否定」から「対立」へ改める。既存文書は無変更のまま新表示に乗る。
    - `contradicts`（EvidenceLink）は**根拠レベルの反証**（ある根拠が主張を反証する）であり、カード/島どうしの**構造上の関係**（Edge）とは独立の機構として併存する。
-2. **同値（`equivalence`）vs canonical 化（`Card.canonicalId` / `sources`）**
+2. **同値（`equivalence`）vs canonical化（`Card.canonicalId` / `sources`）**
    - `equivalence` は「2枚が同じことを言っている」という**記述**（関係の注釈）。両カードは第一級のまま残り、線の削除でいつでも取り消せる。
-   - canonical 化は統合の**実行**（操作）。同値線は統合を**自動実行しない**（AI 自動グルーピングの確定禁止 = ADR-0048 D3 反パターン）。同値線は人間の統合判断への入力に留まる。
+   - canonical化は統合の**実行**（操作）。同値線は統合を**自動実行しない**（AI自動グルーピングの確定禁止 = ADR-0048 D3反パターン）。同値線は人間の統合判断への入力に留まる。
 3. **未知種別の保全（往復規約）**
    - 寛容（import）・厳格（契約検証）の両モードで、未知の `type` を理由にエッジを**破棄しない**。`type` は非空文字列であれば受理する。
    - 既知5種別以外は表示・挙動上「関連（無方向）」として解決する（`resolveKnownEdgeType()`）。
-   - バックエンド（Pydantic）も同じ規約（`type: 非空 str`）で受理する。export → import → save の往復で `type` 文字列は不変とする。
+   - バックエンド（Pydantic）も同じ規約（`type: 非空 str`）で受理する。export → import → saveの往復で `type` 文字列は不変とする。
 
 > 既定値: 新規に作成される関係線の既定は `related`（無方向）とし、種別の確定を強制しない（早すぎる収束の防止 = ADR-0001 P-01/P-04）。
 
 ### 3.4 Document
 
-`DocumentV1`（`version: 1`）は、sui-sensemaking が唯一サポートする永続Document契約である（`ADR-0058`）。カード・エッジのMVPスナップショット保存に加え、島、文章化、根拠リンク、レビュー関連情報を含む現在の完全構造を、単一の型・単一のversion番号で表す。過去に存在した最小構造専用の別型、および`version: 2`を名乗る別契約は存在しない。
+`DocumentV1`（`version: 1`）は、sui-sensemakingが唯一サポートする永続Document契約である（`ADR-0058`）。カード・エッジのMVPスナップショット保存に加え、島、文章化、根拠リンク、レビュー関連情報を含む現在の完全構造を、単一の型・単一のversion番号で表す。過去に存在した最小構造専用の別型、および`version: 2`を名乗る別契約は存在しない。
 
 `DocumentV1` に含まれる構造は、標準API/UIで個別CRUDできることを意味しない。標準の永続化単位は引き続き `Document` 全体であり、個別CRUDの有無は `02_Architecture/data_model_operations_overview.html` のCRUD表に従う。
 
@@ -608,7 +608,7 @@ export type DocumentV1 = {
 };
 ```
 
-`VoidEntry`:
+`VoidEntry`は次のとおりです。
 
 ```ts
 export type VoidKind =
@@ -629,22 +629,22 @@ export type VoidEntry = {
 };
 ```
 
-支援レベル:
+支援レベルは次のとおりです。
 
 - `claimType`、`fromKind`、`toKind`、`evidenceLinks` は `DocumentV1` スナップショット内で往復保持する。
-- `edges[].type` は未知種別を含めて往復保持する（§3.3.2 の保全規約）。未知種別を理由にエッジを破棄・改変してはならない。
+- `edges[].type` は未知種別を含めて往復保持する（§3.3.2の保全規約）。未知種別を理由にエッジを破棄・改変してはならない。
 - `evidenceLinks` は根拠・反証のリンクであり、SafeMode/share/exportで未レビュー本文や根拠情報をどう扱うかは共有前確認のポリシーに従う。
-- `patchApplyLog.stats` は evidence link の追加/削除件数（`upsertEvidenceLinks` / `deleteEvidenceLinks`）を含める。旧データで欠損する場合は0として扱う。
-- `critiqueInputs`、`reproposalDiffs`、`reviewAttribution`、`deterministicTieBreak` は A1 契約の往復保持対象である。MVPでは画面上の個別編集や個別CRUDを提供せず、import/export/API保存時の型・検証・監査境界を固定する。
+- `patchApplyLog.stats` はevidence linkの追加/削除件数（`upsertEvidenceLinks` / `deleteEvidenceLinks`）を含める。旧データで欠損する場合は0として扱う。
+- `critiqueInputs`、`reproposalDiffs`、`reviewAttribution`、`deterministicTieBreak` はA1契約の往復保持対象である。MVPでは画面上の個別編集や個別CRUDを提供せず、import/export/API保存時の型・検証・監査境界を固定する。
 - `targetRef` は `card:` / `island:` / `cluster:` / `edge:` / `proposal:` の名前空間を許可する。現行UIは島を `island:` として扱い、既存A1文書の `cluster:` と互換的に残す。
 - `reproposalDiffs[].diffOps[].before` と `after` はどちらも必須キーであり、追加/削除を可逆にするため片側 `null` を許可する。ただし両方 `null` は不可とする。
-- `reviewAttribution.reviewedAt` は `human_reviewed` のとき ISO 8601、`unreviewed` のとき `null` とする。`reviewerRef` / `ownerRef` は不透明参照であり、生IDを含めない。
+- `reviewAttribution.reviewedAt` は `human_reviewed` のときISO 8601、`unreviewed` のとき `null` とする。`reviewerRef` / `ownerRef` は不透明参照であり、生IDを含めない。
 - 個別EvidenceLink API、個別Card分類API、個別Edge endpoint APIはMVP範囲外とする。
 
 #### 3.4.1（廃止）
 
 `DocumentListItemV1`（`DATA-MODEL-OPS-02` 時点の契約先行案）はここにあった。実装された `GET /docs` は
-§3.4.2 の型を返すため廃止した（`api.md` §2.2、`SEC-DOC-BOUND-06`）。番号は再利用しない。
+§3.4.2の型を返すため廃止した（`api.md` §2.2、`SEC-DOC-BOUND-06`）。番号は再利用しない。
 
 #### 3.4.2 DocumentListItem（実装済み、`ADR-0073` D1=C/D2=A・`SEC-DOC-BOUND-06`）
 
@@ -658,11 +658,11 @@ export type DocumentListItem = {
 };
 ```
 
-- `cards` / `edges` / `islands` / `narratives` / `evidenceLinks` / `relationSummaries` など `DocumentV1` の本文・構造フィールドは、空配列であっても一覧項目に含めない（旧 3.4.1 から継承）。
-- 対象集合は tenant-scoped であることに加え、`access_control_adapter` が既定の `noop` 以外の場合は
+- `cards` / `edges` / `islands` / `narratives` / `evidenceLinks` / `relationSummaries` など `DocumentV1` の本文・構造フィールドは、空配列であっても一覧項目に含めない（旧3.4.1から継承）。
+- 対象集合はtenant-scopedであることに加え、`access_control_adapter` が既定の `noop` 以外の場合は
   `document_access_metadata.visibility` でも絞り込む（`Restricted` はメタデータ欠落時を含め作成者本人にのみ返す）。
-  `noop`（既定）の場合は単一文書の `GET`/`PUT` も visibility を参照しないため、一覧も絞り込まない。
-- `title` は `DocumentV1.title` と同じ optional 契約を継承する（無題文書は省略可）。
+  `noop`（既定）の場合は単一文書の `GET`/`PUT` もvisibilityを参照しないため、一覧も絞り込まない。
+- `title` は `DocumentV1.title` と同じoptional契約を継承する（無題文書は省略可）。
 - この型は一覧表示専用の射影であり、`DocumentV1` への書き戻し・保存契約には関与しない。
 
 ---
@@ -681,10 +681,10 @@ MVPでは、サーバ側で最低限の検証（型・必須フィールド）�
 以下は **追加しやすい順に** 将来導入します。
 
 1. `Card.w/h`（カードサイズ）
-2. ~~`EdgeType` の拡張（negate/hypothesis 等）~~ → DOMAIN-KJ-01 で導入済み（§3.3）
+2. ~~`EdgeType` の拡張（negate/hypothesis等）~~ → DOMAIN-KJ-01で導入済み（§3.3）
 3. `Island`（囲み、タイトル、所属）
 4. `Asset`（画像挿入・生成結果の参照。現行`Island.imageUrl`は由来・権利情報を持たない旧式フィールドであり、この将来モデルには含めない。SafeMode境界と移行は`SEC-VISUAL-ASSET-01` / `ADR-0060`で管理する）
-5. `Card.meta`（出自情報、タグ、引用元など。非主体メタの `seq`/`source` は DOMAIN-TRACE-01 で導入済み=§15。カード起票者など主体メタのUI/保存/redaction境界は引き続き `CARD-META-UI-01` で管理する）
+5. `Card.meta`（出自情報、タグ、引用元など。非主体メタの `seq`/`source` はDOMAIN-TRACE-01で導入済み=§15。カード起票者など主体メタのUI/保存/redaction境界は引き続き `CARD-META-UI-01` で管理する）
 6. `Patch`（差分同期）
 
 ---
@@ -692,25 +692,25 @@ MVPでは、サーバ側で最低限の検証（型・必須フィールド）�
 ## 6. 互換性・マイグレーション
 
 - `Document.version` を用いてスキーマバージョンを管理する
-- 破壊的変更は version を上げ、API側で移行処理を提供する
+- 破壊的変更はversionを上げ、API側で移行処理を提供する
 
 ### 6.0.1 DocumentV1 mock schema version（downstream独立性）
 
-`DocumentV1` 契約ドリフト検証では、実装進捗と独立して次の mock schema version を固定する。
+`DocumentV1` 契約ドリフト検証では、実装進捗と独立して次のmock schema versionを固定する。
 
 - `mockSchemaVersion = "mock-2026-07-16-v1"`
-- 用途: contract test / fixture / handoff の識別子
-- 非用途: runtime の `Document.version` 代替（`Document.version` は引き続き数値 `1` のみを受理する）
+- 用途: contract test / fixture / handoffの識別子
+- 非用途: runtimeの `Document.version` 代替（`Document.version` は引き続き数値 `1` のみを受理する）
 
-運用ルール:
-- 下流（import/export/validator/worker）は `mockSchemaVersion` を参照して fixture 互換性を判定してよい。
+運用ルールは次のとおりです。
+- 下流（import/export/validator/worker）は `mockSchemaVersion` を参照してfixture互換性を判定してよい。
 - 本番永続データには `mockSchemaVersion` を書き込まない（read-only検証メタ）。
 - `mockSchemaVersion` を更新する場合は `schemas.md` と `02_Architecture/data_model_operations_overview.html` を同時更新する。
 
 ### 6.1 Document versioning / support level運用ルール（ADR-0058固定）
 
 - `DocumentV1`（`version: 1`）は唯一サポートするDocument契約であり、互換性レベルは次で固定する。
-  - **Full**: MVPで `L1/L1.5` に分類される運用対象（Document snapshot、merge decision append-read 連携）。
+  - **Full**: MVPで `L1/L1.5` に分類される運用対象（Document snapshot、merge decision append-read連携）。
   - **Partial**: `L2/L2.5` の埋め込み限定/契約限定フィールド（例: `evidenceLinks` / `reviewAttribution` / `critiqueInputs`）を含む。保存・往復は保証するが個別CRUDは保証しない。
 - 数値 `version: 1` 以外（`version` 欠損、文字列版、`version: 2` 以降を含む旧版・未知版）はすべてfail-closedで拒否する。旧版を`DocumentV1`へ読込時正規化する経路は存在しない（`ADR-0058`、`DATA-CONTRACT-RESET-01`）。
 - 非互換変更（必須キー追加、既存キー意味変更、削除）は、新たな次version（`version: 2`以降）を明示的に導入し、その移行判断・移行手順を別ADR/issueで先に定めない限り行わない。`version: 1` の意味を現行構造から変更しない。
@@ -722,7 +722,7 @@ MVPでは、サーバ側で最低限の検証（型・必須フィールド）�
 ### 6.2 Fail-safe versioning guardrails
 
 - 後方互換が曖昧な変更（既存キーの意味変更、必須化、削除）は `version` を上げずに導入してはならない。
-- 新規フィールドは support level（L1/L1.5/L2/L2.5/L3/L0）を割り当てるまで `Contract-limited (L2.5)` とみなし、個別CRUD保証を主張しない。
+- 新規フィールドはsupport level（L1/L1.5/L2/L2.5/L3/L0）を割り当てるまで `Contract-limited (L2.5)` とみなし、個別CRUD保証を主張しない。
 - 運用責務が未確定（DecisionStatus=Pending）の項目は、スキーマに存在しても実装Go判断に使わない（fail-closed）。
 ## 7. 次に作るもの
 
@@ -738,19 +738,19 @@ MVPでは、サーバ側で最低限の検証（型・必須フィールド）�
 `DocumentV1.islands[*].shape.kind === "polygon"` の場合、保存対象の `shape.points` は次を満たす。
 
 - `points` は `Point[]`（`x: number`, `y: number`）
-- 最小頂点数は 3（`points.length >= 3`）
+- 最小頂点数は3（`points.length >= 3`）
 - 自己交差禁止
-- 座標は UI 編集時に小数第2位へ正規化（決定論維持）
+- 座標はUI編集時に小数第2位へ正規化（決定論維持）
 
-互換読込と保存経路の扱い:
+互換読込と保存経路の扱いは次のとおりです。
 
-- 互換読込（import upgrade）: 不正 polygon はフォールバック（shape除去または rect解釈）を許可。
-- 保存/厳格検証（strict validate / export）: 不正 polygon を reject し、document を成功扱いにしない。
-- UI手動編集（vertex drag/add/remove）: 不正操作は即時拒否し、直前の確定済み polygon を保持。
+- 互換読込（import upgrade）: 不正polygonはフォールバック（shape除去またはrect解釈）を許可。
+- 保存/厳格検証（strict validate / export）: 不正polygonをrejectし、documentを成功扱いにしない。
+- UI手動編集（vertex drag/add/remove）: 不正操作は即時拒否し、直前の確定済みpolygonを保持。
 
 ## 8. Publishing / Access metadata（FB-RM-PUB-01）
 
-公開配布（pack）および表示状態（view metadata）では、以下の visibility enum を共通契約として使う。
+公開配布（pack）および表示状態（view metadata）では、以下のvisibility enumを共通契約として使う。
 
 ```ts
 export type Visibility = "Public" | "Unlisted" | "Org" | "Restricted";
@@ -759,7 +759,7 @@ export type Visibility = "Public" | "Unlisted" | "Org" | "Restricted";
 - 既定値（default）:
   - `view.json`: `visibility` 未定義時は `Restricted` を補完。
   - `packs/index.json`: `visibility` 未定義時は `Public` を補完。
-- fallback は **import読込時に正規化して内部モデルへ反映** し、export時は常に enum を明示出力する。
+- fallbackは **import読込時に正規化して内部モデルへ反映** し、export時は常にenumを明示出力する。
 
 | Artifact | Field | 欠損時 default（互換読込） | enum外値 | export時 |
 | --- | --- | --- | --- | --- |
@@ -782,22 +782,22 @@ export type ViewMetadataV1 = {
 ```
 
 - 互換方針：旧データで `visibility` が無い場合は `Restricted` を補完する。
-- strict validator 方針：`visibility` が存在する場合は enum（`Public` / `Unlisted` / `Org` / `Restricted`）以外を拒否する。
-- 安全方針：`visibility` の有無に関わらず SafeMode 既定ON・share/export 制約の既存ポリシーを維持する。
-- 運用解釈：`visibility` は公開範囲の意図を示すメタデータであり、外部サービスとの共有可否（SafeMode や export制御）を直接変更しない。
+- strict validator方針：`visibility` が存在する場合はenum（`Public` / `Unlisted` / `Org` / `Restricted`）以外を拒否する。
+- 安全方針：`visibility` の有無に関わらずSafeMode既定ON・share/export制約の既存ポリシーを維持する。
+- 運用解釈：`visibility` は公開範囲の意図を示すメタデータであり、外部サービスとの共有可否（SafeModeやexport制御）を直接変更しない。
 
 ### 8.1.1 SafeMode / readOnly / visibility の評価優先順位
 
 競合時の評価順は次で固定する（上位が優先）。
 
 1. **SafeMode / share-export policy**（既定ON、漏えい防止）
-2. **readOnly**（書込・共有・export など破壊的操作や外部サービスとの共有を抑止）
+2. **readOnly**（書込・共有・exportなど破壊的操作や外部サービスとの共有を抑止）
 3. **visibility**（公開範囲ラベル。UI表示・監査ラベル用途）
 
-補足:
-- `visibility=Public` でも SafeMode により export/share が拒否され得る。
-- `visibility=Restricted` でも readOnly=false かつ SafeMode許可条件を満たす操作は、既存ポリシーに従って評価する。
-- `visibility` は判定入力にはなり得るが、SafeMode/readOnly の拒否結果を上書きしてはならない。
+補足は次のとおりです。
+- `visibility=Public` でもSafeModeによりexport/shareが拒否され得る。
+- `visibility=Restricted` でもreadOnly=falseかつSafeMode許可条件を満たす操作は、既存ポリシーに従って評価する。
+- `visibility` は判定入力にはなり得るが、SafeMode/readOnlyの拒否結果を上書きしてはならない。
 
 ### 8.2 public pack manifest（`packs/index.json`）
 
@@ -816,60 +816,60 @@ export type PublicPackManifest = {
 };
 ```
 
-- 互換方針：既存 manifest で `visibility` が無い場合は `Public` を補完する（公開配布の既存運用を維持）。
-- strict validator 方針：`visibility` が存在する場合は enum（`Public` / `Unlisted` / `Org` / `Restricted`）以外を拒否する。
-- import/export/validate は上記 enum を単一契約として扱う。
-- 運用解釈：pack の `visibility` も配布上の分類情報として扱い、SafeMode 既定ONおよび漏洩防止ポリシーとは分離する。
+- 互換方針：既存manifestで `visibility` が無い場合は `Public` を補完する（公開配布の既存運用を維持）。
+- strict validator方針：`visibility` が存在する場合はenum（`Public` / `Unlisted` / `Org` / `Restricted`）以外を拒否する。
+- import/export/validateは上記enumを単一契約として扱う。
+- 運用解釈：packの `visibility` も配布上の分類情報として扱い、SafeMode既定ONおよび漏洩防止ポリシーとは分離する。
 
 ### 8.2.1 I/F 境界（実装者向け）
 
 - **Schema契約（本書）**
   - `Visibility` の値域、default/fallback、不正値拒否条件の単一正本。
-- **Importer / Loader（Backend/Frontend 共通責務）**
-  - 欠損時 default 補完（`view.json` は `Restricted`、`packs/index.json` は `Public`）。
+- **Importer / Loader（Backend/Frontend共通責務）**
+  - 欠損時default補完（`view.json` は `Restricted`、`packs/index.json` は `Public`）。
   - 補完後の内部モデルは `visibility` 必須状態で保持する。
-- **Validator（Backend/Frontend 共通責務）**
-  - enum外値・型不正は互換対象にせず reject する。
-  - `packs/index.json` は entry 単位で黙って救済せず、manifest 全体を失敗扱いにする。
-- **Exporter（Backend/Frontend 共通責務）**
+- **Validator（Backend/Frontend共通責務）**
+  - enum外値・型不正は互換対象にせずrejectする。
+  - `packs/index.json` はentry単位で黙って救済せず、manifest全体を失敗扱いにする。
+- **Exporter（Backend/Frontend共通責務）**
   - 互換補完で受理した旧データを含め、再出力時は必ず `visibility` を明示する。
 - **Policy層（Non-Goalの明確化）**
-  - `visibility` は分類メタデータであり、RBAC/認可/SafeMode 判定ロジックそのものは本タスクの対象外（FB-RM-PUB-01 のスコープ外）。
+  - `visibility` は分類メタデータであり、RBAC/認可/SafeMode判定ロジックそのものは本タスクの対象外（FB-RM-PUB-01のスコープ外）。
 
 ### 8.3 旧データ互換（旧→新）
 
 - 旧 `view.json`（`visibility` 欠損）
   - 読込時: `Restricted` を補完して `ViewMetadataV1` として扱う。
   - 再export時: `visibility: "Restricted"` を明示出力する。
-- 旧 `packs/index.json`（entry の `visibility` 欠損）
+- 旧 `packs/index.json`（entryの `visibility` 欠損）
   - 読込時: `Public` を補完して `PublicPackManifest` として扱う。
-  - 再export時: 各 entry に `visibility` を明示出力する。
-- 旧データに `visibility` が存在しても enum 外値の場合は **互換読込対象にしない**（strict validator で拒否）。
+  - 再export時: 各entryに `visibility` を明示出力する。
+- 旧データに `visibility` が存在してもenum外値の場合は **互換読込対象にしない**（strict validatorで拒否）。
 
 #### 8.3.1 既存 document の欠損解釈（明示）
 
-- `document.json` は FB-RM-PUB-01 の適用対象外であり、`visibility` 欠損という状態自体を扱わない。
-- 互換読込で default 補完を行うのは `view.json` / `packs/index.json` のみ。
+- `document.json` はFB-RM-PUB-01の適用対象外であり、`visibility` 欠損という状態自体を扱わない。
+- 互換読込でdefault補完を行うのは `view.json` / `packs/index.json` のみ。
 - 既存 `document.json` をそのまま読めること（非破壊）を互換要件とする。
 
 ### 8.4 失敗ケース（拒否すべき入力）
 
 - `visibility` が文字列以外（`null`, number, object）
-- `visibility` が enum 外（例: `"FriendsOnly"`, `"private"`）
-- pack manifest で `packs[*].visibility` が欠損以外の不正（例: `""` や空白のみ）
-- view metadata で `visibility` が空文字または大文字小文字違い（例: `"public"`）
+- `visibility` がenum外（例: `"FriendsOnly"`, `"private"`）
+- pack manifestで `packs[*].visibility` が欠損以外の不正（例: `""` や空白のみ）
+- view metadataで `visibility` が空文字または大文字小文字違い（例: `"public"`）
 
 ### 8.5 Definition of Done（FB-RM-PUB-01）
 
 1. **schema検証**
-   - `view.json` / `packs/index.json` が enum 制約（`Public | Unlisted | Org | Restricted`）を満たす。
-   - 不正値は import/export validator が拒否する。
+   - `view.json` / `packs/index.json` がenum制約（`Public | Unlisted | Org | Restricted`）を満たす。
+   - 不正値はimport/export validatorが拒否する。
 2. **互換読込**
    - `visibility` 欠損の旧 `view.json` が `Restricted` として読める。
    - `visibility` 欠損の旧 `packs/index.json` が `Public` として読める。
 3. **回帰観点**
    - SafeMode既定ON・share/export漏えい防止の既存テストが通る。
-   - `visibility` 追加により readOnly/SafeMode の拒否挙動が緩まない。
+   - `visibility` 追加によりreadOnly/SafeModeの拒否挙動が緩まない。
 
 ### 8.6 importer / validator / exporter テスト観点
 
@@ -877,17 +877,17 @@ export type PublicPackManifest = {
   - `view.json` の `visibility` 欠損時は `Restricted` を補完して読込成功。
   - `packs/index.json` の `packs[*].visibility` 欠損時は `Public` を補完して読込成功。
 - strict validator（不正拒否）:
-  - `visibility` が enum 外または型不正（number/null/object/空文字）は失敗として拒否。
-  - `packs/index.json` は entry 単位で黙って破棄せず、manifest 全体を失敗扱いにする。
+  - `visibility` がenum外または型不正（number/null/object/空文字）は失敗として拒否。
+  - `packs/index.json` はentry単位で黙って破棄せず、manifest全体を失敗扱いにする。
 - exporter（再出力明示）:
   - 互換補完で読んだ旧データは再出力時に `visibility` を必ず明示。
-  - `visibility` 追加後も SafeMode/readOnly の拒否優先順は不変。
+  - `visibility` 追加後もSafeMode/readOnlyの拒否優先順は不変。
 
 ### 8.7 トレーサビリティ（FB-RM-PUB-01）
 
 - 要求元: `01_Plans/adr/ADR-0007-future-backlog.md` の `FB-RM-PUB-01`（schema検証と既存データ互換）。
 - 上位整合: `02_Architecture/architecture.html` §11（visibility enum / default補完 / SafeMode優先）。
-- 本節（schemas.md）は、実装者向けの単一契約として default/fallback/strict validation/I/F境界を具体化する。
+- 本節（schemas.md）は、実装者向けの単一契約としてdefault/fallback/strict validation/I/F境界を具体化する。
 
 
 ## 9. Island hierarchy compatibility contract（FB-P2A-01）
@@ -904,13 +904,13 @@ export type Island = {
 
 - `parentIslandId` は任意（未設定時はルート島として扱う）。
 - 既存データ互換のため、`parentIslandId` が欠損していても読み込みを失敗させない。
-- `parentIslandId` が存在しない島を参照する場合は、import 正規化で `undefined` にフォールバックする。
-- 循環参照（self-parent 含む）は import 正規化で `undefined` にフォールバックする。
-- save/reload では有効な `parentIslandId` を欠落させず往復保持する。
+- `parentIslandId` が存在しない島を参照する場合は、import正規化で `undefined` にフォールバックする。
+- 循環参照（self-parent含む）はimport正規化で `undefined` にフォールバックする。
+- save/reloadでは有効な `parentIslandId` を欠落させず往復保持する。
 
 ## 10. AUTH-SCHEMA-01: Identity schema (`users` / `user_identities`)
 
-`ADR-0020` の AUTH-ARCH-01 決定を受け、認証情報を保持しない前提で次を正本とする。
+`ADR-0020` のAUTH-ARCH-01決定を受け、認証情報を保持しない前提で次を正本とする。
 
 - `users`
   - `id` (UUID, immutable, PK)
@@ -922,16 +922,16 @@ export type Island = {
   - `id` (PK)
   - `user_id` (FK -> `users.id`)
   - `provider` (例: `oidc` / `saml` / `header`)
-  - `external_uid` (IdP subject 等)
+  - `external_uid` (IdP subject等)
   - `created_at`
   - 一意制約: `UNIQUE(provider, external_uid)`
 
-運用モード:
+運用モードは次のとおりです。
 
 - `SUI_ALLOW_JIT_PROVISIONING=true`（既定）: 未登録 `provider+external_uid` を受信したら `users` / `user_identities` を同時作成。
 - `SUI_ALLOW_JIT_PROVISIONING=false`（strict）: 未登録は `403` とし、事前プロビジョニング済みのみ許可。
 
-API I/F 整合用の最小型（実装依存を避ける境界）:
+API I/F整合用の最小型（実装依存を避ける境界）:
 
 ```ts
 export type IdentityProvisioningContract = {
@@ -952,7 +952,7 @@ export type IdentityProvisioningContract = {
 
 ## 11. FB-P2B-02 Decision Log schema contract（CTR-2B-02-DECISION-LOG-V1）
 
-Manual assisted merge の意思決定ログは、`DocumentV1` 本体とは独立した append-only ストアとして扱う。
+Manual assisted mergeの意思決定ログは、`DocumentV1` 本体とは独立したappend-onlyストアとして扱う。
 
 ```ts
 export type MergeDecisionRecord = {
@@ -968,50 +968,50 @@ export type MergeDecisionRecord = {
 ```
 
 - `action` は4値固定（契約拡張禁止）。
-- `restore(snapshotVersion)` は同一 `snapshotVersion` に紐づく記録を append 順で返す。
-- `listByGroup(groupId)` は同一 `groupId` の記録を append 順で返す。
+- `restore(snapshotVersion)` は同一 `snapshotVersion` に紐づく記録をappend順で返す。
+- `listByGroup(groupId)` は同一 `groupId` の記録をappend順で返す。
 - 非自動確定を守るため、本契約は `accept` でも代表カード確定を暗黙実行しない。
 
 移行前提（expand/contract）:
 
 - expand:
   1) `users` / `user_identities` を追加し、`UNIQUE(provider, external_uid)` を先に適用する。
-  2) 既存 attribution は互換維持しつつ、新規書込は `AuthContext.userId=users.id` 経由へ切替える。
+  2) 既存attributionは互換維持しつつ、新規書込は `AuthContext.userId=users.id` 経由へ切替える。
 - contract:
   3) 旧来の外部識別子直参照を段階的に廃止し、`reviewerRef` / `ownerRef` は `user:<users.id>` のみ許可する。
-  4) strict 運用では未登録 subject を `403` とし、管理導線（`POST /admin/provision/users`）を必須化する。
-- backfill運用: 旧 `reviewerRef` / `ownerRef`（例: `user:sso:sub:<subject>`）は mapping JSON を使って `user:<users.id>` へ変換する。
+  4) strict運用では未登録subjectを `403` とし、管理導線（`POST /admin/provision/users`）を必須化する。
+- backfill運用: 旧 `reviewerRef` / `ownerRef`（例: `user:sso:sub:<subject>`）はmapping JSONを使って `user:<users.id>` へ変換する。
 
 ### 10.1 監査観点での固定ルール（実装向け決裁）
 
-実装判断のブレをなくすため、AuthContext/identity 属性を次の3分類で固定する。
+実装判断のブレをなくすため、AuthContext/identity属性を次の3分類で固定する。
 
 #### persist（DB永続化を許可）
 
 - 許可: `users.display_name`, `users.email`, `user_identities.provider`, `user_identities.external_uid`
 - 目的: 同一人物の再識別（`provider+external_uid`）と最低限の運用表示。
-- 制約: `display_name`/`email` は nullable かつ最小利用に限定し、認可判定条件としては使用しない。
+- 制約: `display_name`/`email` はnullableかつ最小利用に限定し、認可判定条件としては使用しない。
 
 #### transient（リクエスト内/監査最小メタのみ）
 
 - 対象: `amr`, `acr`, `aal`, `auth_time`, `roles`, `groups`, `policyRef`, `trace_id`
-- DB保存: 禁止（`users` / `user_identities` / document / review attribution のいずれにも保存しない）。
-- 監査出力: 直接値ではなく、後述 10.2 の「presence/level 正規化」のみ許可。
+- DB保存: 禁止（`users` / `user_identities` / document / review attributionのいずれにも保存しない）。
+- 監査出力: 直接値ではなく、後述10.2の「presence/level正規化」のみ許可。
 
 #### forbidden（受信しても保存・再出力を禁止）
 
 - `password`/`password_hash`/`secret` 全般
-- WebAuthn credential id / authenticator AAGUID 等の端末識別子
-- 生の policy token / assertion / id token / access token
+- WebAuthn credential id / authenticator AAGUID等の端末識別子
+- 生のpolicy token / assertion / id token / access token
 - `roles`/`groups`/`policyRef` の生値ログ出力
 
-上記 forbidden は debug ログ・監査ログ・エクスポートファイルを含め **全面禁止** とする。
+上記forbiddenはdebugログ・監査ログ・エクスポートファイルを含め **全面禁止** とする。
 
 ### 10.2 `amr/acr/aal/auth_time` の保存・表示・監査出力
 
 - 保存（DB）: 全て禁止。
-- UI表示: セッション診断表示に限定し、document/view へ埋め込まない。
-- 監査出力（許可範囲）:
+- UI表示: セッション診断表示に限定し、document/viewへ埋め込まない。
+- 監査出力（許可範囲）は次のとおりです。
   - `amr`: 生値禁止。`hasStepUp`（boolean）または `amrClass`（`single_factor|multi_factor|unknown`）へ正規化。
   - `acr` / `aal`: 生値禁止。`assuranceLevel`（`low|substantial|high|unknown`）へ正規化。
   - `auth_time`: 生値禁止。`authAgeBucket`（`fresh(<=15m)|stale(>15m)|unknown`）へ正規化。
@@ -1024,7 +1024,7 @@ export type MergeDecisionRecord = {
 - SaaSの文書認可設定では、`visibility`、アプリ生成の非秘密`policy_binding_id`、`policy_version`だけを`document_access_metadata`へ保存する。`policy_binding_id`は外部policyRef、token、URL、assertionそのものではなく、trusted runtime resolver用のlookup keyとする。
 - runtime resolverが返した生のpolicyRefはrequest内だけで使用し、DB、監査、export、diagnosticsへ保存・再出力しない。binding欠損・不正・resolver障害は`Restricted + policy_ref_missing`へfail-closedにする。
 - 永続許可されるのは `policyRefPresent` のような存在フラグのみ。
-- fail-safe 判定（`policy_ref_missing|policy_ref_unreachable|policy_ref_invalid`）は保存可。
+- fail-safe判定（`policy_ref_missing|policy_ref_unreachable|policy_ref_invalid`）は保存可。
 
 この境界により、組織属性の最新性は外部IdP/PDPを正本とし、アプリ側の属性陳腐化リスクを回避する。
 
@@ -1096,7 +1096,7 @@ export type TenantBrowserStorageScopeV1 = {
 
 tenant切替・logoutでは選択scope prefixの全entryを列挙後に削除し、反復中のindex変化でentryを取りこぼさない。検証済みsession responseだけを受け付けるtransition coordinatorが、request abort、worker dispose、object URL・memory state破棄hook、旧scope削除、hard document replacementを順に実行する。cleanup/storage削除の一部が失敗しても旧DOMを継続利用しない。未保存変更の保存／破棄／取消をclosed-worldに受けるrequest coordinatorは、current sessionと旧scopeの一致、allowlist内の切替先、POST成功responseのprincipal不変と要求tenant一致を再検証し、確認取消・保存失敗・不正responseではcleanupやnavigationを開始しない。Appの任意注入hostはsessionとscopeの完全一致をmount時に再確認し、切替確定後は旧本文をloadingへ、失敗・応答不明時はblocked stateへ置換してから、保存、runtime cleanup、旧scope削除、hard replacementを実行する。既存3 profileはlocal-first起動を維持し、`saas-multitenant` buildだけがpolicy一致とsession成功後に検証済みsession contextとscopeをAppへ同時注入してmountする。未知build profileとpolicy不一致はsingle-tenantへfallbackしない。現段階では実auth edge adapterとanti-forgery付きsession persisterをbackend runtimeへ接続しないため、SaaS profileの起動拒否は維持する。
 
-実装段階:
+実装段階は次のとおりです。
 
 | 項目 | 状態 | 解禁上の扱い |
 | --- | --- | --- |
@@ -1142,7 +1142,7 @@ export type PolygonHandoffExpectedOutputContract = {
 };
 ```
 
-ロールバック判定トリガー:
+ロールバック判定トリガーは次のとおりです。
 
 - `paddingViolationCount > 0`
 - `tieBreakOrder` が `deterministicTieBreakOrder` と不一致
@@ -1150,7 +1150,7 @@ export type PolygonHandoffExpectedOutputContract = {
 
 ## 12. HIL-RS-01 A1 error envelope contract（A1-ERROR-IF）
 
-A1契約違反時に backend が返すエラーは共通 envelope を用いる。
+A1契約違反時にbackendが返すエラーは共通envelopeを用いる。
 
 ```ts
 export type A1ErrorEnvelope = {
@@ -1170,9 +1170,9 @@ export type A1ErrorEnvelope = {
 };
 ```
 
-- `message` へ email / external_uid など生IDを含めない。
+- `message` へemail / external_uidなど生IDを含めない。
 - `contractId` は違反した契約IDを必ず指す。
-- A2/A3 で errorCode 列挙を拡張しない。
+- A2/A3でerrorCode列挙を拡張しない。
 
 ## 13. 実装済み response view model
 
@@ -1218,14 +1218,14 @@ export type ProviderStatusResponse = {
 
 ## 14. DOMAIN-EXPR-02 加算スキーマ拡張（2026-06-21）
 
-ADR-0040 Phase 2: 保留 Hold + 未統合 Shelf の第一級化。加算原則に従い、全フィールドは optional。
+ADR-0040 Phase 2: 保留Hold + 未統合Shelfの第一級化。加算原則に従い、全フィールドはoptional。
 
 ### 14.1 Card.holdState
 
 - 型正本: §3.2 `CardHoldState` / `Card.holdState?`
 - Support level: `L2.5`（未分類。実装検証後にL2以上へ昇格）
 - 欠落時: 従来挙動（holdしていない通常カード）
-- 意味:
+- 意味は次のとおりです。
   - `"held"`: 意図的に判断を保留しているカード
   - `"pending"`: 未処理/未着手のカード
   - `"shelved"`: Shelfへ退避中（本文は保持、配置からは一時的に除外）
@@ -1239,9 +1239,9 @@ ADR-0040 Phase 2: 保留 Hold + 未統合 Shelf の第一級化。加算原則�
 
 ### 14.3 後方互換
 
-- 新フィールドはすべて optional。未対応クライアント・旧データは欠落を従来挙動として解釈
+- 新フィールドはすべてoptional。未対応クライアント・旧データは欠落を従来挙動として解釈
 - `version: 1` のまま（破壊的変更なし）
-- import/export/validate は未知フィールドを許容し、欠落時にデフォルト解釈する
+- import/export/validateは未知フィールドを許容し、欠落時にデフォルト解釈する
 
 ### 14.4 参照
 
@@ -1251,53 +1251,53 @@ ADR-0040 Phase 2: 保留 Hold + 未統合 Shelf の第一級化。加算原則�
 
 ## 15. DOMAIN-TRACE-01 加算スキーマ拡張: Card.meta（通し番号・原データ遡及）（2026-07-08）
 
-ADR-0048 D3 改訂（2026-07-03）採択分。加算原則に従い、全フィールドは optional。
+ADR-0048 D3改訂（2026-07-03）採択分。加算原則に従い、全フィールドはoptional。
 
 ### 15.1 Card.meta
 
 - 型正本: §3.2 `CardMeta` / `Card.meta?`
 - Support level: `L2.5`（契約限定。往復保持を保証し、個別CRUDは保証しない）
 - 欠落時: 従来挙動（番号・出典を持たない通常カード）
-- 意味:
+- 意味は次のとおりです。
   - `seq`: 任意の通し番号（有限数）。**自動連番を強制しない**（任意入力。一括採番機能があっても上書きは人間操作）。表示は「#N」。
-  - `source`: 原データへの遡及参照（原発話・観察記録の行番号・URL 等の**自由記述**）。リンク先の自動取得・プレビュー・埋め込みは行わない。
+  - `source`: 原データへの遡及参照（原発話・観察記録の行番号・URL等の**自由記述**）。リンク先の自動取得・プレビュー・埋め込みは行わない。
 
 ### 15.2 語彙境界（`Card.sources` との役割分担・AC-1）
 
-- `Card.sources`（既存）: canonical 化における**統合元カード id** の配列。意味は不変（再定義禁止）。
-- `Card.meta.source`（本節）: **文書外部**の原データへの参照（自由記述）。カード id を指すためには使わない。
+- `Card.sources`（既存）: canonical化における**統合元カードid** の配列。意味は不変（再定義禁止）。
+- `Card.meta.source`（本節）: **文書外部**の原データへの参照（自由記述）。カードidを指すためには使わない。
 - 起票者・作成者・最終更新者・所有者などの**主体（provenance/accountability）メタは `Card.meta` に含めない**。UI・保存・redaction境界はAcceptedの `ADR-0056` と `CARD-META-UI-01` に従い、主体メタデータを追加する場合はスキーマ、認証、権限、保持、共有範囲をまとめた新しい判断を先に行う。本節が確定するのは非主体メタ（`seq`/`source`）のみである。
 
 ### 15.3 取り込み境界（meta 内未知キーの fail-closed）
 
 - import/validate（寛容・厳格の両モード）は `Card.meta` の **既知キー（`seq`/`source`）のみを受理**し、未知キーは破棄する。
-- これは DOMAIN-KJ-01 の「未知エッジ種別の保全」（§3.3.2）と**対照的な意図的判断**である: 関係種別は語彙拡張の余地が採択済みだが、`Card.meta` の未知キーは主体メタ（起票者等）が `CARD-META-UI-01` の判断確定前に import 経由で永続化される抜け道になり得るため、fail-closed とする（同Issue AC-5「import 由来の provenance メタは非信頼データ」に整合）。
+- これはDOMAIN-KJ-01の「未知エッジ種別の保全」（§3.3.2）と**対照的な意図的判断**である: 関係種別は語彙拡張の余地が採択済みだが、`Card.meta` の未知キーは主体メタ（起票者等）が `CARD-META-UI-01` の判断確定前にimport経由で永続化される抜け道になり得るため、fail-closedとする（同Issue AC-5「import由来のprovenanceメタは非信頼データ」に整合）。
 - `CARD-META-UI-01` で新キーが採択された場合は、本節の既知キー集合を追加更新してから実装する（契約先行）。
 
 ### 15.4 共有・書き出し境界（AC-4）
 
-- **共有向け書き出し（レビューパック等）では `Card.meta` を既定で含めない**。含める場合は共有前確認の明示トグル「出典参照を含める」（**既定 OFF**）＋警告1行（出典は内部情報を含み得る旨）で opt-in する。
-- 文書スナップショット自体の保存（`PUT /docs/{doc_id}`）・バックアップ用途の文書 JSON 書き出しは redaction 対象外（既存の critique 等と同じ扱い。文書の完全な往復が目的のため）。
-- SafeMode の固定マスク（未レビュー本文）とは**独立の軸**として管理する。SafeMode の ON/OFF は本トグルの既定（OFF）を変えない。
+- **共有向け書き出し（レビューパック等）では `Card.meta` を既定で含めない**。含める場合は共有前確認の明示トグル「出典参照を含める」（**既定OFF**）＋警告1行（出典は内部情報を含み得る旨）でopt-inする。
+- 文書スナップショット自体の保存（`PUT /docs/{doc_id}`）・バックアップ用途の文書JSON書き出しはredaction対象外（既存のcritique等と同じ扱い。文書の完全な往復が目的のため）。
+- SafeModeの固定マスク（未レビュー本文）とは**独立の軸**として管理する。SafeModeのON/OFFは本トグルの既定（OFF）を変えない。
 
 ### 15.5 後方互換
 
-- optional のため `version: 1` を維持（破壊的変更なし）。未対応クライアント・旧データは欠落を従来挙動として解釈。
-- カード面（キャンバス）の通し番号バッジは**既定 OFF**（View パネルのトグルで表示）。CB-1 自己申告は issue 完了記録に記載する。
+- optionalのため `version: 1` を維持（破壊的変更なし）。未対応クライアント・旧データは欠落を従来挙動として解釈。
+- カード面（キャンバス）の通し番号バッジは**既定OFF**（Viewパネルのトグルで表示）。CB-1自己申告はissue完了記録に記載する。
 
 ### 15.6 参照
 
-- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3 改訂）
+- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3改訂）
 - Issue: `DOMAIN-TRACE-01-serial-number-and-source-provenance`, `CARD-META-UI-01-card-provenance-metadata-ui-boundary`（主体メタの上位境界）
 - Frontend: `03_Implement/frontend/src/domain/types.ts` (Card.meta)
 
 ## 16. DOMAIN-EXPR-04 加算スキーマ拡張: 矛盾シグナルのレビュー決定（2026-07-08）
 
-ADR-0040 Phase 4（根拠・主張・矛盾の人間レビュー第一級化）の残存スコープ。加算原則に従い、全フィールドは optional。AI権限境界は ADR-0041 CVI-2/CVI-3 の既存契約（本書 §1.2 CE2-LOW-RISK-AI-ASSIST の `ProposalStatus` 語彙）を新規許可なく再利用するため、新規ADRは不要と判断する。
+ADR-0040 Phase 4（根拠・主張・矛盾の人間レビュー第一級化）の残存スコープ。加算原則に従い、全フィールドはoptional。AI権限境界はADR-0041 CVI-2/CVI-3の既存契約（本書 §1.2 CE2-LOW-RISK-AI-ASSISTの `ProposalStatus` 語彙）を新規許可なく再利用するため、新規ADRは不要と判断する。
 
 ### 16.1 背景・スコープ
 
-既存の `analyzeContradictions()`（決定論的キーワード/構造ヒューリスティック。AI/LLM 呼び出しなし）は島・relationSummary 粒度の矛盾シグナル（C001〜C004）を検出済みだが、これまで「Focus」（画面遷移のみ）以外の操作導線がなく、シグナルへの人間の判断が持続化されない。本拡張は、シグナル自体に人間のレビュー決定（採用/保留/却下）を可逆に付与する。
+既存の `analyzeContradictions()`（決定論的キーワード/構造ヒューリスティック。AI/LLM呼び出しなし）は島・relationSummary粒度の矛盾シグナル（C001〜C004）を検出済みだが、これまで「Focus」（画面遷移のみ）以外の操作導線がなく、シグナルへの人間の判断が持続化されない。本拡張は、シグナル自体に人間のレビュー決定（採用/保留/却下）を可逆に付与する。
 
 **個別カード間の `EvidenceLink` を自動生成することはしない**: シグナルは島レベルの集約検出であり、特定のカードペアへ機械的に対応付けると検出精度を偽ることになるため。成果物（review pack）契約の拡張は本拡張のスコープ外（`PRODUCT-VALUE-03`/`PRODUCT-QA-01` が所有）。
 
@@ -1305,31 +1305,31 @@ ADR-0040 Phase 4（根拠・主張・矛盾の人間レビュー第一級化）�
 
 - 型正本: §3.4 `ContradictionSignalReviewStatus` / `ContradictionSignalDecision` / `DocumentV1.contradictionSignalDecisions?`
 - `signatureKey` の生成規則: `${signal.code}:${signal.pairKey ?? signal.entityRefs[0]?.idOrSignature ?? ""}`
-- `ContradictionSignalReviewStatus` は CE2-PROPOSAL-IF の ProposalStatus 語彙を再利用する。新規AI権限ではない。
+- `ContradictionSignalReviewStatus` はCE2-PROPOSAL-IFのProposalStatus語彙を再利用する。新規AI権限ではない。
 - Support level: `L2.5`（未分類。実装検証後にL2以上へ昇格）
-- 欠落時、または該当 `signatureKey` が配列内に無い場合: 「未決定」（暗黙の "proposed"）として扱う。"proposed" 自体は永続化しない値であり、決定を取り消す操作は配列から該当エントリを削除する（DOMAIN-TRACE-01 の `Card.meta` 空値削除と同じ規約）。
+- 欠落時、または該当 `signatureKey` が配列内に無い場合: 「未決定」（暗黙の "proposed"）として扱う。"proposed" 自体は永続化しない値であり、決定を取り消す操作は配列から該当エントリを削除する（DOMAIN-TRACE-01の `Card.meta` 空値削除と同じ規約）。
 - `signatureKey` は `analyzeContradictions()` の実行毎に再計算されるシグナル列から決定論的に導出する識別子であり、シグナル自体は永続化しない（`mergeSuggestionDecisions` が候補生成物と決定を分離する既存パターンに倣う）。
 
 ### 16.3 AI/検出ロジック権限境界（ADR-0041 CVI-2/CVI-3 の適用であり拡張ではない）
 
 - `analyzeContradictions()` はシグナルを提示するのみで、`ContradictionSignalDecision` を書き込む経路を一切持たない。書き込みは人間のUI操作（1操作=1履歴ステップ）のみが行う。
 - `status` は常に人間の最初のクリックで決まり、AIや検出ロジックが `"accepted"` を自動付与することはない（CVI-2 proposal-only）。
-- 本拡張は新しい AI 権限を追加しない。既存 `CE2-LOW-RISK-AI-ASSIST`（本書 §1.2）の `ProposalStatus` 語彙を、決定論的ヒューリスティック検出器（`analyzeContradictions`）が生成する別種の候補（矛盾シグナル）に再適用するのみであり、ADR-0041 の枠内に留まる。
+- 本拡張は新しいAI権限を追加しない。既存 `CE2-LOW-RISK-AI-ASSIST`（本書 §1.2）の `ProposalStatus` 語彙を、決定論的ヒューリスティック検出器（`analyzeContradictions`）が生成する別種の候補（矛盾シグナル）に再適用するのみであり、ADR-0041の枠内に留まる。
 
 ### 16.4 UI・可逆性
 
 - 選択コンテキスト（SidePanel）の矛盾シグナル一覧に、各シグナルの現在状態（未決定/採用/保留/却下）と決定操作（採用にする/保留にする/却下する/決定を取り消す）を表示する。
 - シグナル自体は決定状態に関わらず常に表示する（却下しても非表示にしない）。「却下」は「検討済みで対象外と判断した」ことの記録であり、シグナルの隠蔽ではない。
-- 決定変更は `applyDocumentChange` による1操作=1履歴ステップ（⌘Z で取り消し可能）。
+- 決定変更は `applyDocumentChange` による1操作=1履歴ステップ（⌘Zで取り消し可能）。
 
 ### 16.5 成果物・共有境界
 
-- 本拡張は review pack バンドル契約（`bundle_export.ts` の `contradiction_trace_*.md` 等）を変更しない。narrative export / diagnostics.md への反映も本拡張のスコープに含めない（既存の `EvidenceLink.contradictionState` の narrative 反映で当該 AC は充足済み）。
-- SafeMode / share-export の既定挙動は変更しない（決定状態は選択コンテキストのみに表示し、共有前チェック契約に新規項目を追加しない）。
+- 本拡張はreview packバンドル契約（`bundle_export.ts` の `contradiction_trace_*.md` 等）を変更しない。narrative export / diagnostics.mdへの反映も本拡張のスコープに含めない（既存の `EvidenceLink.contradictionState` のnarrative反映で当該ACは充足済み）。
+- SafeMode / share-exportの既定挙動は変更しない（決定状態は選択コンテキストのみに表示し、共有前チェック契約に新規項目を追加しない）。
 
 ### 16.6 後方互換
 
-- 新フィールドはすべて optional。旧データ（配列欠落）は「すべて未決定」として解釈する。
+- 新フィールドはすべてoptional。旧データ（配列欠落）は「すべて未決定」として解釈する。
 - `version: 1` のまま（破壊的変更なし）。
 - 寛容/厳格の両検証モードで、`signatureKey`/`status`/`decidedAt` のいずれかが不正な要素は破棄し、他の正しい要素は保全する（`mergeSuggestionDecisions` の既存パターンに倣う）。
 
@@ -1341,7 +1341,7 @@ ADR-0040 Phase 4（根拠・主張・矛盾の人間レビュー第一級化）�
 
 ## 17. DOMAIN-KA-01 加算スキーマ拡張: KAカード種別（出来事/心の声/価値）（2026-07-08）
 
-ADR-0048 D3 改訂（2026-07-03）採択分。加算原則に従い、全フィールドは optional。DOMAIN-TRACE-01（§15）と同じ D3改訂バッチでの条件付き採択。
+ADR-0048 D3改訂（2026-07-03）採択分。加算原則に従い、全フィールドはoptional。DOMAIN-TRACE-01（§15）と同じD3改訂バッチでの条件付き採択。
 
 ### 17.1 Card.ka
 
@@ -1351,50 +1351,50 @@ ADR-0048 D3 改訂（2026-07-03）採択分。加算原則に従い、全フィ�
 - Support level: `L2.5`（未分類。実装検証後にL2以上へ昇格）
 - 欠落時: 従来挙動（KA欄を持たない通常カード）
 - `Card.text` は従来どおり**出来事の正本**として維持する（意味変更なし）。`voice`/`value` は `text` に併記しない別フィールド。
-- 形状は `Card.meta`（§15.1）と同じ「関連する複数の optional フィールドを1つの入れ子オブジェクトへ束ねる」規約を踏襲する（フラットな `kaVoice`/`kaValue` ではなく `ka: { voice?, value? }`）。
+- 形状は `Card.meta`（§15.1）と同じ「関連する複数のoptionalフィールドを1つの入れ子オブジェクトへ束ねる」規約を踏襲する（フラットな `kaVoice`/`kaValue` ではなく `ka: { voice?, value? }`）。
 
 ### 17.2 取り込み境界
 
 - import/validate（寛容・厳格の両モード）は `Card.ka` の既知キー（`voice`/`value`）のみを受理する。両方とも欠落・空文字列の場合は `ka` フィールド自体を省略する（`Card.meta` の空値削除規約と同じ）。
-- `claimType` とは直交（統合・再定義しない）。critique・holdState 等の既存カード状態にも影響しない。
+- `claimType` とは直交（統合・再定義しない）。critique・holdState等の既存カード状態にも影響しない。
 
 ### 17.3 UI・非目標
 
-- 選択コンテキストの基本編集群に「心の声」「価値」欄（未入力時は折りたたみ/プレースホルダ）。**カード面（キャンバス）には表示しない**（AC-4: 初期表示アンカー非回帰。UX-VISUAL-01 のメタ行チャネル予算を追加消費しない）。
-- 非目標: 価値によるグルーピング画面の新設、AI による心の声/価値の自動抽出、カード面への3欄常時表示。
+- 選択コンテキストの基本編集群に「心の声」「価値」欄（未入力時は折りたたみ/プレースホルダ）。**カード面（キャンバス）には表示しない**（AC-4: 初期表示アンカー非回帰。UX-VISUAL-01のメタ行チャネル予算を追加消費しない）。
+- 非目標: 価値によるグルーピング画面の新設、AIによる心の声/価値の自動抽出、カード面への3欄常時表示。
 
 ### 17.4 成果物境界
 
-- レビューパック/narrative export への含め方は「本文に併記しない・任意セクション」とする。既定 OFF のオプトインで、設定時のみ KA 欄が設定されているカードを列挙する独立セクションとして追加する（`text` の本文とは混在させない）。
-- SafeMode でのテキスト露出可否は `card.text` と同じ判定チャネル（`SafeModePolicy.canExposeText("card.text", ...)`）を再利用する（KA 欄は `text` と同等以上に機微な言語化途中データのため、別基準を新設しない）。
+- レビューパック/narrative exportへの含め方は「本文に併記しない・任意セクション」とする。既定OFFのオプトインで、設定時のみKA欄が設定されているカードを列挙する独立セクションとして追加する（`text` の本文とは混在させない）。
+- SafeModeでのテキスト露出可否は `card.text` と同じ判定チャネル（`SafeModePolicy.canExposeText("card.text", ...)`）を再利用する（KA欄は `text` と同等以上に機微な言語化途中データのため、別基準を新設しない）。
 
 ### 17.5 後方互換
 
-- 新フィールドはすべて optional。旧データ（`ka` 欄欠落）は従来挙動として解釈する。
+- 新フィールドはすべてoptional。旧データ（`ka` 欄欠落）は従来挙動として解釈する。
 - `version: 1` のまま（破壊的変更なし）。
 
 ### 17.6 参照
 
-- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3 改訂）
+- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3改訂）
 - Issue: `DOMAIN-KA-01-ka-card-fields`
 - Frontend: `03_Implement/frontend/src/domain/types.ts`（Card.ka）
 
 
 ## 18. EXT-CONN-03 契約先行固定: agent-constraints.v1（訂正ループの輸出）＋加算スキーマ拡張（2026-07-15）
 
-ADR-0054 段階3の契約先行固定（issue-EXT-CONN-03 AC-1 / DecisionQueueRef が要求する「constraint 契約の `schemas.md` 先行固定」）。本節は**契約の固定のみ**を行い、実装の着手可否は EXT-CONN-03 issue の段階ゲート（段階1/2 の運用知見）に従う。加算原則に従い、DocumentV1 への追加フィールドはすべて optional。
+ADR-0054段階3の契約先行固定（issue-EXT-CONN-03 AC-1 / DecisionQueueRefが要求する「constraint契約の `schemas.md` 先行固定」）。本節は**契約の固定のみ**を行い、実装の着手可否はEXT-CONN-03 issueの段階ゲート（段階1/2の運用知見）に従う。加算原則に従い、DocumentV1への追加フィールドはすべてoptional。
 
 ### 18.1 目的と設計判断（方式設計の要点）
 
 TRACE（arXiv:2606.13174）の知見「記憶への保存では選好違反の57.5%が残る。訂正は次回実行の**制約**として明示的に渡す必要がある」に基づき、人間がカード・島・エージェント提案へ付けた違和感タグ・保留・却下を機械可読な制約として輸出する。
 
-**契約形態の決定**: issue-EXT-CONN-03 が挙げた2候補 (a) `agent-task.v1` ガードレール節への追記 / (b) 独立の `agent-constraints.v1` 文書 のうち、**(b) 独立文書を正とし、(a) は (b) の埋め込みプロファイルとする**。理由:
+**契約形態の決定**: issue-EXT-CONN-03が挙げた2候補 (a) `agent-task.v1` ガードレール節への追記 / (b) 独立の `agent-constraints.v1` 文書 のうち、**(b) 独立文書を正とし、(a) は (b) の埋め込みプロファイルとする**。理由:
 
-1. 配布経路が2つある（手動レーン=タスクシート同梱、自動レーン=EXT-CONN-01 MCP サーバーの読み取りツール）。独立文書なら1つの正本形状を両経路で共有でき、ガードレール節専用形式だと MCP 経路で二重定義になる。
+1. 配布経路が2つある（手動レーン=タスクシート同梱、自動レーン=EXT-CONN-01 MCPサーバーの読み取りツール）。独立文書なら1つの正本形状を両経路で共有でき、ガードレール節専用形式だとMCP経路で二重定義になる。
 2. 制約の語彙はタスクパッケージと独立に進化しうる（版管理の分離）。
-3. `02_Architecture/external_agent_collaboration_spec.html` §3.3 のタスクシートには「制約」節として同一 JSON を埋め込む（同 spec 参照）。定義の重複を作らない。
+3. `02_Architecture/external_agent_collaboration_spec.html` §3.3のタスクシートには「制約」節として同一JSONを埋め込む（同spec参照）。定義の重複を作らない。
 
-**内部設計の外部化**: 本契約は HIL-RS の内部 critique 収集（`buildHilRsCritiqueInputs`: card/island の `critiqueTags`＋自由記述 → `CritiqueInput.constraintHints`）と同じ源泉・同じ5種タグ語彙（§18.3）を用いる。新しい語彙・新しいAI権限を導入しない（語彙重複禁止の既存規約に従う）。
+**内部設計の外部化**: 本契約はHIL-RSの内部critique収集（`buildHilRsCritiqueInputs`: card/islandの `critiqueTags`＋自由記述 → `CritiqueInput.constraintHints`）と同じ源泉・同じ5種タグ語彙（§18.3）を用いる。新しい語彙・新しいAI権限を導入しない（語彙重複禁止の既存規約に従う）。
 
 ### 18.2 AgentConstraintsV1（輸出契約・正本）
 
@@ -1427,12 +1427,12 @@ TRACE（arXiv:2606.13174）の知見「記憶への保存では選好違反の57
 }
 ```
 
-制約（契約不変条件）:
+制約（契約不変条件）は次のとおりです。
 
-- 各 entry は `critiqueTags` と `facts` の**少なくとも一方が非空**（空の制約は生成しない）。
-- **理由不要原則の保持**: `note` は任意。`no_articulable_reason` は一級のシグナルであり、理由の言語化を輸出の条件にしない（domain.md の違和感原則）。
-- **反スコアリング**: `score` / `rank` / `confidence` / `priority` / `weight` 等の数値評価語彙をトップレベル・entry・target のいずれにも**含めない**（契約禁止。テストは直列化文字列への正規表現で固定する）。制約間に順序的優先度は存在せず、`entries` の並びは決定論のためのソート順（§18.6）であって重要度ではない。
-- **エージェント側の遵守は受け手の責務**: sui-sensemaking は明示的に渡すところまで（issue 非目標）。遵守検証・自動学習・制約の自動生成は本契約のスコープ外。
+- 各entryは `critiqueTags` と `facts` の**少なくとも一方が非空**（空の制約は生成しない）。
+- **理由不要原則の保持**: `note` は任意。`no_articulable_reason` は一級のシグナルであり、理由の言語化を輸出の条件にしない（domain.mdの違和感原則）。
+- **反スコアリング**: `score` / `rank` / `confidence` / `priority` / `weight` 等の数値評価語彙をトップレベル・entry・targetのいずれにも**含めない**（契約禁止。テストは直列化文字列への正規表現で固定する）。制約間に順序的優先度は存在せず、`entries` の並びは決定論のためのソート順（§18.6）であって重要度ではない。
+- **エージェント側の遵守は受け手の責務**: sui-sensemakingは明示的に渡すところまで（issue非目標）。遵守検証・自動学習・制約の自動生成は本契約のスコープ外。
 
 ### 18.3 制約の源泉（すべて文書内・人間の判断のみ）
 
@@ -1444,8 +1444,8 @@ TRACE（arXiv:2606.13174）の知見「記憶への保存では選好違反の57
 | `mergeSuggestionDecisions`（`decision: "reject" \| "defer"`） | `target.kind="proposal"` 相当が無いため、対象カードがすべてレビュー済みの場合のみ `target.kind="card"`（複数 entry）へ展開。`facts:["rejected"]` / `["deferred"]`、`note` は決定 entry の `note` | 却下・保留の**事実**の輸出。`accept`/`partial` は制約ではない |
 | `agentProposalDecisions`（§18.4。`decision: "rejected" \| "held"`） | `target.kind="proposal"`（taskId/proposalId/proposalKind）＋`facts` | エージェント既知の識別子のみで構成され、文書内部 ID を含まない |
 
-- 源泉はすべて人間の UI 操作で書かれた文書内データであり、決定論的に再導出できる（バックエンド状態・セッション状態に依存しない）。
-- **v1 で源泉に含めないもの**: `contradictionSignalDecisions`（決定論的検出器のシグナルへの判断であり、エージェント行動への訂正ではない）、`shelf`（内からの退避であり訂正シグナルではない — ADR-0054 用語定義「シェルフとの対」）。将来の版で再検討する場合も加算のみとする。
+- 源泉はすべて人間のUI操作で書かれた文書内データであり、決定論的に再導出できる（バックエンド状態・セッション状態に依存しない）。
+- **v1で源泉に含めないもの**: `contradictionSignalDecisions`（決定論的検出器のシグナルへの判断であり、エージェント行動への訂正ではない）、`shelf`（内からの退避であり訂正シグナルではない — ADR-0054用語定義「シェルフとの対」）。将来の版で再検討する場合も加算のみとする。
 
 ### 18.4 加算スキーマ拡張: AgentProposalDecisionEntry / constraintExportOptIn
 
@@ -1469,50 +1469,50 @@ export type AgentProposalDecisionEntry = {
 //   constraintExportOptIn?: boolean;   // 欠落 = false = 輸出無効（既定OFF）
 ```
 
-- `adopted` も記録する（EXT-CONN-04 根拠トレイルの将来素材）。ただし**制約として輸出されるのは `rejected` / `held` のみ**（§18.3）。
-- 決定の書き込みは人間の UI 操作のみ（proposal-only 維持。ADR-0041 CVI-2）。`applyDocumentChange` による 1操作=1履歴ステップで、却下も ⌘Z で取り消し可能になる（現状の「セッション限りの却下」からの改善。保全思想）。
+- `adopted` も記録する（EXT-CONN-04根拠トレイルの将来素材）。ただし**制約として輸出されるのは `rejected` / `held` のみ**（§18.3）。
+- 決定の書き込みは人間のUI操作のみ（proposal-only維持。ADR-0041 CVI-2）。`applyDocumentChange` による1操作=1履歴ステップで、却下も ⌘Zで取り消し可能になる（現状の「セッション限りの却下」からの改善。保全思想）。
 - 取り込み境界: 寛容/厳格の両検証モードで、`id`/`taskId`/`proposalId`/`decision`/`decidedAt` のいずれかが不正な要素は破棄し、他の正しい要素は保全する（`mergeSuggestionDecisions` の既存パターン）。
-- `constraintExportOptIn` の既定は **OFF**（欠落=false）。ON への切り替えは人間の明示操作（Claude Design P32 B-3「輸出は既定で含めない・明示 opt-in」）。
+- `constraintExportOptIn` の既定は **OFF**（欠落=false）。ONへの切り替えは人間の明示操作（Claude Design P32 B-3「輸出は既定で含めない・明示opt-in」）。
 
 ### 18.5 安全境界（EXT-CONN-01 の原則を弱めない）
 
-ADR-0054「後段が前段の安全原則を弱めることはない」に従い、EXT-CONN-01 再レビューゲート（2026-07-13）の確定事項を本契約にそのまま継承する:
+ADR-0054「後段が前段の安全原則を弱めることはない」に従い、EXT-CONN-01再レビューゲート（2026-07-13）の確定事項を本契約にそのまま継承する。
 
-1. **未レビューカードの ID はいかなる形でも出さない**: `target.kind="card"` の entry は対象カードが `textReviewed === true` の場合のみ生成する。未レビューカードへの critique/hold は `counts.withheldCardConstraints` に**件数のみ**計上する（ID・タグ内訳・note のいずれも出さない。タグ内訳の集計すら相関ベクトルになりうるため v1 では件数単独とする）。
-2. **proposal target は文書内部 ID を含まない**: `taskId`/`proposalId` はエージェント自身が生成・受領した識別子のエコーバックであり、新たな情報開示ではない。提案の本文・content の引用は行わない（採用後に編集・レビューされた本文の逆流を防ぐ）。
-3. **SafeMode**: 自由記述（`note`）は人間著述だがカード本文を引用しうるため、`SafeModePolicy.canExposeText("card.text", "share", safeMode)` と同一チャネルで判定し、秘匿時は `note: null`＋`noteRedacted: true` とする（KA §17.4 の「別基準を新設しない」規約に従う）。タグ・facts・counts は構造情報であり SafeMode の影響を受けない。短縮ハッシュによる placeholder は用いない（EXT-CONN-01 と同じ相関ベクトル回避）。
-4. **未レビュー本文の混入なし**: 本契約はカード本文フィールドを一切持たない（issue AC-4 を構造で保証）。
+1. **未レビューカードのIDはいかなる形でも出さない**: `target.kind="card"` のentryは対象カードが `textReviewed === true` の場合のみ生成する。未レビューカードへのcritique/holdは `counts.withheldCardConstraints` に**件数のみ**計上する（ID・タグ内訳・noteのいずれも出さない。タグ内訳の集計すら相関ベクトルになりうるためv1では件数単独とする）。
+2. **proposal targetは文書内部IDを含まない**: `taskId`/`proposalId` はエージェント自身が生成・受領した識別子のエコーバックであり、新たな情報開示ではない。提案の本文・contentの引用は行わない（採用後に編集・レビューされた本文の逆流を防ぐ）。
+3. **SafeMode**: 自由記述（`note`）は人間著述だがカード本文を引用しうるため、`SafeModePolicy.canExposeText("card.text", "share", safeMode)` と同一チャネルで判定し、秘匿時は `note: null`＋`noteRedacted: true` とする（KA §17.4の「別基準を新設しない」規約に従う）。タグ・facts・countsは構造情報でありSafeModeの影響を受けない。短縮ハッシュによるplaceholderは用いない（EXT-CONN-01と同じ相関ベクトル回避）。
+4. **未レビュー本文の混入なし**: 本契約はカード本文フィールドを一切持たない（issue AC-4を構造で保証）。
 
 ### 18.6 決定論・監査
 
-- `entries` のソート順: `target.kind`（proposal → card → island）→ 各 ID の辞書順。同一 target への複数源泉（例: critique と hold）は1 entry に併合する。
-- `constraintsHash` は canonical JSON（`patch_fingerprint.ts` の `canonicalizeJson`）全体の sha256 hex。同一文書・同一 SafeMode 状態からの再輸出は同一ハッシュになる（context-projection.v1 の `bundleHash` と同じ規律）。
-- 監査相関: タスクシート同梱時は agent-task.v1 相関ブロックに `constraintsHash` を追加（optional・後方互換）。MCP 経由の読み取りは EXT-CONN-01 と同じ監査経路に `constraintsHash` を記録する。
+- `entries` のソート順: `target.kind`（proposal → card → island）→ 各IDの辞書順。同一targetへの複数源泉（例: critiqueとhold）は1 entryに併合する。
+- `constraintsHash` はcanonical JSON（`patch_fingerprint.ts` の `canonicalizeJson`）全体のsha256 hex。同一文書・同一SafeMode状態からの再輸出は同一ハッシュになる（context-projection.v1の `bundleHash` と同じ規律）。
+- 監査相関: タスクシート同梱時はagent-task.v1相関ブロックに `constraintsHash` を追加（optional・後方互換）。MCP経由の読み取りはEXT-CONN-01と同じ監査経路に `constraintsHash` を記録する。
 
 ### 18.7 配布（輸送を新設しない）
 
-- **手動レーン**: `02_Architecture/external_agent_collaboration_spec.html` §3.3 のタスクシートに任意節「制約」として同梱（同 spec §3.3a 参照）。`constraintExportOptIn` が ON の文書でのみ生成される。
-- **自動レーン**: EXT-CONN-01 の MCP サーバー（`03_Implement/mcp/`）に読み取り専用ツール `get_agent_constraints` を追加する。既存 `get_context_projection` と同じサーバー・同じ投影コア共有パターン（`03_Implement/frontend/src/export/agent_constraints_export.ts` を monorepo import）であり、**新しい輸送・新しいサービスは作らない**（issue の「EXT-CONN-01 の投影に合流」の充足形）。`constraintExportOptIn` が OFF の文書に対してはエラー応答（契約 payload を返さない）。
-- **用語の区別**: `ContextProjectionConstraint`（context-projection.v1 の**取得範囲**セレクタ: reviewed-only/evidence/contradiction/summary）と本契約の **constraint（訂正制約）** は別概念。取得範囲セレクタへ `"constraints"` 値を追加する案は、この語衝突を避けるため採らず、独立ツールとした。
+- **手動レーン**: `02_Architecture/external_agent_collaboration_spec.html` §3.3のタスクシートに任意節「制約」として同梱（同spec §3.3a参照）。`constraintExportOptIn` がONの文書でのみ生成される。
+- **自動レーン**: EXT-CONN-01のMCPサーバー（`03_Implement/mcp/`）に読み取り専用ツール `get_agent_constraints` を追加する。既存 `get_context_projection` と同じサーバー・同じ投影コア共有パターン（`03_Implement/frontend/src/export/agent_constraints_export.ts` をmonorepo import）であり、**新しい輸送・新しいサービスは作らない**（issueの「EXT-CONN-01の投影に合流」の充足形）。`constraintExportOptIn` がOFFの文書に対してはエラー応答（契約payloadを返さない）。
+- **用語の区別**: `ContextProjectionConstraint`（context-projection.v1の**取得範囲**セレクタ: reviewed-only/evidence/contradiction/summary）と本契約の **constraint（訂正制約）** は別概念。取得範囲セレクタへ `"constraints"` 値を追加する案は、この語衝突を避けるため採らず、独立ツールとした。
 
 ### 18.8 後方互換
 
-- 新フィールド（`agentProposalDecisions` / `constraintExportOptIn`）はすべて optional。旧データ（欠落）は「決定記録なし・輸出無効」として解釈する。
+- 新フィールド（`agentProposalDecisions` / `constraintExportOptIn`）はすべてoptional。旧データ（欠落）は「決定記録なし・輸出無効」として解釈する。
 - `version: 1` のまま（破壊的変更なし）。
-- agent-task.v1 相関ブロックへの `constraintsHash` 追加は optional であり、既存の応答エコーバック規約を変更しない。往復互換: agent-response.v1 側に constraints への応答フィールドは**設けない**（制約は一方向の入力であり、エージェントが制約に「回答」する契約を作ると遵守の自己申告に意味があるかのような誤認を生むため）。
-- Support level: `L2.5`（未分類。実装検証後に L2 以上へ昇格）。
+- agent-task.v1相関ブロックへの `constraintsHash` 追加はoptionalであり、既存の応答エコーバック規約を変更しない。往復互換: agent-response.v1側にconstraintsへの応答フィールドは**設けない**（制約は一方向の入力であり、エージェントが制約に「回答」する契約を作ると遵守の自己申告に意味があるかのような誤認を生むため）。
+- Support level: `L2.5`（未分類。実装検証後にL2以上へ昇格）。
 
 ### 18.9 参照
 
 - ADR: `ADR-0054-external-connection-layer-staged-introduction.md`（段階3）, `ADR-0049-external-flat-rate-agent-collaboration.md`（安全境界の正本）, `ADR-0041-core-value-invariants-single-guard.md`（CVI-2 proposal-only）
 - Issue: `EXT-CONN-03-critique-constraint-export`
-- Research: `01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md`（追補A3: TRACE 定量根拠）
-- Spec: `02_Architecture/external_agent_collaboration_spec.html`（§3.3a 制約節の埋め込みプロファイル）
-- Frontend: `03_Implement/frontend/src/domain/types.ts`（CRITIQUE_TAGS / AgentProposalDecisionEntry）, `03_Implement/frontend/src/domain/hil_rs_payload.ts`（内部 critique 収集の前例）, `03_Implement/frontend/src/export/context_bundle_projection.ts`（外部読み取り面の安全境界前例）
+- Research: `01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md`（追補A3: TRACE定量根拠）
+- Spec: `02_Architecture/external_agent_collaboration_spec.html`（§3.3a制約節の埋め込みプロファイル）
+- Frontend: `03_Implement/frontend/src/domain/types.ts`（CRITIQUE_TAGS / AgentProposalDecisionEntry）, `03_Implement/frontend/src/domain/hil_rs_payload.ts`（内部critique収集の前例）, `03_Implement/frontend/src/export/context_bundle_projection.ts`（外部読み取り面の安全境界前例）
 
 ## 19. DOMAIN-VISUAL-CUE-01 契約先行固定: Island.representativeCue（代表視覚手掛かり）（2026-07-29）
 
-ADR-0060 Accepted（2026-07-20）§8 の保存決定（`02_Architecture/design/representative_visual_cue/storage_candidate_comparison.md` T6、§5決定サマリー）を契約として固定する。本節は**契約の固定のみ**を行い、issue-DOMAIN-VISUAL-CUE-01 の T7（実装）は本節を先行させたうえで小さなPRへ分割して進める（契約先行。§18 EXT-CONN-03 と同じ運用）。加算原則に従い、`Island` への追加フィールドはすべて optional。
+ADR-0060 Accepted（2026-07-20）§8の保存決定（`02_Architecture/design/representative_visual_cue/storage_candidate_comparison.md` T6、§5決定サマリー）を契約として固定する。本節は**契約の固定のみ**を行い、issue-DOMAIN-VISUAL-CUE-01のT7（実装）は本節を先行させたうえで小さなPRへ分割して進める（契約先行。§18 EXT-CONN-03と同じ運用）。加算原則に従い、`Island` への追加フィールドはすべてoptional。
 
 ### 19.1 RepresentativeVisualCue
 
@@ -1542,12 +1542,12 @@ export type RepresentativeVisualCue = {
 
 ### 19.2 権利情報の対象外（経路C/Dとの境界）
 
-- 本契約は経路A（`hand_drawn`/`user_image`）・経路B（`preset_svg`/`emoji`）のみを対象とし、ライセンス・出典・帰属・取得時点等の権利情報フィールドは**含まない**。経路C（外部素材）・D（生成画像）導入時に、ADR-0060 の受理未了項目（原典・ライセンス・帰属表示の確認、外部providerのAPI利用条件）を満たしたうえで別途加算する（契約先行。本節を先に更新してから実装する）。
+- 本契約は経路A（`hand_drawn`/`user_image`）・経路B（`preset_svg`/`emoji`）のみを対象とし、ライセンス・出典・帰属・取得時点等の権利情報フィールドは**含まない**。経路C（外部素材）・D（生成画像）導入時に、ADR-0060の受理未了項目（原典・ライセンス・帰属表示の確認、外部providerのAPI利用条件）を満たしたうえで別途加算する（契約先行。本節を先に更新してから実装する）。
 - `hand_drawn`/`user_image`/`preset_svg`/`emoji` はいずれも自己完結（利用者自身の描画・画像、または同梱済み一次配布物）であり、権利確認を要さない。
 
 ### 19.3 取り込み境界
 
-- import/validate（寛容・厳格の両モード）は `Island.representativeCue` の既知キー（`kind`/`cueId`/`altText`/`imageRef`）のみを受理する。`kind` が4値のいずれでもない、または `cueId`/`altText` が欠落・非文字列の場合は `representativeCue` フィールド自体を省略する（`Card.meta`/`Card.ka` の空値削除規約と同じ。DOMAIN-TRACE-01 §15.3 / DOMAIN-KA-01 §17.2 に倣う）。
+- import/validate（寛容・厳格の両モード）は `Island.representativeCue` の既知キー（`kind`/`cueId`/`altText`/`imageRef`）のみを受理する。`kind` が4値のいずれでもない、または `cueId`/`altText` が欠落・非文字列の場合は `representativeCue` フィールド自体を省略する（`Card.meta`/`Card.ka` の空値削除規約と同じ。DOMAIN-TRACE-01 §15.3 / DOMAIN-KA-01 §17.2に倣う）。
 - `imageRef` は `kind` が `hand_drawn`/`user_image` 以外のとき無視する（`preset_svg`/`emoji` に紛れ込んでも保持しない）。
 - 画像本体（IndexedDBエントリ）自体はDocumentV1 JSONの一部ではない。`hand_drawn` はversion固定・未知キー拒否・整数座標0〜20・最大512点・JSON UTF-8 4KB以下のベクター命令列だけを保存する。`user_image` は利用者が選んだ原本を保持せず、ブラウザ内で切り抜き・減彩した48×48 PNGの複製だけを保存する。PNG signature、IHDR寸法・方式・先頭位置、chunk型・CRC、IDAT存在、IEND終端とブラウザ画像decodeを再検証し、1件16KBを上限とする。文書にはいずれも不透明な`imageRef`だけを保持する。IndexedDBレコードはlocal scopeまたは`deployment + tenantId + principalId`のtenant storage scopeで分離し、`scopeKey + imageRef` の複合キーで格納する。別scopeの同一`imageRef`は衝突せず、別scopeから画像本体を解決しない。旧v1ストアは初回接続時に同じ複合キー規則のv2ストアへ移行する。
 - review pack importは `representative_visual_cue_assets.json` がある場合、文書ID、文書内の全`hand_drawn`/`user_image`の`imageRef`との完全一致、参照kindとasset kindの一致、重複なし、既知キーだけ、手描き1件4KB・画像1件16KB・全体400件/2MB以下を先に検証する。`integrity.json` があるpackでは同ファイルが整合性対象に含まれていなければ拒否する。検証後、現在のbrowser storage scopeへ単一transactionで全件復元し、1件でも失敗すれば文書を取り込まない。
@@ -1557,19 +1557,19 @@ export type RepresentativeVisualCue = {
 
 - 選択コンテキストの高度機能UIでは、基本図形、手描き、利用者画像の切り抜きを明示操作で採用できる。手描きはPointer Events（マウス・ペン・タッチ）と、矢印キー + Space/Enterによる代替操作を持つ。利用者画像はPNG/JPEG/WebP（10MB以下・各辺8000px以下）を端末内だけで読み、キーボード操作可能な横位置・縦位置・拡大の調整後に48×48 PNGへ変換する。いずれも採用前は文書を変更しない。採用済み手掛かりは表札左の20×20固定スロットへ文字と併記する。
 - Unicode絵文字はissue T7の後続小PRとし、本節の実装済み範囲へ含めない。手描きと利用者画像のreview pack同梱・復元は実装済み。
-- 非目標: 島作成時の自動生成・自動採用、画像だけによる意味伝達、装飾目的の常設表示（ADR-0060「提案する決定」3・4に整合）。5段階評価等のスコアリングUIは反スコアリング方針により対象外（issue §2 参照）。
+- 非目標: 島作成時の自動生成・自動採用、画像だけによる意味伝達、装飾目的の常設表示（ADR-0060「提案する決定」3・4に整合）。5段階評価等のスコアリングUIは反スコアリング方針により対象外（issue §2参照）。
 
 ### 19.5 成果物・共有境界
 
-- SafeMode / share-export: `preset_svg`/`emoji` の `kind`/`cueId` は構造識別子として既定で保全する。`altText` は人間が記述する代替テキストであり、`title`/`critique` と同一の redaction チャネル（`SafeModePolicy.redactText`）で扱う（`inquiry_bundle_safe_mode.ts` の `sanitizeRepresentativeCue`）。KA §17.4 の「別基準を新設しない」規約に従う。
+- SafeMode / share-export: `preset_svg`/`emoji` の `kind`/`cueId` は構造識別子として既定で保全する。`altText` は人間が記述する代替テキストであり、`title`/`critique` と同一のredactionチャネル（`SafeModePolicy.redactText`）で扱う（`inquiry_bundle_safe_mode.ts` の `sanitizeRepresentativeCue`）。KA §17.4の「別基準を新設しない」規約に従う。
 - `hand_drawn`/`user_image` は画像本体だけでなく形状や切り抜き自体が機微情報になり得るため、review packでは参照と本体を既定で除外する。利用者が件数と警告を確認して一回限りの明示opt-inを行った場合だけ、SafeMode投影後の文書参照と完全一致する `representative_visual_cue_assets.json` を同梱し、`bundle_manifest.json`へversion/countを記録し、`integrity.json`のhash対象に含める。asset欠落・参照不一致・kind不一致時はexportを中止する。
-- narrative export 等への反映要否は実装時に別途判断する（本契約は妨げない）。
+- narrative export等への反映要否は実装時に別途判断する（本契約は妨げない）。
 - 旧式 `Island.imageUrl`/`imageReviewed`（外部URL直接表示・由来/権利/代替テキストなし）とは別フィールドであり、本契約は旧式フィールドの往復保持・SafeMode遮断（`SEC-VISUAL-ASSET-01`）に影響しない。両者を混同しない。
 - 削除時に監査情報は残さない（手掛かりは思考内容ではなく補助表示であり、監査証跡の対象外 — `storage_candidate_comparison.md` §3.2）。文書Undoを成立させるため、過去・現在・未来の履歴snapshotが参照中の画像本体は保持し、参照が全履歴から外れた時点で同一document/scopeのIndexedDBエントリを削除する。
 
 ### 19.6 後方互換
 
-- 新フィールドは optional。旧データ（`representativeCue` 欠落）は従来挙動として解釈する。
+- 新フィールドはoptional。旧データ（`representativeCue` 欠落）は従来挙動として解釈する。
 - `version: 1`（本書時点の唯一の文書契約。旧DocumentV1/V2区分は退役済み）のまま。破壊的変更なし。
 - 寛容/厳格の両検証モードで、`kind`/`cueId`/`altText`/`imageRef` のいずれかが不正な要素は `representativeCue` フィールド全体を省略し、島の他フィールドは保全する。
 
@@ -1590,4 +1590,4 @@ ExternalProposalReference {
 }
 ```
 
-`CheckNarrativeRequest.externalProposalRef` と `DetectContradictionRequest.externalProposalRef` は optional。参照自体に `docId` を持たせず、route payload の `doc.id` と server-side proposal row を照合する。これにより proposal ID を document lookup key として扱わない。
+`CheckNarrativeRequest.externalProposalRef` と `DetectContradictionRequest.externalProposalRef` はoptional。参照自体に `docId` を持たせず、route payloadの `doc.id` とserver-side proposal rowを照合する。これによりproposal IDをdocument lookup keyとして扱わない。

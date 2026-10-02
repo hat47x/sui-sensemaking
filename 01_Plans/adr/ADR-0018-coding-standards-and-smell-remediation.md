@@ -11,17 +11,17 @@
 コードベースの保守性・安全性を継続的に担保するため、再発しやすいバッドスメルを
 「観測メモ」ではなく、意思決定（ADR）と運用規約へ昇格させる必要がある。
 
-観測した主な課題:
+観測した主な課題は次のとおりです。
 
-1. Frontend で巨大ファイル化（例: `App.tsx`）が進み、責務境界が曖昧。
+1. Frontendで巨大ファイル化（例: `App.tsx`）が進み、責務境界が曖昧。
 2. インラインスタイルや色コード重複が多く、UI変更時の一貫性が崩れやすい。
-3. Backend で `except Exception` の広域捕捉が散見され、障害解析性が低い。
-4. Frontend CI は型検査中心で、可読性・安全性ルールの自動検知が限定的。
-5. PRごとに E2E 実施証跡（実行コマンド/未実施理由）が明示されず、UI/境界変更で確認漏れが再発しやすい。
+3. Backendで `except Exception` の広域捕捉が散見され、障害解析性が低い。
+4. Frontend CIは型検査中心で、可読性・安全性ルールの自動検知が限定的。
+5. PRごとにE2E実施証跡（実行コマンド/未実施理由）が明示されず、UI/境界変更で確認漏れが再発しやすい。
 
 ## Decision
 
-1. **バッドスメルの管理先を ADR + 規約へ一本化**する。
+1. **バッドスメルの管理先をADR + 規約へ一本化**する。
    - 観測事項は本ADRに記録し、実務ルールは `02_Architecture/coding_standards.md` に集約する。
    - 規約文書からは「現在のコードの観測一覧」を削除し、ルール本文に集中させる。
 
@@ -29,8 +29,8 @@
    - 巨大ファイル: 機能追加時に責務抽出（component/hook/util）を必須化。
    - スタイル重複: トークン/定数へ集約し、重複追加を禁止。
    - 広域例外: 期待例外型での狭い捕捉へ置換。
-   - 静的検知: Frontend lint 強化（例: ESLint）を段階導入。
-   - E2E証跡: UI/境界変更時は Playwright 追加/更新または未実施理由の明記を必須化。
+   - 静的検知: Frontend lint強化（例: ESLint）を段階導入。
+   - E2E証跡: UI/境界変更時はPlaywright追加/更新または未実施理由の明記を必須化。
 
 3. **PRレビューでの統制**を明文化する。
    - 規約チェックリストにより、複雑性・安全性・テスト有無を毎回確認する。
@@ -40,16 +40,16 @@
 
 本ADRの「静的検知を段階導入する」決定に対する運用実装として、以下を必須化する。
 
-- Phase A/B/C のチェックリストと exit criteria を `02_Architecture/coding_standards.md` に定義する。
+- Phase A/B/Cのチェックリストとexit criteriaを `02_Architecture/coding_standards.md` に定義する。
 - 開発者向けの `npm run lint` 実行手順・失敗時対処・期限付き例外運用を `CONTRIBUTING.md` に定義する。
-- CIは `frontend-lint` / `frontend-typecheck` / `frontend-test` に責務分離し、Phase B 以降の fail-on-error 条件を明示する。
+- CIは `frontend-lint` / `frontend-typecheck` / `frontend-test` に責務分離し、Phase B以降のfail-on-error条件を明示する。
 - 文書とCIの同期確認は、同一PR内の差分監査コマンドで検証する。
 
 ### 2026-08-05 追記: 上記の運用実装は撤去した（決定自体は維持）
 
 「静的検知を段階導入する」という本ADRの決定は維持する。ただし上記4項目の運用実装は、**段階導入の対象となる独立したリンタが実際には導入されなかった**ため撤去した。`npm run lint` は `npm run typecheck`（`tsc --noEmit`）の別名であり、`frontend-lint` ジョブは `frontend-typecheck` と同一コマンドを実行していた。
 
-そのため Phase A/B/C のチェックリスト、移行証跡、14日期限の例外Issue運用、`FRONTEND_LINT_PHASE` 変数、差分監査手順は、いずれも存在しないツールを統治していた。`ADR-0039`（個人OSS段階の過剰ガバナンス回避）に照らして撤去し、CIゲートを `frontend-typecheck` と `frontend-test` の2つへ整理した。
+そのためPhase A/B/Cのチェックリスト、移行証跡、14日期限の例外Issue運用、`FRONTEND_LINT_PHASE` 変数、差分監査手順は、いずれも存在しないツールを統治していた。`ADR-0039`（個人OSS段階の過剰ガバナンス回避）に照らして撤去し、CIゲートを `frontend-typecheck` と `frontend-test` の2つへ整理した。
 
 実のリンタを導入する時点で、専用ジョブと運用方針を改めて定める。その際に本ADRの決定を再び運用実装へ落とす。
 

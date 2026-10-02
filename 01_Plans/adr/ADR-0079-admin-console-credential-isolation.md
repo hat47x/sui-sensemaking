@@ -8,7 +8,7 @@
 
 ## 採択記録（2026-08-26）
 
-保守者の明示承認により Proposed → Accepted。採択内容は推奨どおり **D1=A / D2=A / D3=A**。管理コンソール自体の構築着手は本ADRとは別判断とし、現時点では見送る（`issue-OPS-ADMIN-UX-01`側に記録）。
+保守者の明示承認によりProposed → Accepted。採択内容は推奨どおり **D1=A / D2=A / D3=A**。管理コンソール自体の構築着手は本ADRとは別判断とし、現時点では見送る（`issue-OPS-ADMIN-UX-01`側に記録）。
 
 ## Context
 

@@ -7,8 +7,8 @@
 
 ## Context
 
-現在の sui-sensemaking は全 AI タスク（10 tasks）に単一の LLM モデルを使用する。
-しかし KJ 法のタスクは要求される思考レベルが大きく異なる：
+現在のsui-sensemakingは全AIタスク（10 tasks）に単一のLLMモデルを使用する。
+しかしKJ法のタスクは要求される思考レベルが大きく異なる。
 
 | タスク | 要求される能力 | 複雑度 |
 |---|---|---|
@@ -44,7 +44,7 @@ SUI_LLM_TASK_MODEL_MAP = "re_layout=deepseek-v4-flash,..."
 | 2 | テナント | `tenant_settings` テーブル（将来） | 組織単位のポリシー |
 | 3 (最低) | グローバル | `SUI_LOCAL_LLM_MODEL` + `SUI_LLM_TASK_MODEL_MAP` | デプロイ全体の既定値 |
 
-v1 では優先度 1 と 3 を実装する。優先度 2 は Phase 2。
+v1では優先度1と3を実装する。優先度2はPhase 2。
 
 ### D3: 推奨モデルマッピング
 
@@ -67,10 +67,10 @@ v1 では優先度 1 と 3 を実装する。優先度 2 は Phase 2。
 
 **Phase 2 (将来)**: テナントレベル設定
 - `tenant_settings` テーブル
-- テナント管理 UI
+- テナント管理UI
 
 **Phase 3 (将来)**: ユーザ/キャンバスレベル設定
-- パーソナライズされた AI 設定
+- パーソナライズされたAI設定
 - コスト追跡・使用量制限
 
 ## Three-Element Verification（ADR-0067 遡及適用）

@@ -1,6 +1,6 @@
 # sui-sensemaking デザイン設計要求（Round 9・エージェント連携2パネルの事後照合と開始パネル/カード検索の新規要求）
 
-対象: Claude Designセッションへの貼り付け用プロンプト。今回は、A-1（エージェント連携2パネル：`AgentTaskExportPanel`/`AgentResponseImportPanel`）の事後設計照合と、A-2/A-3（開始パネル・カード検索：`StartPanel`/`SearchBar`）の新規設計要求の2件を扱います。いずれも `02_Architecture/design/design-request-gaps-2026-07-20.md`（改訂: 2026-07-21）の棚卸しで「要求・照合とも未実施のまま」と確認済みの項目です（同時期に予備検討が届いた N-1/N-2/F-1 とは別系統で、本ラウンドが対象2項目にとって初回の依頼になります）。
+対象: Claude Designセッションへの貼り付け用プロンプト。今回は、A-1（エージェント連携2パネル：`AgentTaskExportPanel`/`AgentResponseImportPanel`）の事後設計照合と、A-2/A-3（開始パネル・カード検索：`StartPanel`/`SearchBar`）の新規設計要求の2件を扱います。いずれも `02_Architecture/design/design-request-gaps-2026-07-20.md`（改訂: 2026-07-21）の棚卸しで「要求・照合とも未実施のまま」と確認済みの項目です（同時期に予備検討が届いたN-1/N-2/F-1とは別系統で、本ラウンドが対象2項目にとって初回の依頼になります）。
 
 ---
 
@@ -33,7 +33,7 @@ R9-A固有の境界:
 R9-B固有の境界:
 
 - ⌘Kのコマンド検索と、`SearchBar`のカード本文検索を**混同しない**。両者は別物として扱ってください。
-- 文書一覧・文書を開くフローそのもの（サーバー正本の文書一覧、6状態、viewport変形）は Round 8 R8-A ですでに回答済みです。**R9-Bで再度依頼しません**。R9-Bが扱うのは、StartPanelの「新規/サンプル/読み込み/review pack import」という他3〜4アクションの情報設計、「直前文書への再開導線」の新設可否とfocus復帰先、そしてカード検索の状態管理です。
+- 文書一覧・文書を開くフローそのもの（サーバー正本の文書一覧、6状態、viewport変形）はRound 8 R8-Aですでに回答済みです。**R9-Bで再度依頼しません**。R9-Bが扱うのは、StartPanelの「新規/サンプル/読み込み/review pack import」という他3〜4アクションの情報設計、「直前文書への再開導線」の新設可否とfocus復帰先、そしてカード検索の状態管理です。
 
 ### 3. 既存UIと視覚言語
 
@@ -61,7 +61,7 @@ R9-B固有の境界:
 - 解析エラーは赤帯、解析警告は件数のみのamber帯（生の警告文はDOMへ出さない）。
 - per-proposalレビューカード: 種別・対象ラベル・内容プレビュー・根拠、状態に応じて「orphaned」（対象が解決不能、Adoptボタンなし）／「patchSignatureMismatch」（Adoptの代わりに「パッチ書出」、in-app適用を拒否）／delete系操作の警告バッジを表示。一括適用はなく、1件ずつの明示Import操作のみ。
 
-**設計論点**:
+**設計論点**は次のとおりです。
 
 1. 外部エージェントへ渡すエクスポート文面（パネル外で生成）に対する安全境界表示は十分か（SafeMode gating・出典参照警告・scope confirm）。
 2. 取込サニタイズの見せ方（警告は件数のみ／エラーは全文赤）が、説明可能性と情報過多のバランスとして妥当か。
@@ -69,9 +69,9 @@ R9-B固有の境界:
 
 **レビュー観点（4軸）**: A.視覚言語（警告色・amberの用法）／B.状態遷移（confirm前後、per-proposalのadopted/rejected）／C.核の保護（AIは候補生成に留まり確定しない。per-proposal明示適用・一括なし・patch mismatch時のin-app適用拒否）／D.a11y・契約（dialog契約4点）。
 
-**期待成果物**: 4軸の✓/△/✗照合＋外部共有文面・取込サニタイズ表示のレッドライン（△/✗があった場合のみ）。
+**期待成果物**: 4軸の○/△/×照合＋外部共有文面・取込サニタイズ表示のレッドライン（△/×があった場合のみ）。
 
-**受入条件**: SafeMode既定ON・共有前確認必須（核）との整合が確認できること。△/✗はissue化する。
+**受入条件**: SafeMode既定ON・共有前確認必須（核）との整合が確認できること。△/×はissue化する。
 
 #### R9-B. 開始パネル・カード検索の新規設計要求（A-2/A-3）
 
@@ -79,7 +79,7 @@ R9-B固有の境界:
 
 ドッグフード記録（`01_Plans/dogfood/dogfood-log-2026-07-10.md`）: 「再読込後に直前の文書へ自動復帰しない。スタートパネルの文書一覧から選び直す動線になる」という摩擦（低優先、未解消）。関連issue `issue-UI-QUALITY-A11Y-07` は、StartPanelを閉じた後の再オープン導線が現在まったく存在しない（`setIsStartPanelVisible(true)`は初期化以外どこからも呼ばれない）ため、focus復帰先の設計判断ができずに保留中です。
 
-**設計論点**:
+**設計論点**は次のとおりです。
 
 1. 開始パネルの情報設計（新規/サンプル/読み込み/review pack importと、再開導線の主従関係）。
 2. 再開導線（直前文書へのワンクリック復帰）の新設可否と、それに伴うfocus復帰先。新設する場合、StartPanel自体を再度開く導線（メニュー等からの再オープン）を設けるのか、それとも別の形（例: 「前回の続きから」を初回表示の主操作にする等）で解決するのかを比較し、推奨案を1つ選んでください。
@@ -95,10 +95,10 @@ R9-B固有の境界:
 
 次を1つの回答パッケージとして返してください。
 
-1. **R9-A**: 4軸の✓/△/✗照合表と、△/✗があった場合のみのレッドライン修正案。
+1. **R9-A**: 4軸の○/△/×照合表と、△/×があった場合のみのレッドライン修正案。
 2. **R9-B**: 開始パネル・カード検索の推奨IA、画面レッドライン（1440/768/390px）、状態表（Empty/Loading/Ready/Error/検索一致・非一致）、a11y/focus仕様。
 3. **既存→提案の置換表（R9-Bのみ）**: StartPanelの4アクション・最近使った文書セレクトが、提案後どう変わるか。初期表示に何が増減するか。
-4. **自己照合**: 下記の採否を✓/△/✗と理由つきで回答。
+4. **自己照合**: 下記の採否を○/△/×と理由つきで回答。
 
 ### 6. 自己照合項目
 
@@ -113,7 +113,7 @@ R9-B固有の境界:
 
 R9-Aでは、次の架空データを使って構いません。
 
-- タスク依頼書: 島タイトル案 3件、`includeSourceReferences`チェック時の警告文面例。
+- タスク依頼書: 島タイトル案3件、`includeSourceReferences`チェック時の警告文面例。
 - エージェント応答: 正常proposal 2件（1件はorphaned、1件はpatchSignatureMismatch）、禁止フィールド（`score`等）を含むlenientモード警告の例。
 
 R9-Bでは、Round 8と同じ架空文書を使って構いません（一貫性のため）。
@@ -129,7 +129,7 @@ R9-Bでは、Round 8と同じ架空文書を使って構いません（一貫性
 ## プロジェクト側の受領条件
 
 - 回答は`02_Architecture/design/design-request-gaps-2026-07-20.md`のN-3/N-7詳細仕様、`ADR-0049`（external-flat-rate-agent-collaboration, Status: Proposed）、`02_Architecture/external_agent_collaboration_spec.html`、`02_Architecture/design/ui_design_handoff.md`の5領域IA定義へ照合する。
-- R9-Aで△/✗が出た場合、または R9-Bの新規画面いずれについても、△/✗・新規レッドラインはissue化してから実装する。本Roundの成果物だけでは実装着手の根拠にしない。
+- R9-Aで△/×が出た場合、またはR9-Bの新規画面いずれについても、△/×・新規レッドラインはissue化してから実装する。本Roundの成果物だけでは実装着手の根拠にしない。
 - R9-Bの「文書を開く」一覧UI自体はRound 8 R8-Aの管轄であり、本Roundでは扱わない（R8-A採否とは独立に進められる）。
 - 実装ラウンドでは実機スクリーンショットを取得し、`design-qa-checklist.md`で4軸（A.視覚言語/B.状態遷移/C.核の保護/D.a11y・契約）の照合を行う。
 
@@ -139,7 +139,7 @@ R9-Bでは、Round 8と同じ架空文書を使って構いません（一貫性
 
 - Related: `02_Architecture/design/design-request-gaps-2026-07-20.md`（本Roundの一次入力、N-3/N-7の詳細仕様）
 - Related: `02_Architecture/design/design-request-2026-07-round8.md`（視覚言語の再利用元、R8-Aとの境界）
-- Related: `02_Architecture/design/design-qa-checklist.md`（4軸✓/△/✗規約の正本）
+- Related: `02_Architecture/design/design-qa-checklist.md`（4軸○/△/×規約の正本）
 - Related: `01_Plans/adr/ADR-0049-external-flat-rate-agent-collaboration.md`（Status: Proposed）
 - Related: `02_Architecture/external_agent_collaboration_spec.html`
 - Related: `01_Plans/dogfood/dogfood-log-2026-07-10.md`（N-7の再開導線摩擦）

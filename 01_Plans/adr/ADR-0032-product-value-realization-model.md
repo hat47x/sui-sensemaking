@@ -5,11 +5,11 @@
 - Accepted-Date: 2026-05-31
 - Deciders: Maintainer（委譲された意思決定権限）
 - Scope: `01_Plans/`, `02_Architecture/`, `03_Implement/frontend/`, `04_Documentation/`
-- Activation: コア価値ループ V0–V4 は active。二軸スコアカード等の観測機構（Stream H / VR4）は `ADR-0039` により activation 延期。Accepted 化の根拠と PRODUCT-VALUE-02 の循環デッドロック解消は `ADR-0040` を参照。
+- Activation: コア価値ループV0–V4はactive。二軸スコアカード等の観測機構（Stream H / VR4）は `ADR-0039` によりactivation延期。Accepted化の根拠とPRODUCT-VALUE-02の循環デッドロック解消は `ADR-0040` を参照。
 
 ## Context
 
-`ADR-0001`、`domain.md`、`ai_cognitive_externalization_requirements.md` は、sui-sensemaking が守るべき価値を強く定義している。
+`ADR-0001`、`domain.md`、`ai_cognitive_externalization_requirements.md` は、sui-sensemakingが守るべき価値を強く定義している。
 また `ADR-0031` は、MVPから製品化へ移るための画面情報設計を定義した。
 
 一方で、現状の計画と設計には次の不足がある。
@@ -19,11 +19,11 @@
 3. ナラティブ、レビューパック、共有前確認は整備されているが、成果物が「何が分かり、何が未確定か」を読者へ伝える価値単位として十分に束ねられていない。
 4. 製品化品質ゲートはUI/安全/文書/診断を扱うが、プロダクト価値そのものを検証するゲートが不足している。
 
-このままでは、機能は増えても、sui-sensemaking の本質である「意味が揺れている状態に耐えながら、判断可能な形へ育てる」価値が利用者体験として届きにくい。
+このままでは、機能は増えても、sui-sensemakingの本質である「意味が揺れている状態に耐えながら、判断可能な形へ育てる」価値が利用者体験として届きにくい。
 
 ## Decision
 
-sui-sensemaking の製品化では、次の5つの価値ループを最小モデルとして扱う。
+sui-sensemakingの製品化では、次の5つの価値ループを最小モデルとして扱う。
 
 | 価値ループ | 利用者が得る状態 | 主な設計対象 | 関連issue |
 | --- | --- | --- | --- |
@@ -74,15 +74,15 @@ KPIは次の3条件を満たすもののみ採用する。
 
 ## Consequences
 
-- 期待される効果:
+- 期待される効果は次のとおりです。
   - 製品化作業が「画面を整える」だけでなく、プロダクト価値の実現単位で優先順位づけできる。
   - 既存の認知外在化要件、SafeMode、review attribution、ナラティブ、共有導線が一つの利用者価値へ接続される。
   - 価値実現に足りない作業を内部issueとして管理しやすくなる。
-- 想定される副作用/制約:
+- 想定される副作用/制約は次のとおりです。
   - UI、データ、文書、E2Eを横断するため、単一PRで完了しにくい。
   - 価値ループを過剰に測定しようとすると、利用者行動の監視や不要なログ収集に寄りやすい。
   - 指標は診断・受入確認の補助に留め、個人行動追跡やスコアリングへ転用しない。
-- 移行時に必要な対応:
+- 移行時に必要な対応は次のとおりです。
   - `02_Architecture/value_traceability.md` に価値ループと設計境界を追加する。
   - `PRODUCT-VALUE-01` で初回価値実感の受入シナリオを定義する。
   - `PRODUCT-VALUE-02` で保留・違和感・根拠不足を日常操作へ落とす。

@@ -8,7 +8,7 @@
 
 ## Context
 
-`DATA-MAINT-05`（A1: share/export event lookup、本文を含まない監査メタデータの read-only 一覧/検索API）は、`DATA-MAINT-04`が候補として推奨した機能である。しかし現行の監査構成は emit-only であり、read API が照会できるローカル保存が存在しない。
+`DATA-MAINT-05`（A1: share/export event lookup、本文を含まない監査メタデータのread-only一覧/検索API）は、`DATA-MAINT-04`が候補として推奨した機能である。しかし現行の監査構成はemit-onlyであり、read APIが照会できるローカル保存が存在しない。
 
 - `audit.py`の`AuditDispatcher`は`NoopAuditTransport`（既定・破棄）または`HttpAuditTransport`（外部SIEM等への送信）のいずれかで、`build_event()`したイベントをローカルDBへ保存しない。
 - ローカルで唯一の監査テーブル`document_access_admin_audit_events`は`CheckConstraint("action = 'document.policy.update'")`により`document.policy.update`専用に固定されており、export/shareイベントを保持する設計ではない。
@@ -20,7 +20,7 @@
 
 `DATA-MAINT-06`（本ADRの起票元issue）が扱う設計項目には保持ポリシー（保持期間・保持件数上限・削除手順）が含まれるため、`ADR-0035`自身の規定により内部issueだけでは完結せず、本ADRを必須とする。
 
-比較した主要選択肢（保存先）:
+比較した主要選択肢（保存先）は次のとおりです。
 
 1. **新規専用テーブル**（例: `document_export_audit_events`）を追加する。
 2. `document_access_admin_audit_events`のCHECK制約を緩めてexportイベントも受け入れる。
@@ -45,7 +45,7 @@
 
 **`DX-BACKEND-CE4-01`との関係: 無関係、混在させない。** CE4監査完全性tracker（`_ce4_audit_event_tracker`）は`query→bundle→proposal→apply`の一連完了をプロセス内メモリ（TTL 24h・LRU 10,000件）で追跡する短命な整合性チェック機構であり、本ADRが扱う「export/shareイベントの永続的な監査証跡」とは目的が異なる。前者は必要期間が短く、意図的にプロセス内で完結してよい。後者は`DATA-MAINT-05`のread APIが後から照会するため、定義上永続化が必須である。本ADRはCE4 trackerのロジック・保存先を一切変更しない。
 
-非目標:
+非目標は次のとおりです。
 
 - `DATA-MAINT-05`のAPI実装そのもの（本ADR採択後に着手する）。
 - `document_access_admin_audit_events`・`admin_audit_events`の既存スキーマ変更。
@@ -62,18 +62,18 @@
 
 ## Consequences
 
-期待される効果:
+期待される効果は次のとおりです。
 
 - `DATA-MAINT-05`（A1 read API）が、保存先未定という前提条件を解消して着手可能になる。
 - 既存`document_access_admin_audit_events`で実証済みのtenant境界パターン（複合FK + FORCE RLS）を再利用するため、新規のセキュリティ設計判断を追加しない。
 - 保持ポリシーを`ADR-0035`の既存決定へ一本化し、二重の方針決定を作らない。
 
-想定される副作用/制約:
+想定される副作用/制約は次のとおりです。
 
 - 監査イベントがテナントごとに無期限に蓄積される（`ADR-0035`が明示的に許容している範囲）。大規模テナントでの行数増加に伴うインデックス設計は実装issueで扱う。
 - transport送信（外部SIEM）とローカル永続化の二重書き込みになるため、両者の内容不一致（例: transport送信は成功したがinsertは失敗）が起こり得る。これはfail-open原則上許容するが、実装issueで観測可能性（ログ）を用意する。
 
-移行時に必要な対応:
+移行時に必要な対応は次のとおりです。
 
 - `DATA-MAINT-06`をこのADR採択後に`DecisionStatus=Fixed`相当として扱い、`DATA-MAINT-05`のDraft→Open判断をMaintainerが行う。
 - `02_Architecture/schemas.md` / `api.md`に新規テーブルとread API契約を同期する（`DATA-MAINT-05`実装時）。

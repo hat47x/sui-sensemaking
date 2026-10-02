@@ -1,6 +1,6 @@
 # Operations
 
-対象読者: sui-sensemaking の日常運用、検証環境管理、リリース後確認を担当する人。
+対象読者: sui-sensemakingの日常運用、検証環境管理、リリース後確認を担当する人。
 
 目的: 起動、停止、状態確認、更新、バックアップ、障害時の初動を再現できる手順としてまとめます。
 
@@ -10,7 +10,7 @@
 
 ## 標準構成
 
-Docker Compose の標準構成は次の3サービスです。
+Docker Composeの標準構成は次の3サービスです。
 
 | サービス | 役割 |
 | --- | --- |
@@ -18,36 +18,36 @@ Docker Compose の標準構成は次の3サービスです。
 | `api` | FastAPI backend |
 | `db` | PostgreSQL |
 
-標準 URL は `http://localhost:8080` です。nginx は `/api/` を backend に転送します。`web` は loopback（`127.0.0.1`）へ bind されるため、この URL は起動したホスト自身からだけ開けます。別端末や LAN からの利用が必要な場合は、認証 proxy・TLS を伴う別構成が必要です。
+標準URLは `http://localhost:8080` です。nginxは `/api/` をbackendに転送します。`web` はloopback（`127.0.0.1`）へbindされるため、このURLは起動したホスト自身からだけ開けます。別端末やLANからの利用が必要な場合は、認証proxy・TLSを伴う別構成が必要です。
 
 ## 運用で見るもの
 
-sui-sensemaking の運用確認は、次の順で見ると切り分けやすくなります。
+sui-sensemakingの運用確認は、次の順で見ると切り分けやすくなります。
 
 1. 画面が開くか。
-2. API が `/api/healthz` に応答するか（liveness）。応答するのに動作がおかしい場合は `/api/readyz` でDBとスキーマを確認します。
-3. DB が healthy か。
+2. APIが `/api/healthz` に応答するか（liveness）。応答するのに動作がおかしい場合は `/api/readyz` でDBとスキーマを確認します。
+3. DBがhealthyか。
 4. 保存と再読み込みができるか。
-5. LLM や audit など、外部接続を有効にした部分だけ追加で確認する。
+5. LLMやauditなど、外部接続を有効にした部分だけ追加で確認する。
 
 最初からすべてのログを読む必要はありません。利用者影響のある入口から順に確認します。
 
-画面側の入口は次の状態を目安にします。起動直後に「作業を開始」パネルが表示され、新しい文書、サンプル、`document.json`、レビューパックの入口と SafeMode の状態を確認できれば、利用者は次の操作を選べます。
+画面側の入口は次の状態を目安にします。起動直後に「作業を開始」パネルが表示され、新しい文書、サンプル、`document.json`、レビューパックの入口とSafeModeの状態を確認できれば、利用者は次の操作を選べます。
 
 ![運用確認で見る作業開始パネル](assets/screenshots/start-document-entry.png)
 
-開始パネルを閉じるか入口を選ぶと、ヘッダーに SafeMode、表示モード、共有と再現、保存などの主要操作があり、キャンバスと右側パネルが表示されます。この状態まで進めば、次に API と保存の確認へ進めます。
+開始パネルを閉じるか入口を選ぶと、ヘッダーにSafeMode、表示モード、共有と再現、保存などの主要操作があり、キャンバスと右側パネルが表示されます。この状態まで進めば、次にAPIと保存の確認へ進めます。
 
 ![運用確認で見る標準画面](assets/screenshots/app-canvas-overview.png)
 
 
 ## Runtime profile の選択
 
-運用手順を開始する前に、対象環境の profile を固定します。
-profile の詳細は GitHub 上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。ここでは運用時の判断だけを示します。
+運用手順を開始する前に、対象環境のprofileを固定します。
+profileの詳細はGitHub上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。ここでは運用時の判断だけを示します。
 
-- 開発再現や不具合切り分け: `local-dev`
-- Compose での評価・受入確認: `evaluation`
+- 開発再現や不具合切り分け: `local-dev`は次のとおりです。
+- Composeでの評価・受入確認: `evaluation`
 - 企業/行政の本番相当: `enterprise-production`
 - 共有テナントSaaS: `saas-multitenant`
 
@@ -114,17 +114,17 @@ curl -fsS http://localhost:8080/api/healthz
 docker compose logs api --tail=100
 ```
 
-確認すること:
+確認すること。
 
-- `db` が healthy になっている。
-- `api` が migration 後に起動している。
+- `db` がhealthyになっている。
+- `api` がmigration後に起動している。
 - `web` が `SUI_WEB_PORT` のポートで公開されている。
-- `/api/healthz` が `{"status":"ok"}` を返す（**liveness のみ。DBの状態は見ていません**）。
+- `/api/healthz` が `{"status":"ok"}` を返す（**livenessのみ。DBの状態は見ていません**）。
 - `/api/readyz` が `{"status":"ready"}` を返す（DB到達性とスキーマ世代を検査します）。DBを失った状態でも `/api/healthz` は成功するため、依存の確認はこちらを使ってください。
 
 > **ヘルスチェックの意味（OPS-OBSERV-01）**: `/healthz` は **liveness（プロセス生存）のみ**で、DB には触れません（DB を失っても `{"status":"ok"}` を返します）。依存（DB 到達性・migration の適用状態）まで確認するには `/readyz` を使います。DB 停止時に `/readyz` は 503、schema が migration head より古い場合も 503 `schema_mismatch` を返します。ビルドリビジョンは `/version` で確認できます。
 
-`docker compose ps` はサービスの生死を見るコマンドです。`curl` は API の応答を見るコマンドです。どちらか片方だけでは原因を絞り切れないため、両方を確認します。
+`docker compose ps` はサービスの生死を見るコマンドです。`curl` はAPIの応答を見るコマンドです。どちらか片方だけでは原因を絞り切れないため、両方を確認します。
 
 ## 停止
 
@@ -322,7 +322,7 @@ docker compose logs api --tail=200
 docker compose logs db --tail=100
 ```
 
-障害調査では、最初に発生時刻、操作内容、対象ドキュメント ID、HTTP status、画面上のエラーを控えます。ログやスクリーンショットを共有する前に、秘密情報を除外してください。診断 worker の見方は [diagnostics.md](diagnostics.md)、残してよい情報の判断は [data_handling.md](data_handling.md) を参照してください。
+障害調査では、最初に発生時刻、操作内容、対象ドキュメントID、HTTP status、画面上のエラーを控えます。ログやスクリーンショットを共有する前に、秘密情報を除外してください。診断workerの見方は [diagnostics.md](diagnostics.md)、残してよい情報の判断は [data_handling.md](data_handling.md) を参照してください。
 
 ログは既定で1行1JSONです。エラー応答の `requestId`（`X-Request-Id` ヘッダーと同じ値）でログ行を絞り込めます。
 
@@ -416,15 +416,15 @@ API status:
 
 ## SafeMode と外部サービスとの共有
 
-既定では `SUI_LLM_PROVIDER=none`、audit HTTP 連携も無効です。外部 LLM や audit HTTP を有効にする場合は、[data_handling.md](data_handling.md)、[security.md](security.md)、[configuration.md](configuration.md) を先に確認してください。
+既定では `SUI_LLM_PROVIDER=none`、audit HTTP連携も無効です。外部LLMやaudit HTTPを有効にする場合は、[data_handling.md](data_handling.md)、[security.md](security.md)、[configuration.md](configuration.md) を先に確認してください。
 
 ## 運用前チェックリスト
 
 - [ ] `/api/healthz` が成功する。
 - [ ] 画面から新規ドキュメントを作成できる。
 - [ ] 保存後に再読み込みして内容が残る。
-- [ ] LLM provider が意図した値になっている。
-- [ ] API key を使う環境では、キーなし API が 401 になる。
+- [ ] LLM providerが意図した値になっている。
+- [ ] API keyを使う環境では、キーなしAPIが401になる。
 - [ ] バックアップまたは復旧方針が確認済み。
 
 ## 関連文書

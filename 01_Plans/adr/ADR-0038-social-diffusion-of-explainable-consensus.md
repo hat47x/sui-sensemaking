@@ -4,39 +4,39 @@
 - Date: 2026-05-31
 - Deciders: Maintainer（委譲された意思決定権限）
 - Scope: `01_Plans/`, `02_Architecture/`, `03_Implement/frontend/`, `04_Documentation/`
-- Activation: direction として Accepted。実ユーザー/協力者が現れる milestone まで activation を延期（`ADR-0039`）。
+- Activation: directionとしてAccepted。実ユーザー/協力者が現れるmilestoneまでactivationを延期（`ADR-0039`）。
 - Derived-from: `01_Plans/adr/ADR-0036-value-to-social-goal-realization-roadmap.md`
 
 ## Context
 
 `ADR-0036` が固定した社会的目標は「説明可能で見直し可能な合意形成を社会へ広げること」である。既存の価値ループは `V4: 共有と学習`（読者が確定点・保留点・根拠を理解できる成果物）までを扱う（`ADR-0032` / `PRODUCT-VALUE-03`）。
 
-しかし V4 は**1人の作成者が1つの成果物を安全に共有できる**状態であり、社会的目標が要求する次の3点は未定義である。
+しかしV4は**1人の作成者が1つの成果物を安全に共有できる**状態であり、社会的目標が要求する次の3点は未定義である。
 
 1. 同じ成果物が、独立した複数のレビュアー間で**再現的に同じ理解**を生むか（一貫性。正誤判定ではない）。
 2. 一度共有した合意が、時間を越えて**見直し・差し戻し・再オープン**できるか（lock-inしない可逆性）。
-3. 社会へ広がる過程で、保留・反対・根拠が**消えずに定着**し、early collapse を社会規模で防げるか。
+3. 社会へ広がる過程で、保留・反対・根拠が**消えずに定着**し、early collapseを社会規模で防げるか。
 
-加えて、「普及しているか」を知るには観測が要るが、`domain.md` / `ROADMAP.md` / `ADR-0032` は個人追跡・監視・SNS型プラットフォーム化を明確な非目標としている。したがって**非監視のまま採用・価値を観測する方法**が必要になる。VR5 はこの空白を埋める。
+加えて、「普及しているか」を知るには観測が要るが、`domain.md` / `ROADMAP.md` / `ADR-0032` は個人追跡・監視・SNS型プラットフォーム化を明確な非目標としている。したがって**非監視のまま採用・価値を観測する方法**が必要になる。VR5はこの空白を埋める。
 
 ## Decision
 
-V4 の先に、社会的普及を扱う層 VR5 を次の4本柱で定義する。新しい思想は追加せず、既存の SafeMode / review attribution / evidence trace / Static Publish 資産を社会軸へ拡張する。
+V4の先に、社会的普及を扱う層VR5を次の4本柱で定義する。新しい思想は追加せず、既存のSafeMode / review attribution / evidence trace / Static Publish資産を社会軸へ拡張する。
 
 ### 柱1: 複数レビュアー再現性（SOCIAL-DIFFUSION-01）
 
 - 同一レビューパックを独立レビュアーが読んだとき、「確定点・保留点・根拠・未レビュー情報」の読み取り結果が再現的に一致することを観測単位とする。
-- 観測するのは**理解の再現性**であり、結論の正しさや合意の強制ではない（P-02 反スコアリングを維持）。
+- 観測するのは**理解の再現性**であり、結論の正しさや合意の強制ではない（P-02反スコアリングを維持）。
 
 ### 柱2: 合意の経時的見直し可能性（SOCIAL-DIFFUSION-02）
 
-- 共有済み成果物（Consensus Graph 由来のパック）を、版を越えて再オープンし、差分と根拠付きで見直せること。
-- 過去合意を不可逆に固定しない。`patch + approval` 履歴と source trace を保持し、後からの再評価導線を残す。
+- 共有済み成果物（Consensus Graph由来のパック）を、版を越えて再オープンし、差分と根拠付きで見直せること。
+- 過去合意を不可逆に固定しない。`patch + approval` 履歴とsource traceを保持し、後からの再評価導線を残す。
 
 ### 柱3: 証拠定着型の安全配布（SOCIAL-DIFFUSION-03）
 
-- 広域配布（Static Publish / Review Pack 配布）でも、保留・反対・未レビュー・根拠参照が欠落しないことを配布の必須要件とする。
-- SafeMode を配布既定ONとし、解除不可の公開モードを社会配布の標準とする（`ROADMAP.md` 方式A/C と整合）。
+- 広域配布（Static Publish / Review Pack配布）でも、保留・反対・未レビュー・根拠参照が欠落しないことを配布の必須要件とする。
+- SafeModeを配布既定ONとし、解除不可の公開モードを社会配布の標準とする（`ROADMAP.md` 方式A/Cと整合）。
 
 ### 柱4: 非監視型採用シグナル（SOCIAL-DIFFUSION-04）
 
@@ -47,8 +47,8 @@ V4 の先に、社会的普及を扱う層 VR5 を次の4本柱で定義する�
 ### 統治・非目標
 
 - 自動結論生成・自動合意・正解判定UIを導入しない。
-- SNS型公開プラットフォーム化、大規模リアルタイム共同編集、個人を追跡するアナリティクスは非目標（`ROADMAP.md` Out of Scope を継承）。
-- 本ADRは `Accepted`（direction）。社会的普及(VR5)の機能群は実ユーザー/協力者が現れる milestone まで activation を延期し、配下issueは `Draft`（deferred backlog）として保持する（`ADR-0039`）。
+- SNS型公開プラットフォーム化、大規模リアルタイム共同編集、個人を追跡するアナリティクスは非目標（`ROADMAP.md` Out of Scopeを継承）。
+- 本ADRは `Accepted`（direction）。社会的普及(VR5)の機能群は実ユーザー/協力者が現れるmilestoneまでactivationを延期し、配下issueは `Draft`（deferred backlog）として保持する（`ADR-0039`）。
 
 ## Three-Element Verification（ADR-0067 遡及適用）
 
@@ -60,13 +60,13 @@ V4 の先に、社会的普及を扱う層 VR5 を次の4本柱で定義する�
 
 ## Consequences
 
-- 期待される効果:
+- 期待される効果は次のとおりです。
   - 社会的目標が、測定可能で安全な4本柱へ分解され、初めて計画・起票可能になる。
   - 既存の安全・レビュー資産を、個人利用から社会的利用へ無理なく拡張できる。
-- 想定される副作用/制約:
+- 想定される副作用/制約は次のとおりです。
   - 複数レビュアー再現性の観測は人手評価を伴い、コストが高い。
   - 非監視制約のため採用観測は粗くなる。意図的に粗さを受け入れ、監視への転用を禁ずる。
-- 移行時に必要な対応:
+- 移行時に必要な対応は次のとおりです。
   - `SOCIAL-DIFFUSION-01..04` を起票する。
   - `02_Architecture/value_traceability.md` と `ROADMAP.md` の公開運用節に、社会的普及の安全要件を接続する。
 

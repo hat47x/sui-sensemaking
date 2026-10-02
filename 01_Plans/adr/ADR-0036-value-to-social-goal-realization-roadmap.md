@@ -4,11 +4,11 @@
 - Date: 2026-05-31
 - Deciders: Maintainer（委譲された意思決定権限）
 - Scope: `01_Plans/`, `02_Architecture/`, `03_Implement/`, `04_Documentation/`
-- Activation: VR0–VR3 は active。VR4/VR5 は `ADR-0039` により activation を延期（direction として保持）。
+- Activation: VR0–VR3はactive。VR4/VR5は `ADR-0039` によりactivationを延期（directionとして保持）。
 
 ## Context
 
-`README.md`、`00_Prompt/domain.md`、`00_Prompt/ai_cognitive_externalization_requirements.md` は、sui-sensemaking の存在意義を次のように定義している。
+`README.md`、`00_Prompt/domain.md`、`00_Prompt/ai_cognitive_externalization_requirements.md` は、sui-sensemakingの存在意義を次のように定義している。
 
 - 意味を急いで確定せず、違和感・保留・揺らぎを健全な状態として扱う（`domain.md`）。
 - 生成AI時代に起きやすい「早すぎる収束」「もっともらしい誤り」「反対仮説の消失」「レビュー不能な要約の流通」を防ぐ、人間とAIの共有認知足場を提供する（`ai_cognitive_externalization_requirements.md` §1）。
@@ -19,13 +19,13 @@
 - 価値実現ループ `V0〜V4`（`ADR-0032` / `02_Architecture/value_traceability.md`）。
 - 認知外在化フェーズ `CE-0〜CE-4`（`ADR-0028`）。
 
-不足しているのは「価値→社会的目標」を**一本のフェーズ系列**として並べた上位ロードマップである。現状フェーズ定義は `ADR-0002`(Phase 0–6) / `ADR-0028`(CE-0–4) / `ADR-0007`(FB-*) / `ROADMAP.md`(近接/中期/長期) / `ADR-0001`(Phase A/B/C) に分散し、相互の順序・出口ゲート・社会的目標への接続が曖昧である。特に、個人・チームの共有(V4)の先にある**「説明可能な合意形成を社会へ広げる」層は、フェーズ化も起票もされていない**（`ADR-0032` は L4相当の社会的観測を将来課題と明記）。
+不足しているのは「価値→社会的目標」を**一本のフェーズ系列**として並べた上位ロードマップである。現状フェーズ定義は `ADR-0002`(Phase 0–6) / `ADR-0028`(CE-0–4) / `ADR-0007`(FB-*) / `ROADMAP.md`(近接/中期/長期) / `ADR-0001`(Phase A/B/C) に分散し、相互の順序・出口ゲート・社会的目標への接続が曖昧である。特に、個人・チームの共有(V4)の先にある**「説明可能な合意形成を社会へ広げる」層は、フェーズ化も起票もされていない**（`ADR-0032` はL4相当の社会的観測を将来課題と明記）。
 
 このままでは、各issueが個別に正しくても、全体として「いま価値のどこを作っており、社会的目標まで何が残っているか」を説明できない。
 
 ## Decision
 
-新しい思想は追加しない。既存価値を社会的目標まで一直線に並べる**実現フェーズ系列 VR0〜VR5** を本ADRの正本として固定する。本ADRは索引・順序・ゲートを定める親ADRであり、実装進捗はissueで管理する。
+新しい思想は追加しない。既存価値を社会的目標まで一直線に並べる**実現フェーズ系列VR0〜VR5** を本ADRの正本として固定する。本ADRは索引・順序・ゲートを定める親ADRであり、実装進捗はissueで管理する。
 
 ### 社会的目標（北極星/ 上流文書からの統合表現）
 
@@ -46,12 +46,12 @@
 
 ### 順序・依存・統治ルール
 
-1. 順序は `VR0 -> VR1 -> VR2 -> VR3` を直列固定。`VR4` は VR1–VR3 の各完了点を観測対象として並行進行してよいが、Program Gate最終判定は対象フェーズ完了後に行う。`VR5` は `VR3` Exit と `VR4` 観測の双方を前提とする。
+1. 順序は `VR0 -> VR1 -> VR2 -> VR3` を直列固定。`VR4` はVR1–VR3の各完了点を観測対象として並行進行してよいが、Program Gate最終判定は対象フェーズ完了後に行う。`VR5` は `VR3` Exitと `VR4` 観測の双方を前提とする。
 2. 本ADRは既存フェーズ体系（`ADR-0028` CE / `ADR-0007` FB / `ADR-0031` PRODUCT-UX）を**置換せず、価値軸で再配置する索引**として機能する。各VRは既存issueを正担当として再利用し、重複起票しない。
-3. 新規に必要なのは VR4（観測の運用化）と VR5（社会的普及）のみであり、それぞれ `ADR-0037` / `ADR-0038` と新規issueへ委譲する。
+3. 新規に必要なのはVR4（観測の運用化）とVR5（社会的普及）のみであり、それぞれ `ADR-0037` / `ADR-0038` と新規issueへ委譲する。
 4. 全VR共通の非後退不変条件: SafeMode既定ON、未レビュー保護、`human_reviewed` 人手昇格、patch+approval、`SUI_LLM_PROVIDER=none` 既定でも主要価値が成立。
 5. 非目標: 自動結論生成、自動合意、正解/採点UI、個人追跡・行動スコアリング・監視目的テレメトリ、SNS型公開プラットフォーム化。
-6. 本ADRは `Accepted`（`ADR-0039` の段階適正化を反映）。VR0–VR3 は既存issueで進行可能。VR4/VR5 は実ユーザー/協力者が現れる milestone まで activation を延期し、新規issueは `Draft`（deferred backlog）として保持する。各VRのExit判定は Maintainer が記録する。
+6. 本ADRは `Accepted`（`ADR-0039` の段階適正化を反映）。VR0–VR3は既存issueで進行可能。VR4/VR5は実ユーザー/協力者が現れるmilestoneまでactivationを延期し、新規issueは `Draft`（deferred backlog）として保持する。各VRのExit判定はMaintainerが記録する。
 
 ## Three-Element Verification（ADR-0067 遡及適用）
 
@@ -63,16 +63,16 @@
 
 ## Consequences
 
-- 期待される効果:
+- 期待される効果は次のとおりです。
   - 価値から社会的目標までの優先順位を単一の背骨で説明でき、散在フェーズの再発明を防げる。
   - 社会的普及(VR5)が初めて計画可能・起票可能になる。
   - 観測(VR4)が「契約」から「運用される成果物」へ接続される。
-- 想定される副作用/制約:
+- 想定される副作用/制約は次のとおりです。
   - UI/データ/文書/E2Eを横断するため単一PRで閉じにくい。
   - VR5は過剰計測へ滑りやすいため、非監視制約を`ADR-0038`で固定する。
   - ADR `Proposed -> Accepted` の人間承認が前提で、承認前は下流着手しない。
-- 移行時に必要な対応:
-  - `02_Architecture/value_traceability.md` に VR系列と社会的目標接続を追記する。
+- 移行時に必要な対応は次のとおりです。
+  - `02_Architecture/value_traceability.md` にVR系列と社会的目標接続を追記する。
   - `ADR-0037`（観測ハーネス）と `ADR-0038`（社会的普及）を起票する。
   - VR4/VR5の新規issueを `01_Plans/issues/` に起票し、`AGENTS.md` のADR参照範囲を更新する。
 

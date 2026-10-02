@@ -7,9 +7,9 @@
 
 ## Context
 
-sui-sensemaking の設計文書には、MVPで実際に利用する最小スキーマと、AI連携・レビュー帰属・監査連携・将来拡張の契約が同じ `02_Architecture` 層に存在している。
+sui-sensemakingの設計文書には、MVPで実際に利用する最小スキーマと、AI連携・レビュー帰属・監査連携・将来拡張の契約が同じ `02_Architecture` 層に存在している。
 
-一方、現行MVPの永続化は、ドキュメント全体をJSONスナップショットとして保存し、補助的にユーザー/ID対応表とマージ判断ログを持つ構成である。Card、Edge、Island、Narrative、ReviewAttribution などは論理データとして重要だが、多くは `Document` 内の埋め込み構造であり、個別CRUDや管理画面を持たない。
+一方、現行MVPの永続化は、ドキュメント全体をJSONスナップショットとして保存し、補助的にユーザー/ID対応表とマージ判断ログを持つ構成である。Card、Edge、Island、Narrative、ReviewAttributionなどは論理データとして重要だが、多くは `Document` 内の埋め込み構造であり、個別CRUDや管理画面を持たない。
 
 この境界が曖昧なままだと、次の問題が起きる。
 
@@ -33,7 +33,7 @@ MVPでは、データサポート境界を次の4区分で管理する。
 
 採用理由は、MVPのスナップショット保存方針を維持しつつ、製品化に必要なデータ運用課題を隠さず分離できるためである。現段階で全エンティティを正規化し、個別CRUDを実装すると、UI、API、移行、監査の範囲が一気に広がり、MVPで確認したい価値よりも管理機構が先行する。
 
-非目標:
+非目標は次のとおりです。
 
 - このADRだけで新しい永続テーブルや管理画面を追加しない。
 - Card/Edge/Islandなどの個別CRUDをMVP必須にしない。
@@ -56,9 +56,9 @@ MVPでは、データサポート境界を次の4区分で管理する。
 
 1. **Detect**: 異常検知（破損、契約ドリフト、復元要求）を運用者が起票する。
 2. **Classify**: 事象を `Contract` / `Maintenance` / `Support` の3系統で分類する。
-3. **Contain**: share/export を safeMode既定ONで凍結し、未レビュー本文の二次共有を抑止する。
+3. **Contain**: share/exportをsafeMode既定ONで凍結し、未レビュー本文の二次共有を抑止する。
 4. **Recover**: `DATA-MAINT-01` の手順に従いバックアップ復元（DB単位）またはDocument再投入を行う。
-5. **Verify**: `DATA-CONTRACT-01` 観点で roundtrip と `PUT create-if-absent` 契約を再確認する。
+5. **Verify**: `DATA-CONTRACT-01` 観点でroundtripと `PUT create-if-absent` 契約を再確認する。
 6. **Record**: 判断と再発防止を `DATA-MODEL-OPS-01` の境界表へ反映する。
 
 ## Acceptance Criteria / Definition of Done
@@ -79,15 +79,15 @@ MVPでは、データサポート境界を次の4区分で管理する。
 
 ## Consequences
 
-- 期待される効果:
+- 期待される効果は次のとおりです。
   - 初見の開発者や運用者が、MVPで保守できるデータと将来契約を区別しやすくなる。
   - ステークホルダー別に、標準操作でできることと未整備の運用課題を説明できる。
   - 製品化に必要な管理機能、復旧手順、契約同期を個別issueとして進めやすくなる。
-- 想定される副作用/制約:
+- 想定される副作用/制約は次のとおりです。
   - `Document` スナップショット内の構造が増えるほど、全体置換保存の競合・検証・復旧が難しくなる。
   - 個別CRUDがないため、管理者やサポートが部分修復したい場面では標準手段が不足する。
   - API文書、frontend型、backend型、実装ルートの同期を継続的に確認する必要がある。
-- 移行時に必要な対応:
+- 移行時に必要な対応は次のとおりです。
   - `DATA-MAINT-01` で、一覧、アーカイブ/削除、バックアップ、復旧、データ検証、ユーザー棚卸しを設計する。
   - `DATA-CONTRACT-01` で、DocumentV2とAPIの正本差分を棚卸しし、必要な実装・テストを分割する。
   - 新しい永続テーブルまたは標準CRUDを追加する場合は、本ADRの区分と `02_Architecture/data_model_operations_overview.html` のCRUD表を更新する。

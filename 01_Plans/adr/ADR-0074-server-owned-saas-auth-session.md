@@ -2,8 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-08-11
-- Accepted: 2026-08-13（**案2 server-owned BFF session を採用**。保守者による明示承認。仮承認ではない）
-- Deciders: Maintainer（承認 2026-08-13。ドッグフーディングループの承認方針に基づく。「Acceptance Gate 回答案」節の4項目を含め、個別確認なしで承認）
+- Accepted: 2026-08-13（**案2 server-owned BFF sessionを採用**。保守者による明示承認。仮承認ではない）
+- Deciders: Maintainer（承認2026-08-13。ドッグフーディングループの承認方針に基づく。「Acceptance Gate回答案」節の4項目を含め、個別確認なしで承認）
 - Source Issue: `SAAS-TENANT-SESSION-BINDING-01`
 - Scope: `03_Implement/backend/`, `03_Implement/frontend/`, Identity Broker連携、SaaS session persistence
 
@@ -23,11 +23,11 @@
 
 ## 採択記録（2026-08-13）
 
-保守者の明示承認により Proposed → Accepted。**案2 の server-owned BFF session を採用**する。下記 Decision の7項目がそのまま実装要件になる。
+保守者の明示承認によりProposed → Accepted。**案2のserver-owned BFF sessionを採用**する。下記Decisionの7項目がそのまま実装要件になる。
 
 ### 実装の解禁
 
-本ADR採択により、**1つの判断で3本の Open P1 が同時に着手可能**になる。
+本ADR採択により、**1つの判断で3本のOpen P1が同時に着手可能**になる。
 
 | issue | 本ADRが与える前提 |
 |---|---|
@@ -37,13 +37,13 @@
 
 ### 採択時に確認した現行実装との差分
 
-現行の `saas_tenant_sessions`（`models.py`）は `principal_id` をキーとし version のみを保持する。本ADR採択は次の3点を**破壊的変更として認める**ことを含む。
+現行の `saas_tenant_sessions`（`models.py`）は `principal_id` をキーとしversionのみを保持する。本ADR採択は次の3点を**破壊的変更として認める**ことを含む。
 
-1. `principal_id` 主キー → `session_key_hash` 主キー（別 device 非干渉のため。Decision 3）
-2. SPA の Bearer 直接送信を廃止し、HttpOnly cookie ＋ anti-CSRF へ移行（Decision 2/5）
-3. logout は提示 session のみ失効。全 session logout は明示的な別操作（Decision 6）
+1. `principal_id` 主キー → `session_key_hash` 主キー（別device非干渉のため。Decision 3）
+2. SPAのBearer直接送信を廃止し、HttpOnly cookie ＋ anti-CSRFへ移行（Decision 2/5）
+3. logoutは提示sessionのみ失効。全session logoutは明示的な別操作（Decision 6）
 
-`research/direction-review-2026-08-13.md` が「session model is principal-scoped, not session-scoped」として記録した問題群（別browser/deviceで切替とlogoutが干渉する、次のrequestでJWTのclaim tenantへ戻り得る、cookieがDB行と照合されない、行が失効しない）はすべて 1 の帰結であり、本採択がその根本対策にあたる。
+`research/direction-review-2026-08-13.md` が「session model is principal-scoped, not session-scoped」として記録した問題群（別browser/deviceで切替とlogoutが干渉する、次のrequestでJWTのclaim tenantへ戻り得る、cookieがDB行と照合されない、行が失効しない）はすべて1の帰結であり、本採択がその根本対策にあたる。
 
 ## Decision（採択済み）
 
@@ -99,7 +99,7 @@ Maintainerの要請により以下4項目への回答案を作成し、個別確
 
 ### 回答案1: BFFの配置 — sui-sensemaking backend自身に内蔵する（別gatewayは新設しない）
 
-根拠:
+根拠は次のとおりです。
 - `main.py`に`CORSMiddleware`が存在しない。これは現状が同一origin／reverse proxy前提の構成であることを示す。BFFを内蔵すれば、OAuth callback・cookie発行・API呼び出しがすべて同一originのまま維持され、**新規CORS設定が不要**になる。
 - `ADR-0072`でも同種の論点（D1=C「ネットワーク分離gateway」）を「単一プロセス前提の現行構成から乖離する」という理由で見送り、アプリ内認可（D1=A+B）を選んだばかりである。同じ理由がBFFにも当てはまる。
 - 別gatewayを新設すると、デプロイ構成・TLS終端・health check・監視対象が増え、個人OSS・プレリリース段階（`ADR-0039`）が求める複雑性予算に見合わない。

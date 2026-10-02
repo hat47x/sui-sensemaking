@@ -182,7 +182,7 @@ export type ProvenanceEnvelopeV1Alpha1 = {
 
 ### 4.3 AI runとの境界
 
-`runRef`の参照先が保持するもの:
+`runRef`の参照先が保持するもの。
 
 - task
 - provider / model

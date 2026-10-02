@@ -95,7 +95,7 @@ SUIはAIのprivate chain-of-thoughtやhidden stateを保存しない。
 
 **定義:** sensemakingの根拠として参照される資料・記録・証拠。
 
-例:
+例は次のとおりです。
 
 - 利用者の元発言
 - インタビュー記録
@@ -121,7 +121,7 @@ AIが元資料を要約したものは、元Evidenceそのものではなく派�
 
 **定義:** ある主体または認知Providerが、Evidenceや対象状態から「何を認識したか」を外在化した記録。
 
-例:
+例は次のとおりです。
 
 - 「この3件では同じ例外処理が繰り返されている」
 - 「このカード群では時間に関する表現が増えている」
@@ -144,7 +144,7 @@ same Evidence
 
 Relationは、現在の`Edge`より広い概念である。
 
-例:
+例は次のとおりです。
 
 - related-to
 - contradicts
@@ -241,7 +241,7 @@ AIがReviewしたことを`human_reviewed`として記録してはならない�
 
 Decisionは、Evidence、Hypothesis、Synthesisの真偽を証明しない。
 
-例:
+例は次のとおりです。
 
 - 追加調査を行う
 - 現時点ではHypothesis Aを作業前提として採用する
@@ -358,7 +358,7 @@ archived
 
 SUIは、異なる認知channelを一つのconfidence scoreへ統合することを要求しない。
 
-例:
+例は次のとおりです。
 
 ```text
 D0 deterministic detector

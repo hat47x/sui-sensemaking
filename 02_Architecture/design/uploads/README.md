@@ -2,16 +2,16 @@
 
 このディレクトリには、利用者向け文書に掲載する画面例を置きます。
 
-撮影条件:
+撮影条件は次のとおりです。
 
-- サンプル文書: `doc_phase1_canvas`
+- サンプル文書: `doc_phase1_canvas`は次のとおりです。
 - UI locale: `ja`
 - API: `http://127.0.0.1:8000`
 - frontend: `http://127.0.0.1:4173/?locale=ja`
 - LLM provider: `SUI_LLM_PROVIDER=none`
 - 秘密情報、API key、組織固有の承認履歴、顧客データは含めない
 
-ファイル:
+ファイルは次のとおりです。
 
 | ファイル | 内容 |
 | --- | --- |
@@ -89,7 +89,7 @@ cd 03_Implement/frontend
 node .\scripts\capture_ui_catalog.mjs
 ```
 
-WSL/Nix 環境などローカルに Playwright のブラウザ依存が無い場合は、Playwright 公式 Docker イメージ（プロジェクトの `@playwright/test` と同一バージョン）内で実行できます。
+WSL/Nix環境などローカルにPlaywrightのブラウザ依存が無い場合は、Playwright公式Dockerイメージ（プロジェクトの `@playwright/test` と同一バージョン）内で実行できます。
 
 ```bash
 docker run --rm --ipc=host \

@@ -84,7 +84,7 @@ Constraints:
 - UNIQUE: `(tenant_id, child_revision_id, parent_revision_id)`
 - composite FK child: `(tenant_id, artifact_id, child_revision_id)`
 - composite FK parent: `(tenant_id, artifact_id, parent_revision_id)`
-- self-parent禁止 check
+- self-parent禁止check
 - cycleはvalidation-enforced
 
 この形でparentが別artifactを指すことをDB FKで防ぐ。
@@ -279,7 +279,7 @@ Consensus Policy本体は別policy registry / content contractの候補とし、
 
 ### 6.1 `artifact_import_sessions`
 
-候補:
+候補は次のとおりです。
 
 - tenant_id
 - import_session_id
@@ -336,7 +336,7 @@ Relation artifactそのものはcanonical artifact。
 
 高速query用indexはderived。
 
-候補:
+候補は次のとおりです。
 
 ```text
 semantic_relation_index
@@ -360,26 +360,26 @@ semantic_relation_index
 
 | Invariant | DB | Transaction | Validator |
 |---|---:|---:|---:|
-| tenant越境FK禁止 | ✅ |  |  |
-| exact revision存在 | ✅ |  |  |
-| parent same artifact | ✅ composite FK |  |  |
-| parent cycle禁止 |  |  | ✅ |
-| semantic kind immutable | schema + no update path | ✅ | ✅ |
-| payload kind/schema一致 |  |  | ✅ |
-| payload digest一致 |  | ✅ load/write | ✅ |
-| Review target exact revision | ✅ |  |  |
-| AI Review != human Review | enum + policy | ✅ | ✅ |
-| Authority expectedFrom一致 |  | ✅ CAS |  |
-| Authority Scope存在 | ✅ |  |  |
-| parent scope authority非継承 |  | ✅ | ✅ |
-| participant snapshot immutable | no update path | ✅ |  |
-| Consensus != Review count |  | ✅ | ✅ |
-| imported authority非昇格 | separate tables | ✅ | ✅ |
-| bundle closure |  |  | ✅ |
-| import ID collision |  | ✅ | ✅ |
-| unknown extension relation保全 |  |  | ✅ |
-| extension relation side effect禁止 |  | ✅ | ✅ |
-| retention root保護 |  | ✅ GC | ✅ |
+| tenant越境FK禁止 | ○ |  |  |
+| exact revision存在 | ○ |  |  |
+| parent same artifact | ○ composite FK |  |  |
+| parent cycle禁止 |  |  | ○ |
+| semantic kind immutable | schema + no update path | ○ | ○ |
+| payload kind/schema一致 |  |  | ○ |
+| payload digest一致 |  | ○ load/write | ○ |
+| Review target exact revision | ○ |  |  |
+| AI Review != human Review | enum + policy | ○ | ○ |
+| Authority expectedFrom一致 |  | ○ CAS |  |
+| Authority Scope存在 | ○ |  |  |
+| parent scope authority非継承 |  | ○ | ○ |
+| participant snapshot immutable | no update path | ○ |  |
+| Consensus != Review count |  | ○ | ○ |
+| imported authority非昇格 | separate tables | ○ | ○ |
+| bundle closure |  |  | ○ |
+| import ID collision |  | ○ | ○ |
+| unknown extension relation保全 |  |  | ○ |
+| extension relation side effect禁止 |  | ○ | ○ |
+| retention root保護 |  | ○ GC | ○ |
 
 ---
 

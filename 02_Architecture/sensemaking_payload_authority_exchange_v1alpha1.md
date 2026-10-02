@@ -312,7 +312,7 @@ export type SemanticPayloadV1Alpha1 =
 
 Revision Envelopeの`semanticKind`とpayload schemaは一致必須。
 
-例:
+例は次のとおりです。
 
 ```text
 semanticKind = "hypothesis"
@@ -560,7 +560,7 @@ source human Reviewはprovenanceとして表示できるが、local reviewerに�
 
 ### 8.8 Identity collision
 
-import時に同じ`artifactId / revisionId`が存在する場合:
+import時に同じ`artifactId / revisionId`が存在する場合。
 
 1. semantic kind
 2. content digest

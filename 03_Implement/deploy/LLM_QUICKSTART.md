@@ -1,15 +1,15 @@
 # sui-sensemaking LLM クイックスタート
 
-AI 支援機能（レイアウト提案、マージ候補、ナラティブ生成など）をローカルで動作させる手順です。
+AI支援機能（レイアウト提案、マージ候補、ナラティブ生成など）をローカルで動作させる手順です。
 
 ## 前提
 
-sui-sensemaking の LLM プロバイダは独自の `/generate` 契約を使用します（OpenAI API 非互換）。
-実際の LLM 推論サーバがなくても、付属の mock サーバで全 AI 機能の動作を確認できます。
+sui-sensemakingのLLMプロバイダは独自の `/generate` 契約を使用します（OpenAI API非互換）。
+実際のLLM推論サーバがなくても、付属のmockサーバで全AI機能の動作を確認できます。
 
 ## 方法 1: Mock LLM（GPU不要、全6タスク対応）
 
-`mock_local_llm.py` は決定論的なスタブで、全 AI タスクに有効な最小限の応答を返します。
+`mock_local_llm.py` は決定論的なスタブで、全AIタスクに有効な最小限の応答を返します。
 
 ```bash
 # 1. Mock LLM を起動
@@ -42,9 +42,9 @@ curl http://localhost:8000/ai/provider-status
 
 ## 方法 3: 実 LLM（OpenAI 互換 API 統一アダプタ）
 
-`openai_compatible_adapter.py` は **すべての主要な生成 AI** に対応する単一のアダプタです。
-OpenAI / DeepSeek / Groq / Together / Ollama (v0.1.14+) / vLLM など、
-OpenAI 互換の chat completions API を持つすべてのプロバイダで動作します。
+`openai_compatible_adapter.py` は **すべての主要な生成AI** に対応する単一のアダプタです。
+OpenAI / DeepSeek / Groq / Together / Ollama (v0.1.14+) / vLLMなど、
+OpenAI互換のchat completions APIを持つすべてのプロバイダで動作します。
 
 ```bash
 # Ollama（ローカル・無料）
@@ -124,8 +124,8 @@ export SUI_LLM_TASK_MODEL_MAP="generate_narrative=deepseek-v4-pro[1m]"
 | `SUI_LLM_ESCALATION_ENABLED` | `false` | large-scale に必須 |
 | `SUI_LLM_LARGE_SCALE_OPT_IN` | `false` | large-scale に必須 |
 
-`SUI_LLM_PROVIDER=none`（既定）では、全 AI エンドポイントが `503 provider_unavailable` を返します。
-これは安全な既定値であり、AI を使わない運用を妨げません。
+`SUI_LLM_PROVIDER=none`（既定）では、全AIエンドポイントが `503 provider_unavailable` を返します。
+これは安全な既定値であり、AIを使わない運用を妨げません。
 
 ## トラブルシューティング
 

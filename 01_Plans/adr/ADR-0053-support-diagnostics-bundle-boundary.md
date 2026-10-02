@@ -8,9 +8,9 @@
 ## Context
 
 - `PRODUCT-OPS-01` は画面上の復帰導線と、手動でのサポート共有ガイダンス（共有してよい情報/してはいけない情報の区別）を整備済み。ただし利用者が再現情報を1つずつ転記する形であり、サポート切り分けに必要な情報が揃わない・逆に貼りすぎる、の両方向の事故が起きやすい。
-- 「診断バンドル」は share/export と同等の外部共有リスクを持つ。方針を決めずに実装すると、未加工本文・API key・token・内部URL・個人情報の混入経路になり、SafeMode と共有抑制の価値を裏から毀損する。
+- 「診断バンドル」はshare/exportと同等の外部共有リスクを持つ。方針を決めずに実装すると、未加工本文・API key・token・内部URL・個人情報の混入経路になり、SafeModeと共有抑制の価値を裏から毀損する。
 - `PRODUCT-OPS-02` は「バンドル形式・自動収集範囲・送信有無を固定する場合は実装前にADR化」と定めている。本ADRはその決定器である。
-- 比較した選択肢:
+- 比較した選択肢は次のとおりです。
   - 案A: バンドルを導入しない（現状の手動テンプレート運用のみ）。安全だが、転記漏れ・過剰貼り付けのリスクが残り続ける。
   - 案B: **ローカル生成・メタデータ限定・プレビュー必須のバンドル**（採用案）。含める項目を許可リストで固定し、送信機能を持たない。
   - 案C: 自動収集＋サポート基盤への送信連携。組織ごとの承認・保持・監査要件を製品が先取りすることになり、`PRODUCT-OPS-02` の非目標と衝突するため不採用。
@@ -23,20 +23,20 @@
 
 - 形式はバージョン付き（`diag-bundle.v1`）とし、項目の追加・削除は本ADRの更新を要する。
 - 単一のUTF-8 JSONとして生成し、ZIP化しない。未知キーは全階層で拒否する。
-- **許可リスト（これ以外は含めない）**:
-  - 安全な文字種・長さへ検証済みのアプリ revision / ビルド識別子、生成時刻。検証できないrevisionは `unknown` とする
+- **許可リスト（これ以外は含めない）**は次のとおりです。
+  - 安全な文字種・長さへ検証済みのアプリrevision / ビルド識別子、生成時刻。検証できないrevisionは `unknown` とする
   - 正規化済みのブラウザfamily、任意のmajor version、OS family。生のUserAgentは含めない
-  - 障害分類コード（`operations.md` の WEB-ENTRY / API-UNAVAILABLE / SAVE-FAILURE / IMPORT-VALIDATION / SHARE-SAFEMODE）と、画面が明示的な障害コンテキストとして保持する直近の HTTP status
-  - SafeMode 状態（ON/OFF）と provider 種別名（none / local / large-scale / deepseek / unknown。エンドポイントURL・モデル名は含めない）
-  - 対象 Document の `version` / `updatedAt` と、カード/島/エッジの**件数のみ**。`Document.id` は含めない
-  - アプリ自身のエラーエンベロープのうち、既知のA1契約値 `errorCode` / `contractId` / `occurredAt` のみ。`message` / stack / cause は含めない
-- **禁止リスト（レビュー状態を問わず一切含めない）**:
+  - 障害分類コード（`operations.md` のWEB-ENTRY / API-UNAVAILABLE / SAVE-FAILURE / IMPORT-VALIDATION / SHARE-SAFEMODE）と、画面が明示的な障害コンテキストとして保持する直近のHTTP status
+  - SafeMode状態（ON/OFF）とprovider種別名（none / local / large-scale / deepseek / unknown。エンドポイントURL・モデル名は含めない）
+  - 対象Documentの `version` / `updatedAt` と、カード/島/エッジの**件数のみ**。`Document.id` は含めない
+  - アプリ自身のエラーエンベロープのうち、既知のA1契約値 `errorCode` / `contractId` / `occurredAt` のみ。`message` / stack / causeは含めない
+- **禁止リスト（レビュー状態を問わず一切含めない）**は次のとおりです。
   - カード・島・narrative・critique・KAフィールド等の本文、Document id / タイトル、entity id / ref、取り込みファイル内容
-  - API key / token / password / Authorization ヘッダー、環境変数値、内部URL・接続文字列
+  - API key / token / password / Authorizationヘッダー、環境変数値、内部URL・接続文字列
   - メールアドレス等の個人識別子、生のUserAgent、referrer、cookie、request/response body、error message、サーバーログ、スクリーンショット（必要時は利用者が既存文書の判断基準に従い別途添付する）
 - **SafeMode不変条件**: SafeMode ON/OFFで出力項目・値の露出境界を変えない。変化してよいのは `safeMode` 状態値だけである。
 - **生成契約**: 既存のcontent diagnostics workerやreview/export bundleを流用せず、許可された値だけから新しいオブジェクトを組み立てる。生成時に新しいAPI要求を行わず、localStorage / IndexedDB / cacheへ保存しない。
-- **UI 契約**: 生成は明示ボタンからのみ開始。コピー/ダウンロードの**前に全文プレビューを必ず表示**し、除外済みカテゴリを明記する。プレビューとコピー/ダウンロードは同一の不変JSON文字列を使う。任意の時点でキャンセルでき、閉じた時点でメモリ上のスナップショットを破棄する。自動送信・バックグラウンド収集・定期収集は行わない。
+- **UI契約**: 生成は明示ボタンからのみ開始。コピー/ダウンロードの**前に全文プレビューを必ず表示**し、除外済みカテゴリを明記する。プレビューとコピー/ダウンロードは同一の不変JSON文字列を使う。任意の時点でキャンセルでき、閉じた時点でメモリ上のスナップショットを破棄する。自動送信・バックグラウンド収集・定期収集は行わない。
 - **文書同期**: `diagnostics.md` / `operations.md` / `SUPPORT.md` の手動共有テンプレートはバンドル導入後も代替経路として残し、同一PRで整合させる。
 
 v1のtop-level keyは `schemaVersion/generatedAt/app/client/incident/runtime/document?/error?` に固定する。`client` は `browserFamily/browserMajor?/osFamily`、`incident` は `classificationCode/httpStatus?`、`runtime` は `safeMode/providerType`、`document` は `version/updatedAt?/counts`、`error` は `errorCode/contractId/occurredAt` だけを持つ。`counts` は `cards/islands/edges` だけを持つ。自由記述フィールドは設けない。
@@ -64,7 +64,7 @@ v1のtop-level keyは `schemaVersion/generatedAt/app/client/incident/runtime/doc
 ## 実装着手ゲート（2026-07-13）
 
 - unit: strict schema/unknown-key拒否、SafeMode ON/OFF双方の禁止センチネル、プレビューと出力bytesの一致を確認する。
-- integration: 生成中の `fetch` / XHR / `sendBeacon` / WebSocket と、localStorage / sessionStorage / IndexedDBへの書き込みが0件であることを確認する。
+- integration: 生成中の `fetch` / XHR / `sendBeacon` / WebSocketと、localStorage / sessionStorage / IndexedDBへの書き込みが0件であることを確認する。
 - e2e: 明示生成、全文プレビュー、キャンセル、コピー、ダウンロード、キーボード/フォーカス、ja/en等価性、禁止項目不在を確認する。
 - `diagnostics.md` / `operations.md` / `data_handling.md` / `SUPPORT.md` を同一変更単位で同期する。
 

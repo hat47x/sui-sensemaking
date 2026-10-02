@@ -26,9 +26,9 @@ This is a phased checklist plan for local LLM integration in sui-sensemaking, co
 
 ## 0. ゴール
 
-- Provider Interfaceにより、none/fixture/local/external を設定で切替可能にする。
-- CIの既定を fixture + rule checks に固定し、再現性を担保する。
-- 本番は Local-first を基本とし、必要時のみ deterministic trigger でエスカレーションする。
+- Provider Interfaceにより、none/fixture/local/externalを設定で切替可能にする。
+- CIの既定をfixture + rule checksに固定し、再現性を担保する。
+- 本番はLocal-firstを基本とし、必要時のみdeterministic triggerでエスカレーションする。
 - safeModeおよび漏えい防止を、評価ゲートと運用手順の両面で満たす。
 
 ---
@@ -40,7 +40,7 @@ This is a phased checklist plan for local LLM integration in sui-sensemaking, co
 - [x] `llm_quality_strategy.md` の二層評価基準をレビュー確定。
 - [x] `02_Architecture/llm_escalation_policy.html` の既定無効・opt-in条件をレビュー確定。
 
-**完了条件**
+完了条件
 - 4文書の用語整合（provider, safeMode, escalation）に矛盾がない。
 
 ---
@@ -51,7 +51,7 @@ This is a phased checklist plan for local LLM integration in sui-sensemaking, co
 - [x] 非LLM前処理（クラスタ候補、中心性、連結成分、矛盾サブグラフ）を仕様化。
 - [x] LLM投入IRのJSON schema（必須/任意、サイズ上限、切り詰め規則）を確定。
 
-**完了条件**
+完了条件
 - IR仕様だけでFixtureProviderの回帰データを生成できる状態になる。
 - 正本: `02_Architecture/llm_input_ir_spec.md`。
 
@@ -61,25 +61,25 @@ This is a phased checklist plan for local LLM integration in sui-sensemaking, co
 
 - [x] Unit: schema/post-processing/safeMode検証項目を確定。
 - [x] Regression: fixture snapshot/golden運用手順を確定。
-- [x] Integration: 強モデルの curatedセット（小規模）と夜間実行方針を確定。
+- [x] Integration: 強モデルのcuratedセット（小規模）と夜間実行方針を確定。
 
 ### Phase C CDC（Context / Decision / Consequences）
 
-**Context**
-- `llm_quality_strategy.md` と `llm_runtime_constraints.md` は「PR必須」と「定期監査」を分離する方針を示しているが、ADR-0009 側の運用表現が未固定だった。
+Context
+- `llm_quality_strategy.md` と `llm_runtime_constraints.md` は「PR必須」と「定期監査」を分離する方針を示しているが、ADR-0009側の運用表現が未固定だった。
 - CI再現性（fixture中心）と統合監査（強モデル夜間）の境界を、同一文書内で読み替えなしに辿れる必要がある。
 
-**Decision**
+Decision
 - Unit（PR必須）を以下で固定する：`schema validation` / `post-processing deterministic check` / `safeMode leak prevention`。
 - Regression（PR必須）を以下で固定する：`FixtureProvider snapshot + golden diff` / `必須セクション欠落検知` / `citation coverage 下限チェック`。
 - Integration（定期監査のみ）を以下で固定する：`external provider による curated 小規模セット` を夜間実行し、PR必須ゲートから分離する。
-- fail-safe を明記する：`SUI_LLM_ESCALATION_ENABLED=false` の環境では integration 経路を起動しない。
+- fail-safeを明記する：`SUI_LLM_ESCALATION_ENABLED=false` の環境ではintegration経路を起動しない。
 
-**Consequences**
+Consequences
 - 「PR必須テスト」と「定期監査テスト」の境界は本ADRで確定し、実装側は同境界を破らない形でCI定義を行う。
-- 失敗時の優先順位は Unit/Regression を先に解消し、Integration は監査アラートとして別レーンで運用する。
+- 失敗時の優先順位はUnit/Regressionを先に解消し、Integrationは監査アラートとして別レーンで運用する。
 
-**完了条件**
+完了条件
 - 「PR必須テスト」と「定期監査テスト」の境界が文書化されている。
 
 ---
@@ -92,20 +92,20 @@ This is a phased checklist plan for local LLM integration in sui-sensemaking, co
 
 ### Phase D CDC（Context / Decision / Consequences）
 
-**Context**
+Context
 - `02_Architecture/llm_escalation_policy.html` には決定論的トリガと無効時/有効時ルーティングがあるが、運用実装へ渡す最低形式がADR側で未確定だった。
-- Local-first 原則を維持しつつ、外部送信を例外経路として監査可能に固定する必要がある。
+- Local-first原則を維持しつつ、外部送信を例外経路として監査可能に固定する必要がある。
 
-**Decision**
-- deterministic trigger は次の固定列で運用設定に反映する：`schema_failure` / `required_section_missing` / `contradiction_section_missing` / `threshold_exceeded` / `rubric_below_threshold`。
-- escalation無効時（既定）は `local retry -> fixture fallback -> manual review(hold)` の順で処理し、external へは遷移しない。
+Decision
+- deterministic triggerは次の固定列で運用設定に反映する：`schema_failure` / `required_section_missing` / `contradiction_section_missing` / `threshold_exceeded` / `rubric_below_threshold`。
+- escalation無効時（既定）は `local retry -> fixture fallback -> manual review(hold)` の順で処理し、externalへは遷移しない。
 - escalation有効時（明示opt-in）は `allowlist-only outbound` / `safeMode redaction` / `minimal payload` / `reason-code audit log` を必須条件とする。
 
-**Consequences**
+Consequences
 - 「外部送信なしで成立する標準運用」と「有効化時手順」を分離記述する完了条件を満たす。
-- 運用手順書側は本ADRの trigger 名称と reason code をそのまま継承し、命名ドリフトを禁止する。
+- 運用手順書側は本ADRのtrigger名称とreason codeをそのまま継承し、命名ドリフトを禁止する。
 
-**完了条件**
+完了条件
 - 「外部送信なしで成立する標準運用」と「有効化時手順」が分離記述される。
 
 ---
@@ -119,25 +119,25 @@ This is a phased checklist plan for local LLM integration in sui-sensemaking, co
 
 ### Phase E CDC（Context / Decision / Consequences）
 
-**Context**
+Context
 - 運用移行判定に必要なSLO/KPIが未定義だと、Offline/Intranet/Enterprise間で成功判定が揺れる。
 - `llm_runtime_constraints.md` / `02_Architecture/llm_escalation_policy.html` が求める監査可能性を、日次運用手順へ落とし込む必要がある。
 
-**Decision**
-- SLO/KPIを次で固定する：
-  - `LocalProvider success rate >= 95%`（日次7日移動平均、対象は local 実行全件）。
+Decision
+- SLO/KPIを次で固定する。
+  - `LocalProvider success rate >= 95%`（日次7日移動平均、対象はlocal実行全件）。
   - `Escalation rate <= 5%`（明示opt-in環境のみ計測、週次）。
   - `Manual hold resolution within 1 business day`（`hold` 事案の中央値）。
 - 失敗時手順を固定する：`retry(max2)` -> `human review` -> `hold with reason code`。
 - 最小ログ項目を固定する：`timestamp` / `provider` / `trigger` / `decision(pass|hold|stop)` / `reasonCode` / `bundleHash`。
-- 赤線化（redaction）方針を固定する：未レビュー本文・個人情報候補・秘匿識別子はログ保存前にマスクし、必要時は hash 化する。
+- 赤線化（redaction）方針を固定する：未レビュー本文・個人情報候補・秘匿識別子はログ保存前にマスクし、必要時はhash化する。
 
-**Consequences**
+Consequences
 - 3運用形態（Offline/Intranet/Enterprise）で同一KPIを比較できる。
 - 運用ガイド更新時の必須チェックとして、SLO/KPI閾値とログ最小セットの欠落を差し戻し対象にする。
 
-**完了条件**
-- Offline / Intranet / Enterprise の3運用形態で必要手順が欠落なく揃う。
+完了条件
+- Offline / Intranet / Enterpriseの3運用形態で必要手順が欠落なく揃う。
 
 ---
 
@@ -150,17 +150,17 @@ This is a phased checklist plan for local LLM integration in sui-sensemaking, co
 
 ### 横断制約 CDC（Context / Decision / Consequences）
 
-**Context**
+Context
 - Phase C〜Eを確定しても、横断制約が明文化されないと運用実装で後退（lock-in, PII, safeMode, 添付入力）が起きる。
 
-**Decision**
-- lock-in回避: provider 表記は `none|fixture|local|external` の抽象列挙のみを使用し、特定ベンダ固有名を規範語にしない。
-- PII/秘匿情報: 仕様・ログ・監査キーに生データを持ち込まず、識別が必要な場合は reason code と hash 参照に限定する。
+Decision
+- lock-in回避: provider表記は `none|fixture|local|external` の抽象列挙のみを使用し、特定ベンダ固有名を規範語にしない。
+- PII/秘匿情報: 仕様・ログ・監査キーに生データを持ち込まず、識別が必要な場合はreason codeとhash参照に限定する。
 - safeMode: 既定ON + `allowUnreviewedText=false` を後退不可の運用原則として固定する。
 - 添付入力: LLM入力は `structured_text_only=true` を満たす構造化テキストに限定し、バイナリ添付/自由形式ペイロードを許可しない。
 
-**Consequences**
-- 横断4項目を ADR-0009 の完了条件として扱い、各フェーズ成果物の受入チェックに組み込む。
+Consequences
+- 横断4項目をADR-0009の完了条件として扱い、各フェーズ成果物の受入チェックに組み込む。
 - 実装・運用文書で例外が必要な場合は、本ADRではなく上位仕様（02_Architecture）へ先に変更提案する。
 
 

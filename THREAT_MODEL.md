@@ -28,37 +28,37 @@
 
 ### 1) ZIP import
 
-- Zip bomb による過大展開（CPU/メモリ/ディスク枯渇）
-- `../` を含むパスによる path traversal
+- Zip bombによる過大展開（CPU/メモリ/ディスク枯渇）
+- `../` を含むパスによるpath traversal
 - 想定外の巨大ファイル・大量エントリ投入
 
 **想定対策**
 
-- 圧縮前後サイズ・エントリ数・1ファイル上限の cap
+- 圧縮前後サイズ・エントリ数・1ファイル上限のcap
 - 正規化パス検証（ルート外書き込み禁止）
 - タイムアウト/中断可能な処理設計
 
 ### 2) Markdown rendering
 
-- スクリプト埋め込みや危険属性による XSS
+- スクリプト埋め込みや危険属性によるXSS
 - URLスキーム悪用（`javascript:` など）
 
 **想定対策**
 
 - サニタイズのデフォルト適用
-- 許可タグ/属性の allowlist 管理
+- 許可タグ/属性のallowlist管理
 - レンダリング前の危険スキーム除去
 
 ### 3) Supply chain
 
-- npm/pip 依存の悪性アップデート
+- npm/pip依存の悪性アップデート
 - 乗っ取り済みパッケージ混入
 - トランジティブ依存経由の脆弱性流入
 
 **想定対策**
 
-- lockfile の利用と差分レビュー
-- CI で lint/test を常時実行
+- lockfileの利用と差分レビュー
+- CIでlint/testを常時実行
 - 依存更新PRの分離、最小権限でのレビュー
 
 ### 4) データプライバシー
@@ -99,19 +99,19 @@
 
 ### 6-1) HTTP transport / OAuth 2.1 resource server（Subslice C, ADR-0054）
 
-stdio段階では listen port を開かず外部到達不可だったが、streamable-HTTP transport（`SUI_MCP_TRANSPORT=http`）は本リポジトリ初の公開ネットワークリスナーであり、リスクの質が変わる。
+stdio段階ではlisten portを開かず外部到達不可だったが、streamable-HTTP transport（`SUI_MCP_TRANSPORT=http`）は本リポジトリ初の公開ネットワークリスナーであり、リスクの質が変わる。
 
 - 未認証／偽造／期限切れbearer tokenによる `POST/GET/DELETE /mcp` への到達
 - 他リソース向けに発行されたtoken（audience違い）や、信頼していないissuerが発行したtokenの受理（confused deputy）
 - 正規に署名されたtokenでもMCP文脈読取scopeを持たない主体が、認証済みという理由だけで投影を取得する認証・認可混同
-- 本サーバーが誤って authorization server 相当の機能（token発行・client登録・consent）を持ってしまうscope creep
+- 本サーバーが誤ってauthorization server相当の機能（token発行・client登録・consent）を持ってしまうscope creep
 - 単純なリクエスト洪水によるCPU/メモリ枯渇（DoS）
 - 認証エラー応答から到達可能性・内部実装がfingerprintされる情報漏えい
 - `/.well-known/oauth-protected-resource` のような未認証で公開する必要があるエンドポイントが、意図せず認証必須のエンドポイントにも認証バイパスの糸口を与える
 
 **想定対策**
 
-- ADR-0054/ADR-0020方針どおり、本サーバーは OAuth 2.1 **resource serverのみ**として実装し、token発行・client登録・authorization endpointは一切持たない（そのコードパス自体が存在しない）
+- ADR-0054/ADR-0020方針どおり、本サーバーはOAuth 2.1 **resource serverのみ**として実装し、token発行・client登録・authorization endpointは一切持たない（そのコードパス自体が存在しない）
 - `jose`の`jwtVerify`でtoken署名・`iss`（`SUI_MCP_TRUSTED_ISSUER`と厳密一致、prefix/wildcard一致は行わない）・`aud`（`SUI_MCP_RESOURCE_URL`）・`exp`を検証し、失敗経路はすべて`InvalidTokenError`にfail-closedで正規化（未知の失敗が既定で通過することはない）
 - SDKの`requireBearerAuth`で`read:context` scopeを必須化する。認証失敗は401、正規tokenのscope不足は403 `insufficient_scope`とし、`WWW-Authenticate`で必要scopeを示す。いずれも文書存在確認へ到達させない
 - `/.well-known/oauth-protected-resource`（RFC 9728）は仕様上未認証公開が前提のdiscovery文書であり、`resource`/`authorization_servers`/`bearer_methods_supported`/`scopes_supported`など非秘匿情報のみを返す。`/mcp`自体の認証要件は変えない
@@ -198,7 +198,7 @@ stdio段階では listen port を開かず外部到達不可だったが、strea
 - LLM HTTP provider応答を1MiB以下のclosed-world `text` objectへ限定し、不正応答は値を反射せずprovider validationで停止する
 - LLM HTTP requestを1MiB以下、canonical task、finite temperature、bounded max tokensへ限定し、過大prompt・不正数値はtransport前に値を反射せず停止する。validation失敗をfallbackで隠さない
 - LLM base URLをtrusted HTTPSまたはloopback HTTPへ限定し、large-scaleは完全なmodel/host allowlist設定と宛先一致を起動時に検証してlocal-first・opt-in境界の設定迂回を防ぐ
-- **SafeMode の未レビュー本文保護を API 境界で強制する（SEC-AI-SAFEMODE-01 / ADR-0068）**: 文書を伴う `/ai/*` は未レビューカード（`textReviewed ≠ true`）を含む場合に 422 `unreviewed_text_not_allowed` で拒否し、`allowUnreviewedText=true` は profile の `SUI_ALLOW_UNREVIEWED_AI_TEXT=true` を必要とする（fail-closed）。これにより、API 直接呼び出し（curl・別クライアント・将来の MCP/エージェント連携）による SafeMode 迂回で未レビュー本文が外部 LLM へ送出される経路を塞ぐ
+- **SafeModeの未レビュー本文保護をAPI境界で強制する（SEC-AI-SAFEMODE-01 / ADR-0068）**: 文書を伴う `/ai/*` は未レビューカード（`textReviewed ≠ true`）を含む場合に422 `unreviewed_text_not_allowed` で拒否し、`allowUnreviewedText=true` はprofileの `SUI_ALLOW_UNREVIEWED_AI_TEXT=true` を必要とする（fail-closed）。これにより、API直接呼び出し（curl・別クライアント・将来のMCP/エージェント連携）によるSafeMode迂回で未レビュー本文が外部LLMへ送出される経路を塞ぐ
 - SPAの短命access tokenはmodule memoryだけに保持し、browser storageへ保存しない。SPA clientにはrefresh tokenを発行せず、token応答に`refresh_token`が混入した場合はaccess tokenも採用しない。reload後はbrokerで再認証する
 - tenant-session cookieはHttpOnly・SameSite=Strict・Path=/を明示し、`local-dev`以外はSecureを必須にする。ログアウトはJWT期限切れ時にもcookieを同じscopeで失効できるようにする
 - recent/QueryPreset等のApp永続状態をmount時に検証・snapshotしたdeployment origin + tenantId + userId scopeへbindingし、同一mount内のscope変更を拒否する。App unmountはrequest abort、task cancel、worker disposeを失敗分離して実行し、切替時はmemory/DOM/cacheを破棄してhard replacementする
@@ -206,13 +206,13 @@ stdio段階では listen port を開かず外部到達不可だったが、strea
 
 **現行の適用限界**
 
-tenant/identity/membership、Document複合key、TenantContext/PDP/audit伝播、PostgreSQL RLS migrationとtransaction-local DB context、fail-closed bootstrap policy/session GET/active tenant POST route、runtime profileと相互必須化したtrusted auth adapterの原子的な起動前bundle、検証済みsession contextとscopeをAppへ同時注入するprofile別frontend entry、tenant switch App host、strict capability adapter、trusted outbound HTTPのredirect拒否、外部PDP request/responseとLLM応答のclosed-world・上限検証、外部PDP・監査HTTPの設定guardまでは実装済みである。session/capability境界ではresolverのmembership IDをDBのactive membershipから再生成した値と照合し、停止・差し替え証跡をPDP呼出し前に拒否する。frontendはruntime cleanupでtenant session generationを無効化し、Document read/write、export監査、AI mutation、diff／診断worker、bundle生成、ローカルFile／zip importの遅延成功結果を旧generationからcommitせず、旧bundleをdownloadしない。review-packのobject URLも最後の非同期検証後にだけ生成し、PNG／HTML snapshot、patch、agent taskは生成結果のgeneration照合後にだけdownload／clipboardへ渡す。public packも全fetch／parse後に一括commitし、stale時に別sourceへfallbackしない。子コンポーネント所有の問い合わせbundle／trace workerも同じguardを通り、stale結果からstate更新やclipboard処理を開始しない。ADR-0063 D9により auth edge から verified evidence を生成する実 resolver（`JwtSaasIdentityContextResolver`）と anti-forgery 付き session persister（`InMemoryActiveTenantSessionPersister`）への接続は実装済みである。ADR-0064 Phase 1 により mock OAuth 2.0 + PKCE ログインフローと JWT 検証の E2E テストも完了している。PostgreSQLの非superuser／非BYPASSRLS runtime roleによるRLS実地検証、現在公開されているAPI・export監査・worker/browser/cacheの越境matrix、同一認証sessionを共有する2 tabから実backendへのstale request拒否までを`SAAS-TENANT-01` AC-1〜13として完了した。現存しない将来のimport／share／webhook等と、tenant-bound credentialをまだ持たないMCPのSaaS昇格は別の将来surfaceであり、親Issueの完了から実装済みとは推論しない。MCPは該当credentialが無い間fail-fastを維持する。clipboard API呼出し後のOS側commit取消はbrowser外部副作用の限界として残るが、現在のtenant分離acceptance gateではない。`saas-multitenant` profileは`TrustedSaasRuntimePolicy.validate()`とlifespan preflightが必須設定・componentを検証した場合だけ起動し、実運用deploymentはその外部依存を明示構成する。
+tenant/identity/membership、Document複合key、TenantContext/PDP/audit伝播、PostgreSQL RLS migrationとtransaction-local DB context、fail-closed bootstrap policy/session GET/active tenant POST route、runtime profileと相互必須化したtrusted auth adapterの原子的な起動前bundle、検証済みsession contextとscopeをAppへ同時注入するprofile別frontend entry、tenant switch App host、strict capability adapter、trusted outbound HTTPのredirect拒否、外部PDP request/responseとLLM応答のclosed-world・上限検証、外部PDP・監査HTTPの設定guardまでは実装済みである。session/capability境界ではresolverのmembership IDをDBのactive membershipから再生成した値と照合し、停止・差し替え証跡をPDP呼出し前に拒否する。frontendはruntime cleanupでtenant session generationを無効化し、Document read/write、export監査、AI mutation、diff／診断worker、bundle生成、ローカルFile／zip importの遅延成功結果を旧generationからcommitせず、旧bundleをdownloadしない。review-packのobject URLも最後の非同期検証後にだけ生成し、PNG／HTML snapshot、patch、agent taskは生成結果のgeneration照合後にだけdownload／clipboardへ渡す。public packも全fetch／parse後に一括commitし、stale時に別sourceへfallbackしない。子コンポーネント所有の問い合わせbundle／trace workerも同じguardを通り、stale結果からstate更新やclipboard処理を開始しない。ADR-0063 D9によりauth edgeからverified evidenceを生成する実resolver（`JwtSaasIdentityContextResolver`）とanti-forgery付きsession persister（`InMemoryActiveTenantSessionPersister`）への接続は実装済みである。ADR-0064 Phase 1によりmock OAuth 2.0 + PKCEログインフローとJWT検証のE2Eテストも完了している。PostgreSQLの非superuser／非BYPASSRLS runtime roleによるRLS実地検証、現在公開されているAPI・export監査・worker/browser/cacheの越境matrix、同一認証sessionを共有する2 tabから実backendへのstale request拒否までを`SAAS-TENANT-01` AC-1〜13として完了した。現存しない将来のimport／share／webhook等と、tenant-bound credentialをまだ持たないMCPのSaaS昇格は別の将来surfaceであり、親Issueの完了から実装済みとは推論しない。MCPは該当credentialが無い間fail-fastを維持する。clipboard API呼出し後のOS側commit取消はbrowser外部副作用の限界として残るが、現在のtenant分離acceptance gateではない。`saas-multitenant` profileは`TrustedSaasRuntimePolicy.validate()`とlifespan preflightが必須設定・componentを検証した場合だけ起動し、実運用deploymentはその外部依存を明示構成する。
 
-**二層テナント分離の同時検証は完了（QA-TENANT-ISOLATION-01）**: アプリ層の `WHERE tenant_id` フィルタと DB層の PostgreSQL RLS は、これまで独立にしか検証されていなかった。`test_tenant_isolation_postgres_rls.py`（CI の PostgreSQL matrix の `-m postgres` で実行）により、実際の HTTP 経路で両層が同時に発火することを固定した（tenant A 書込 → tenant B 読取が 404）。さらにカナリア（`test_rls_alone_blocks_cross_tenant_without_app_where`）が、アプリ層の WHERE を介さない生 SELECT で RLS 単独が越境を止めることを固定している — アプリ層が1箇所欠けても RLS が後段で止める保証の直接証拠。
+**二層テナント分離の同時検証は完了（QA-TENANT-ISOLATION-01）**: アプリ層の `WHERE tenant_id` フィルタとDB層のPostgreSQL RLSは、これまで独立にしか検証されていなかった。`test_tenant_isolation_postgres_rls.py`（CIのPostgreSQL matrixの `-m postgres` で実行）により、実際のHTTP経路で両層が同時に発火することを固定した（tenant A書込 → tenant B読取が404）。さらにカナリア（`test_rls_alone_blocks_cross_tenant_without_app_where`）が、アプリ層のWHEREを介さない生SELECTでRLS単独が越境を止めることを固定している — アプリ層が1箇所欠けてもRLSが後段で止める保証の直接証拠。
 
 ## 検証・運用 / Verification
 
-- import / sanitize / diff・merge 系の回帰テストを維持
+- import / sanitize / diff・merge系の回帰テストを維持
 - PRでセキュリティ影響を明示（必要時）
 - 脆弱性報告フローは `SECURITY.md` を参照
 - SaaS関連変更では、同一docIdを持つ2tenantの越境negative matrixを必須にする

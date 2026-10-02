@@ -1,10 +1,10 @@
 # E2E Testing
 
-対象読者: sui-sensemaking の実装変更に対して Playwright E2E、回帰テスト、PR 前確認を行う開発者、QA、メンテナ。
+対象読者: sui-sensemakingの実装変更に対してPlaywright E2E、回帰テスト、PR前確認を行う開発者、QA、メンテナ。
 
-目的: Docker Compose またはローカル起動環境で、開発者向け E2E を再現できるようにします。一般利用者向けの画面確認は [受け入れ確認](../../../04_Documentation/acceptance_check.md) を参照してください。
+目的: Docker Composeまたはローカル起動環境で、開発者向けE2Eを再現できるようにします。一般利用者向けの画面確認は [受け入れ確認](../../../04_Documentation/acceptance_check.md) を参照してください。
 
-範囲外: 組織固有のテスト管理、非公開データを使った検証、CI 基盤の詳細設定、一般利用者向けの導入説明。
+範囲外: 組織固有のテスト管理、非公開データを使った検証、CI基盤の詳細設定、一般利用者向けの導入説明。
 
 ## 事前準備
 
@@ -18,9 +18,9 @@ node ../frontend/scripts/e2e_storage_preflight.mjs \
   --write-base-url http://127.0.0.1:8080/api
 ```
 
-`e2e_storage_preflight.mjs` は、毎回一意なIDの合成 `DocumentV1` を作成し、frontend proxy 経由で `PUT -> GET` した応答payloadと `ETag` が一致することを確認します。clean PostgreSQLでも成立し、事前seed済みの固定documentには依存しません。これは `ADR-0019` の標準Compose最小受入（health + 実PostgreSQL保存経路のroundtrip）を実行可能な形にしたものです。
+`e2e_storage_preflight.mjs` は、毎回一意なIDの合成 `DocumentV1` を作成し、frontend proxy経由で `PUT -> GET` した応答payloadと `ETag` が一致することを確認します。clean PostgreSQLでも成立し、事前seed済みの固定documentには依存しません。これは `ADR-0019` の標準Compose最小受入（health + 実PostgreSQL保存経路のroundtrip）を実行可能な形にしたものです。
 
-ローカル開発サーバーで確認する場合は [導入手順](../../../04_Documentation/installation.md) の「Docker を使わない最小起動」を使います。Vite の `/api` proxy は backend が起動していないと 500 を返すため、E2E 前に次の両方を確認します。frontend の port を変更した場合は `4173` を実際の port に置き換えてください。
+ローカル開発サーバーで確認する場合は [導入手順](../../../04_Documentation/installation.md) の「Dockerを使わない最小起動」を使います。Viteの `/api` proxyはbackendが起動していないと500を返すため、E2E前に次の両方を確認します。frontendのportを変更した場合は `4173` を実際のportに置き換えてください。
 
 ```bash
 curl -fsS http://127.0.0.1:8000/healthz
@@ -30,7 +30,7 @@ node scripts/e2e_storage_preflight.mjs \
   --read-base-url http://127.0.0.1:4173/api
 ```
 
-ローカル経路では backend へ `PUT` し、同じdocumentを frontend proxyから `GET` することで、backend保存とproxy接続を同時に確認します。
+ローカル経路ではbackendへ `PUT` し、同じdocumentをfrontend proxyから `GET` することで、backend保存とproxy接続を同時に確認します。
 
 ## 手動確認と自動テストの違い
 
@@ -40,7 +40,7 @@ node scripts/e2e_storage_preflight.mjs \
 | Playwright E2E | ブラウザ操作を自動で再現する | PR、リリース前、回帰確認 |
 | unit/regression test | 小さなロジックやデータ変換を速く確認する | 実装変更後、原因切り分け |
 
-一般利用者の確認では、まず [受け入れ確認](../../../04_Documentation/acceptance_check.md) の手動 smoke test だけで十分です。開発変更を含む場合は自動テストも実行します。
+一般利用者の確認では、まず [受け入れ確認](../../../04_Documentation/acceptance_check.md) の手動smoke testだけで十分です。開発変更を含む場合は自動テストも実行します。
 
 ## 手動 smoke test
 
@@ -51,36 +51,36 @@ node scripts/e2e_storage_preflight.mjs \
 5. 島またはレビュー関連の表示が崩れていないことを確認する。
 6. 保存し、ページを再読み込みする。
 7. 変更が残っていることを確認する。
-8. share/export を使う場合、[データ取り扱い](../../../04_Documentation/data_handling.md) のチェックリストに沿って、出力に秘密情報や内部メモが混ざっていないことを確認する。
+8. share/exportを使う場合、[データ取り扱い](../../../04_Documentation/data_handling.md) のチェックリストに沿って、出力に秘密情報や内部メモが混ざっていないことを確認する。
 
-表示設定や SafeMode の確認を含める場合は、`View` パネルを開きます。手動 smoke test では、視点プリセット、深さ、SafeMode、export legacy 導線が表示され、キャンバスが操作不能になっていないことを確認します。
+表示設定やSafeModeの確認を含める場合は、`View` パネルを開きます。手動smoke testでは、視点プリセット、深さ、SafeMode、export legacy導線が表示され、キャンバスが操作不能になっていないことを確認します。
 
 ![View パネルを開いた手動確認画面](../../../04_Documentation/assets/screenshots/view-controls-safe-mode.png)
 
 ## Playwright を実行する
 
-frontend の依存関係を入れます。
+frontendの依存関係を入れます。
 
 ```bash
 cd 03_Implement/frontend
 npm ci
 ```
 
-`npm ci` は `package-lock.json` に固定された依存関係を入れるため、E2E の再現性を保ちやすい手順です。
+`npm ci` は `package-lock.json` に固定された依存関係を入れるため、E2Eの再現性を保ちやすい手順です。
 
-E2E を実行します。
+E2Eを実行します。
 
 ```bash
 npm run e2e
 ```
 
-画面を見ながら確認する場合:
+画面を見ながら確認する場合。
 
 ```bash
 npm run e2e:headed
 ```
 
-特定の mock E2E だけ実行する場合:
+特定のmock E2Eだけ実行する場合。
 
 ```bash
 npm run e2e:mock
@@ -88,7 +88,7 @@ npm run e2e:mock
 
 ## 単体・回帰テスト
 
-E2E の前に軽量な回帰確認を行う場合:
+E2Eの前に軽量な回帰確認を行う場合。
 
 ```bash
 cd 03_Implement/frontend
@@ -101,9 +101,9 @@ npm run test:regression-guards
 
 `npm run test:regression-guards` には `src/ui/ux_operability_regression.test.ts` を含めます。このテストは、マウス操作とキーボード操作が同じ選択結果へつながること、カード選択後に文脈パネルへ進めること、`表示` / `共有と再現` パネルを `Escape` で閉じて起点へ戻れることを、実装上の契約として固定します。
 
-このレーンは Playwright の代替ではありません。狙いは、E2E 実行前に主要操作の入口が壊れていないことを短時間で確認し、`PRODUCT-QA-01` の G2 主要操作ゲートへ渡す一次証跡を作ることです。リリース候補では、次の順で証跡を積み上げます。
+このレーンはPlaywrightの代替ではありません。狙いは、E2E実行前に主要操作の入口が壊れていないことを短時間で確認し、`PRODUCT-QA-01` のG2主要操作ゲートへ渡す一次証跡を作ることです。リリース候補では、次の順で証跡を積み上げます。
 
-Windows のローカルシェルで `npm` が PATH にない場合は、同梱 Node.js など、プロジェクトで承認された Node.js 実行ファイルから `node .\node_modules\vitest\vitest.mjs run <対象テスト>` を実行して同じ対象を確認します。CI と通常の開発環境では `npm run test:regression-guards` を正準コマンドとして扱います。
+Windowsのローカルシェルで `npm` がPATHにない場合は、同梱Node.jsなど、プロジェクトで承認されたNode.js実行ファイルから `node .\node_modules\vitest\vitest.mjs run <対象テスト>` を実行して同じ対象を確認します。CIと通常の開発環境では `npm run test:regression-guards` を正準コマンドとして扱います。
 
 | 段階 | 代表操作 | 証跡 |
 | --- | --- | --- |
@@ -111,7 +111,7 @@ Windows のローカルシェルで `npm` が PATH にない場合は、同梱 N
 | 手動 smoke | 初期表示、カード作成、移動、保存、再読込、共有前確認 | 手順メモ、必要に応じてスクリーンショット |
 | Playwright E2E | 作成→編集→保存→再読込、共有試行→条件充足→許可 | `npm run e2e` または `npm run e2e:mock` |
 
-キーボードでは、`Tab` で対象へ移動し、`Enter` または `Space` で選択、`Escape` で一時パネルを閉じます。マウスでは、対象をクリックまたはドラッグした後、同じ詳細表示・保存・共有前確認へ進めることを確認します。どちらか一方だけで成立する操作は、G2 では未達として扱います。
+キーボードでは、`Tab` で対象へ移動し、`Enter` または `Space` で選択、`Escape` で一時パネルを閉じます。マウスでは、対象をクリックまたはドラッグした後、同じ詳細表示・保存・共有前確認へ進めることを確認します。どちらか一方だけで成立する操作は、G2では未達として扱います。
 
 backend:
 
@@ -149,7 +149,7 @@ python -m pytest
 
 すべての細部を確認する必要はありません。主要操作が見えるか、テキストが重ならないか、保存操作ができるかを優先します。
 
-390px では、ヘッダーが複数行に折り返され、検索、表示モード、共有と再現、保存などの主要操作が画面外へ消えないことを確認します。
+390pxでは、ヘッダーが複数行に折り返され、検索、表示モード、共有と再現、保存などの主要操作が画面外へ消えないことを確認します。
 
 ![390px viewport のヘッダー確認](../../../04_Documentation/assets/screenshots/mobile-toolbar-smoke-390.png)
 
@@ -169,26 +169,26 @@ python -m pytest
 
 ### QA Monkey 群の優先境界
 
-1. SafeMode / share-export は fail-closed を維持する。
+1. SafeMode / share-exportはfail-closedを維持する。
 2. `SUI_LLM_PROVIDER=none` でも回帰検証が継続可能である。
-3. `ja/en` のユーザージャーニー等価は E2E で機械判定し、翻訳品質は人間レビューに分離する。
+3. `ja/en` のユーザージャーニー等価はE2Eで機械判定し、翻訳品質は人間レビューに分離する。
 
 ### 再現性・flaky対策（必須）
 
-- mock/fixture を優先し、外部依存を固定する。
-- 同一 commit で `npm run test` → `npm run e2e:mock` を同順で実行し、差分再現を確認する。
-- flaky が発生した場合は、まず再実行または待機調整で切り分ける。同一原因で繰り返し失敗する場合は無条件の再実行で握り潰さず、fixture または実装側の問題として対象 issue へ記録する。
+- mock/fixtureを優先し、外部依存を固定する。
+- 同一commitで `npm run test` → `npm run e2e:mock` を同順で実行し、差分再現を確認する。
+- flakyが発生した場合は、まず再実行または待機調整で切り分ける。同一原因で繰り返し失敗する場合は無条件の再実行で握り潰さず、fixtureまたは実装側の問題として対象issueへ記録する。
 
 
 ## QA issue の Open化条件
 
-`issue-QA-*` を Draft から Open へ進める AC/DoD、証跡フォーマット、Gate テンプレートは、対象 issue memo と [issues/README.md](../../../01_Plans/issues/README.md)（Lifecycle運用）、`01_Plans/adr/ADR-0019-e2e-verification-policy-and-compose-runbook.md` を正本とします。値や進行テンプレートを本書へ複製せず、対象 issue を直接参照してください。
+`issue-QA-*` をDraftからOpenへ進めるAC/DoD、証跡フォーマット、Gateテンプレートは、対象issue memoと [issues/README.md](../../../01_Plans/issues/README.md)（Lifecycle運用）、`01_Plans/adr/ADR-0019-e2e-verification-policy-and-compose-runbook.md` を正本とします。値や進行テンプレートを本書へ複製せず、対象issueを直接参照してください。
 
 ## 失敗時に残す情報
 
 - 実行したコマンド
-- 対象 URL
-- ブラウザと viewport
+- 対象URL
+- ブラウザとviewport
 - 失敗した操作
 - API status code
 - `docker compose logs api --tail=200`
@@ -215,7 +215,7 @@ python -m pytest
 - Resume condition / owner:
 ```
 
-代替経路で未確認になる代表境界:
+代替経路で未確認になる代表境界は次のとおりです。
 
 | Risk ID | Composeで確認する境界 | 代替経路での扱い |
 | --- | --- | --- |
@@ -241,7 +241,7 @@ python -m pytest
 | 英語切り替えフロー | fixture固定UI |
 | readOnly / SafeMode制限 | fixture固定UI |
 
-この境界を確認するコマンド:
+この境界を確認するコマンドは次のとおりです。
 
 ```bash
 cd 03_Implement/frontend
@@ -297,6 +297,6 @@ DELETEの`If-Match`競合（同issueのAC-3/AC-5）は対象外です。パネ�
 
 ## Release Gate 連携（QA専任運用）
 
-- E2E結果は `PRODUCT-QA-01` の Gate Record に `result/evidence/owner/due` 形式で転記します。
-- Blocker または Critical を検出した場合は、E2E段で即時停止し `MVP-EXIT-01` 判定を Fail にします。
+- E2E結果は `PRODUCT-QA-01` のGate Recordに `result/evidence/owner/due` 形式で転記します。
+- BlockerまたはCriticalを検出した場合は、E2E段で即時停止し `MVP-EXIT-01` 判定をFailにします。
 - Compose実行不可時は `ADR-0019` の代替経路（SQLiteまたはmock）を使用し、未実施理由を必ず記録します。

@@ -14,7 +14,7 @@
 
 - テーブル: `documents(id TEXT PK, version INT, updated_at TEXT, payload_json TEXT)`
 - `payload_json` に `DocumentV1` 全体(JSON文字列)を保存
-- スキーマ管理は Alembic migration を利用
+- スキーマ管理はAlembic migrationを利用
 
 ## Environment variables
 
@@ -25,12 +25,12 @@
   - 正式対応はSQLite、PostgreSQL 16、MySQL 8.4、MariaDB 11.4、SQL Server 2022、CockroachDB 26.2.3、Oracle AI Database Free 23.26.2
   - 対応状況と昇格条件: `02_Architecture/database_portability.md`
 - `SUI_LLM_PROVIDER`
-  - 既定値: `none`
+  - 既定値: `none`は次のとおりです。
   - 値: `none | local | large-scale | deepseek`（後方互換エイリアス: `local_http`, `external`）
   - `deepseek`では`SUI_DEEPSEEK_API_KEY`が必須。base URLと既定modelは環境変数正本を参照
 - `SUI_LLM_FALLBACK_TO_NONE`
-  - 既定値: `true`
-  - `true` の場合、`local`/`large-scale` 呼び出し失敗時は `none` 退避として fail-closed（HTTP 501）
+  - 既定値: `true`は次のとおりです。
+  - `true` の場合、`local`/`large-scale` 呼び出し失敗時は `none` 退避としてfail-closed（HTTP 501）
 
 ## Run
 
@@ -46,7 +46,7 @@ alembic upgrade head
 uvicorn sui_sensemaking_api.main:app --reload
 ```
 
-PostgreSQL を使う場合は `SUI_DATABASE_URL` を PostgreSQL の URL に変更してください。
+PostgreSQLを使う場合は `SUI_DATABASE_URL` をPostgreSQLのURLに変更してください。
 
 MySQL/MariaDBはoptional driverを導入し、single-tenant構成で使用します。
 
@@ -140,7 +140,7 @@ Do not place the admin credential in the end-user SPA. The static credential is
 the ADR-0072 bootstrap path; a separately deployed administrator console and
 interactive Stage-B capability session remain separate follow-up work.
 
-PostgreSQL roundtrip test を実行する場合:
+PostgreSQL roundtrip testを実行する場合。
 
 ```bash
 export SUI_DATABASE_URL="postgresql+psycopg://sui_sensemaking:sui_sensemaking@localhost:5432/sui_sensemaking"
@@ -158,7 +158,7 @@ export SUI_RUN_PG_RLS_TESTS=1
 pytest -q tests/test_document_access_rls_postgres.py
 ```
 
-Auth federation Level2（Mock SP/IdP）を実行する場合:
+Auth federation Level2（Mock SP/IdP）を実行する場合。
 
 ```bash
 cd 03_Implement/backend
@@ -171,7 +171,7 @@ export SUI_LEVEL2_DIAG_DIR=.artifacts/auth-level2/legacy-federation
 - 差異再現観点: ヘッダー名 / claim名 / groups形式 / amr-acr有無
 - 診断JSONは `SUI_LEVEL2_DIAG_DIR` を明示したときだけ出力する。通常の `pytest` は作業ツリーへ診断ファイルを書き込まない。
 
-同じ統合ハーネスを直接実行する場合:
+同じ統合ハーネスを直接実行する場合。
 
 ```bash
 cd 03_Implement/backend
@@ -193,8 +193,8 @@ tests/scripts/run_auth_level2.sh
 - `trace_id`
 - `fallback_to_none`
 
-これらは `extra={...}` で渡され、`SUI_LOG_JSON=true`（既定）のとき JSON の1行として
-出力されます。OPS-OBSERV-01 以前はログ設定が存在せず、`logging.Formatter` の既定書式が
+これらは `extra={...}` で渡され、`SUI_LOG_JSON=true`（既定）のときJSONの1行として
+出力されます。OPS-OBSERV-01以前はログ設定が存在せず、`logging.Formatter` の既定書式が
 `extra` を描画しないため **上記の項目は実際には出力されていませんでした**。出力レベルは
 `SUI_LOG_LEVEL` で変更できます。全リクエストには `X-Request-Id` が付与され、ログ行の
 `requestId` フィールドと突き合わせられます。

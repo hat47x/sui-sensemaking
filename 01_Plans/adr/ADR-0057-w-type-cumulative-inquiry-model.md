@@ -4,7 +4,7 @@
 - Date: 2026-07-15
 - Deciders: Project Maintainers（ユーザー委任による方針確定）
 - Scope: `00_Prompt/w_type_iterative_inquiry_requirements.md`, `02_Architecture/inquiry_journey_model.html`, `02_Architecture/schemas.md`, `02_Architecture/data_model_operations_overview.html`, `03_Implement/frontend/src/domain/`, `03_Implement/frontend/src/ui/`
-- Norms: `WIR-01, WIR-02, WIR-03, WIR-04, WIR-05, WIR-06, WIR-07, WIR-08, WIR-09`（本ADRは `w_type_iterative_inquiry_requirements.md` §5 の全9要件を確定させる決定である）
+- Norms: `WIR-01, WIR-02, WIR-03, WIR-04, WIR-05, WIR-06, WIR-07, WIR-08, WIR-09`（本ADRは `w_type_iterative_inquiry_requirements.md` §5の全9要件を確定させる決定である）
 
 ## 背景
 
@@ -161,4 +161,4 @@
 - Research: [W3C PROV-O](https://www.w3.org/TR/prov-o/)
 - Research: [RFC 8785: JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html)
 - Research: [Ink & Switch: Local-first software](https://www.inkandswitch.com/essay/local-first/)
-- Derived-from: 2026-07-15 ユーザー提案「6ラウンドのW型進行に見られる、イテレーションで思考を深める高度実務を支援する要件」
+- Derived-from: 2026-07-15ユーザー提案「6ラウンドのW型進行に見られる、イテレーションで思考を深める高度実務を支援する要件」

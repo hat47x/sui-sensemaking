@@ -2,30 +2,30 @@
 
 - Status: Accepted
 - Date: 2026-08-25
-- Accepted: 2026-08-26（**D1=多方式対応（A2） / D2=A（`guest_principals`+`guest_document_grants`） / D3=A / D4=A**。保守者による明示承認。仮承認ではない）
+- Accepted: 2026-08-26（D1=多方式対応（A2） / D2=A（`guest_principals`+`guest_document_grants`） / D3=A / D4=A。保守者による明示承認。仮承認ではない）
 - Deciders: Maintainer
 - Scope: `03_Implement/backend/src/sui_sensemaking_api/tenant_context.py`, `models.py`（新規table候補）, `trusted_auth_edge.py`, `02_Architecture/schemas.md`, `02_Architecture/api.md`, `THREAT_MODEL.md`
 
 ## 採択記録（2026-08-26）
 
-保守者の明示承認により Proposed → Accepted。採択内容は以下のとおり、原案から2点補正されている。
+保守者の明示承認によりProposed → Accepted。採択内容は以下のとおり、原案から2点補正されている。
 
-1. **D1補正**: 原案は単一方式（単回短命リンク）を推奨したが、保守者の指示により**複数方式を選択可能にする**（詳細はD1節）。明確に排除するのは「いかなるIdPも要求しない」方式のみ。
-2. **要求2の文言補正**: 当初要求2（`post-mvp-business-scope-design-program.html` §18／`issue-PGM-ITER-05-03`）の「組織IdP外のユーザーに対応する」は、「**受入先テナント自身の企業IdPは要求しない**が、ゲスト自身は何らかのIdP（自分の所属組織のIdPまたは汎用個人アカウント）を持つことを前提とする」という趣旨に補正した。該当箇所は別途更新する。
+1. **D1補正**: 原案は単一方式（単回短命リンク）を推奨したが、保守者の指示により複数方式を選択可能にする（詳細はD1節）。明確に排除するのは「いかなるIdPも要求しない」方式のみ。
+2. **要求2の文言補正**: 当初要求2（`post-mvp-business-scope-design-program.html` §18／`issue-PGM-ITER-05-03`）の「組織IdP外のユーザーに対応する」は、「受入先テナント自身の企業IdPは要求しないが、ゲスト自身は何らかのIdP（自分の所属組織のIdPまたは汎用個人アカウント）を持つことを前提とする」という趣旨に補正した。該当箇所は別途更新する。
 3. **D2補正**: 保守者の指示（関数従属性再検査・サロゲートキー必要性の明示）を受け、原案の`guest_invitations`単独ではなく、`guest_principals`（招待〜redeem〜失効のライフサイクルを持つ個人identity本体）と`guest_document_grants`の2テーブルへ設計を精緻化した（D2節およびFD再検査節を参照）。テーブル数は原案の2件から変わらない。
 
 ## Context
 
 `issue-PGM-ITER-05-03`は、Maintainerが2026-08-25に直接指示した4つの確定要求を扱う（`post-mvp-business-scope-design-program.html` §18）。
 
-1. 組織間だけでなく、小規模の**個人間**利用もサポートする。
-2. 行政・企業等が、市民や外部協力者のような**組織IdP外のユーザー**を受け入れられる。
-3. 組織IdP外ユーザーの受付可否を、**テナント全体より詳細な単位**で制御できる。
-4. **既定は拒否**。既定の共有対象ドキュメントは**0件**。
+1. 組織間だけでなく、小規模の個人間利用もサポートする。
+2. 行政・企業等が、市民や外部協力者のような組織IdP外のユーザーを受け入れられる。
+3. 組織IdP外ユーザーの受付可否を、テナント全体より詳細な単位で制御できる。
+4. 既定は拒否。既定の共有対象ドキュメントは0件。
 
-これらは再検討の対象ではない（同issue「実施しないこと」）。本ADRの論点は**どう実現するか**である。
+これらは再検討の対象ではない（同issue「実施しないこと」）。本ADRの論点はどう実現するかである。
 
-コードで確認した事実: `resolve_verified_claim_tenant_context()`（`tenant_context.py:188-227`）は、verified claimの`tenant_id`に対して`tenant_identity_providers`が`(tenant, identity_provider)`単位でactiveであることを要求し、そこから`user_identities`（`identity_provider_id + subject`）経由でしか個人を解決できない。**IdPを持たない個人を表現する経路が構造的に存在しない。** `issue-PGM-ITER-05-02`（外部比較調査、`02_Architecture/cross-tenant-sharing-external-comparison-2026-08-25.html`）の結論（§0）は、比較した4製品のうち3製品（Slack・Microsoft・Google）が「組織単位の信頼」と「個人単位の信頼」を別々のプリミティブとして持ち、Notionは組織単位の信頼という概念自体を持たない、という点で一致することを示した。sui-sensemakingはこの4製品のいずれとも異なり、個人単位の信頼を組織単位の信頼から独立に表現できない。
+コードで確認した事実: `resolve_verified_claim_tenant_context()`（`tenant_context.py:188-227`）は、verified claimの`tenant_id`に対して`tenant_identity_providers`が`(tenant, identity_provider)`単位でactiveであることを要求し、そこから`user_identities`（`identity_provider_id + subject`）経由でしか個人を解決できない。IdPを持たない個人を表現する経路が構造的に存在しない。 `issue-PGM-ITER-05-02`（外部比較調査、`02_Architecture/cross-tenant-sharing-external-comparison-2026-08-25.html`）の結論（§0）は、比較した4製品のうち3製品（Slack・Microsoft・Google）が「組織単位の信頼」と「個人単位の信頼」を別々のプリミティブとして持ち、Notionは組織単位の信頼という概念自体を持たない、という点で一致することを示した。sui-sensemakingはこの4製品のいずれとも異なり、個人単位の信頼を組織単位の信頼から独立に表現できない。
 
 ## 決定すべき論点
 
@@ -49,7 +49,7 @@
 | B（将来拡張の余地として残す） | メールアドレス宛の単回コード（OTP）等、A1/A2が使えない場合の補助手段 | 本ADRでは方式を1つに固定しないという方針のみを決定し、個々の追加方式の要否・実装順は`issue-PGM-ITER-05-03`のAC-3以降で判断する |
 | C（不採用） | 「いかなるIdPも要求しない」単回リンクのみで受諾させる方式 | 補正後の要求2は「ゲスト自身が何らかのIdPを持つこと」を前提とするため、単独の受入経路としては採用しない。ただしA1/A2いずれの認証も、既存の`ADR-0074`が確立したserver-owned session境界と同じ形で短命sessionへ交換する運用は維持する |
 
-この結果、本ADRのデータ設計（D2）は「ゲストがどの方式で認証したか」を単一の固定形ではなく、**検証方式を区別する属性を持つ拡張可能な形**で保持する必要がある（D2節・FD再検査節を参照）。
+この結果、本ADRのデータ設計（D2）は「ゲストがどの方式で認証したか」を単一の固定形ではなく、検証方式を区別する属性を持つ拡張可能な形で保持する必要がある（D2節・FD再検査節を参照）。
 
 ### D2: 個人単位の信頼レコードの形
 
@@ -63,14 +63,14 @@
 
 保守者の指示に基づき、D2=Aの初稿（`guest_invitations` + `guest_document_grants`の2テーブル）を関数従属性 `x → y`（xの値がyの値を一意に決める関係）の観点で再検査した。同分析手法の枠組み（§1.1）に従い、対象を「システム内世界の確定事実」（招待・redeem・失効・権限付与のいずれも確定事実であり適用対象）に限定する。
 
-**発見した問題**: 初稿の`guest_invitations`は「招待という手続き」と「redeem後の個人identity」という**2つの異なる関数従属性を1つのテーブルへ混在**させていた。
+**発見した問題**: 初稿の`guest_invitations`は「招待という手続き」と「redeem後の個人identity」という2つの異なる関数従属性を1つのテーブルへ混在させていた。
 
 - 手続き面のFD: `invitation_id → (invited_email, status, expires_at, created_by)`
 - identity面のFD: `guest_principal_id → (verified_issuer, verified_subject, verification_method)`
 
-同じ人物が**同一テナント内で複数回招待される**場合（例: 別の管理者が別の文書について後日再度招待する）、この2つのFDを1テーブルに混在させたまま素朴に「招待ごとに新規行」とすると、同一人物に対して`guest_principal_id`が複数生成され、`guest_document_grants`が人物単位で集約できなくなる（`functional-dependency-integrity-2026-08-06.html` F-3が指摘した「同一関係の複数箇所保持」と同型の問題）。
+同じ人物が同一テナント内で複数回招待される場合（例: 別の管理者が別の文書について後日再度招待する）、この2つのFDを1テーブルに混在させたまま素朴に「招待ごとに新規行」とすると、同一人物に対して`guest_principal_id`が複数生成され、`guest_document_grants`が人物単位で集約できなくなる（`functional-dependency-integrity-2026-08-06.html` F-3が指摘した「同一関係の複数箇所保持」と同型の問題）。
 
-**是正**: 「招待」と「identity」を同じ**ライフサイクルを持つ1つの実体**として統合し、テーブル数は増やさずに`guest_invitations`を`guest_principals`へ改称・再定義する。「再招待」は新しい行を作らず、既存`guest_principals`行への`guest_document_grants`追加として表現する（招待は`(tenant_id, invited_email)`の一意制約でdedupする）。
+**是正**: 「招待」と「identity」を同じライフサイクルを持つ1つの実体として統合し、テーブル数は増やさずに`guest_invitations`を`guest_principals`へ改称・再定義する。「再招待」は新しい行を作らず、既存`guest_principals`行への`guest_document_grants`追加として表現する（招待は`(tenant_id, invited_email)`の一意制約でdedupする）。
 
 ```
 guest_principals (
@@ -95,7 +95,7 @@ guest_document_grants (
 
 **サロゲートキーの必要性（`guest_principals.guest_principal_id`）**: この列だけは自然キーで代替できない。理由は、この実体を一意に識別する属性集合がライフサイクルの途中で変わるためである——pending状態では`invited_email`しか分からず、redeem後に初めて`(verified_issuer, verified_subject)`という暗号学的に検証済みの識別子が確定する。`guest_document_grants`側の外部キーは、この2つのどちらの時点でも変化しない安定した参照先を必要とする。もし`(tenant_id, invited_email)`を主キーにすると、redeem後に実際に認証されたアカウントのメールアドレスが招待メールと一致しない場合（多くのOAuthプロバイダで許容される）に破綻する。既存コードの`UserRow`（サロゲート`user_id`）と`UserIdentityRow`（`identity_provider_id + subject`）を分離した先例と同型の必要性であり、本ADR独自の判断ではない。`guest_document_grants`側は逆に、複合自然キー（どの人物がどの文書にアクセスできるか、という関係そのもの）で十分であり、追加のサロゲートキーは不要と判断する。
 
-**確認した「禁止したい関数従属性」**: `tenant_id → (guest_principalが読める文書集合)`という関数従属性は**存在してはならない**。`guest_principals`の存在（pending/active/revokedいずれの状態でも）単独では、いかなる文書へのアクセスも決定しない。アクセスは`guest_document_grants`の一致行の有無だけで決まる（D3）。同様に、`tenant_identity_providers`（テナント全体のIdP信頼）から`guest_principals`への参照・派生も存在しない——2つの信頼プリミティブは意図的に非連動である。
+**確認した「禁止したい関数従属性」**: `tenant_id → (guest_principalが読める文書集合)`という関数従属性は存在してはならない。`guest_principals`の存在（pending/active/revokedいずれの状態でも）単独では、いかなる文書へのアクセスも決定しない。アクセスは`guest_document_grants`の一致行の有無だけで決まる（D3）。同様に、`tenant_identity_providers`（テナント全体のIdP信頼）から`guest_principals`への参照・派生も存在しない——2つの信頼プリミティブは意図的に非連動である。
 
 ### D3: 既定拒否・既定ゼロ件の保証層
 
@@ -123,7 +123,7 @@ CHK-X1〜X6（次元間クロスチェック）: 業務要求（個人単位受�
 
 ## 採択内容（確定）
 
-**D1=多方式対応（A1: 自組織IdP連携 + A2: 汎用個人アカウント、Bは将来拡張余地として保留、Cは不採用）、D2=A（`guest_principals`+`guest_document_grants`、FD再検査済み）、D3=A、D4=A**。
+D1=多方式対応（A1: 自組織IdP連携 + A2: 汎用個人アカウント、Bは将来拡張余地として保留、Cは不採用）、D2=A（`guest_principals`+`guest_document_grants`、FD再検査済み）、D3=A、D4=A。
 
 理由: D2=A・D3=Aは、`issue-PGM-ITER-05-02`が発見した「sui-sensemakingには個人単位の信頼を組織単位の信頼から独立に表現する経路がない」という欠陥を、データモデルの構造そのもので解消する。既存の`tenant_identity_providers`を流用する案（D2=B）は、粒度混在という同じ欠陥を別の場所で再生産するため採用しない。D1は、保守者の指示により当初の単一方式（原案A＝単回リンクのみ）から複数方式へ拡張し、「受入先テナント自身の企業IdPは不要だが、ゲスト自身は何らかのIdPを持つ」という補正後の要求2を、A1（自組織IdP連携）とA2（汎用個人アカウント）の2経路で満たす。D4=Aは要求されている取り消しの独立性と直接一致する。
 

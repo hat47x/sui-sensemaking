@@ -2,14 +2,14 @@
 
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-本ファイルは review attribution を view.json 側へ追加するためのスキーマ提案である。  
+本ファイルはreview attributionをview.json側へ追加するためのスキーマ提案である。  
 MVPでは未実装だが、将来の互換性のため設計段階で固定する。
 
 > **ADR-0086との境界:** 本書の `ReviewEvent` / `ReviewAttribution` は既存view/document review文脈の契約であり、将来のartifact-level `ReviewRecordV1Alpha1` と同一型ではない。artifact-level Reviewはexact artifact revisionを対象とし、Authority transitionとは分離する。移行・正本関係は別schema ADRまで未決とし、本書だけを理由に現行`human_reviewed`を導出値へ変更しない。
 
 ## Location
 - view.json (view metadata) に追加
-- document.json には追加しない（default）
+- document.jsonには追加しない（default）
 
 ## Top-level additions to view.json
 
@@ -88,7 +88,7 @@ type ReviewSignatureVerification = {
 
 - SSOT（唯一参照先）: `02_Architecture/hil_rs_01_a1_minimum_interface_contract.md`
 - Contract ID（固定）: `A1-ATTR-IF`
-- schemaVersion（固定）: `1.0.0`
+- schemaVersion（固定）: `1.0.0`は次のとおりです。
 - required fields（固定）:
   - `reviewState` (`unreviewed | human_reviewed`)
   - `reviewedAt`
@@ -109,7 +109,7 @@ type ReviewSignatureVerification = {
 
 ### A1-ERROR-IF binding（review attribution関連）
 
-review attribution の検証失敗時は次の error code を用いる。
+review attributionの検証失敗時は次のerror codeを用いる。
 
 - `A1_SCHEMA_VERSION_MISMATCH`
 - `A1_REQUIRED_FIELD_MISSING`
@@ -117,37 +117,37 @@ review attribution の検証失敗時は次の error code を用いる。
 - `A1_OVERRIDE_POLICY_VIOLATION`
 - `A1_PII_POLICY_VIOLATION`
 
-共通 envelope 形式は `02_Architecture/schemas.md` の `A1-ERROR-IF` を唯一参照先とし、
+共通envelope形式は `02_Architecture/schemas.md` の `A1-ERROR-IF` を唯一参照先とし、
 `contractId` は `A1-ATTR-IF` で固定する。
 
 ## Defaults
 - reviewAttributionPolicy.storePII = false
 - reviewAttributionPolicy.exportRedactionMode = "strip-identities"
 - reviewAttributionPolicy.retention.maxEvents = 2000
-- reviewEvents / reviewers 欠如は「履歴なし」として扱う
+- reviewEvents / reviewers欠如は「履歴なし」として扱う
 
 ## Validation rules
-- reviewerRef は空文字不可
-- storePII=false の場合:
-  - reviewers[].displayName / reviewers[].contact は保存しない（読み込み時に破棄、または無視）
+- reviewerRefは空文字不可
+- storePII=falseの場合。
+  - reviewers[].displayName / reviewers[].contactは保存しない（読み込み時に破棄、または無視）
 - reviewEvents は以下を満たす:
-  - id 重複なし
-  - target.id は既存要素IDであることが望ましい
+  - id重複なし
+  - target.idは既存要素IDであることが望ましい
     - ただし過去イベントの再現のため、参照先欠落は 読み込み時にエラーにしない（警告扱い）
-  - createdAt は ISO 文字列
+  - createdAtはISO文字列
 - retention:
-  - export/import 時に maxEvents を超える場合は古い順に削除してよい
-  - details の肥大化を避けるため、必要なら event ごとの note 長を制限してよい（例: 500 chars）
+  - export/import時にmaxEventsを超える場合は古い順に削除してよい
+  - detailsの肥大化を避けるため、必要ならeventごとのnote長を制限してよい（例: 500 chars）
 
 ## Export redaction behavior
 - none:
-  - reviewers / reviewEvents をそのまま出力
+  - reviewers / reviewEventsをそのまま出力
 - strip-identities:
-  - reviewers[].displayName / reviewers[].contact を除去
-  - reviewEvents[].reviewerRef は残す（匿名ID）
+  - reviewers[].displayName / reviewers[].contactを除去
+  - reviewEvents[].reviewerRefは残す（匿名ID）
 - strip-all:
-  - reviewers / reviewEvents を出力しない
-  - policy 自体は残してよい
+  - reviewers / reviewEventsを出力しない
+  - policy自体は残してよい
 
 ## Interoperability guidance
 ReviewerRef 推奨フォーマット（例）:
@@ -155,15 +155,15 @@ ReviewerRef 推奨フォーマット（例）:
 - SSO: user:sso:sub:<subject>
 - 組織独自: user:org:<opaque>
 
-重要:
-- reviewEvents は暗号署名されない前提であり、監査証跡としての強度は限定的。
-- 将来拡張で detached signature を追加する場合も、上記構造を壊さず付加情報として実装する。
+重要は次のとおりです。
+- reviewEventsは暗号署名されない前提であり、監査証跡としての強度は限定的。
+- 将来拡張でdetached signatureを追加する場合も、上記構造を壊さず付加情報として実装する。
 
 ## Optional signing additions (Phase3 M6)
 
 ### File placement
 - `review-signature.json`（新規、任意）
-  - `ReviewSignatureEnvelope` を保存する detached signature ファイル
+  - `ReviewSignatureEnvelope` を保存するdetached signatureファイル
   - `document.json` / `view.json` を変更せず同梱する
 
 ### Verification status model
@@ -174,25 +174,25 @@ ReviewerRef 推奨フォーマット（例）:
 - `keyId` は空文字不可
 - `algorithm` は当面 `rsa-sha256` のみ許可（将来列挙拡張）
 - `payload.*Digest` は `sha256:<hex>` 形式
-- `signedAt` は ISO 8601 文字列
-- `signature` は base64 文字列（空文字不可）
+- `signedAt` はISO 8601文字列
+- `signature` はbase64文字列（空文字不可）
 
 ### Verification behavior
-- 署名ファイル欠損:
+- 署名ファイル欠損は次のとおりです。
   - `result=not_provided`
-  - import / view / review 操作は継続（non-blocking default）
-- 署名ファイルあり + 検証成功:
+  - import / view / review操作は継続（non-blocking default）
+- 署名ファイルあり + 検証成功は次のとおりです。
   - `result=passed`
-- 署名ファイルあり + 検証失敗:
+- 署名ファイルあり + 検証失敗は次のとおりです。
   - `result=failed` + `reasonCode`
-  - 既定では read-only で閲覧継続可、share/export で追加確認
+  - 既定ではread-onlyで閲覧継続可、share/exportで追加確認
 
 ### Policy override (org optional)
-- 組織運用で fail-closed が必要な場合のみ `requireSignature=true` を別途 policy で指定する。
+- 組織運用でfail-closedが必要な場合のみ `requireSignature=true` を別途policyで指定する。
 - 既定は `requireSignature=false` とし、無署名をエラー扱いにしない。
 
 ### Backward compatibility
-- 署名情報は sidecar 追加のため、既存 `ViewMetadata` スキーマ version を変更しない。
+- 署名情報はsidecar追加のため、既存 `ViewMetadata` スキーマversionを変更しない。
 - 旧クライアントは `review-signature.json` を読まなくても動作可能。
 
 
@@ -200,62 +200,62 @@ ReviewerRef 推奨フォーマット（例）:
 
 - 正規キーは `AuthContext.userId`（内部 `users.id`）とする。
 - `reviewerRef` / `ownerRef` は派生値 `user:<users.id>` を採用する。
-- `provider` や `external_uid` は attribution payload へ直保存しない。
-- strict mode（`SUI_ALLOW_JIT_PROVISIONING=false`）では、`users.id` が未確定の要求を拒否し attribution を作らない。
+- `provider` や `external_uid` はattribution payloadへ直保存しない。
+- strict mode（`SUI_ALLOW_JIT_PROVISIONING=false`）では、`users.id` が未確定の要求を拒否しattributionを作らない。
 - `reviewerRef` / `ownerRef` の具体値は `ReviewerRefResolverAdapter` が決定し、schema側は「non-empty opaque string」のみを保証する。
 - adapterが `sso_subject` の場合は `user:sso:<provider>:<externalUid>` を許容し、入力不足時は `user_id` profile（`actorRef` → `null`）へフォールバックする。
-- source判定は UI補助情報であり schema必須項目にしない（`reviewerRef` 単体で互換維持）。
-- backfill時は `reviewerRef` / `ownerRef` のみを書換対象とし、`provider` / `external_uid` は attribution payload へ新規保存しない。
+- source判定はUI補助情報でありschema必須項目にしない（`reviewerRef` 単体で互換維持）。
+- backfill時は `reviewerRef` / `ownerRef` のみを書換対象とし、`provider` / `external_uid` はattribution payloadへ新規保存しない。
 
 - `internal_user_id` は実体として `users.id` を指し、`reviewerRef` / `ownerRef` は表示・交換用の派生参照（`user:<users.id>`）とする。
-- attribution の永続層では `provider` / `external_uid` を保持せず、参照逆引きは `user_identities` に委譲する。
+- attributionの永続層では `provider` / `external_uid` を保持せず、参照逆引きは `user_identities` に委譲する。
 
-これにより、IdP変更時でも `user_identities` の再紐付けで reviewer/owner 帰属を不変維持できる。
+これにより、IdP変更時でも `user_identities` の再紐付けでreviewer/owner帰属を不変維持できる。
 
 ## Stream B Contract Annotation（schema-only fixation）
 
 ### Context
-- review attribution schema は privacy/safeMode 境界を壊さずに、mock payload で独立検証できる形で固定する必要がある。
+- review attribution schemaはprivacy/safeMode境界を壊さずに、mock payloadで独立検証できる形で固定する必要がある。
 
 ### Decision
-- `reviewerRef` は non-empty opaque string とし、`provider` / `external_uid` の直保存を禁止する。
+- `reviewerRef` はnon-empty opaque stringとし、`provider` / `external_uid` の直保存を禁止する。
 - `reviewEvents` / `reviewers` / `reviewAttributionPolicy` は型契約のみ固定し、実装値や運用値は本書で規定しない。
-- A系契約ID参照は conditional を許容するが、schema key set の再定義は行わない。
+- A系契約ID参照はconditionalを許容するが、schema key setの再定義は行わない。
 
 ### Consequences
-- 下流は mock sidecar（`review-signature.json`）を含む入出力契約を先行検証できる。
-- 用語統一（reviewerRef / ownerRef / reviewState）と safeMode境界の非侵害を schema review で担保できる。
-- 実装段階での過収集PIIや契約外キー混入を fail-closed で検知できる。
+- 下流はmock sidecar（`review-signature.json`）を含む入出力契約を先行検証できる。
+- 用語統一（reviewerRef / ownerRef / reviewState）とsafeMode境界の非侵害をschema reviewで担保できる。
+- 実装段階での過収集PIIや契約外キー混入をfail-closedで検知できる。
 
 ### CE1整合メモ（Stream B / contract-only）
-- 本書は review attribution 契約に限定し、`ContextQueryV1` / `ContextBundleV1` のキー集合を再定義しない。
-- CE1 固定エラー語彙（`preview_required` / `unknown_contract_key` / `nondeterministic_bundle`）との衝突を導入しない。
-- mock-first 検証時も safeMode 境界（PII最小化・匿名参照）を緩和しない。
+- 本書はreview attribution契約に限定し、`ContextQueryV1` / `ContextBundleV1` のキー集合を再定義しない。
+- CE1固定エラー語彙（`preview_required` / `unknown_contract_key` / `nondeterministic_bundle`）との衝突を導入しない。
+- mock-first検証時もsafeMode境界（PII最小化・匿名参照）を緩和しない。
 
 ## Stream G regression-hardening constraints (2026-05-18)
 
-- Level1 契約境界: `reviewerRef` / `ownerRef` は non-empty opaque string、PII最小化、禁止キー（`provider`, `external_uid`）の fail-closed 検証を必須とする。
-- Level2 統合境界: `users` / `user_identities` と attribution の参照整合、strict 403 契約、audit 記録の再現性を同時検証する。
+- Level1契約境界: `reviewerRef` / `ownerRef` はnon-empty opaque string、PII最小化、禁止キー（`provider`, `external_uid`）のfail-closed検証を必須とする。
+- Level2統合境界: `users` / `user_identities` とattributionの参照整合、strict 403契約、audit記録の再現性を同時検証する。
 - 自己修復上限: 契約不一致の自動修復は3回までとし、超過時は `StoppedForClarification` を返す。
 
 
 ## Stream D alignment note (2026-05-19)
 
-- Contract drift抽出: review attribution は `DocumentV1` 埋め込み契約（L2.5）として維持し、個別CRUD保証を主張しない。
+- Contract drift抽出: review attributionは `DocumentV1` 埋め込み契約（L2.5）として維持し、個別CRUD保証を主張しない。
 - Support level定義: `reviewerRef` / `ownerRef` / `reviewState` / `reviewedAt` は契約固定だが運用は `DATA-MODEL-OPS-01` のCRUD境界に従う。
 - Admin maintenance/recovery境界: 削除・移管・監査閲覧などの高権限運用は `DATA-MAINT-01` のPending論点として分離し、先行実装しない。
-- Verify: `schemas.md` と同じ support level語彙（L1/L1.5/L2/L2.5/L3/L0）を参照する前提で整合。
+- Verify: `schemas.md` と同じsupport level語彙（L1/L1.5/L2/L2.5/L3/L0）を参照する前提で整合。
 
 ## Stream D migration boundary memo (2026-05-20)
 
-- 本書は review attribution の契約提案を固定する文書であり、MVP時点では attribution 専用テーブル migration を要求しない。
+- 本書はreview attributionの契約提案を固定する文書であり、MVP時点ではattribution専用テーブルmigrationを要求しない。
 - Alembic head `20260716_0006`ではtenant foundation表とDocument/判断ログの`tenant_id`がexpandされたが、review attributionは引き続き`Document`埋め込み前提とし、tenant列へ分解しない。
-- したがって review attribution は `L2/L2.5`（埋め込み/契約先行）として扱い、個別CRUDや独立 migration を前提にしない。
+- したがってreview attributionは `L2/L2.5`（埋め込み/契約先行）として扱い、個別CRUDや独立migrationを前提にしない。
 
 
 ## Stream E sync note (2026-05-20, Auth attribution only)
 
-- Auth属性の正規化境界を再確認: `reviewerRef` / `ownerRef` は non-empty opaque string を維持し、Auth内部正本は `user:<users.id>` 派生参照とする。
-- `provider` / `external_uid` は review attribution 永続層に保存しない（逆引きは `user_identities` へ委譲）。
-- strict mode（`SUI_ALLOW_JIT_PROVISIONING=false`）時は `users.id` 未解決の要求を fail-closed で拒否し、attribution event を新規生成しない。
-- mock IdP 回帰での差分吸収点は `AUTH_PROVIDER_PROFILE` と header mapping に限定し、schema key set は不変。
+- Auth属性の正規化境界を再確認: `reviewerRef` / `ownerRef` はnon-empty opaque stringを維持し、Auth内部正本は `user:<users.id>` 派生参照とする。
+- `provider` / `external_uid` はreview attribution永続層に保存しない（逆引きは `user_identities` へ委譲）。
+- strict mode（`SUI_ALLOW_JIT_PROVISIONING=false`）時は `users.id` 未解決の要求をfail-closedで拒否し、attribution eventを新規生成しない。
+- mock IdP回帰での差分吸収点は `AUTH_PROVIDER_PROFILE` とheader mappingに限定し、schema key setは不変。

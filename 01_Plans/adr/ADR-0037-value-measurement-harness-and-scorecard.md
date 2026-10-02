@@ -4,25 +4,25 @@
 - Date: 2026-05-31
 - Deciders: Maintainer（委譲された意思決定権限）
 - Scope: `01_Plans/`, `02_Architecture/value_traceability.md`, `03_Implement/frontend/e2e/`, `04_Documentation/`
-- Activation: direction として Accepted。実ユーザー/協力者が現れる milestone まで activation を延期（`ADR-0039`）。
+- Activation: directionとしてAccepted。実ユーザー/協力者が現れるmilestoneまでactivationを延期（`ADR-0039`）。
 - Derived-from: `01_Plans/adr/ADR-0036-value-to-social-goal-realization-roadmap.md`
 
 ## Context
 
-`ADR-0032` は価値観測モデル（Value Hypothesis → User Action → Evidence Artifact → Decision Gate）と二軸スコアカード（価値KPI軸 / 統治軸）を**契約**として固定した。`PRODUCT-VALUE-01..03` も各々 KPI と `Hypothesis→Action→Evidence→Decision` 連鎖を保持している。
+`ADR-0032` は価値観測モデル（Value Hypothesis → User Action → Evidence Artifact → Decision Gate）と二軸スコアカード（価値KPI軸 / 統治軸）を**契約**として固定した。`PRODUCT-VALUE-01..03` も各々 KPIと `Hypothesis→Action→Evidence→Decision` 連鎖を保持している。
 
-一方で、これらは「issueごとの記述契約」に留まり、**観測を実際に運用する成果物（再現可能なシナリオ実行手順・証拠成果物の形式・再測定手順・スコアカードの集計運用）が VR4 のフェーズ成果物として存在しない**。結果として、機能完了と価値実感の乖離（`ADR-0032` Context）を埋める観測が、issue本文の宣言止まりになっている。
+一方で、これらは「issueごとの記述契約」に留まり、**観測を実際に運用する成果物（再現可能なシナリオ実行手順・証拠成果物の形式・再測定手順・スコアカードの集計運用）がVR4のフェーズ成果物として存在しない**。結果として、機能完了と価値実感の乖離（`ADR-0032` Context）を埋める観測が、issue本文の宣言止まりになっている。
 
-`ADR-0036` の VR4 は、この観測を「契約」から「運用される成果物」へ接続することを要求する。
+`ADR-0036` のVR4は、この観測を「契約」から「運用される成果物」へ接続することを要求する。
 
 ## Decision
 
-`ADR-0032` の観測契約を運用化するため、次を VR4 の観測基盤として固定する。本ADRは観測の**運用方法**を定め、個別KPIの定義は各VALUE issueを正本とする。
+`ADR-0032` の観測契約を運用化するため、次をVR4の観測基盤として固定する。本ADRは観測の**運用方法**を定め、個別KPIの定義は各VALUE issueを正本とする。
 
 ### 1. 価値観測ハーネス（再現可能シナリオ実行）
 
-- 各価値ループ V0–V4 に対し、`Hypothesis → Action(操作列) → Evidence(証拠ID) → Decision(Go/No-Go)` を1つの再実行可能な観測単位として束ねる。
-- 操作列は E2E シナリオ名（または手動受入手順）で固定し、同一手順で同一種類の証拠を再取得できることを要件とする。
+- 各価値ループV0–V4に対し、`Hypothesis → Action(操作列) → Evidence(証拠ID) → Decision(Go/No-Go)` を1つの再実行可能な観測単位として束ねる。
+- 操作列はE2Eシナリオ名（または手動受入手順）で固定し、同一手順で同一種類の証拠を再取得できることを要件とする。
 - 証拠成果物（Evidence Artifact）は `evidenceId / 取得手順 / 形式 / 保存先 / 再測定一致条件` を持つ。形式は版間比較可能な固定形式とする。
 
 ### 2. 二軸スコアカード運用
@@ -32,8 +32,8 @@
 | 価値KPI軸 | 活性化 / 曖昧さ保持 / 成果物レビュー可能性 | `PV01-K1 first_meaningful_map_*`, `PV02-K1 unresolved_*`, `PV03-K1 reviewable_package_completeness` | 定義可能・再測定可能・比較可能の3条件を満たすKPIのみ採用 |
 | 統治軸 | SafeMode境界 / review帰属 / 証拠再現性 | safeMode後退=0, `human_reviewed`自動昇格=0, 証拠欠落率/再測定一致率 | 後退検知時は即No-Go（緩和不可） |
 
-- スコアカードは `MVP-EXIT-01` Program Gate と `PRODUCT-QA-01` Release Readiness の入力とし、判定式は既存の `Go / Conditional Go / No-Go` を再利用する（再発明しない）。
-- 判定記録には `candidate / date / reviewer / decision / artifactId / re-decision condition` を必須とする（`ADR-0032` AC-L3 準拠）。
+- スコアカードは `MVP-EXIT-01` Program Gateと `PRODUCT-QA-01` Release Readinessの入力とし、判定式は既存の `Go / Conditional Go / No-Go` を再利用する（再発明しない）。
+- 判定記録には `candidate / date / reviewer / decision / artifactId / re-decision condition` を必須とする（`ADR-0032` AC-L3準拠）。
 
 ### 3. 非目標・安全制約
 
@@ -52,13 +52,13 @@
 
 ## Consequences
 
-- 期待される効果:
+- 期待される効果は次のとおりです。
   - 「価値を実感できたか」を版間・シナリオ間で比較でき、機能完了と価値の乖離を縮小できる。
   - 監査性が上がり、Program Gate/Release判定の入力が再現可能になる。
-- 想定される副作用/制約:
+- 想定される副作用/制約は次のとおりです。
   - 観測手順・証拠形式の整備コストが先行する。
   - 過剰計測は監視へ滑りやすいため、非監視制約の遵守を毎回確認する必要がある。
-- 移行時に必要な対応:
+- 移行時に必要な対応は次のとおりです。
   - `VALUE-MEASURE-01`（ハーネスと証拠成果物）と `VALUE-MEASURE-02`（二軸スコアカード運用）を起票する。
   - `02_Architecture/value_traceability.md` の検証観点列へ、観測単位と証拠IDの対応を追記する。
 

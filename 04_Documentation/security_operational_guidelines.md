@@ -1,8 +1,8 @@
 # セキュリティ運用ガイドライン（例）
 
-対象読者: sui-sensemaking の安全設定を確認する管理者、運用担当者、セキュリティ担当者。
+対象読者: sui-sensemakingの安全設定を確認する管理者、運用担当者、セキュリティ担当者。
 
-目的: SafeMode、AI 接続、監査ログ連携、共有や export の設定を変える前に、最低限確認したい観点を整理します。
+目的: SafeMode、AI接続、監査ログ連携、共有やexportの設定を変える前に、最低限確認したい観点を整理します。
 
 範囲外: 組織固有の承認フロー、承認期限、役職名、監査証跡、インシデント対応規程。
 
@@ -14,9 +14,9 @@
 
 - 迷ったら設定を変えずに保留する。
 - 外部サービスとの共有が必要な理由を説明できない場合は共有しない。
-- SafeMode の緩和は、便利さではなく必要性と復旧可能性で判断する。
-- AI の出力は提案として扱い、人間の確認なしに確定状態へ昇格させない。
-- API key、token、password、未加工の顧客情報は、ログ、スクリーンショット、export に含めない。
+- SafeModeの緩和は、便利さではなく必要性と復旧可能性で判断する。
+- AIの出力は提案として扱い、人間の確認なしに確定状態へ昇格させない。
+- API key、token、password、未加工の顧客情報は、ログ、スクリーンショット、exportに含めない。
 
 ## 役割の考え方
 
@@ -33,12 +33,12 @@
 
 ## Runtime profile とセキュリティ判断
 
-設定変更の前に、どの profile で運用するかを確定します。
-profile の詳細は、GitHub 上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。
+設定変更の前に、どのprofileで運用するかを確定します。
+profileの詳細は、GitHub上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。
 
 - `local-dev`: 外部共有を避ける初期検証向け（`SUI_LLM_PROVIDER=none`）。
 - `evaluation`: Compose評価向け。外部連携は必要時のみ限定有効化。
-- `enterprise-production`: strict 運用を前提に、`SUI_ALLOW_JIT_PROVISIONING=false` を標準とする。
+- `enterprise-production`: strict運用を前提に、`SUI_ALLOW_JIT_PROVISIONING=false` を標準とする。
 - `enterprise-production`: `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE` を `read_only` または `deny` で事前合意し、運用中に暗黙変更しない。
 
 プロファイル未確定のまま `SUI_ALLOW_JIT_PROVISIONING`、`SUI_AUDIT_*`、`SUI_ACCESS_CONTROL_*` を変更しないでください。
@@ -62,42 +62,42 @@ profile の詳細は、GitHub 上の [runtime_parameter_registry.md](https://git
 
 ### local LLM を使う
 
-確認すること:
+確認すること。
 
-- 実際の接続先が local または組織内の管理された endpoint である。
+- 実際の接続先がlocalまたは組織内の管理されたendpointである。
 - 入力に秘密情報や未公開顧客情報を含めない運用になっている。
 - 失敗時に `SUI_LLM_PROVIDER=none` へ戻せる。
 
-保留する例:
+保留する例は次のとおりです。
 
-- local と呼んでいるが、実際の endpoint が外部ネットワークにある。
+- localと呼んでいるが、実際のendpointが外部ネットワークにある。
 - 入力の保持期間や二次利用条件が確認できない。
 
 ### large-scale LLM を使う
 
-確認すること:
+確認すること。
 
-- 明示的に opt-in している。
-- allowlist と実際の host が一致している。
+- 明示的にopt-inしている。
+- allowlistと実際のhostが一致している。
 - 外部サービスとの共有が必要な理由と、共有する情報の範囲が記録されている。
 
-保留する例:
+保留する例は次のとおりです。
 
-- allowlist と host が一致しない。
+- allowlistとhostが一致しない。
 - 未レビュー情報や秘密情報が共有される可能性が残っている。
 
 ### audit HTTP 連携を使う
 
-確認すること:
+確認すること。
 
 - 接続先、保持期間、所有者が分かっている。
-- payload に秘密情報を含めない方針がある。
-- SafeMode 中に連携を許可する場合、その理由を記録している。
+- payloadに秘密情報を含めない方針がある。
+- SafeMode中に連携を許可する場合、その理由を記録している。
 
-保留する例:
+保留する例は次のとおりです。
 
-- audit endpoint の管理者や保持期間が分からない。
-- 障害時の queue、timeout、再送の扱いが分からない。
+- audit endpointの管理者や保持期間が分からない。
+- 障害時のqueue、timeout、再送の扱いが分からない。
 
 ## 記録に残す最小項目
 
@@ -109,7 +109,7 @@ profile の詳細は、GitHub 上の [runtime_parameter_registry.md](https://git
 - 戻し方
 - 確認した結果
 
-組織固有の承認番号、個人情報、秘密情報、内部 URL は、公開文書や共有用メモへ含めません。
+組織固有の承認番号、個人情報、秘密情報、内部URLは、公開文書や共有用メモへ含めません。
 
 ## 確認コマンド
 
@@ -118,7 +118,7 @@ curl -fsS http://localhost:8080/api/healthz
 docker compose logs api --tail=100
 ```
 
-API key を有効にしている場合:
+API keyを有効にしている場合。
 
 ```bash
 curl -H "X-API-Key: <key>" http://localhost:8080/api/docs/<doc_id>

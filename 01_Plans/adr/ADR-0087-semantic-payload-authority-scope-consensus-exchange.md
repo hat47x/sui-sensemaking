@@ -117,7 +117,7 @@ SUIがsystem behaviorへ利用するcore predicateはclosed vocabularyとする�
 
 domain-specific / experimental relationはnamespaced predicateとして許容する。
 
-例:
+例は次のとおりです。
 
 ```text
 domain:requirements/depends_on

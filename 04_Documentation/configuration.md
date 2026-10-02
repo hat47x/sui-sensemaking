@@ -1,34 +1,34 @@
 # Configuration
 
-対象読者: sui-sensemaking を起動・運用する管理者、検証担当者。
+対象読者: sui-sensemakingを起動・運用する管理者、検証担当者。
 
 目的: すべての公開環境変数、安全な既定値、設定変更後の確認方法を示します。
 
 範囲外: 組織固有の秘密管理、未公開ネットワーク情報、承認履歴。
 
-公開区分: 運用者向け公開候補。ここでは利用者が設定する `SUI_*` と既存の既定値だけを扱い、内部 adapter の秘密値や未承認の設定変更は扱いません。
+公開区分: 運用者向け公開候補。ここでは利用者が設定する `SUI_*` と既存の既定値だけを扱い、内部adapterの秘密値や未承認の設定変更は扱いません。
 
 ## 基本方針
 
-- sui-sensemaking の利用者・運用者が設定する環境変数は、すべて例外なく `SUI_` で始まります。
+- sui-sensemakingの利用者・運用者が設定する環境変数は、すべて例外なく `SUI_` で始まります。
 - 接頭辞のない旧キーや、別接頭辞の互換キーは使いません。
-- Docker Compose や build tool が内部的に別名を必要とする場合も、利用者が設定する公開キーは `SUI_*` だけです。
-- 既定では LLM 連携は無効です。
-- 外部サービスとの共有や large-scale LLM の利用は、明示的な opt-in と宛先 allowlist がある場合だけ有効にします。
+- Docker Composeやbuild toolが内部的に別名を必要とする場合も、利用者が設定する公開キーは `SUI_*` だけです。
+- 既定ではLLM連携は無効です。
+- 外部サービスとの共有やlarge-scale LLMの利用は、明示的なopt-inと宛先allowlistがある場合だけ有効にします。
 
 
 ## 起動面ごとの配送範囲（重要）
 
-このページの `export SUI_*` 例は、特記がない限り backend を直接起動する場合の設定例です。標準 Docker Compose (`docker-compose.yml`) は、次の公開キーを明示的な配送面として持ちます。この2行は `01_Plans/tests/test_configuration_compose_delivery_contract.py` で Compose 定義と照合します。
+このページの `export SUI_*` 例は、特記がない限りbackendを直接起動する場合の設定例です。標準Docker Compose (`docker-compose.yml`) は、次の公開キーを明示的な配送面として持ちます。この2行は `01_Plans/tests/test_configuration_compose_delivery_contract.py` でCompose定義と照合します。
 
 | Compose surface | 配送される公開キー | 挙動 |
 | --- | --- | --- |
 | `api.environment` | `SUI_RUNTIME_PROFILE`, `SUI_DATABASE_URL`, `SUI_LLM_PROVIDER`, `SUI_APP_REVISION`, `SUI_API_KEY`, `SUI_ALLOW_JIT_PROVISIONING` | profile・DB・provider は Compose 既定値を持つ。revision・API key・JIT は host で設定された場合だけ pass-through する。 |
 | `web.build.args` | `SUI_FRONTEND_API_BASE`, `SUI_RUNTIME_PROFILE`, `SUI_APP_REVISION` | API base は標準 Compose では `/api` に固定。profile と revision は frontend build 時に確定する。 |
 
-これとは別に、`SUI_WEB_PORT` は loopback 公開ポートを、`SUI_POSTGRES_DB` / `SUI_POSTGRES_USER` / `SUI_POSTGRES_PASSWORD` は db コンテナの vendor 設定と既定 DB URL の組み立てを制御します。上表にない backend 設定は、`Delivery surface` が `direct` の場合、標準 Compose へは届きません。必要な接続系設定は組織側 overlay で関連キーを一組として配送してください。キーごとの正本は [runtime_parameter_registry.md の Backend settings 表](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings)です。
+これとは別に、`SUI_WEB_PORT` はloopback公開ポートを、`SUI_POSTGRES_DB` / `SUI_POSTGRES_USER` / `SUI_POSTGRES_PASSWORD` はdbコンテナのvendor設定と既定DB URLの組み立てを制御します。上表にないbackend設定は、`Delivery surface` が `direct` の場合、標準Composeへは届きません。必要な接続系設定は組織側overlayで関連キーを一組として配送してください。キーごとの正本は [runtime_parameter_registry.md の Backend settings 表](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings)です。
 
-標準 Compose は同梱の `evaluation` 用スタックです。`SUI_RUNTIME_PROFILE` 自体は `enterprise-production` / `saas-multitenant` も backend と frontend へ配送できますが、標準 `api.environment` は両profileで起動必須の `SUI_ADMIN_API_KEY` を配送せず、SaaSで必要な外部adapter・OAuth・session系の `direct` キーも配送しません。そのためprofile名だけを変更しても起動はfail-fastします。これらのprofileをComposeで使う場合は、組織側overlayで各profileの必須キー一式を明示配送してください。
+標準Composeは同梱の `evaluation` 用スタックです。`SUI_RUNTIME_PROFILE` 自体は `enterprise-production` / `saas-multitenant` もbackendとfrontendへ配送できますが、標準 `api.environment` は両profileで起動必須の `SUI_ADMIN_API_KEY` を配送せず、SaaSで必要な外部adapter・OAuth・session系の `direct` キーも配送しません。そのためprofile名だけを変更しても起動はfail-fastします。これらのprofileをComposeで使う場合は、組織側overlayで各profileの必須キー一式を明示配送してください。
 
 ## 公開設定と内部adapter境界
 
@@ -61,7 +61,7 @@
 ## Runtime profiles（推奨プロファイル）
 
 実装既定値（未設定時に使われる値）と、運用で推奨する値は異なる場合があります。
-迷った場合は GitHub 上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。
+迷った場合はGitHub上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。
 
 - `local-dev`: **起動hard gateは追加なし**。SQLite + `SUI_LLM_PROVIDER=none` を推奨し、未登録header userを自動作成する場合だけJITを明示 `true`。
 - `evaluation`: **profile単体の起動hard gateは追加なし**。標準ComposeではPostgreSQL + LLM `none` + audit/access-control `noop` を推奨。
@@ -75,7 +75,7 @@
 
 ## 最小設定
 
-Docker Compose の既定値で起動する場合、通常は追加設定なしで動きます。明示するなら次を使います。
+Docker Composeの既定値で起動する場合、通常は追加設定なしで動きます。明示するなら次を使います。
 
 ```bash
 export SUI_LLM_PROVIDER=none
@@ -84,7 +84,7 @@ export SUI_DATABASE_URL='postgresql+asyncpg://sui_sensemaking:sui_sensemaking@db
 export SUI_WEB_PORT=8080
 ```
 
-ローカル SQLite で backend を直接起動する場合:
+ローカルSQLiteでbackendを直接起動する場合。
 
 ```bash
 export SUI_DATABASE_URL='sqlite:///./sui_sensemaking.db'
@@ -92,11 +92,11 @@ export SUI_RUNTIME_PROFILE=local-dev
 export SUI_LLM_PROVIDER=none
 ```
 
-最初の確認では `SUI_LLM_PROVIDER=none` を推奨します。AI 機能は使えませんが、意図しない外部サービスとの共有を避けながら、保存・表示・受け入れ確認の基本動作を確認できます。
+最初の確認では `SUI_LLM_PROVIDER=none` を推奨します。AI機能は使えませんが、意図しない外部サービスとの共有を避けながら、保存・表示・受け入れ確認の基本動作を確認できます。
 
 ## Backend 環境変数
 
-次の表は backend が受け付ける全環境変数です。
+次の表はbackendが受け付ける全環境変数です。
 
 | 変数 | 既定値 | 用途 |
 | --- | --- | --- |
@@ -173,7 +173,7 @@ export SUI_LLM_PROVIDER=none
 
 ## Compose / frontend build 環境変数
 
-次の表は、標準 Docker Compose が host から参照する公開キーと、frontend を直接 build するときに設定できる公開キーです。これらもすべて `SUI_` で始まります。標準 Compose で host から変更できない build 値は用途欄に明記します。
+次の表は、標準Docker Composeがhostから参照する公開キーと、frontendを直接buildするときに設定できる公開キーです。これらもすべて `SUI_` で始まります。標準Composeでhostから変更できないbuild値は用途欄に明記します。
 
 | 変数 | 既定値 | 用途 |
 | --- | --- | --- |
@@ -185,9 +185,9 @@ export SUI_LLM_PROVIDER=none
 | `SUI_APP_REVISION` | `unknown` | backend `/version`・全アプリケーションログと frontend 診断bundleを同じbuildへ結び付ける。標準 Compose は api へ pass-through し、web build へも渡す |
 | `SUI_FRONTEND_API_BASE` | `/api` | frontend direct build の API base path。標準 Compose は `/api` を固定注入するため host 側の値では変更できない |
 
-PostgreSQL image や frontend build tool の内部名は、sui-sensemaking の公開設定キーではありません。利用者は上の `SUI_*` だけを設定します。
+PostgreSQL imageやfrontend build toolの内部名は、sui-sensemakingの公開設定キーではありません。利用者は上の `SUI_*` だけを設定します。
 
-サードパーティイメージや build tool が内部的に別名を要求する場合でも、利用者が設定する sui-sensemaking の公開設定は `SUI_*` だけに統一します。
+サードパーティイメージやbuild toolが内部的に別名を要求する場合でも、利用者が設定するsui-sensemakingの公開設定は `SUI_*` だけに統一します。
 
 ## よく使う構成例
 
@@ -213,13 +213,13 @@ export SUI_WEB_PORT=8080
 export SUI_API_KEY='change-me'
 ```
 
-この値は例です。実運用では推測しにくい値を使い、Git にコミットしないでください。
+この値は例です。実運用では推測しにくい値を使い、Gitにコミットしないでください。
 
 ## Frontend の API 接続先
 
-frontend の API 接続先は `SUI_FRONTEND_API_BASE` で指定します。未設定なら `/api` を使います。値は same-origin の絶対 path として扱い、`/` 自体または単一の `/` で始まる path だけを受理します。`//host` のような network-path reference、backslash、query (`?`)、fragment (`#`) を含む値や相対 path は受理せず、frontend 側で `/api` にフォールバックします。`/` は root API base として扱います。
+frontendのAPI接続先は `SUI_FRONTEND_API_BASE` で指定します。未設定なら `/api` を使います。値はsame-originの絶対pathとして扱い、`/` 自体または単一の `/` で始まるpathだけを受理します。`//host` のようなnetwork-path reference、backslash、query (`?`)、fragment (`#`) を含む値や相対pathは受理せず、frontend側で `/api` にフォールバックします。`/` はroot API baseとして扱います。
 
-ローカル開発サーバーと Docker Compose の標準構成では `/api` が backend へ proxy されます。標準 Compose は同梱 Nginx の `location /api/` と一致させるため frontend build に `/api` を固定注入し、host 側で `SUI_FRONTEND_API_BASE` を変更しても標準 Compose の API base は変更しません。別 path を使う場合は frontend を直接 build し、その path を backend へ配送する reverse proxy も同時に構成してください。
+ローカル開発サーバーとDocker Composeの標準構成では `/api` がbackendへproxyされます。標準Composeは同梱Nginxの `location /api/` と一致させるためfrontend buildに `/api` を固定注入し、host側で `SUI_FRONTEND_API_BASE` を変更しても標準ComposeのAPI baseは変更しません。別pathを使う場合はfrontendを直接buildし、そのpathをbackendへ配送するreverse proxyも同時に構成してください。
 
 直接frontend buildを実行する場合は、build前に`SUI_RUNTIME_PROFILE`と`SUI_FRONTEND_API_BASE`を設定します。profile未指定時はlocal-firstの`local-dev`相当です。空文字、未知値、前後空白を含む値はsingle-tenantへfallbackせずblocked画面になります。
 
@@ -235,19 +235,19 @@ npm run build
 export SUI_API_KEY='change-me'
 ```
 
-`/healthz` / `/readyz` / `/version` は運用probeとして API キーなしで確認できます。`/admin/*` はbusiness API keyでは保護せず、`X-Admin-Api-Key` またはprovision capabilityによるcontrol-plane認可を使います。それ以外のbusiness-plane APIへアクセスする場合は次のヘッダーを付けます。
+`/healthz` / `/readyz` / `/version` は運用probeとしてAPIキーなしで確認できます。`/admin/*` はbusiness API keyでは保護せず、`X-Admin-Api-Key` またはprovision capabilityによるcontrol-plane認可を使います。それ以外のbusiness-plane APIへアクセスする場合は次のヘッダーを付けます。
 
 ```bash
 curl -H "X-API-Key: change-me" http://localhost:8080/api/docs/example
 ```
 
-ブラウザで動く同梱の画面（SPA）は `X-API-Key` を付与しません。そのため `SUI_API_KEY` を設定すると画面からの読み込み・保存は 401 になります。API キーは `curl` などプログラムからのアクセス保護を想定したものです。ブラウザでの動作検証では未設定（既定）のまま使い、ブラウザ配信自体を保護する場合は前段に認証 proxy を置いてください（[security.md](security.md) 参照）。
+ブラウザで動く同梱の画面（SPA）は `X-API-Key` を付与しません。そのため `SUI_API_KEY` を設定すると画面からの読み込み・保存は401になります。APIキーは `curl` などプログラムからのアクセス保護を想定したものです。ブラウザでの動作検証では未設定（既定）のまま使い、ブラウザ配信自体を保護する場合は前段に認証proxyを置いてください（[security.md](security.md) 参照）。
 
 > 注意: 標準 Docker Compose はこのキーをホスト環境から pass-through 配送します。`local-dev` / `evaluation` では未設定ならbusiness API keyは無効のままです。`enterprise-production` はこのキーを起動必須とするため未設定では起動しません。`saas-multitenant` はtrusted JWT/cookie identityを使うためbusiness key自体は起動必須ではありません（control plane用 `SUI_ADMIN_API_KEY` は別途必須です）。[runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings) 参照。
 
 ## local LLM を使う
 
-local provider は `<base_url>/generate` に JSON を POST します。応答は `{ "text": "..." }` を返す必要があります。
+local providerは `<base_url>/generate` にJSONをPOSTします。応答は `{ "text": "..." }` を返す必要があります。
 
 ```bash
 export SUI_LLM_PROVIDER=local
@@ -263,7 +263,7 @@ providerへ送るrequestはUTF-8 JSONで1MiB以下です。task、temperature、
 
 ## large-scale LLM を使う
 
-large-scale provider は既定で無効です。利用する場合は、昇格許可、明示 opt-in、allowlist をすべて設定します。
+large-scale providerは既定で無効です。利用する場合は、昇格許可、明示opt-in、allowlistをすべて設定します。
 
 ```bash
 export SUI_LLM_PROVIDER=large-scale
@@ -278,7 +278,7 @@ large-scaleではbase URL、model、allowlistをすべて設定し、base URLの
 
 ## アクセス制御を使う
 
-既定の `noop` は、認可判定を外部の PDP に任せません。外部 PDP を使う場合は、方式（adapter）、失敗時の扱い（fail-safe）、接続先（endpoint）をセットで設定します。
+既定の `noop` は、認可判定を外部のPDPに任せません。外部PDPを使う場合は、方式（adapter）、失敗時の扱い（fail-safe）、接続先（endpoint）をセットで設定します。
 
 ```bash
 export SUI_ACCESS_CONTROL_ADAPTER=external_http
@@ -301,7 +301,7 @@ export SUI_DOCUMENT_POLICY_BINDING_HTTP_API_KEY='set-in-secret-store'
 export SUI_DOCUMENT_POLICY_BINDING_HTTP_TIMEOUT_SECONDS=1.5
 ```
 
-接続先はcredential、query、fragmentを含まないHTTPS URLにします。HTTPは`localhost`、`127.0.0.1`、`::1`だけで利用できます。resolverを`none`へ戻す場合はendpoint/API keyも同時に未設定へ戻し、`none`のままHTTP設定だけを残す構成は起動時に拒否されます。`saas-multitenant` では `external_http` が必須で、起動前にexternal componentを検査し、`ServerOwnedDocumentResourceResolver` の policy binding resolver として配線されます。このresolverだけでSaaSが成立するわけではなく、trusted auth edge、external access control、tenant capability resolver等の必須条件も同時に満たす必要があります。
+接続先はcredential、query、fragmentを含まないHTTPS URLにします。HTTPは`localhost`、`127.0.0.1`、`::1`だけで利用できます。resolverを`none`へ戻す場合はendpoint/API keyも同時に未設定へ戻し、`none`のままHTTP設定だけを残す構成は起動時に拒否されます。`saas-multitenant` では `external_http` が必須で、起動前にexternal componentを検査し、`ServerOwnedDocumentResourceResolver` のpolicy binding resolverとして配線されます。このresolverだけでSaaSが成立するわけではなく、trusted auth edge、external access control、tenant capability resolver等の必須条件も同時に満たす必要があります。
 
 ### Tenant capability resolver
 
@@ -323,13 +323,13 @@ curl -fsS http://localhost:8080/api/healthz
 docker compose logs api --tail=100
 ```
 
-直接 backend を起動している場合:
+直接backendを起動している場合。
 
 ```bash
 curl -fsS http://127.0.0.1:8000/healthz
 ```
 
-設定ミスで backend が起動しない場合、`api` log に validation error が出ます。特に旧キー、provider 名、large-scale の opt-in 不足を確認してください。
+設定ミスでbackendが起動しない場合、`api` logにvalidation errorが出ます。特に旧キー、provider名、large-scaleのopt-in不足を確認してください。
 
 ## 関連文書
 

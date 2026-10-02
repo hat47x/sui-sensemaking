@@ -10,9 +10,9 @@
 ### AC/DoD不足の補完提案
 
 - AC補完-1: docs-check必須対象（必須）/ CI拡張対象（警告）/ 例外承認対象外を同時に判定可能な境界を明示する。
-- AC補完-2: ADR-0023の可読性基線（RBL-1〜RBL-5）と矛盾しないことを Verify で明示する。
+- AC補完-2: ADR-0023の可読性基線（RBL-1〜RBL-5）と矛盾しないことをVerifyで明示する。
 - AC補完-3: 例外承認の責務境界はADR-0025へ委譲し、本ADRで固定しない。
-- DoD補完-1: Context / Decision / Consequences / Traceability の4章で境界が一致している。
+- DoD補完-1: Context / Decision / Consequences / Traceabilityの4章で境界が一致している。
 - DoD補完-2: Self-Correction上限3回と停止条件を明示している。
 
 ### 合意ログ
@@ -23,68 +23,68 @@
 
 ## Context
 
-DOC-OPS-04 の ADR候補C では、docs-check は運用されている一方で、どこまでを「必須（merge blocking）」とし、どこからを「CI拡張の審査対象」とするかの境界が統一されていない。
+DOC-OPS-04のADR候補Cでは、docs-checkは運用されている一方で、どこまでを「必須（merge blocking）」とし、どこからを「CI拡張の審査対象」とするかの境界が統一されていない。
 
-また、Issue 側の暫定整理では次の前提が示されている。
+また、Issue側の暫定整理では次の前提が示されている。
 
-- `01_Plans` の Decision 文書（ADR / issue meta）および `project-progress-dashboard.md` 更新は docs-check 必須化候補。
-- `04_Documentation/` は対外公開するユーザ/開発者向け文書として Gist リリースされる前提が追加され、公開安全性・単体読解性・再現可能性の最低基準が必要になった。
-- link/metadata strict などの CI 拡張は ADR-C で境界判断する。
+- `01_Plans` のDecision文書（ADR / issue meta）および `project-progress-dashboard.md` 更新はdocs-check必須化候補。
+- `04_Documentation/` は対外公開するユーザ/開発者向け文書としてGistリリースされる前提が追加され、公開安全性・単体読解性・再現可能性の最低基準が必要になった。
+- link/metadata strictなどのCI拡張はADR-Cで境界判断する。
 - 境界が曖昧なままでは、軽微修正に過剰な待機コストが発生するか、逆に回帰検知が弱くなる。
 
-加えて、ADR-0022（DOC-OPS-04 情報I/F）準拠の観点では、C（本ADR）は「品質ゲート境界のみ」を扱い、readability 本体（B）および変更統治責務（D）へ越境しないことが必須である。
+加えて、ADR-0022（DOC-OPS-04情報I/F）準拠の観点では、C（本ADR）は「品質ゲート境界のみ」を扱い、readability本体（B）および変更統治責務（D）へ越境しないことが必須である。
 
 ## Decision
 
-本ADRは、DOC-OPS-04 における品質ゲートを **Boundary-1（docs-check 必須）** と **Boundary-2（CI拡張の段階適用）** に分離し、判定責務を明確化する。
+本ADRは、DOC-OPS-04における品質ゲートを **Boundary-1（docs-check必須）** と **Boundary-2（CI拡張の段階適用）** に分離し、判定責務を明確化する。
 
 ### 1) AC/DoD 不足補完（本ADR内合意）
 
 本ADRでは、Issueで抽出された不足を以下で補完し、ここに合意事項として固定する。
 
 - AC補完-1（判定入力の再現性）:
-  - docs-check 判定に使用したコマンドを Verify へ明記する。
+  - docs-check判定に使用したコマンドをVerifyへ明記する。
 - AC補完-2（境界の可判定性）:
-  - docs-check 必須対象と CI拡張審査対象をファイル種別ベースで明記する。
+  - docs-check必須対象とCI拡張審査対象をファイル種別ベースで明記する。
 - AC補完-3（非目標の分離）:
-  - readability 規約の本文定義と、例外承認の責務分離設計は本ADRで確定しない。
+  - readability規約の本文定義と、例外承認の責務分離設計は本ADRで確定しない。
 
 DoD（本ADR完了条件）:
 
-- DoD-1: Context / Decision / Consequences の3章で同一境界が読み取れる。
-- DoD-2: Verify で I/F準拠・境界明確性・非目標明記を検査できる。
-- DoD-3: Self-Correction 上限3回と停止条件が記載されている。
+- DoD-1: Context / Decision / Consequencesの3章で同一境界が読み取れる。
+- DoD-2: VerifyでI/F準拠・境界明確性・非目標明記を検査できる。
+- DoD-3: Self-Correction上限3回と停止条件が記載されている。
 
 ### 2) 境界定義
 
 #### Boundary-1: docs-check 必須（merge blocking）
 
-次の更新では docs-check を必須とする。
+次の更新ではdocs-checkを必須とする。
 
 - `01_Plans/adr/*.md`（ADR本文の更新/新規）
-- `01_Plans/issues/*.md`（issue meta を含む運用メモ）
+- `01_Plans/issues/*.md`（issue metaを含む運用メモ）
 - `01_Plans/project-progress-dashboard.md`
-- `04_Documentation/*.md` のうち、Gist 等で対外公開するユーザ/開発者向け文書
+- `04_Documentation/*.md` のうち、Gist等で対外公開するユーザ/開発者向け文書
 
-判定規則:
+判定規則は次のとおりです。
 
-- docs-check が fail の場合は merge 不可（blocking）。
-- `04_Documentation/*.md` を公開対象として更新する場合は、docs-check に加えて `01_Plans/documentation_quality.md` の Mandatory（QG-1〜QG-6）を満たさない限り release 不可（blocking）とする。
-- ただし例外承認の制度設計・責務分離そのものは ADR-D の対象であり、本ADRでは確定しない。
+- docs-checkがfailの場合はmerge不可（blocking）。
+- `04_Documentation/*.md` を公開対象として更新する場合は、docs-checkに加えて `01_Plans/documentation_quality.md` のMandatory（QG-1〜QG-6）を満たさない限りrelease不可（blocking）とする。
+- ただし例外承認の制度設計・責務分離そのものはADR-Dの対象であり、本ADRでは確定しない。
 
 #### Boundary-2: CI拡張（段階適用の審査対象）
 
-次は「導入可否を審査する対象」とし、本ADR時点で一律 mandatory にはしない。
+次は「導入可否を審査する対象」とし、本ADR時点で一律mandatoryにはしない。
 
 - link check strict
 - metadata strict
-- prose lint / style lint / glossary drift のような文体・用語自動検証
-- その他 docs-check 以外の文書品質自動検証
+- prose lint / style lint / glossary driftのような文体・用語自動検証
+- その他docs-check以外の文書品質自動検証
 
-判定規則:
+判定規則は次のとおりです。
 
-- CI拡張の pass/fail は観測・記録対象に留める。
-- mandatory への昇格判断は、運用実績を踏まえて後続判断とする。
+- CI拡張のpass/failは観測・記録対象に留める。
+- mandatoryへの昇格判断は、運用実績を踏まえて後続判断とする。
 
 ### 2.1) 2026-07-15 amendment: docs-contract適用matrix
 
@@ -114,7 +114,7 @@ DoD（本ADR完了条件）:
 
 ### 3) 非目標（越境禁止）
 
-- Readability 基準本文（読者前提・文体・可読性スコア閾値）の規約化。
+- Readability基準本文（読者前提・文体・可読性スコア閾値）の規約化。
 - 変更統治責務（誰が承認し、誰が例外を発行するか）の確定。
 - 統合ファイル3点の更新ポリシー変更。
 
@@ -130,20 +130,20 @@ DoD（本ADR完了条件）:
 
 ### 期待される効果
 
-- docs-check の merge blocking 境界が先に固定され、最低限の回帰防止が可能になる。
+- docs-checkのmerge blocking境界が先に固定され、最低限の回帰防止が可能になる。
 - `04_Documentation/` を公開Gistとして扱う場合の最低品質基準が固定され、公開事故（情報漏えい・単体読解不能・手順不備）を減らせる。
 - CI拡張を段階適用とすることで、軽微修正への過剰コストを抑制できる。
 - B（readability）/D（governance）との責務衝突を避け、ADR間の比較可能性を維持できる。
 
 ### 想定される制約
 
-- CI拡張が mandatory でない期間は、一部の品質論点がレビュー依存で残る。
+- CI拡張がmandatoryでない期間は、一部の品質論点がレビュー依存で残る。
 - 境界妥当性の再評価を定期的に行わないと、暫定運用が長期化する。
 
 ## Execute
 
-- 必須（Mandatory）/警告（Warning）/例外（Exception Boundary）を Boundary-1/2/3 として分離した。
-- ADR-0023のRBL基線を前提に、`04_Documentation/` 向け公開品質基準は別紙 `01_Plans/documentation_quality.md` の Mandatory（QG-1〜QG-6）へ切り出した。
+- 必須（Mandatory）/警告（Warning）/例外（Exception Boundary）をBoundary-1/2/3として分離した。
+- ADR-0023のRBL基線を前提に、`04_Documentation/` 向け公開品質基準は別紙 `01_Plans/documentation_quality.md` のMandatory（QG-1〜QG-6）へ切り出した。
 - 統合ファイル3点を更新せず、ADR-0024単体で境界を確定した。
 
 ## Verify
@@ -151,13 +151,13 @@ DoD（本ADR完了条件）:
 I/F準拠・境界明確性・非目標明記を確認するため、以下を検査する。
 
 1. I/F準拠:
-   - Context / Decision / Consequences の3章が存在し、境界記述が整合していること。
-2. 境界明確性:
-   - Boundary-1（docs-check mandatory）と Boundary-2（CI拡張審査対象）が分離されていること。
-3. 非目標明記:
+   - Context / Decision / Consequencesの3章が存在し、境界記述が整合していること。
+2. 境界明確性は次のとおりです。
+   - Boundary-1（docs-check mandatory）とBoundary-2（CI拡張審査対象）が分離されていること。
+3. 非目標明記は次のとおりです。
    - readability本体 / 変更統治責務が本ADRの非目標に記載されていること。
-4. 公開文書境界:
-   - `04_Documentation/*.md` を公開対象にした場合、`01_Plans/documentation_quality.md` の Mandatory 参照が存在すること。
+4. 公開文書境界は次のとおりです。
+   - `04_Documentation/*.md` を公開対象にした場合、`01_Plans/documentation_quality.md` のMandatory参照が存在すること。
 5. docs-contract amendment:
    - root/01/02-current/02-history/04-publicの適用matrix、`DC-*` rule ID、blocking有効化条件が存在すること。
    - `DC-LNK-001`は内部相対参照先の存在確認に限定され、外部URL到達性と文体lintがBoundary-2に残ること。
@@ -170,8 +170,8 @@ Self-Correction（最大3回）:
 
 停止条件（Fail-safe）:
 
-- Self-Correction が3回を超過。
-- ADR-0022 のI/F語彙変更兆候を検知。
+- Self-Correctionが3回を超過。
+- ADR-0022のI/F語彙変更兆候を検知。
 - 範囲外干渉（統合ファイル3点や他ADR編集）が必要と判明。
 
 判定: **Self-Correction 0回で充足**（停止条件非該当）。
@@ -184,7 +184,7 @@ Self-Correction（最大3回）:
 - 次Phase開始条件（ADR-0025）:
   1. 本ADRのBoundary-1/2/3定義を変更しない。
   2. 変更統治ADRで品質ゲート境界へ越境しない。
-- 変更影響:
+- 変更影響は次のとおりです。
   - 以後のDOC-OPS-04文書変更は「必須/警告/例外」の3分類で説明責務を持つ。
 
 ## Traceability

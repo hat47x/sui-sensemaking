@@ -5,15 +5,15 @@
 
 ## Nix 開発環境（プロジェクト標準）
 
-ローカルのツールチェーン（Node 20 / Python 3.12 / Ruff）は、`03_Implement/flake.nix` で一元管理します。バージョンは `03_Implement/flake.lock` で固定され、全員が同一環境になります。frontend/backend の Dockerfile（`node:20-alpine` / `python:3.12-slim`）と揃えています。
+ローカルのツールチェーン（Node 20 / Python 3.12 / Ruff）は、`03_Implement/flake.nix` で一元管理します。バージョンは `03_Implement/flake.lock` で固定され、全員が同一環境になります。frontend/backendのDockerfile（`node:20-alpine` / `python:3.12-slim`）と揃えています。
 
-1. Nix を導入します（WSL2 / systemd 環境で確認済み。flakes が既定で有効になる Determinate Systems 版を推奨。`sudo` のパスワード入力を求められます）。
+1. Nixを導入します（WSL2 / systemd環境で確認済み。flakesが既定で有効になるDeterminate Systems版を推奨。`sudo` のパスワード入力を求められます）。
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 ```
 
-公式インストーラを使う場合は、導入後に flakes を有効化します。
+公式インストーラを使う場合は、導入後にflakesを有効化します。
 
 ```bash
 sh <(curl -L https://nixos.org/nix/install) --daemon
@@ -29,25 +29,25 @@ cd /path/to/sui-sensemaking
 nix develop ./03_Implement
 ```
 
-flakes を未有効化のまま一時的に使う場合は次の形でも実行できます。
+flakesを未有効化のまま一時的に使う場合は次の形でも実行できます。
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' develop ./03_Implement
 ```
 
-3. （任意）direnv を使うと `03_Implement` 以下に入ったとき自動的にこのシェルへ切り替わります。`.envrc` は追跡しないため、テンプレートをコピーして有効化します。
+3. （任意）direnvを使うと `03_Implement` 以下に入ったとき自動的にこのシェルへ切り替わります。`.envrc` は追跡しないため、テンプレートをコピーして有効化します。
 
 ```bash
 cp 03_Implement/.envrc.example 03_Implement/.envrc
 cd 03_Implement && direnv allow
 ```
 
-補足:
+補足は次のとおりです。
 
-- Docker はホスト側（Docker Desktop / WSL 統合）で用意します。`flake.nix` には含めません。統合起動（`docker compose up --build`）はローカルの Node/Python 不要で、Docker だけで動きます。
-- WSL2 から Windows ファイルシステム上（`/mnt/c/...`）の本リポジトリで `npm ci` を実行すると、9p 経由の展開でファイルが壊れて失敗することがあります（esbuild の install.js が `SyntaxError` になる等）。その場合はリポジトリを WSL ネイティブ FS（例 `~/`）に置いて Node 系コマンドを実行するか、統合確認は Docker（`docker compose up --build`）を使ってください。`python` / `ruff` や `nix develop` 自体は `/mnt/c` 上でも動作します。
-- WSL2 側の git から `/mnt/c/...` 上のリポジトリを参照すると、改行コード（`core.autocrlf`）やファイルモード（`core.filemode`）の差により、実体のない「変更あり」が多数表示されることがあります（実際の変更ではありません）。コミット対象の正本は Windows 側 git（`git status` が clean を示す）です。差分の有無を判断する際は Windows git を優先し、WSL git の表示のみで `git add -A` 等を行わないでください。WSL 側で常用する場合は `git config core.autocrlf false` と `git config core.filemode false` を設定すると誤検出を抑えられます。
-- Playwright（`npx playwright test`）はブラウザバイナリの追加取得が必要で、Nix シェル単体では動かないことがあります。E2E は Docker か別途のブラウザ導入で実行してください。
+- Dockerはホスト側（Docker Desktop / WSL統合）で用意します。`flake.nix` には含めません。統合起動（`docker compose up --build`）はローカルのNode/Python不要で、Dockerだけで動きます。
+- WSL2からWindowsファイルシステム上（`/mnt/c/...`）の本リポジトリで `npm ci` を実行すると、9p経由の展開でファイルが壊れて失敗することがあります（esbuildのinstall.jsが `SyntaxError` になる等）。その場合はリポジトリをWSLネイティブFS（例 `~/`）に置いてNode系コマンドを実行するか、統合確認はDocker（`docker compose up --build`）を使ってください。`python` / `ruff` や `nix develop` 自体は `/mnt/c` 上でも動作します。
+- WSL2側のgitから `/mnt/c/...` 上のリポジトリを参照すると、改行コード（`core.autocrlf`）やファイルモード（`core.filemode`）の差により、実体のない「変更あり」が多数表示されることがあります（実際の変更ではありません）。コミット対象の正本はWindows側git（`git status` がcleanを示す）です。差分の有無を判断する際はWindows gitを優先し、WSL gitの表示のみで `git add -A` 等を行わないでください。WSL側で常用する場合は `git config core.autocrlf false` と `git config core.filemode false` を設定すると誤検出を抑えられます。
+- Playwright（`npx playwright test`）はブラウザバイナリの追加取得が必要で、Nixシェル単体では動かないことがあります。E2EはDockerか別途のブラウザ導入で実行してください。
 
 ## 主要コマンド（本リポジトリ準拠）
 

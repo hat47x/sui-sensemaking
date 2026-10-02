@@ -1,19 +1,19 @@
 # Runtime Parameter Registry
 
-この文書は sui-sensemaking の環境変数と実行時パラメータの単一正本です。実装、Docker Compose、利用者向け文書で設定キーを追加・変更・削除する場合は、先にこの表を更新します。
+この文書はsui-sensemakingの環境変数と実行時パラメータの単一正本です。実装、Docker Compose、利用者向け文書で設定キーを追加・変更・削除する場合は、先にこの表を更新します。
 
 ## 基本ルール
 
 1. 利用者または運用者が設定する環境変数は、すべて例外なく `SUI_` で始めます。
 2. 接頭辞のない旧キーや、別接頭辞の互換キーは公開設定として扱いません。
-3. サードパーティコンテナや build tool が内部的に別名を必要とする場合でも、sui-sensemaking の公開設定キーは `SUI_*` だけです。実装側で内部名へ写像します。
-4. boolean は肯定形で命名し、既定値と安全側の意味を固定します。
-5. 04 文書には「主要なもの」だけではなく、この文書に載る公開環境変数をすべて記載します。
-6. サードパーティイメージや build tool が要求する内部名は、sui-sensemaking の公開設定キーではありません。必要な内部変換は `01_Plans/adr/ADR-0029-third-party-runtime-env-boundary.md` で扱い、利用者は `SUI_*` だけを設定します。
+3. サードパーティコンテナやbuild toolが内部的に別名を必要とする場合でも、sui-sensemakingの公開設定キーは `SUI_*` だけです。実装側で内部名へ写像します。
+4. booleanは肯定形で命名し、既定値と安全側の意味を固定します。
+5. 04文書には「主要なもの」だけではなく、この文書に載る公開環境変数をすべて記載します。
+6. サードパーティイメージやbuild toolが要求する内部名は、sui-sensemakingの公開設定キーではありません。必要な内部変換は `01_Plans/adr/ADR-0029-third-party-runtime-env-boundary.md` で扱い、利用者は `SUI_*` だけを設定します。
 
 ## Runtime profiles
 
-この表は、代表的な実行環境ごとの operating condition を示します。`SUI_RUNTIME_PROFILE`でprofile名を明示し、未指定時は`local-dev`を使います。`Startup-required conditions` はそのprofileを起動するために満たす hard gate、`Recommended / conditional settings` は安全・標準として推奨する値または特定機能を使う場合だけ必要な値です。profile名だけで秘密値や接続先を補完しません。実装既定値を変更する場合や、公開設定キーを追加・改名する場合はADRで扱います。
+この表は、代表的な実行環境ごとのoperating conditionを示します。`SUI_RUNTIME_PROFILE`でprofile名を明示し、未指定時は`local-dev`を使います。`Startup-required conditions` はそのprofileを起動するために満たすhard gate、`Recommended / conditional settings` は安全・標準として推奨する値または特定機能を使う場合だけ必要な値です。profile名だけで秘密値や接続先を補完しません。実装既定値を変更する場合や、公開設定キーを追加・改名する場合はADRで扱います。
 
 | Profile | Purpose | Startup-required conditions | Recommended / conditional settings | Notes |
 |---|---|---|---|---|
@@ -22,11 +22,11 @@
 | `enterprise-production` | 企業・行政の本番相当で運用する | `SUI_ADMIN_API_KEY=<secret>`, `SUI_API_KEY=<secret>` | 推奨: `SUI_ALLOW_JIT_PROVISIONING=false`, `SUI_LLM_PROVIDER=none`, `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE=read_only` または `deny` | 2つのAPI keyは別値で必須。未設定なら `Settings()` 構築時に起動拒否する。HTTP連携を使う場合は接続先、timeout、fail-safe、秘密情報管理を同時に確認する。 |
 | `saas-multitenant` | 相互に信頼しない複数tenantを同じサービスへ収容する | `SUI_ADMIN_API_KEY=<secret>`, `SUI_DATABASE_URL=<PostgreSQL URL>`, `SUI_ALLOW_JIT_PROVISIONING=false`, `SUI_ACCESS_CONTROL_ADAPTER=external_http`, `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_ENDPOINT=<HTTPS URL>`, `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE=deny`, `SUI_DOCUMENT_POLICY_BINDING_RESOLVER=external_http`, `SUI_DOCUMENT_POLICY_BINDING_HTTP_ENDPOINT=<HTTPS URL>`, `SUI_TENANT_CAPABILITY_RESOLVER=external_http`, `SUI_TENANT_CAPABILITY_HTTP_ENDPOINT=<HTTPS URL>`, `SUI_JWT_ALGORITHMS` の非空allowlist（未指定は既定 `RS256,ES256`、設定時は既知の非HMAC asymmetric algorithmのみ）, `SUI_TENANT_CLAIM_NAME` の検証済み非空claim名（未指定は既定 `tenant_ref`）, `SUI_SAAS_OAUTH_BROKER_HTTP_AUTHORIZE_ENDPOINT=<HTTPS URL>`, `SUI_SAAS_AUTH_SESSION_HASH_KEY=<64 lowercase hex>` | OAuth BFF request時の条件付き設定: `/session/login` 開始には `SUI_SAAS_OAUTH_BROKER_HTTP_REDIRECT_URI`, `SUI_SAAS_OAUTH_BROKER_HTTP_CLIENT_ID`。`/session/callback` の code 交換には `SUI_SAAS_OAUTH_BROKER_HTTP_TOKEN_ENDPOINT`, `SUI_SAAS_OAUTH_BROKER_HTTP_REDIRECT_URI`, `SUI_SAAS_OAUTH_BROKER_HTTP_CLIENT_ID`, `SUI_SAAS_OAUTH_BROKER_HTTP_CLIENT_SECRET` の4項目完全セット | `TrustedSaasRuntimePolicy.validate()` と lifespan preflight がstartup hard gateを検証する。active IdP の存在はDB初期化後に診断するが、0件でもprocess startupは拒否せずwarningを出す。control-plane credentialで最初のproviderを登録でき、登録までは認証requestが失敗する。login開始用2項目の欠損は`/session/login`を503、callback用4項目の欠損は`/session/callback`を503でfail-closedする。 |
 
-Profile に関係なく、利用者が設定する公開環境変数は例外なく `SUI_*` で始めます。サードパーティが別名を要求する場合は、実装または deployment adapter が内部で写像します。
+Profileに関係なく、利用者が設定する公開環境変数は例外なく `SUI_*` で始めます。サードパーティが別名を要求する場合は、実装またはdeployment adapterが内部で写像します。
 
 ### Profile default vs recommendation（既定値と推奨値）
 
-運用ドリフトを防ぐため、実装既定値（未設定時）と profile 推奨値（運用上の標準）を区別して扱います。
+運用ドリフトを防ぐため、実装既定値（未設定時）とprofile推奨値（運用上の標準）を区別して扱います。
 
 | Key | Implementation default | Enterprise recommendation | Rationale |
 | --- | --- | --- | --- |
@@ -45,14 +45,14 @@ Profile に関係なく、利用者が設定する公開環境変数は例外な
 
 1. `local-dev` を選ぶ条件
    - 目的が機能開発または再現テストであり、外部連携が不要。
-   - DB を SQLite でよい（`SUI_DATABASE_URL=sqlite:///./sui_sensemaking.db`）。
+   - DBをSQLiteでよい（`SUI_DATABASE_URL=sqlite:///./sui_sensemaking.db`）。
 2. `evaluation` を選ぶ条件
-   - Docker Compose 上で利用者評価を行い、PostgreSQL や Nginx 経由の導線を含めて検証したい。
+   - Docker Compose上で利用者評価を行い、PostgreSQLやNginx経由の導線を含めて検証したい。
    - 外部監査/外部PDPは原則無効（`noop`）で、必要時のみ限定有効化する。
 3. `enterprise-production` を選ぶ条件
-   - `SUI_ADMIN_API_KEY` と `SUI_API_KEY` を別値で設定できる。両方とも Settings の起動hard gateであり、欠損時はfail-fastする。
-   - 認証・認可・監査の責務分離が必要で、障害時の fail-safe を `read_only` か `deny` で固定する。
-   - JIT provisioning を無効化し、運用承認済みの接続先・秘密管理がある。
+   - `SUI_ADMIN_API_KEY` と `SUI_API_KEY` を別値で設定できる。両方ともSettingsの起動hard gateであり、欠損時はfail-fastする。
+   - 認証・認可・監査の責務分離が必要で、障害時のfail-safeを `read_only` か `deny` で固定する。
+   - JIT provisioningを無効化し、運用承認済みの接続先・秘密管理がある。
 4. `saas-multitenant` を選ぶ条件
    - `SUI_ADMIN_API_KEY` を設定し、PostgreSQL共有認証状態、trusted SaaS auth edge、external access control、external document binding、external tenant capability、JIT無効、`deny` fail-safe、SaaS OAuth broker authorize endpoint、auth-session hash keyなど、`TrustedSaasRuntimePolicy` の必須条件を満たす。
    - 起動前preflightのhard gateを通過できる。hard gateが1つでも欠ける場合はfail-fastし、single-tenant profileへfallbackしない。active IdP存在検査はpost-DB-initのwarning診断であり、provider 0件自体はstartup拒否条件ではない。
@@ -70,29 +70,29 @@ Profile に関係なく、利用者が設定する公開環境変数は例外な
 
 - 命名ゲート: 公開キーは `SUI_*` のみ。
 - 既定値ゲート: `Default` 列と実装既定値が一致しない変更は差し戻す。
-- 境界ゲート: `POSTGRES_*` など vendor 名は private adapter 扱いとし、公開文書で利用者入力として記載しない。
-- プロファイルゲート: profile 変更は `runtime profiles` 表と同時に理由（Purpose/Notes）を更新する。
+- 境界ゲート: `POSTGRES_*` などvendor名はprivate adapter扱いとし、公開文書で利用者入力として記載しない。
+- プロファイルゲート: profile変更は `runtime profiles` 表と同時に理由（Purpose/Notes）を更新する。
 
 ## Prefix migration governance（互換期間と切替条件）
 
-- Backend runtime key は `ADR-0021` に基づき **互換期間なし** で `SUI_*` へ一括切替済みです。
+- Backend runtime keyは `ADR-0021` に基づき **互換期間なし** で `SUI_*` へ一括切替済みです。
 - 旧キー（接頭辞なし/別接頭辞）は公開契約外であり、受理しません。
 - 切替条件（Go/No-Go）:
-  1. `runtime_parameter_registry.md`、`deployment.md`、Compose 定義で公開キーが一致していること。
-  2. backend settings validation が旧キー単独・新旧混在を拒否すること。
+  1. `runtime_parameter_registry.md`、`deployment.md`、Compose定義で公開キーが一致していること。
+  2. backend settings validationが旧キー単独・新旧混在を拒否すること。
   3. runbook/公開文書で利用者向けキーが `SUI_*` のみであること。
-- 破壊的な再移行（例: 旧キー互換の再導入、公開キー改名）は新規 ADR を必須とします。
+- 破壊的な再移行（例: 旧キー互換の再導入、公開キー改名）は新規ADRを必須とします。
 
 ## Backend settings
 
 `Delivery surface` は、現時点でそのキーがどの起動面へ実際に届くかを示します（ENV-COMPOSE-01）。
 
-- `direct` — backend を直接起動する場合にのみ有効。標準 Compose・overlay のいずれからも配送されない。
+- `direct` — backendを直接起動する場合にのみ有効。標準Compose・overlayのいずれからも配送されない。
 - `base Compose` — 標準 `docker-compose.yml` の `api.environment` が配送する。
-- `llm-stub overlay` — `docker-compose.llm-stub.yml`（検証専用 overlay。本番相当の利用者向けデプロイでは使わない）からのみ配送される。
+- `llm-stub overlay` — `docker-compose.llm-stub.yml`（検証専用overlay。本番相当の利用者向けデプロイでは使わない）からのみ配送される。
 - `fixed` — `Settings.validate_llm_provider_guards` が既定値以外を拒否する固定契約値。運用者が変更する対象ではない。
 
-`direct` と記載されたキーは、`04_Documentation/configuration.md` 等で Compose 起動時の設定例として案内しても実際には `api` コンテナへ届かない。標準 `docker-compose.yml` は `SUI_API_KEY` と `SUI_ALLOW_JIT_PROVISIONING` をホスト環境からの pass-through（値なし `environment` entry）として配送する（ENV-COMPOSE-01 Phase 2）。ホスト側で未設定の場合はコンテナ内でも未設定のまま（空文字は注入しない）で、実装既定値を維持する。監査HTTP・外部PDP・large-scale LLM・local LLM の接続系キーは標準 Compose では unsupported であり、必要な場合は組織側 overlay で関連キーを一組として配送する。
+`direct` と記載されたキーは、`04_Documentation/configuration.md` 等でCompose起動時の設定例として案内しても実際には `api` コンテナへ届かない。標準 `docker-compose.yml` は `SUI_API_KEY` と `SUI_ALLOW_JIT_PROVISIONING` をホスト環境からのpass-through（値なし `environment` entry）として配送する（ENV-COMPOSE-01 Phase 2）。ホスト側で未設定の場合はコンテナ内でも未設定のまま（空文字は注入しない）で、実装既定値を維持する。監査HTTP・外部PDP・large-scale LLM・local LLMの接続系キーは標準Composeではunsupportedであり、必要な場合は組織側overlayで関連キーを一組として配送する。
 
 `Probe` 列は、設定後に秘密値を出力せず効果を確認する方法の説明である。`SUI_API_KEY` と `SUI_ALLOW_JIT_PROVISIONING` の代表probeは `03_Implement/deploy/tools/verify_env_delivery.sh`（Docker利用可能なローカル環境向け、CIでは実行しない）として実装済み。他キーの手順は記載のみで、自動テストとしては未実装（後続作業）。
 
@@ -183,7 +183,7 @@ Profile に関係なく、利用者が設定する公開環境変数は例外な
 
 ## Private adapter boundary (non-public keys)
 
-以下は公開設定キーではなく、third-party adapter が内部で使用する名前です。利用者は設定しません。
+以下は公開設定キーではなく、third-party adapterが内部で使用する名前です。利用者は設定しません。
 
 | Internal name | Adapter owner | Source public key | Scope |
 | --- | --- | --- | --- |
@@ -193,7 +193,7 @@ Profile に関係なく、利用者が設定する公開環境変数は例外な
 
 ## Verification harness keys (non-public)
 
-以下は製品ランタイムの公開設定ではなく、ローカル検証・CI・リハーサル用の環境変数です。利用者向けの 04 文書では公開ランタイム設定として扱いませんが、名前の例外を作らないため `SUI_*` を使います。
+以下は製品ランタイムの公開設定ではなく、ローカル検証・CI・リハーサル用の環境変数です。利用者向けの04文書では公開ランタイム設定として扱いませんが、名前の例外を作らないため `SUI_*` を使います。
 
 | Key | Owner | Default | Purpose |
 | --- | --- | --- | --- |
@@ -227,11 +227,11 @@ Profile に関係なく、利用者が設定する公開環境変数は例外な
 - 外部PDP、監査HTTP、Document policy binding、tenant capability、LLMのoutbound HTTPは3xx redirectを追跡しません。検証済みendpointやhost allowlistをredirect先で迂回させず、固定bearer、tenant context、policyRef、promptを別の接続先へ転送しません。
 - `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_AUTH_MODE` は `none`, `oidc`, `saml` だけを許可します。
 - `SUI_REVIEWER_REF_RESOLVER_ADAPTER` は `user_id`, `sso_subject` だけを許可します。
-- CE4 の固定契約値は、実装で安全側に検証します。
+- CE4の固定契約値は、実装で安全側に検証します。
 
 ## Operating rule
 
-公開文書、runbook、Docker Compose の利用者入力、CI 設定例では、上記以外の環境変数名を sui-sensemaking の設定キーとして記載しません。内部実装上の写像が必要な場合も、利用者には `SUI_*` のみを提示します。
+公開文書、runbook、Docker Composeの利用者入力、CI設定例では、上記以外の環境変数名をsui-sensemakingの設定キーとして記載しません。内部実装上の写像が必要な場合も、利用者には `SUI_*` のみを提示します。
 
 
 ### Public contract boundary (ENV-CONFIG-DRIFT-01)
@@ -253,39 +253,39 @@ Profile に関係なく、利用者が設定する公開環境変数は例外な
 
 ## Drift recurrence prevention checklist（ENV-CONFIG-DRIFT-01 / ENV-ARCH-01 / ENV-PROFILE-01）
 
-次のチェックは、runtime parameter contract 変更時に毎回実施します。
+次のチェックは、runtime parameter contract変更時に毎回実施します。
 
 1. **Naming**: 追加・変更する公開キーが `SUI_*` で始まること。
 2. **Defaults**: `Default` 列と実装既定値（settings/frontend build）が一致していること。
-3. **Boundary**: vendor 名（例: `POSTGRES_*`）を public key として公開文書に露出していないこと。
+3. **Boundary**: vendor名（例: `POSTGRES_*`）をpublic keyとして公開文書に露出していないこと。
 4. **Profiles**: `local-dev` / `evaluation` / `enterprise-production` の推奨差分が変更理由と整合し、`saas-multitenant`は必須policy・componentが完備した場合だけ起動可能で、不足時はfail-fastすること。
 5. **Cross-doc sync**: `deployment.md` と `04_Documentation/configuration.md` に同じ公開キー集合が反映されていること。
-6. **Compatibility gate**: 非互換が必要な場合は即実装せず、ADR/Issue に Go/No-Go とロールバックを先に記録すること。
+6. **Compatibility gate**: 非互換が必要な場合は即実装せず、ADR/IssueにGo/No-Goとロールバックを先に記録すること。
 
 Stopper条件:
-- 上記 1〜6 のうち未充足がある場合は変更を停止し、承認待ちに切り替える。
+- 上記1〜6のうち未充足がある場合は変更を停止し、承認待ちに切り替える。
 
 
 ## Global prefix migration adapter boundary（Stream D contract）
 
-`ADR-0021` に基づき backend runtime key は互換期間なしで `SUI_*` へ移行済みです。
-一方で deploy/frontend build には、利用者向け公開キーと実装内部adapterの境界があるため、次の2層で固定します。
+`ADR-0021` に基づきbackend runtime keyは互換期間なしで `SUI_*` へ移行済みです。
+一方でdeploy/frontend buildには、利用者向け公開キーと実装内部adapterの境界があるため、次の2層で固定します。
 
 1. **Public contract layer（利用者入力）**
    - 受理する公開キーは `SUI_*` のみ。
-   - 旧prefix/無接頭辞キーは fail-fast で拒否する。
+   - 旧prefix/無接頭辞キーはfail-fastで拒否する。
 2. **Private adapter layer（実装内部写像）**
-   - third-party container が要求する `POSTGRES_*` 等は内部写像に限定する。
-   - frontend build は `envPrefix: "SUI_"` とし、`SUI_RUNTIME_PROFILE`と`SUI_FRONTEND_API_BASE`だけを読み取る。旧frontendキーの互換shimは設けない。
+   - third-party containerが要求する `POSTGRES_*` 等は内部写像に限定する。
+   - frontend buildは `envPrefix: "SUI_"` とし、`SUI_RUNTIME_PROFILE`と`SUI_FRONTEND_API_BASE`だけを読み取る。旧frontendキーの互換shimは設けない。
 
 ### Plan → Execute → Verify → Proceed gate
 
 - Plan: 変更前に `Naming / Defaults / Boundary / Profiles` の4観点を固定する。
-- Execute: 公開契約の更新を先に行い、実装・deploy・docs を追随させる。
-- Verify: docs-check + settings validation + compose config で同一キー集合を確認する。
-- Proceed: 4観点がすべて pass の場合のみ進行し、1つでも fail なら停止して Issue/ADR へ戻す。
+- Execute: 公開契約の更新を先に行い、実装・deploy・docsを追随させる。
+- Verify: docs-check + settings validation + compose configで同一キー集合を確認する。
+- Proceed: 4観点がすべてpassの場合のみ進行し、1つでもfailなら停止してIssue/ADRへ戻す。
 
 ### Failure budget（3回失敗で停止）
 
-- 同一論点で Verify が3回連続失敗した場合、4回目の試行に進まず **Stop** とする。
-- Stop 時は「失敗原因」「再開条件」「要追加判断（ADR/Issue）」を `01_Plans/issues/` に記録する。
+- 同一論点でVerifyが3回連続失敗した場合、4回目の試行に進まず **Stop** とする。
+- Stop時は「失敗原因」「再開条件」「要追加判断（ADR/Issue）」を `01_Plans/issues/` に記録する。

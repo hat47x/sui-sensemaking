@@ -4,10 +4,10 @@
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
 > 現行契約と Stream / freeze 履歴の読み分けは `02_Architecture/contract_reading_guide.md` を参照する。
 > MVPのCRUDサポート表と運用保守境界は `02_Architecture/data_model_operations_overview.html` を参照する。
-本ドキュメントは、sui-sensemaking の **MVP API（Documentの保存・取得）** を定義します。
+本ドキュメントは、sui-sensemakingの **MVP API（Documentの保存・取得）** を定義します。
 
 - MVPでは **スナップショット保存** を基本とします
-- Document の標準CRUDは **全体保存/取得** に絞ります
+- Documentの標準CRUDは **全体保存/取得** に絞ります
 - 認証/認可、監査、Context/AI系APIは限定契約として別節で扱い、個別エンティティCRUDとは分けます
 - APIはイントラ利用や組織導入を含むため、単純で監査しやすい境界を優先します
 
@@ -17,11 +17,11 @@
 
 ### 1.1 リソース単位
 
-- 主リソース：`Document`
+- 主リソース：`Document`は次のとおりです。
 - 最小のCRUD：Create / Read / Update
 
 DeleteはMVPおよび現製品化準備段階の標準APIに含めない（`ADR-0035` Accepted 2026-07-13）。必要性だけを理由に追加せず、削除方式・監査保持・復旧不能性を別ADRで先に固定する。
-Card / Edge / Island / Narrative などは Document 内の論理構造であり、MVPでは個別リソースCRUDを正本にしません。
+Card / Edge / Island / NarrativeなどはDocument内の論理構造であり、MVPでは個別リソースCRUDを正本にしません。
 
 ### 1.2 更新方式
 
@@ -36,7 +36,7 @@ MVPでは以下のいずれかで簡素に扱う。
 - Last Write Wins（デフォルト）
 - `If-Match` / `ETag` による楽観ロック（任意ヘッダー。指定時は不一致を拒否）
 
-`If-Match` が無い場合は LWW とし、`If-Match` がある場合は保存済み `ETag` と一致したときだけ更新する。
+`If-Match` が無い場合はLWWとし、`If-Match` がある場合は保存済み `ETag` と一致したときだけ更新する。
 
 ---
 
@@ -46,7 +46,7 @@ MVPでは以下のいずれかで簡素に扱う。
 
 MVPの実装境界では、クライアントがIDを指定して **PUT** `/docs/{doc_id}` を呼び、対象IDが存在しない場合に作成として扱う。
 
-- Request body：`DocumentV1`
+- Request body：`DocumentV1`は次のとおりです。
 - Response：保存後の `Document`
 
 **POST** `/docs` は、サーバ採番の新規作成が必要になった場合の将来候補であり、MVPの必須APIではない。`POST /docs` を標準契約に昇格する場合は、`DATA-CONTRACT-01` で文書、実装、テストを同期する。
@@ -57,28 +57,28 @@ MVPの実装境界では、クライアントがIDを指定して **PUT** `/docs
 
 **GET** `/docs/{doc_id}`
 
-- Response：`DocumentV1`
+- Response：`DocumentV1`は次のとおりです。
 - Not found：404
 
 **GET** `/docs`（第2反復・キャンバス一覧の土台）
 
-- tenant-scoped な文書の**行メタデータ一覧**を返す（SafeMode非依存 — 本文カードは含まない。本文は `GET /docs/{doc_id}` の SafeMode 経路で取得する）。
+- tenant-scopedな文書の**行メタデータ一覧**を返す（SafeMode非依存 — 本文カードは含まない。本文は `GET /docs/{doc_id}` のSafeMode経路で取得する）。
 - Query：`createdBy`（任意・作成者フィルタ。「自分の文書」。`created_by=NULL` の移行文書は一致しない）。
 - Query（**SEC-DOC-BOUND-05・keyset pagination**）：`limit`（既定500・最大500）と `cursor`（前ページ末尾の不透明カーソル）。並び順 `(updated_at DESC, id ASC)`。次ページがある場合 `X-Next-Cursor` レスポンスヘッダーで次カーソルを返す（`{urlencoded(updated_at)}:{id}`）。レスポンスは配列のまま（既存クライアントは後方互換）。
 - Response：`DocumentListItem[]`、`updated_at` 降順
   - `{ id, title?, created_by?, lifecycle_state, updated_at }`
   - `created_by` は不変の作成者事実（未特定の移行文書は省略）。`lifecycle_state` は `active` / `archived`（ADR-0073 D2=A）。
-- 認可（`SEC-DOC-BOUND-06`）：tenant-scoped であることに加え、`access_control_adapter` が既定の `noop` 以外
+- 認可（`SEC-DOC-BOUND-06`）：tenant-scopedであることに加え、`access_control_adapter` が既定の `noop` 以外
   （実質的なPDPが構成されている）場合は `document_access_metadata.visibility` でも絞り込む。
   `Public`/`Unlisted`/`Org` は無条件、`Restricted`（メタデータ行が無い場合も含む）は作成者本人にのみ返す。
   PDPへの追加照会は行わない——ローカルの `visibility` 列だけで判定する保守的な近似であり、
-  厳密な対象者判定の代替ではない。`noop`（既定）の場合、単一文書の `GET`/`PUT` も visibility を参照しないため、
+  厳密な対象者判定の代替ではない。`noop`（既定）の場合、単一文書の `GET`/`PUT` もvisibilityを参照しないため、
   一覧も絞り込まない（一覧だけを単一文書より厳しくしない）。
 
 **POST** `/docs/{doc_id}/archive` / **POST** `/docs/{doc_id}/unarchive`（ADR-0073 D2=A）
 
 - `archive`: `lifecycle_state` を `archived` に遷移。`unarchive`: `active` に戻す。
-- Response：204。存在しない文書は 404。
+- Response：204。存在しない文書は404。
 - 認可（`SEC-DOC-BOUND-06`）：`GET`/`PUT /docs/{doc_id}` と同じ `_authorize_request(action="write")` を経由する
   （tenant-scopedのみではない）。
 
@@ -88,7 +88,7 @@ MVPの実装境界では、クライアントがIDを指定して **PUT** `/docs
 
 **PUT** `/docs/{doc_id}`
 
-- Request body：`DocumentV1`
+- Request body：`DocumentV1`は次のとおりです。
 - Response：保存後の `DocumentV1`
 - Validation error：400
 
@@ -96,7 +96,7 @@ MVPの実装境界では、クライアントがIDを指定して **PUT** `/docs
 
 ### 2.4 Document監査イベント（FB-RM-PUB-05 / CE4）
 
-Document 本体の標準CRUDとは別に、共有・Context操作の監査連携点を持つ。監査送信は本体処理を阻害しない fail-open dispatcher 方針を維持するが、各リクエスト自体は SafeMode/readOnly/access-control の判定対象になる。
+Document本体の標準CRUDとは別に、共有・Context操作の監査連携点を持つ。監査送信は本体処理を阻害しないfail-open dispatcher方針を維持するが、各リクエスト自体はSafeMode/readOnly/access-controlの判定対象になる。
 
 **POST** `/docs/{doc_id}/export-audit`
 
@@ -122,16 +122,16 @@ Document 本体の標準CRUDとは別に、共有・Context操作の監査連携
   - `schemaVersion: "ce4.audit.v1"`
 - Response: `{ "status": "accepted" }`
 - Error:
-  - 409: CE4の4点監査イベントが `apply` 時点で揃わない、または deterministic 判定が不成立
+  - 409: CE4の4点監査イベントが `apply` 時点で揃わない、またはdeterministic判定が不成立
   - 422: operation/command不一致、`dryRun` 違反、`sourceBundleHash` 欠損などの契約違反
-- 目的: `query -> bundle -> proposal -> apply` の監査4点を同一 `equivalenceKey` / `bundleHash` で接続し、proposal-only / dry-run の境界を検証する。
+- 目的: `query -> bundle -> proposal -> apply` の監査4点を同一 `equivalenceKey` / `bundleHash` で接続し、proposal-only / dry-runの境界を検証する。
 - SEC-AUDIT-DUP-01: 同一論理操作（`tenant/doc/operation/equivalenceKey/bundleHash`）の重複POSTは、`SUI_AUDIT_DEDUP_WINDOW_SECONDS`（既定5秒）内で外部シンクへ1回しか送出されない。HTTP応答はいずれも `{ "status": "accepted" }` のまま。
 - 消費者境界（外部消費者向け）: 本エンドポイントは`03_Implement/frontend/src`のUIから直接呼び出されることを想定しない。`channel: "api" | "cli" | "gui" | "mcp"`はGUI以外の呼び出し元（CLI、MCP経由の生成AI、将来のAgent連携等）を対等な一級市民として扱うために存在する契約である。2026-08-16時点で、read-only MCPサーバー（`03_Implement/mcp/`）が成功した各投影読み取りを`channel: "mcp"`で本エンドポイントへ監査送出する（`03_Implement/mcp/src/audit_log.ts` の `emitContextAuditEvent`）。CLI（`03_Implement/backend/src/sui_sensemaking_api/cli.py`）は`channel: "cli"`で送出する。監査はbest-effortであり、CE-4送出失敗は読み取り自体を失敗させない（MCP側のローカル監査エントリが読み取りの相関の正本）。分類の根拠と不確実性は`issue-SAAS-TENANT-SURFACE-01-unclassified-frontend-caller-gap.md`の実装記録を参照。
 
 
 ### 2.6 Merge Decision Log（CTR-2B-02-DECISION-LOG-V1）
 
-Manual assisted merge の意思決定ログを、Document 本体とは分離して append/list/restore する。
+Manual assisted mergeの意思決定ログを、Document本体とは分離してappend/list/restoreする。
 
 **POST** `/docs/{doc_id}/merge-decision-logs`
 
@@ -141,17 +141,17 @@ Manual assisted merge の意思決定ログを、Document 本体とは分離し�
 - Error:
   - 404: `doc_id` が存在しない
   - 409: 同一 `decisionId`（同一 `doc_id` 内）の重複
-  - 422: `action` enum などの契約違反
+  - 422: `action` enumなどの契約違反
 
 **GET** `/docs/{doc_id}/merge-decision-logs/by-group/{group_id}`
 
-- Response: `MergeDecisionRecord[]`（append 順）
+- Response: `MergeDecisionRecord[]`（append順）
 
 **GET** `/docs/{doc_id}/merge-decision-logs/restore/{snapshot_version}`
 
-- Response: `MergeDecisionRecord[]`（append 順）
+- Response: `MergeDecisionRecord[]`（append順）
 
-`MergeDecisionRecord`:
+`MergeDecisionRecord`は次のとおりです。
 
 - `decisionId: string`
 - `groupId: string`
@@ -174,12 +174,12 @@ Manual assisted merge の意思決定ログを、Document 本体とは分離し�
 
 ### 2.7 CE4 Audit Integration Contract（API/CLI equivalence）
 
-CE4（API/CLI/監査統合）は CE1 契約を read-only 参照し、実装方式に依存しない接続契約のみを固定する。
+CE4（API/CLI/監査統合）はCE1契約をread-only参照し、実装方式に依存しない接続契約のみを固定する。
 
 #### 2.7.1 固定ルール（Normative）
 - 同値判定成功条件: `equivalenceKey AND bundleHash` の同時一致（片方一致は失敗）。
 - 実行モード: `mode=proposal-only` のみ許容（`auto-apply` / `auto-confirm` / `auto-publish` は禁止）。
-- 監査イベント順序: `query -> bundle -> proposal -> apply` を固定し、欠損/逆順は fail-closed。
+- 監査イベント順序: `query -> bundle -> proposal -> apply` を固定し、欠損/逆順はfail-closed。
 - 依存切断: CE1未整備時は `sourceBundleHash=mock:<64hex>` を許容し、realと同一規律で判定する。
 
 #### 2.7.2 API Signature（contract-only）
@@ -223,7 +223,7 @@ CE-1のHTTP endpoint、status/error、副作用を本節の正本とする。型
 
 logical type、HTTP envelope、下流handoffのkey所属は [`schemas.md` CE1 v1 layer ownership matrix](schemas.md#ce1-v1-layer-ownership-matrixlogical--transport--handoff) を正本とする。`queryId`は`ContextQueryV1`だけに属し、`schemaVersion="1.0.0"`はHTTP response metadata、`sourceBundleHash`はCE2/CE4のread-only handoff値である。
 
-JSON request 共通のtransport安全境界として、backendは `application/json` / `application/*+json` の構造ネストをparser前段で64以下に制限する。超過時は入力値やparser例外を反射せず `400 json_nesting_too_deep` を返す。この制限はlogical type、canonical hash入力、schema versionを変更しない。API keyが設定されている場合は認証をbody検査より先に行う。
+JSON request共通のtransport安全境界として、backendは `application/json` / `application/*+json` の構造ネストをparser前段で64以下に制限する。超過時は入力値やparser例外を反射せず `400 json_nesting_too_deep` を返す。この制限はlogical type、canonical hash入力、schema versionを変更しない。API keyが設定されている場合は認証をbody検査より先に行う。
 
 **POST** `/context/query`
 
@@ -232,19 +232,19 @@ JSON request 共通のtransport安全境界として、backendは `application/j
 - Response body: `ContextQueryValidationResponse`
 - Error:
   - `422 preview_required`: `previewConfirmed != true`
-  - `400 unknown_contract_key`: CE1 v1 最小I/F外のキー、または enum/range違反を fail-closed で拒否
+  - `400 unknown_contract_key`: CE1 v1最小I/F外のキー、またはenum/range違反をfail-closedで拒否
   - `400 invalid_constraints`: `constraints` がJSON互換ではない、深さ8・総ノード数1024・canonical UTF-8 64 KiBのいずれかを超過
-  - `400 json_nesting_too_deep`: JSON request body の構造ネストが64を超過
+  - `400 json_nesting_too_deep`: JSON request bodyの構造ネストが64を超過
   - `422 invalid_query_contract`: enum/rangeの補助バリデーション。既存の契約・安全境界エラー語彙を置換しない
 
 **POST** `/context/bundle`
 
-- Purpose: Deterministic projection を実行し `ContextBundle` を返す。
+- Purpose: Deterministic projectionを実行し `ContextBundle` を返す。
 - Request body: `ContextBundleRequest`
 - Response body: `ContextBundleResponse`。`schemaVersion`はtransport metadataでcanonical bundle hash対象外。`queryId` / `sourceBundleHash`はresponseへ含めない
 - Error:
   - `400 invalid_constraints`: `query.constraints` がJSON互換ではない、深さ8・総ノード数1024・canonical UTF-8 64 KiBのいずれかを超過
-  - `400 json_nesting_too_deep`: JSON request body の構造ネストが64を超過
+  - `400 json_nesting_too_deep`: JSON request bodyの構造ネストが64を超過
   - `409 nondeterministic_bundle`: 同一canonical queryでdeterministic `bundleHash`が成立しない
   - `400 unknown_contract_key`: closed-world envelopeまたは型の未定義キー
 
@@ -255,45 +255,45 @@ SafeMode既定ON、未レビュー本文保護、proposal-only、`human_reviewed
 
 ### 2.9 CE4 API/CLI/GUI 同値性・監査契約（CE4-API-CLI-AUDIT）
 
-CE-4 は API/CLI/GUI の操作同値性と監査導線を固定する契約フェーズであり、実装方式やUI差分よりも監査可能性を優先する。
-また CE4 は proposal-only 境界を維持し、`accepted/rejected` の自動確定経路を許可しない。
+CE-4はAPI/CLI/GUIの操作同値性と監査導線を固定する契約フェーズであり、実装方式やUI差分よりも監査可能性を優先する。
+またCE4はproposal-only境界を維持し、`accepted/rejected` の自動確定経路を許可しない。
 
 #### 2.9.0 Proposal-only + API/CLI監査責務境界
 
-- CE4 の責務は **I/F契約固定** に限定する（実装方式・アルゴリズム詳細・自動適用導線は扱わない）。
+- CE4の責務は **I/F契約固定** に限定する（実装方式・アルゴリズム詳細・自動適用導線は扱わない）。
 - API責務境界: 入力/出力/失敗時セマンティクスを固定する。
 - CLI責務境界: API同値の入力面・出力面・終了コードを固定する。
 - 監査責務境界: `query/bundle/proposal/apply` と `queryCanonicalHash` の記録を固定する。
-- Fail-safe: proposal-only 逸脱（auto-apply/auto-confirm/auto-publish）または監査欠損成功扱いを検知した場合は fail-closed。
+- Fail-safe: proposal-only逸脱（auto-apply/auto-confirm/auto-publish）または監査欠損成功扱いを検知した場合はfail-closed。
 
 #### 2.9.0a CE4 API/CLI監査統合ゲート（Context / Decision / Consequences）
 
 Context:
-- CE4 は実装詳細を持ち込まず、API/CLI監査統合を contract-only で先行固定する必要がある。
+- CE4は実装詳細を持ち込まず、API/CLI監査統合をcontract-onlyで先行固定する必要がある。
 - `ADR-0016` のCLI契約と `ADR-0017` のSecurity/Ops Gateを、監査イベント最小スキーマで接続する必要がある。
 
 Decision:
 1. 監査イベント最小スキーマ（全イベント共通必須キー）を `eventType`, `timestamp`, `equivalenceKey`, `queryCanonicalHash`, `bundleHash`, `actor`, `result`, `channel`, `command`, `schemaVersion`, `sourceBundleHash` に固定する。
 2. API→CLI同値性は `equivalenceKey AND bundleHash` 成立のみ成功とし、部分一致成功を禁止する。
 3. セキュリティ運用チェックは `eventType + equivalenceKey + queryCanonicalHash` の追跡成立を必須にする。
-4. 契約未確定の実装依存点（終了コード数値割当、匿名化方式、監査転送基盤）は CE4 スコープ外として stub 隔離し、契約確定前に本番判定へ昇格しない。
+4. 契約未確定の実装依存点（終了コード数値割当、匿名化方式、監査転送基盤）はCE4スコープ外としてstub隔離し、契約確定前に本番判定へ昇格しない。
 
 Consequences:
-- mock fixture（`sourceBundleHash=mock:<hash>`）のみで API/CLI監査整合の検証が可能になる。
+- mock fixture（`sourceBundleHash=mock:<hash>`）のみでAPI/CLI監査整合の検証が可能になる。
 - 監査欠損・同値不成立を成功扱いできなくなり、fail-closed境界が明確化される。
-- 下流実装は proposal-only のまま契約準拠テストを先行でき、未確定点の混入を防げる。
+- 下流実装はproposal-onlyのまま契約準拠テストを先行でき、未確定点の混入を防げる。
 
 #### 2.9.1 logical operation 同値性（固定）
 
-- 対象 operation: `context-query` / `context-bundle` / `proposal-diff` / `apply --dry-run`
-- 同値性判定は `equivalenceKey == same` かつ `bundleHash == same` の AND 条件で固定する。
-- GUI は独自 operation を定義せず、上記 operation を API/CLI と同一語彙で呼び出す。
+- 対象operation: `context-query` / `context-bundle` / `proposal-diff` / `apply --dry-run`
+- 同値性判定は `equivalenceKey == same` かつ `bundleHash == same` のAND条件で固定する。
+- GUIは独自operationを定義せず、上記operationをAPI/CLIと同一語彙で呼び出す。
 - 同値性判定は `query/bundle/proposal/apply` の全監査イベントで同一 `equivalenceKey` を共有していることを前提に評価する。
 
 `equivalenceKey` 定義（normative）:
-1. `ContextQuery` を canonical JSON 化（キー辞書順、UTF-8、余分な空白なし、非決定論フィールド除外）。
+1. `ContextQuery` をcanonical JSON化（キー辞書順、UTF-8、余分な空白なし、非決定論フィールド除外）。
 2. `equivalenceKey = sha256(canonical_query_json)` を16進小文字で生成。
-3. API/CLI/GUI は同一 query 入力時に同一 `equivalenceKey` を返す。
+3. API/CLI/GUIは同一query入力時に同一 `equivalenceKey` を返す。
 
 #### 2.9.1a CE4 resolve endpoint（mock-first 契約）
 
@@ -329,7 +329,7 @@ Consequences:
 | `apply` | `proposalId`, `approver`, `dryRun`, `sideEffect`, `result`, `equivalenceKey` |
 
 追加必須キー（全イベント共通メタ）: `channel`（`api|cli|gui|mcp`）, `command`, `schemaVersion`.
- `schemaVersion` は CE4 契約期間中に固定値を使用し、互換性変更時のみ明示的に更新する。
+ `schemaVersion` はCE4契約期間中に固定値を使用し、互換性変更時のみ明示的に更新する。
 CE4固定値は `schemaVersion="ce4.audit.v1"` とする。
 
 追加必須キー（同値判定の比較根拠）: `queryCanonicalHash`。
@@ -344,46 +344,46 @@ CE4固定値は `schemaVersion="ce4.audit.v1"` とする。
 #### 2.9.3 dry-run 副作用境界（固定）
 
 - `dryRun=true` の場合、`sideEffect` は常に `"none"`。
-- `dryRun=true` で禁止される副作用:
+- `dryRun=true` で禁止される副作用は次のとおりです。
   - DB永続化
-  - 外部サービスとの共有（監査ログHTTP連携を除く。監査ログHTTP連携は fail-open dispatcher 方針）
-  - review state の昇格（`unreviewed -> human_reviewed`）
+  - 外部サービスとの共有（監査ログHTTP連携を除く。監査ログHTTP連携はfail-open dispatcher方針）
+  - review stateの昇格（`unreviewed -> human_reviewed`）
 - 上記を満たさない場合は契約違反として失敗扱い（fail-closed）。
 
-proposal lifecycle は `proposed | accepted | rejected | held` の閉集合のみを許可する。
-CE4 範囲での語彙追加・別名導入は禁止する。
+proposal lifecycleは `proposed | accepted | rejected | held` の閉集合のみを許可する。
+CE4範囲での語彙追加・別名導入は禁止する。
 
 CE4 フェイルセーフ（停止条件）:
 - 監査4点セット欠損を成功扱いしようとする要求
 - `dryRun=true` で `sideEffect="none"` を満たさない挙動
-- safeMode 後退要求（share/export 保護緩和、未レビュー保護緩和）
-- Consensus 直書き要求（proposal/apply 契約を迂回する更新）
-- Verify の自己修復が 3回失敗した場合（4回目試行は行わない）
-- 前提崩れ（同値性定義や固定 operation 契約の不成立）
+- safeMode後退要求（share/export保護緩和、未レビュー保護緩和）
+- Consensus直書き要求（proposal/apply契約を迂回する更新）
+- Verifyの自己修復が3回失敗した場合（4回目試行は行わない）
+- 前提崩れ（同値性定義や固定operation契約の不成立）
 - 未定義競合（必須キーの契約定義欠落、または同一キーの多重定義衝突）
 
 #### 2.9.4 `sourceBundleHash` の受理境界（依存切離し）
 
 - `proposal.sourceBundleHash` は次の両形式を受理する。
-  - 本番 hash（`[0-9a-f]{64}`）
-  - モック hash（`mock:[0-9a-f]{64}`）
+  - 本番hash（`[0-9a-f]{64}`）
+  - モックhash（`mock:[0-9a-f]{64}`）
 - 形式差により同値性判定・監査手順を分岐させてはならない。
-- CE3未完了時も `mock:<hash>` により CE4 の契約検証を継続可能とする。
+- CE3未完了時も `mock:<hash>` によりCE4の契約検証を継続可能とする。
 - 運用runbook（`04_Documentation/local_llm_ops_guide.md`）でも `Plan -> Execute(同値性契約) -> Verify(max3) -> Proceed` の固定順序と同一契約を維持する。
 
 #### 2.9.5 CE4 mock/stub execution boundary（implementation-ready）
 
-- APIは CE4 契約検証用に `sourceBundleHash=mock:<64hex>` を受理してよい。
-- 未確定項目は次の stub を返して隔離する（fail-closed を優先）。
+- APIはCE4契約検証用に `sourceBundleHash=mock:<64hex>` を受理してよい。
+- 未確定項目は次のstubを返して隔離する（fail-closedを優先）。
   - `501 ce4_stubbed_exit_code_mapping`
   - `501 ce4_stubbed_principal_masking`
   - `501 ce4_stubbed_audit_transport`
-- stub 応答時も `equivalenceKey`, `queryCanonicalHash`, `bundleHash`, `schemaVersion` を監査イベントへ記録し、`result=ng` で終了する。
-- 本節の stub は契約確定までの暫定隔離であり、成功系の代替として利用してはならない。
+- stub応答時も `equivalenceKey`, `queryCanonicalHash`, `bundleHash`, `schemaVersion` を監査イベントへ記録し、`result=ng` で終了する。
+- 本節のstubは契約確定までの暫定隔離であり、成功系の代替として利用してはならない。
 
 ### 2.10 Polygon Handoff Contract Verify（FB-P0-2A2B2C）
 
-Polygon auto-fit の backend接続準備として、A2比較キーの最小契約を検証する。
+Polygon auto-fitのbackend接続準備として、A2比較キーの最小契約を検証する。
 
 **POST** `/docs/{doc_id}/polygon-handoff/verify-contract`
 
@@ -403,7 +403,7 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
   - `verificationKey: string`（`sha256(inputHash + ":" + outputPolygonHash)`）
 - Error:
   - 404: `doc_id` が存在しない
-  - 422: hash format などの契約違反
+  - 422: hash formatなどの契約違反
 
 ### 2.11 実装済み response model の補助API
 
@@ -435,25 +435,25 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 
 - Response: `ProviderStatusResponse`
   - `providerKind: "none" | "local" | "large-scale" | "deepseek"`
-  - `callCounts: { [providerKind]: number, total: number }` — **OPS-LLM-COST-01（段階2）**: プロセス内の LLM 呼び出し回数（provider種別別＋total）。初回呼び出しまでは空。単一プロセス前提（共有ストアは段階3）。
+  - `callCounts: { [providerKind]: number, total: number }` — **OPS-LLM-COST-01（段階2）**: プロセス内のLLM呼び出し回数（provider種別別＋total）。初回呼び出しまでは空。単一プロセス前提（共有ストアは段階3）。
   - `tokenUsage: { [providerKind]: { input: number, output: number }, total: {...} }` — **OPS-LLM-COST-01（段階2）**: プロセス内の入力/出力token合計（provider種別別＋total）。provider報告の`usage`（DeepSeek等のOpenAI互換`usage`）から計上し、報告が無いproviderは0。初回呼び出しまでは空。
 - 設定解決後のprovider種別を表示用に返すread-only echoであり、providerへの疎通確認は行わない。`local_http` 設定は `local` に正規化される。
 
 **GET** `/ai/available-models`
 
-- テナントの利用可能モデル一覧（AI-MODEL-GOVERNANCE-01 R2/R3・MMR-04）。active model・active provider・tenant allowlistを交差し、`_is_user_selectable_model`（intermediate/generate 層のみ）でフィルタする。`final_judgement` 専用モデルは除外する。
-- **AI-MODEL-GOVERNANCE-03（動的dispatch）**: 各modelは自身が登録された `providerId` の `providerKind` が実行可能（必須設定が揃っている）かどうかで判定する。判定は `SUI_LLM_PROVIDER`（プロセス全体の既定値）と model 自身の `providerKind` が一致するかではなく、その `providerKind` 単独の設定完全性（例: `deepseek` なら `SUI_DEEPSEEK_API_KEY`）で行う。したがって、`SUI_LLM_PROVIDER=local` のプロセスでも、`SUI_DEEPSEEK_API_KEY` が設定済みなら `deepseek` 配下のmodelも同時に一覧へ含まれる。ただし `SUI_LLM_PROVIDER=none` はプロセス全体のkill switchであり、この場合はどの `providerKind` の設定完全性に関わらず一覧は常に空になる。
-- Response: モデルID・表示名・"auto" 既定の選択肢。UI の `ModelSelector` がこの一覧でモデル選択肢を限定する。
+- テナントの利用可能モデル一覧（AI-MODEL-GOVERNANCE-01 R2/R3・MMR-04）。active model・active provider・tenant allowlistを交差し、`_is_user_selectable_model`（intermediate/generate層のみ）でフィルタする。`final_judgement` 専用モデルは除外する。
+- **AI-MODEL-GOVERNANCE-03（動的dispatch）**: 各modelは自身が登録された `providerId` の `providerKind` が実行可能（必須設定が揃っている）かどうかで判定する。判定は `SUI_LLM_PROVIDER`（プロセス全体の既定値）とmodel自身の `providerKind` が一致するかではなく、その `providerKind` 単独の設定完全性（例: `deepseek` なら `SUI_DEEPSEEK_API_KEY`）で行う。したがって、`SUI_LLM_PROVIDER=local` のプロセスでも、`SUI_DEEPSEEK_API_KEY` が設定済みなら `deepseek` 配下のmodelも同時に一覧へ含まれる。ただし `SUI_LLM_PROVIDER=none` はプロセス全体のkill switchであり、この場合はどの `providerKind` の設定完全性に関わらず一覧は常に空になる。
+- Response: モデルID・表示名・"auto" 既定の選択肢。UIの `ModelSelector` がこの一覧でモデル選択肢を限定する。
 - 一覧取得後に状態が変わった場合を含め、実行APIへ利用不可なmodel IDを直接指定すると、LLM送信前に503 `model_provider_unavailable`で拒否する（一覧と実行gateは同一の判定関数を使うため乖離しない）。
 
 ### 2.12 AI/LLM生成API
 
-全エンドポイント共通:
-- tenant-scoped precondition必須（§10 参照）
+全エンドポイント共通は次のとおりです。
+- tenant-scoped precondition必須（§10参照）
 - proposal-only: AI出力は候補生成に留まり、人間の明示操作なしに文書へ反映されない
-- **SafeMode は API 境界で強制（SEC-AI-SAFEMODE-01 / ADR-0068）**: 文書を伴う全エンドポイント（suggest-layout / suggest-merges / suggest-island-summary / generate-narrative / check-narrative / proposals/island-summary）は、未レビューカード（`textReviewed ≠ true`）を含む場合に **422 `unreviewed_text_not_allowed`** で拒否する。`allowUnreviewedText=true` かつ profile の `SUI_ALLOW_UNREVIEWED_AI_TEXT=true` のときのみ緩和（監査へ記録）
+- **SafeModeはAPI境界で強制（SEC-AI-SAFEMODE-01 / ADR-0068）**: 文書を伴う全エンドポイント（suggest-layout / suggest-merges / suggest-island-summary / generate-narrative / check-narrative / proposals/island-summary）は、未レビューカード（`textReviewed ≠ true`）を含む場合に **422 `unreviewed_text_not_allowed`** で拒否する。`allowUnreviewedText=true` かつprofileの `SUI_ALLOW_UNREVIEWED_AI_TEXT=true` のときのみ緩和（監査へ記録）
 - `SUI_LLM_PROVIDER=none` 時は全エンドポイントが503（provider disabled）を返す。AI-MODEL-GOVERNANCE-03以降もこれは無条件のkill switchであり、registryに他のproviderが設定済みでも動的dispatchは一切行われない
-- **AI-MODEL-GOVERNANCE-03（動的dispatch）**: `model` を受け取るエンドポイント（suggest-island-summary / propose-opposing-viewpoint / generate-narrative / refine-card-text / suggest-card-groups / suggest-document-title）は、その model が registry 上で登録された `providerId` の `providerKind` へ直接dispatchする（`ProviderRegistry.resolve(providerKind)`）。`SUI_LLM_PROVIDER` と model の `providerKind` が異なっていても、その `providerKind` 自身の設定が完全なら実行できる。`model` を受け取らないエンドポイント（suggest-layout / suggest-merges / check-narrative / detect-contradiction）は従来どおり `SUI_LLM_PROVIDER` の既定transportを使う。`apiKeyRef` は登録時の参照検証（AC-4）を経た上で、実際の資格情報は引き続き `SUI_*_API_KEY` 環境変数から解決する（registry行の値を直接使う経路は追加しない）
+- **AI-MODEL-GOVERNANCE-03（動的dispatch）**: `model` を受け取るエンドポイント（suggest-island-summary / propose-opposing-viewpoint / generate-narrative / refine-card-text / suggest-card-groups / suggest-document-title）は、そのmodelがregistry上で登録された `providerId` の `providerKind` へ直接dispatchする（`ProviderRegistry.resolve(providerKind)`）。`SUI_LLM_PROVIDER` とmodelの `providerKind` が異なっていても、その `providerKind` 自身の設定が完全なら実行できる。`model` を受け取らないエンドポイント（suggest-layout / suggest-merges / check-narrative / detect-contradiction）は従来どおり `SUI_LLM_PROVIDER` の既定transportを使う。`apiKeyRef` は登録時の参照検証（AC-4）を経た上で、実際の資格情報は引き続き `SUI_*_API_KEY` 環境変数から解決する（registry行の値を直接使う経路は追加しない）
 - モデル選択は操作別モデルレベル定義（AGENTS.md §1.2）に従う
 
 **POST** `/ai/suggest-layout`
@@ -461,50 +461,50 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 - Request: `SuggestLayoutRequest`
   - `doc: DocumentV1` — 現在の文書全体
   - `instruction?: string` — 配置指示（任意）
-  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定 fail-closed）。未レビューカード（`textReviewed ≠ true`）を含む文書は、この値が `true` かつ profile の `SUI_ALLOW_UNREVIEWED_AI_TEXT=true` でない限り **422 `unreviewed_text_not_allowed`** で拒否される。
+  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定fail-closed）。未レビューカード（`textReviewed ≠ true`）を含む文書は、この値が `true` かつprofileの `SUI_ALLOW_UNREVIEWED_AI_TEXT=true` でない限り **422 `unreviewed_text_not_allowed`** で拒否される。
 - Response: `SuggestLayoutResponse`
   - `suggestionId: string` — 提案の一意識別子
   - `suggestedDoc: DocumentV1` — 再配置後の文書
   - `notes?: string` — AIからの補足
 - キャンバス全体の空間配置（島・カードの位置）を提案する。指示文があればそれに沿った配置を試みる。
-- **`AI-IR-PROJECTION-01`（`ADR-0069`）Stage 4 で LLM投入IR 経由になった**（`02_Architecture/llm_input_ir_spec.md`。版数の正本は `llm_input_ir.IR_VERSION` で、Stage 4 では繰り上げていない）。**リクエスト／レスポンスの形は変わらない**（後方互換。フロントエンドの `suggestLayout` は無改修）。
-- **座標を渡す唯一のエンドポイントである**（`ADR-0069` D1=B、`llm_input_ir_spec.md` §2.2.1 の要否表で本エンドポイントだけが「要求」）。出力そのものが配置であるため相対布置が入力として意味を持つ。IR が運ぶのは §2.2 の**正規化座標**（重心を原点へ平行移動した `x` / `y` と `radius` / `angle_deg`）のみで、**生の絶対座標は IR に入らない**（§2.2 規則6）。プロンプトには従来どおり文書の絶対座標も併記する ── レスポンスは文書と同じ絶対座標系で返る契約であり、`suggestedDoc` は全カードの位置を含む必要があるため。
-- `doc.edges` の**カード間**関係（5語彙。特に `causal` / `negate`）がAI入力へ届く（`ADR-0069` 実装順序4「あわせて `edges` を渡す」）。島間の辺（`fromKind` / `toKind` = `island`）は IR の対象外であり（§2.3 規則6）、従来どおり `doc.edges` から描画する。
+- **`AI-IR-PROJECTION-01`（`ADR-0069`）Stage 4でLLM投入IR経由になった**（`02_Architecture/llm_input_ir_spec.md`。版数の正本は `llm_input_ir.IR_VERSION` で、Stage 4では繰り上げていない）。**リクエスト／レスポンスの形は変わらない**（後方互換。フロントエンドの `suggestLayout` は無改修）。
+- **座標を渡す唯一のエンドポイントである**（`ADR-0069` D1=B、`llm_input_ir_spec.md` §2.2.1の要否表で本エンドポイントだけが「要求」）。出力そのものが配置であるため相対布置が入力として意味を持つ。IRが運ぶのは §2.2の**正規化座標**（重心を原点へ平行移動した `x` / `y` と `radius` / `angle_deg`）のみで、**生の絶対座標はIRに入らない**（§2.2規則6）。プロンプトには従来どおり文書の絶対座標も併記する ── レスポンスは文書と同じ絶対座標系で返る契約であり、`suggestedDoc` は全カードの位置を含む必要があるため。
+- `doc.edges` の**カード間**関係（5語彙。特に `causal` / `negate`）がAI入力へ届く（`ADR-0069` 実装順序4「あわせて `edges` を渡す」）。島間の辺（`fromKind` / `toKind` = `island`）はIRの対象外であり（§2.3規則6）、従来どおり `doc.edges` から描画する。
 - **島は矩形だけでなく関係の集合としても渡る。** 従来は `cardIds` から算出した `bounds` / `anchor` のみだった。IR経由化により (a) 確定済みの島階層（`parentIslandId` / `placardCardId` / レビュー状態、`ADR-0069` D3=A）と、(b) カード間関係を島単位へ集約した**島間の派生関係**が加わる。(b) はフロントエンドの `getDerivedIslandEdges()`（`island_edge_aggregate.ts`）に対応するサーバ側実装（`llm_input_ir.derived_island_relations()`）が算出する。`bounds` / `anchor` は**削っていない** ── 新しい配置を提案するエンドポイントは現在の幾何を必要とするため、変更は加算的である。
-- SafeMode は二層で強制される。**(1)** `_reject_unreviewed_text`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）が `doc.cards` を検査する。**(2)** IRビルダーが `llm_input_ir_spec.md` §7.1 に従いレビュー状態を独立に再検査する。両層は同じ述語（`allowUnreviewedText=true` かつ profile 許可）で緩和され、片開きにならない。
-- IR経由化で次の 422 が新設された（いずれも `{code, message}` 形の detail）。`pii_detected`（§7.2 のメール／電話／URLトークンのパターンに一致する本文）、`structured_text_only_violation`（§7.3）、`empty_cards`。**`empty_cards` は挙動変更である** ── カード0枚の文書は従来 200 で空の配置提案を返していたが、配置する対象が無い以上 422 とする。
-- カード200枚超（`MAX_CARDS`、§5.1）の文書では IR が切り詰められ、**打ち切られたカードの座標・関係はAI入力の該当セクションに含まれない**。`Cards:` セクションは文書側から描画するため全カードが残り、`suggestedDoc` が全カードの位置を返す契約は維持される。レスポンスの形を変えない方針（後方互換）のため `suggest-card-groups` の `truncated` に相当するフィールドは追加しておらず、切り詰めはプロンプト本文に明記して黙って落とさないことのみ担保する。上限値の妥当性は `AI-IR-PROJECTION-01` AC-10 で扱う。
+- SafeModeは二層で強制される。**(1)** `_reject_unreviewed_text`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）が `doc.cards` を検査する。**(2)** IRビルダーが `llm_input_ir_spec.md` §7.1に従いレビュー状態を独立に再検査する。両層は同じ述語（`allowUnreviewedText=true` かつprofile許可）で緩和され、片開きにならない。
+- IR経由化で次の422が新設された（いずれも `{code, message}` 形のdetail）。`pii_detected`（§7.2のメール／電話／URLトークンのパターンに一致する本文）、`structured_text_only_violation`（§7.3）、`empty_cards`。**`empty_cards` は挙動変更である** ── カード0枚の文書は従来200で空の配置提案を返していたが、配置する対象が無い以上422とする。
+- カード200枚超（`MAX_CARDS`、§5.1）の文書ではIRが切り詰められ、**打ち切られたカードの座標・関係はAI入力の該当セクションに含まれない**。`Cards:` セクションは文書側から描画するため全カードが残り、`suggestedDoc` が全カードの位置を返す契約は維持される。レスポンスの形を変えない方針（後方互換）のため `suggest-card-groups` の `truncated` に相当するフィールドは追加しておらず、切り詰めはプロンプト本文に明記して黙って落とさないことのみ担保する。上限値の妥当性は `AI-IR-PROJECTION-01` AC-10で扱う。
 
 **POST** `/ai/suggest-merges`
 
 - Request: `SuggestMergesRequest`
   - `doc: DocumentV1` — 現在の文書全体
   - `instruction?: string` — 提案方針の指示（任意）
-  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定 fail-closed）
+  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定fail-closed）
 - Response: `SuggestMergesResponse`
   - `suggestions: MergeSuggestion[]` — 統合候補の配列。各要素のAPI契約は `groupId`、2件以上の `cardIds`、`mergedTextDraft`、必須の `mergeMethod`（`near_duplicate` | `kernel_fusion`）、任意の `rationale`。方式欠落・未知値は信頼境界で拒否する。
 - 類似カードの統合候補を提案する。各候補は統合対象カード群と統合理由を含む。
-- フロントエンドの決定論的ローカル候補は、このAPI契約に Stream B の `targetCardId` / `candidateCardIds` / `scoreSummary` / `reasonCodes` / `snapshotVersion` を付加した派生表現を使う。これらはローカル候補生成の再現性メタデータであり、AIプロバイダーが生成する `MergeSuggestion` の必須フィールドではない。remote AI提案に存在しないスコアやsnapshotを補作しない。
+- フロントエンドの決定論的ローカル候補は、このAPI契約にStream Bの `targetCardId` / `candidateCardIds` / `scoreSummary` / `reasonCodes` / `snapshotVersion` を付加した派生表現を使う。これらはローカル候補生成の再現性メタデータであり、AIプロバイダーが生成する `MergeSuggestion` の必須フィールドではない。remote AI提案に存在しないスコアやsnapshotを補作しない。
 
 **POST** `/ai/suggest-island-summary`
 
 - Request: `SuggestIslandSummaryRequest`
   - `doc: DocumentV1` — 現在の文書全体（対象島を含む）
   - `islandId: string` — 対象の島ID
-  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定 fail-closed）
-  - `model?: string` — タスク別モデル override（AI-MODEL-GOVERNANCE-01 R2・allowlist 検査付き）
+  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定fail-closed）
+  - `model?: string` — タスク別モデルoverride（AI-MODEL-GOVERNANCE-01 R2・allowlist検査付き）
   - `critiqueText?: string` — 壁打ち（DOGFOOD-34）。現行表札への違和感。指定時はそれを踏まえた代替候補を返す（任意・後方互換）
 - Response: `SuggestIslandSummaryResponse`
   - `candidates: IslandSummaryCandidate[]` — 表札候補（1〜3件）。各候補は接地（代表カード）と凝縮（志）を分離して持つ（ADR-0077）
     - `summaryText: string` — 凝縮・志（述語を伴う代弁文。分類名・名詞止めでないこと）
     - `groundingIds: string[]` — 接地・根拠としたメンバーカードのID（1〜10件・重複なし・メンバー限定）
   - `warnings?: string[]`
-- 島の表札（ラベル）を提案する。表札は分類名ではなく、カード群の訴えを代弁する文でなければならない（sensemaking_technique.md §3 表札検査）。
+- 島の表札（ラベル）を提案する。表札は分類名ではなく、カード群の訴えを代弁する文でなければならない（sensemaking_technique.md §3表札検査）。
 - AI入力は `DocumentV1` をそのまま広げず、対象島の全直接メンバーと、それらへ直接つながるcard relation / evidenceの両端だけへsourceを縮約してからLLM投入IRを構築する。無関係な文書カードはIRにも追加prompt文脈にも送らない。providerへ送る最終promptの直接メンバー本文もIR正規化後本文から描画し、Document側の生本文を同じ箇所へ再送しない。
 - 対象島の外側にある隣接カードは、relation / evidenceを理解するための**文脈専用**である。応答の `groundingIds` は従来どおり対象島の直接メンバーだけを許可し、外部カードへ広げない。
 - 親島、表札カード、review state、card relation、`contradictionState` はIR由来の構造としてAIへ渡す。親島は親子関係を保持する構造だけを残し、親島のカード集合まで入力へ広げない。`critiqueTags` / `critiqueText` と明示的なisland-to-island edgeはtask-local入力として従来の経路を維持する。
 - 対象島の仕事に必要な意味をIRで完全に保持できない場合は、providerへ不完全な表札生成を依頼せず422でfail-closedにする。主なIRエラーコードは、必須カード集合が上限を超える `required_card_budget_exceeded`、必須カード本文が文字数上限で短縮される `required_text_truncated`、投影後の必須カード集合が一致しない `required_card_context_mismatch`、必要なrelation / evidenceが欠ける `required_relation_missing` / `required_evidence_missing`。request / responseの形は変更しない。
-- **DX-CLEANUP-07 案B**: この直接 route はフロントエンドの直接呼び出し元を持たない（UI は proposal-only の `POST /ai/proposals/island-summary` を使用）。**後方互換・外部 API クライアント用に維持**する。`suggest_island_summary` 関数本体は proposal route の内部実装として再利用されている。
+- **DX-CLEANUP-07案B**: この直接routeはフロントエンドの直接呼び出し元を持たない（UIはproposal-onlyの `POST /ai/proposals/island-summary` を使用）。**後方互換・外部APIクライアント用に維持**する。`suggest_island_summary` 関数本体はproposal routeの内部実装として再利用されている。
 
 **POST** `/ai/proposals/island-summary`
 
@@ -522,18 +522,18 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 - `/ai/suggest-island-summary` のproposalラッパー。人間の明示的Adopt/Reject/Hold操作を経て文書へ反映される。
 - 成功時は本文を持たないproposal相関行を`ai_proposals`へ保存する。対象Documentが存在しない、またはwrite認可されない場合はproposalを生成・登録しない。
 
-**POST** `/ai/proposals/opposing-viewpoint`（AI-OPPOSE-01・iteration 65 以降で契約化）
+**POST** `/ai/proposals/opposing-viewpoint`（AI-OPPOSE-01・iteration 65以降で契約化）
 
 - Request: `ProposeOpposingViewpointRequest`
-  - `doc: DocumentV1` — 現在の文書全体（contradiction / evidence 構造を含む）
+  - `doc: DocumentV1` — 現在の文書全体（contradiction / evidence構造を含む）
   - `targetCardId: string` — 反対視点・根拠不足を検討する対象カード
-  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定 fail-closed）
-  - `model?: string` — タスク別モデル override（AI-MODEL-GOVERNANCE-01 R2・allowlist 検査付き）
+  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定fail-closed）
+  - `model?: string` — タスク別モデルoverride（AI-MODEL-GOVERNANCE-01 R2・allowlist検査付き）
 - Response: `OpposingViewpointProposal`（proposal-only）
   - `proposalId: string`
   - `type: "opposing_viewpoint"`, `status: "proposed"`, `reviewState: "unreviewed"`
   - `targetCardId: string`, `opposingText: string`, `evidenceGap: boolean`, `rationale: string`, `warnings: string[]`
-- contradiction / evidence 構造をもとに、対象カードの**反対視点・根拠不足**を提案する（value_traceability V1/V3）。**proposal-only（自動適用なし・人間の判断を先取りしない）**。対象カードが存在しない場合は 422、対象Documentが永続化されていない場合は 404。判定（Adopt/Reject/Hold）は `/ai/proposals/audit` と同経路。
+- contradiction / evidence構造をもとに、対象カードの**反対視点・根拠不足**を提案する（value_traceability V1/V3）。**proposal-only（自動適用なし・人間の判断を先取りしない）**。対象カードが存在しない場合は422、対象Documentが永続化されていない場合は404。判定（Adopt/Reject/Hold）は `/ai/proposals/audit` と同経路。
 - AI入力はLLM投入IRを経由する。対象カードと、そこへ直接接続するcard relation / evidenceの両端を必須文脈として保護し、`confirmed` / `held` を含む `contradictionState` を人間の既決判断としてprovider手前へ渡す。直接接続していないカードはIRに残った範囲だけを補助探索へ用いる。
 - `Target card:` の本文もIR正規化後の対象カード本文から描画し、Document側の生本文を中心入力へ迂回させない。promptと `LLMRequest.inputs` の対象本文は同じIR値を使う。
 - 必須意味が共有IRの上限で欠ける場合は422でfail-closedにする。主なコードは `required_card_budget_exceeded` / `required_text_truncated` / `required_card_context_mismatch` / `required_relation_missing` / `required_evidence_missing`。SafeModeはroute側とIR側の二層を維持し、座標は送らない。
@@ -559,9 +559,9 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 
 **GET** `/ai/proposals/status`
 
-- CE4 read-only proposal lifecycle status for a document. Query: `docId`（tenant-scoped precondition 必須）。
-- Response: `ProposalStatusResponse`（`proposalId`・`proposalKind`・`origin`・各 proposal の判定状態など）。
-- generative-AI（MCP/API 経由）が proposal が依然 proposal-only か、人間が判定済み（accepted/rejected/held）かを検証するための traceability。read-only 契約（`action="read"`）で、proposal や判定を一切書き込まない。
+- CE4 read-only proposal lifecycle status for a document. Query: `docId`（tenant-scoped precondition必須）。
+- Response: `ProposalStatusResponse`（`proposalId`・`proposalKind`・`origin`・各proposalの判定状態など）。
+- generative-AI（MCP/API経由）がproposalが依然proposal-onlyか、人間が判定済み（accepted/rejected/held）かを検証するためのtraceability。read-only契約（`action="read"`）で、proposalや判定を一切書き込まない。
 
 **POST** `/ai/external-tasks/register`
 
@@ -608,19 +608,19 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 - Request: `GenerateNarrativeRequest`
   - `doc: DocumentV1` — 現在の文書全体
   - `narrativeTitle?: string` — ナラティブのタイトル（任意）
-  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定 fail-closed）
-  - `model?: string` — タスク別モデル override（AI-MODEL-GOVERNANCE-01 R2・allowlist 検査付き）
+  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定fail-closed）
+  - `model?: string` — タスク別モデルoverride（AI-MODEL-GOVERNANCE-01 R2・allowlist検査付き）
 - Response: `GenerateNarrativeResponse`
   - `text: string` — 生成された文章
   - `basedOnReadingOrder: string[]` — 参照した読取順
   - `warnings?: string[]`
 - A型図解（空間配置）からB型叙述（文章）を生成する。生成後はA/B照合（sensemaking_technique.md §5）を人間が実施する必要がある。
-- **`AI-IR-PROJECTION-01`（`ADR-0069`）Stage 3 で LLM投入IR 経由になった**（`02_Architecture/llm_input_ir_spec.md`、`ir_version` 1.2）。`doc.edges` の**カード間**関係（5語彙。特に `causal` / `negate`）と `evidenceLinks` の `contradictionState` が、読み順上のどの位置で効くかとあわせてAI入力へ届く。**リクエスト／レスポンスの形は変わらない**（後方互換。フロントエンドの `generateNarrative` は無改修）。
-- 読み順は IR のフィールドではない（`llm_input_ir_spec.md` §4 は閉じたスキーマであり `reading_order` を定義しない）。叙述の背骨は従来どおり `doc.readingOrder` から描画し、IR は骨格（関係）を供給する。島間の辺（`fromKind` / `toKind` = `island`）も IR の対象外であり（§2.3 規則6）、従来どおり `doc.edges` から描画する。
-- SafeMode は二層で強制される。**(1)** `_reject_unreviewed_text`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）。**(2)** IRビルダーが §7.1 に従い投影対象カードのレビュー状態を独立に再検査する。本エンドポイントは (1) と (2) の検査対象がいずれも同一の `doc` であるため (1) が必ず先に発火する。(2) は多層防御であり、(1) の置き換えではない。
-- IR生成が失敗した場合の 422 コード: `unreviewed_text_not_allowed`（§7.1）/ `pii_detected`（§7.2。メール・電話・URLトークン。**応答に該当文字列を含めない**）/ `structured_text_only_violation`（§7.3）/ `empty_cards` / `empty_card_text` / `duplicate_card_id` / `invalid_card_id` / `invalid_self_loop` / `duplicate_island_id` / `invalid_island_id`。**`empty_cards` は挙動変更**であり、カードが1枚も無い文書は 200 ではなく 422 を返す（叙述の対象が存在しないため）。
+- **`AI-IR-PROJECTION-01`（`ADR-0069`）Stage 3でLLM投入IR経由になった**（`02_Architecture/llm_input_ir_spec.md`、`ir_version` 1.2）。`doc.edges` の**カード間**関係（5語彙。特に `causal` / `negate`）と `evidenceLinks` の `contradictionState` が、読み順上のどの位置で効くかとあわせてAI入力へ届く。**リクエスト／レスポンスの形は変わらない**（後方互換。フロントエンドの `generateNarrative` は無改修）。
+- 読み順はIRのフィールドではない（`llm_input_ir_spec.md` §4は閉じたスキーマであり `reading_order` を定義しない）。叙述の背骨は従来どおり `doc.readingOrder` から描画し、IRは骨格（関係）を供給する。島間の辺（`fromKind` / `toKind` = `island`）もIRの対象外であり（§2.3規則6）、従来どおり `doc.edges` から描画する。
+- SafeModeは二層で強制される。**(1)** `_reject_unreviewed_text`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）。**(2)** IRビルダーが §7.1に従い投影対象カードのレビュー状態を独立に再検査する。本エンドポイントは (1) と (2) の検査対象がいずれも同一の `doc` であるため (1) が必ず先に発火する。(2) は多層防御であり、(1) の置き換えではない。
+- IR生成が失敗した場合の422コード: `unreviewed_text_not_allowed`（§7.1）/ `pii_detected`（§7.2。メール・電話・URLトークン。**応答に該当文字列を含めない**）/ `structured_text_only_violation`（§7.3）/ `empty_cards` / `empty_card_text` / `duplicate_card_id` / `invalid_card_id` / `invalid_self_loop` / `duplicate_island_id` / `invalid_island_id`。**`empty_cards` は挙動変更**であり、カードが1枚も無い文書は200ではなく422を返す（叙述の対象が存在しないため）。
 - 座標は渡さない（`ADR-0069` D1=B、`llm_input_ir_spec.md` §2.2.1）。叙述の骨格は `causal` / `negate` であり布置ではない。
-- カード200枚超（`MAX_CARDS`、§5.1）の文書では IR が切り詰められ、**打ち切られたカードに繋がる関係はAI入力に含まれない**。読み順そのものは従来どおり `doc.readingOrder` 全体から描画するため欠落しない。レスポンスの形は変えない方針（後方互換）のため `suggest-card-groups` の `truncated` に相当するフィールドは追加しておらず、切り詰めはプロンプト本文に明記して黙って落とさないことのみ担保する。上限値の妥当性は `AI-IR-PROJECTION-01` AC-10 で扱う。
+- カード200枚超（`MAX_CARDS`、§5.1）の文書ではIRが切り詰められ、**打ち切られたカードに繋がる関係はAI入力に含まれない**。読み順そのものは従来どおり `doc.readingOrder` 全体から描画するため欠落しない。レスポンスの形は変えない方針（後方互換）のため `suggest-card-groups` の `truncated` に相当するフィールドは追加しておらず、切り詰めはプロンプト本文に明記して黙って落とさないことのみ担保する。上限値の妥当性は `AI-IR-PROJECTION-01` AC-10で扱う。
 
 **POST** `/ai/check-narrative`
 
@@ -628,7 +628,7 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
   - `doc: DocumentV1` — 検証対象のA型図解
   - `narrativeText: string` — 検証対象のナラティブ本文
   - `basedOnReadingOrder?: string[]` — ナラティブが従った読取順（A/B照合のA側）
-  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定 fail-closed）
+  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定fail-closed）
 - Response: `CheckNarrativeResponse`
   - `issues: NarrativeIssue[]` — A/B照合で検出された不整合
     - `direction: "b_missing_in_a" | "a_missing_in_b"` — B型（ナラティブ）にあるのにA型にない記述 / A型にあるのにB型で落ちた島
@@ -640,7 +640,7 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 - Request: `RefineCardTextRequest`
   - `cardText: string` — 元のカード本文
   - `context?: string` — 周辺カードの本文（任意）
-  - `textReviewed?: boolean` — 入力本文が人間レビュー済みか（`SEC-AI-SAFEMODE-02`。**既定 false = fail-closed**。未指定・false は 422）
+  - `textReviewed?: boolean` — 入力本文が人間レビュー済みか（`SEC-AI-SAFEMODE-02`。**既定false = fail-closed**。未指定・falseは422）
   - `allowUnreviewedText?: boolean` — 未レビュー本文の送信を明示的に許可（`SEC-AI-SAFEMODE-01`。`SUI_ALLOW_UNREVIEWED_AI_TEXT=true` のときのみ有効）
 - Response: `RefineCardTextResponse`
   - `refinedText: string` — 改善された文
@@ -651,22 +651,22 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 
 - Request: `SuggestCardGroupsRequest`
   - `cards: CardRef[]` — グループ化対象カードの配列（id + text + textReviewed、2〜1000件。上限は `DOGFOOD-31` で100件から引き上げ済み）
-  - `doc?: DocumentV1` — **任意**。`AI-IR-PROJECTION-01`（`ADR-0069`）Stage 2 で追加。渡すとサーバが LLM投入IR（`02_Architecture/llm_input_ir_spec.md`、`ir_version` 1.2）を構築し、**確定済みの `islands`・`parentIslandId` 階層・`edges`（関係5語彙）・各カードの `holdState`** がAI入力へ届く。**省略時は従来どおり `cards` だけで動作する**（後方互換）
+  - `doc?: DocumentV1` — **任意**。`AI-IR-PROJECTION-01`（`ADR-0069`）Stage 2で追加。渡すとサーバがLLM投入IR（`02_Architecture/llm_input_ir_spec.md`、`ir_version` 1.2）を構築し、**確定済みの `islands`・`parentIslandId` 階層・`edges`（関係5語彙）・各カードの `holdState`** がAI入力へ届く。**省略時は従来どおり `cards` だけで動作する**（後方互換）
   - `allowUnreviewedText?: boolean` — 未レビュー本文の送信を明示的に許可（`SEC-AI-SAFEMODE-01`）
-  - `model?: string` — タスク別モデル override（AI-MODEL-GOVERNANCE-01 R2・allowlist 検査付き）
+  - `model?: string` — タスク別モデルoverride（AI-MODEL-GOVERNANCE-01 R2・allowlist検査付き）
 - Response: `SuggestCardGroupsResponse`
   - `groups: SuggestedGroup[]` — グループの配列
     - `label: string`
     - `cardIds: string[]`
     - `rationale?: string`
   - `excludedCardIds: string[]` — 既定 `[]`。`holdState`（`held` / `pending` / `shelved`）が付いているためグループ化候補から外したリクエストカードのID
-  - `truncated: boolean` — 既定 `false`。IR が §5 の上限（`MAX_CARDS=200` / `MAX_TEXT_CHARS=12000`）に達し、リクエストの全カードを投影できなかった場合に `true`。このとき `groups` は投影されたカードのみを対象とする（上限値の妥当性は `AI-IR-PROJECTION-01` AC-10 で別途扱う）
+  - `truncated: boolean` — 既定 `false`。IRが §5の上限（`MAX_CARDS=200` / `MAX_TEXT_CHARS=12000`）に達し、リクエストの全カードを投影できなかった場合に `true`。このとき `groups` は投影されたカードのみを対象とする（上限値の妥当性は `AI-IR-PROJECTION-01` AC-10で別途扱う）
 - カード群のテーマ別グループ化（島候補）を提案する。1段目の束は2〜3枚が原則。
 - **`holdState` が付いたカードを新規グループへ含めない**（`ADR-0069` / `AI-IR-PROJECTION-01` AC-2）。`held`（判断を保留）/ `pending`（未着手）/ `shelved`（Shelfへ退避）の3値はいずれも「人間が意図的に扱いを決めていない」ことの記録であり（`schemas.md` §14.1）、新しい島の構成員として提案することはその判断を上書きする。抑止は**コードで強制**する ── 候補集合から除外してプロンプトに載せず、さらにLLM応答からも当該IDを除去する（プロンプトの遵守は不変条件にならない）。除外後に候補が2枚未満になった場合は**LLMを呼ばず** `groups: []` を返す。既存の島の構成員として `islands[*].cardIds` に現れることは妨げない（既決の構造であり提案ではない）。
 - 応答の `cardIds` は候補集合に限定される。候補外のID（保留カード・未知のID）は除去され、それにより空になったグループは返さない。
-- `CardRef.textReviewed` は **既定 false = fail-closed**（`SEC-AI-SAFEMODE-02`）。1件でも未レビューのカードを含むと 422（`unreviewed_text_not_allowed`）。
-- SafeMode は二層で強制される。**(1)** `_reject_unreviewed_cards`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）が `cards` を検査する。**(2)** IRビルダーが `llm_input_ir_spec.md` §7.1 に従い、投影対象の全カード（`doc` 側を含む）のレビュー状態を独立に再検査する。`doc` にのみ含まれる未レビューカードは (1) では見えず (2) が 422（`unreviewed_text_not_allowed`）で拒否する。
-- IR生成が失敗した場合の 422 コード: `unreviewed_text_not_allowed`（§7.1）/ `pii_detected`（§7.2。メール・電話・URLトークン。**応答に該当文字列を含めない**）/ `structured_text_only_violation`（§7.3）/ `duplicate_card_id` / `invalid_self_loop` / `empty_card_text`。
+- `CardRef.textReviewed` は **既定false = fail-closed**（`SEC-AI-SAFEMODE-02`）。1件でも未レビューのカードを含むと422（`unreviewed_text_not_allowed`）。
+- SafeModeは二層で強制される。**(1)** `_reject_unreviewed_cards`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）が `cards` を検査する。**(2)** IRビルダーが `llm_input_ir_spec.md` §7.1に従い、投影対象の全カード（`doc` 側を含む）のレビュー状態を独立に再検査する。`doc` にのみ含まれる未レビューカードは (1) では見えず (2) が422（`unreviewed_text_not_allowed`）で拒否する。
+- IR生成が失敗した場合の422コード: `unreviewed_text_not_allowed`（§7.1）/ `pii_detected`（§7.2。メール・電話・URLトークン。**応答に該当文字列を含めない**）/ `structured_text_only_violation`（§7.3）/ `duplicate_card_id` / `invalid_self_loop` / `empty_card_text`。
 - 座標は渡さない（`ADR-0069` D1=B、`llm_input_ir_spec.md` §2.2.1）。束ねの根拠は訴えの類似性であり布置ではない。
 
 **POST** `/ai/detect-contradiction`
@@ -674,7 +674,7 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 - Request: `DetectContradictionRequest`
   - `cardA: CardRef`（id + text + textReviewed）
   - `cardB: CardRef`
-  - `doc?: DocumentV1` — **任意**。`AI-IR-PROJECTION-01`（`ADR-0069`）で追加。渡すとサーバが LLM投入IR（`02_Architecture/llm_input_ir_spec.md`、`ir_version` 1.2）を構築し、`edges`（関係5語彙）・確定済みの `islands`・`evidenceLinks` の `contradictionState` がAI入力へ届く。**省略時は従来どおりカード2枚のみで動作する**（後方互換）
+  - `doc?: DocumentV1` — **任意**。`AI-IR-PROJECTION-01`（`ADR-0069`）で追加。渡すとサーバがLLM投入IR（`02_Architecture/llm_input_ir_spec.md`、`ir_version` 1.2）を構築し、`edges`（関係5語彙）・確定済みの `islands`・`evidenceLinks` の `contradictionState` がAI入力へ届く。**省略時は従来どおりカード2枚のみで動作する**（後方互換）
   - `allowUnreviewedText?: boolean` — 未レビュー本文の送信を明示的に許可（`SEC-AI-SAFEMODE-01`）
 - Response: `DetectContradictionResponse`
   - `hasContradiction: boolean`
@@ -683,20 +683,20 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
   - `existingContradictionState?: "unconfirmed" | "confirmed" | "held" | "resolved"` — 上記に該当する既存リンクの状態
 - 2枚のカード間の論理的矛盾を検出する。異なる意見（単なる相違）は矛盾として扱わない。
 - **確定・保留済みの矛盾を再提示しない**（`ADR-0069`）。`alreadyRecorded=true` のとき、応答は `hasContradiction=false` ＋ `alreadyRecorded=true` を返し、**LLMを呼ばない**。人間が既に下した判断を新規の発見として提示し直さないための決定論的な抑止であり、「矛盾が無い」ことの主張ではない。`unconfirmed` / `resolved` は抑止対象外で、通常どおりAIへ問い合わせる。
-- `CardRef.textReviewed` は **既定 false = fail-closed**（`SEC-AI-SAFEMODE-02`）。どちらかが未レビューなら 422。
-- SafeMode は二層で強制される。**(1)** `_reject_unreviewed_cards`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）が `cardA` / `cardB` を検査する。**(2)** IRビルダーが `llm_input_ir_spec.md` §7.1 に従い、投影対象の全カード（`doc` 側を含む）のレビュー状態を独立に再検査する。`doc` にのみ含まれる未レビューカードは (1) では見えず (2) が 422（`unreviewed_text_not_allowed`）で拒否する。
-- IR生成が失敗した場合の 422 コード: `unreviewed_text_not_allowed`（§7.1）/ `pii_detected`（§7.2。メール・電話・URLトークン。**応答に該当文字列を含めない**）/ `structured_text_only_violation`（§7.3）/ `duplicate_card_id` / `invalid_self_loop` / `empty_card_text`。
+- `CardRef.textReviewed` は **既定false = fail-closed**（`SEC-AI-SAFEMODE-02`）。どちらかが未レビューなら422。
+- SafeModeは二層で強制される。**(1)** `_reject_unreviewed_cards`（`ADR-0068` / `SEC-AI-SAFEMODE-01`、変更なし）が `cardA` / `cardB` を検査する。**(2)** IRビルダーが `llm_input_ir_spec.md` §7.1に従い、投影対象の全カード（`doc` 側を含む）のレビュー状態を独立に再検査する。`doc` にのみ含まれる未レビューカードは (1) では見えず (2) が422（`unreviewed_text_not_allowed`）で拒否する。
+- IR生成が失敗した場合の422コード: `unreviewed_text_not_allowed`（§7.1）/ `pii_detected`（§7.2。メール・電話・URLトークン。**応答に該当文字列を含めない**）/ `structured_text_only_violation`（§7.3）/ `duplicate_card_id` / `invalid_self_loop` / `empty_card_text`。
 - 座標は渡さない（`ADR-0069` D1=B、`llm_input_ir_spec.md` §2.2.1）。矛盾の根拠は論理関係であり布置ではない。
 
 #### 廃止済み: カード重要度評価（再実装禁止）
 
 - 廃止: POST /ai/assess-card-importance — `AI-IMPORTANCE-SCORING-01`（2026-08-11、方向D-a）
 
-上の1行は機械可読な廃止宣言である（`check_design_consistency.py` が読む。書式は §13 参照）。**2026-08-11 に意図的に廃止した**ものであり、未実装でも計画でもない。
+上の1行は機械可読な廃止宣言である（`check_design_consistency.py` が読む。書式は §13参照）。**2026-08-11に意図的に廃止した**ものであり、未実装でも計画でもない。
 
-`AI-IMPORTANCE-SCORING-01`（Status: Done、方向 D-a）が、カード本文を `high` / `medium` / `low` へ序列化する動作を `00_Prompt/domain.md` の無条件の不変条件「AIは内容を採点せず」との抵触と判定し、route・Pydantic型・prompt/parser・mock応答・デモ工程を削除した。`03_Implement/backend/tests/test_ai_anti_scoring_contract.py` が採点surfaceの復活を禁じている。
+`AI-IMPORTANCE-SCORING-01`（Status: Done、方向D-a）が、カード本文を `high` / `medium` / `low` へ序列化する動作を `00_Prompt/domain.md` の無条件の不変条件「AIは内容を採点せず」との抵触と判定し、route・Pydantic型・prompt/parser・mock応答・デモ工程を削除した。`03_Implement/backend/tests/test_ai_anti_scoring_contract.py` が採点surfaceの復活を禁じている。
 
-**この契約を実装の正本として使用してはならない。** 代替が必要な場合は順位・等級を含まない構造的観測（`llm_input_ir_spec.md` §4 の `graph_summary`）に限定し、`ADR-0069` の後に置くこと。
+**この契約を実装の正本として使用してはならない。** 代替が必要な場合は順位・等級を含まない構造的観測（`llm_input_ir_spec.md` §4の `graph_summary`）に限定し、`ADR-0069` の後に置くこと。
 
 > 記録: 2026-08-12 に本節へ「未実装（計画）。実装前にこの契約を正本として使用すること」という誤った注記が入った。`DX-CONTRACT-DRIFT-01` が検出した「api.md に記載があるが実装が無い」というドリフトに対し、**廃止によるものか未着手によるものかを区別せずに** 後者と解釈したことが原因である。ドリフト検出は差分を見つけるが意図は見分けない。詳細は `DX-CANON-INTENT-01`。
 
@@ -709,7 +709,7 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
   - `derived: bool`, `groundingCardIds: string[]`, `groundingEdgeIds: string[]`
   - `cardTexts: RelationCardText[]` — 根拠カードの本文（id + text）
   - `edgeTexts?: RelationEdgeText[]` — 根拠エッジの本文（edgeId/type/from/to）
-  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定 fail-closed）
+  - `allowUnreviewedText?: boolean` — **SEC-AI-SAFEMODE-01（ADR-0068）**: 未レビュー本文の送出許可（任意・既定fail-closed）
 - Response: `SummarizeIslandRelationResponse`
   - `text: string`, `groundingCardIds: string[]`, `groundingEdgeIds: string[]`, `warnings: string[]`
 - 2つの島間の関係を要約する。関係種別は5語彙（related/negate/causal/mutual/equivalence）から選ぶ。
@@ -720,7 +720,7 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
   - `islandTitles: string[]` — 島の表札一覧（最大50件）
   - `cardTexts: string[]` — レビュー済みカード本文（最大50件）
   - `currentTitle?: string` — 現在のタイトル
-  - `textReviewed?: boolean` — `cardTexts` が人間レビュー済みか（`SEC-AI-SAFEMODE-02`。**既定 false = fail-closed**。未指定・false は 422）
+  - `textReviewed?: boolean` — `cardTexts` が人間レビュー済みか（`SEC-AI-SAFEMODE-02`。**既定false = fail-closed**。未指定・falseは422）
   - `allowUnreviewedText?: boolean` — 未レビュー本文の送出許可（`SEC-AI-SAFEMODE-01`）
 - Response: `SuggestDocumentTitleResponse`
   - `candidates: DocumentTitleCandidate[]` — タイトル候補（1〜3件）
@@ -736,7 +736,7 @@ Polygon auto-fit の backend接続準備として、A2比較キーの最小契�
 
 **POST** `/docs/{doc_id}/export-audit`
 
-- 共有・書き出しイベント（exportKind を含む）を監査記録する。SafeMode適用後の書き出し境界を通過した場合のみ記録される。
+- 共有・書き出しイベント（exportKindを含む）を監査記録する。SafeMode適用後の書き出し境界を通過した場合のみ記録される。
 - Error: 404（doc_id不存在）
 
 **GET** `/docs/{doc_id}/similar-candidate-groups`
@@ -770,15 +770,15 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証するunsafe method（POST/
 
 **GET** `/session/login`
 
-- AC-1（ADR-0074）: OAuth broker への authorization-code+PKCE フローを開始する BFF エンドポイント（ブラウザ向けリダイレクト）。`next` クエリを保持し、broker の authorize エンドポイントへ 302。
+- AC-1（ADR-0074）: OAuth brokerへのauthorization-code+PKCEフローを開始するBFFエンドポイント（ブラウザ向けリダイレクト）。`next` クエリを保持し、brokerのauthorizeエンドポイントへ302。
 
 **GET** `/session/callback`
 
-- AC-1（ADR-0074）: OAuth callback。code を交換し、JWKS パイプラインでトークンを検証してサーバー所有の認証セッション cookie を発行する（ブラウザ向けリダイレクト）。
+- AC-1（ADR-0074）: OAuth callback。codeを交換し、JWKSパイプラインでトークンを検証してサーバー所有の認証セッションcookieを発行する（ブラウザ向けリダイレクト）。
 
 **POST** `/admin/provision/identity-providers`
 
-- strict provisioning: 外部IdPの登録。provider, issuer, audience を登録する。
+- strict provisioning: 外部IdPの登録。provider, issuer, audienceを登録する。
 - 認可: Platform operator / admin capability
 
 **POST** `/admin/provision/tenant-identity-providers`
@@ -791,46 +791,46 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証するunsafe method（POST/
 
 **GET** `/admin/provision/audit`
 
-- SEC-ADMIN-PLANE-03: 制御プレーン操作の監査証跡（allowlist 読取）。`X-Admin-Api-Key`（または provision capability）の control-plane 認可必須。
-- Response: `{ "events": [{ "eventId", "occurredAt", "route", "operation?", "result", "statusCode", "requestId?", "actorRefHash?" }], "nextCursor?" }`。`limit`（既定100・上限500）と `cursor`（前ページの `nextCursor`）で bounded にページング。
+- SEC-ADMIN-PLANE-03: 制御プレーン操作の監査証跡（allowlist読取）。`X-Admin-Api-Key`（またはprovision capability）のcontrol-plane認可必須。
+- Response: `{ "events": [{ "eventId", "occurredAt", "route", "operation?", "result", "statusCode", "requestId?", "actorRefHash?" }], "nextCursor?" }`。`limit`（既定100・上限500）と `cursor`（前ページの `nextCursor`）でboundedにページング。
 - Stage-A（`X-Admin-Api-Key`）はbootstrap運用者として全体監査を取得する。Stage-B（trusted sessionの`tenant.provision`）はserver解決したactive tenantで絞り込み、他tenantおよびbootstrap行を返さない。caller指定のactor/tenant headerは監査属性・絞り込みに使用しない。
-- allowlist に `tenant_id`・本文・secret・生PII・policyRef生値は含めない（ADR-0035）。
-- 監査記録は fail-open（記録失敗でも管理操作を阻害しない）。
+- allowlistに `tenant_id`・本文・secret・生PII・policyRef生値は含めない（ADR-0035）。
+- 監査記録はfail-open（記録失敗でも管理操作を阻害しない）。
 
 **GET** `/admin/provision/models`
 
-- AI-MODEL-GOVERNANCE-01（R1）: モデル/プロバイダレジストリ一覧。`X-Admin-Api-Key`（または provision capability）の control-plane 認可必須。
-- Response: `{ "providers": [{ "id", "providerKind", "displayName", "lifecycleState" }], "models": [{ "id", "providerId", "displayName", "capabilities?", "lifecycleState" }] }`。プラットフォーム共有資産（tenant 非依存）。
+- AI-MODEL-GOVERNANCE-01（R1）: モデル/プロバイダレジストリ一覧。`X-Admin-Api-Key`（またはprovision capability）のcontrol-plane認可必須。
+- Response: `{ "providers": [{ "id", "providerKind", "displayName", "lifecycleState" }], "models": [{ "id", "providerId", "displayName", "capabilities?", "lifecycleState" }] }`。プラットフォーム共有資産（tenant非依存）。
 
 **POST** `/admin/provision/models/providers` / **POST** `/admin/provision/models`
 
-- プロバイダ/モデルを**動的に登録**（control-plane 認可）。modelの`providerId`がrequest単位のtransportを決め、一覧表示と実行gateは同じprovider利用可否を用いる。`baseUrl`はtrusted HTTP endpoint契約（HTTPはloopbackのみ）に従う。`apiKeyRef` はprovider用途別の明示allowlistまたは`secret:`参照のみで、平文や他用途の環境変数を保存・解決しない（ADR-0035）。`capabilities` は `intermediate`/`final_judgement` 等のタグ。
+- プロバイダ/モデルを**動的に登録**（control-plane認可）。modelの`providerId`がrequest単位のtransportを決め、一覧表示と実行gateは同じprovider利用可否を用いる。`baseUrl`はtrusted HTTP endpoint契約（HTTPはloopbackのみ）に従う。`apiKeyRef` はprovider用途別の明示allowlistまたは`secret:`参照のみで、平文や他用途の環境変数を保存・解決しない（ADR-0035）。`capabilities` は `intermediate`/`final_judgement` 等のタグ。
 - 登録はinsert-only。同一IDの再登録はproviderを`409 provider_already_exists`、modelを`409 model_already_exists`で拒否し、既存rowを暗黙更新しない。起動時seedの冪等upsertとは別契約とする。
-- モデル無効化: `PATCH /admin/provision/models/{model_id}` で `lifecycleState: disabled`。無効モデルへの呼び出しは fail-closed。
+- モデル無効化: `PATCH /admin/provision/models/{model_id}` で `lifecycleState: disabled`。無効モデルへの呼び出しはfail-closed。
 
 **GET** `/admin/provision/models/tenants/{tenant_id}/allowlist`
 
-- AI-MODEL-GOVERNANCE-01（R3）: テナントの利用可能モデル allowlist の参照（fail-closed）。空 = プラットフォーム既定。適用は Phase 2 の実効モデル解決で交差（より狭い方が勝つ）。
+- AI-MODEL-GOVERNANCE-01（R3）: テナントの利用可能モデルallowlistの参照（fail-closed）。空 = プラットフォーム既定。適用はPhase 2の実効モデル解決で交差（より狭い方が勝つ）。
 - Responseには`revision`（modelIdsの正規化内容から生成した64桁hex）を含む。管理UI/CLIは更新時にこの値を引き継ぎ、表示後の競合更新を検出する。
 
 **PUT** `/admin/provision/models/tenants/{tenant_id}/allowlist`
 
-- AI-MODEL-GOVERNANCE-01（R3）: テナントの利用可能モデル allowlist の更新（fail-closed・control-plane 認可）。空 = プラットフォーム既定。
+- AI-MODEL-GOVERNANCE-01（R3）: テナントの利用可能モデルallowlistの更新（fail-closed・control-plane認可）。空 = プラットフォーム既定。
 - 対象tenantが存在しactiveであること、各modelが登録済みかつactiveであること、modelIdsに重複がないことを更新前に検証する。存在しないtenantは404、無効なmodel集合・重複は422とし、部分更新しない。
 - `expectedRevision`は必須（OPS-ADMIN-CONCURRENCY-01 AC-4、2026-08-26のMaintainer決定：意図的な破壊的変更・移行期間なし）。未指定は`428 Precondition Required`（`{"code": "model_allowlist_expected_revision_required", "message": "..."}`）で拒否し、更新しない。`inquiry_bundles.py`のPUT/DELETEが`If-Match`欠落時に返す428と同じ契約形状。指定した`expectedRevision`が現行revisionと不一致なら`409 model_allowlist_conflict`で更新せず、`currentRevision`を返す（この不一致検出の挙動自体は変更していない）。正式CLIは常にGETで取得したrevisionを指定するため、この変更による影響を受けない。
 
 **GET** `/healthz`
 
 - 未認証。プロセス生存確認。`200 {"status": "ok"}` を返す。
-- **liveness のみで、何も検査しない。** OPS-OBSERV-01: 以前はこれが唯一のAPI確認手段として全runbookで案内されていたため、DBを失った状態でも `ok` を返すことが運用上の落とし穴になっていた。依存の状態は `/readyz` を使う。
+- **livenessのみで、何も検査しない。** OPS-OBSERV-01: 以前はこれが唯一のAPI確認手段として全runbookで案内されていたため、DBを失った状態でも `ok` を返すことが運用上の落とし穴になっていた。依存の状態は `/readyz` を使う。
 
 **GET** `/readyz`
 
-- 未認証。依存の readiness を検査する（OPS-OBSERV-01）。
+- 未認証。依存のreadinessを検査する（OPS-OBSERV-01）。
 - Response: `{ status: "ready" | "not_ready", checks: { [name: string]: string } }`
 - `checks.database`: `ok` | `unreachable`。到達不能時の理由は接続文字列を含みうるため応答へ出さない。
-- `checks.schema`: `ok` | `mismatch`。DBの `alembic_version` とビルドが期待するAlembic head の一致を見る。`mismatch` のとき `checks.schemaExpected` と `checks.schemaApplied` にリビジョンIDを併記する（いずれも秘密ではなく、roll-forward と restore の判断に必要）。
-- 準備完了なら `200`、そうでなければ `503`。例外を投げず必ず status で答える。
+- `checks.schema`: `ok` | `mismatch`。DBの `alembic_version` とビルドが期待するAlembic headの一致を見る。`mismatch` のとき `checks.schemaExpected` と `checks.schemaApplied` にリビジョンIDを併記する（いずれも秘密ではなく、roll-forwardとrestoreの判断に必要）。
+- 準備完了なら `200`、そうでなければ `503`。例外を投げず必ずstatusで答える。
 - 起動時検査はAlembicの**スクリプト側**の分岐しか見ておらずDBの適用済みリビジョンを読まないため、古いスキーマのDBでも正常起動する。その隙間をこのendpointが埋める。
 
 **GET** `/version`
@@ -838,7 +838,7 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証するunsafe method（POST/
 - 未認証。稼働中のビルドを返す（OPS-OBSERV-01）。
 - Response: `{ revision: string, runtimeProfile: string }`
 - `revision` は `SUI_APP_REVISION`。未設定時は `"unknown"`。
-- `runtimeProfile` はprofile名をそのまま返す。`GET /session/bootstrap-policy` が profile 名を隠してbootstrap modeへ写像するのとは**意図的に異なる**——運用者はどのprofileで動いているかを知る必要があり、profile名自体は秘密ではない。
+- `runtimeProfile` はprofile名をそのまま返す。`GET /session/bootstrap-policy` がprofile名を隠してbootstrap modeへ写像するのとは**意図的に異なる**——運用者はどのprofileで動いているかを知る必要があり、profile名自体は秘密ではない。
 
 **GET** `/redoc`
 
@@ -874,14 +874,14 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証するunsafe method（POST/
 
 MVPでは、エラーを過度に作り込まない。ただし、実装済みの安全境界と契約境界は区別して返す。
 
-- 400：**トランスポート/パース境界** — リクエストを解釈できない段階の失敗（JSON構造ネスト深さ超過、closed-world の未知キー、`json_nesting_too_deep` / `unknown_contract_key` 等）。Pydantic body validation の既定は422へ整形するため、400は明示的に上げる安全境界のみ。
-- 403：認可、readOnly、review attribution identity などの安全境界違反
+- 400：**トランスポート/パース境界** — リクエストを解釈できない段階の失敗（JSON構造ネスト深さ超過、closed-worldの未知キー、`json_nesting_too_deep` / `unknown_contract_key` 等）。Pydantic body validationの既定は422へ整形するため、400は明示的に上げる安全境界のみ。
+- 403：認可、readOnly、review attribution identityなどの安全境界違反
 - 404：doc not found
 - 409：`If-Match` 不一致、重複する判断ログなどの競合
-- 422：**ドメイン契約違反** — well-formed だが契約を満たさない（必須フィールドが trim 後空、enum 違反、operation/command 不一致、A1契約フィールド違反、Pydantic body validation の既定）。
+- 422：**ドメイン契約違反** — well-formedだが契約を満たさない（必須フィールドがtrim後空、enum違反、operation/command不一致、A1契約フィールド違反、Pydantic body validationの既定）。
 - 500：内部エラー
 
-（SEC-HTTP-01・2026-08-15）`POST /admin/provision/users` の必須文字列空チェックを **422** へ統一（従来 400 だったが、ai.py/ai_relations.py の同種チェックは 422。IdP登録系の `unsupported_protocol` / `invalid_jwks_uri` は構造化コードを持つ別クラスとして 400 のまま・将来の標準化対象）。
+（SEC-HTTP-01・2026-08-15）`POST /admin/provision/users` の必須文字列空チェックを **422** へ統一（従来400だったが、ai.py/ai_relations.pyの同種チェックは422。IdP登録系の `unsupported_protocol` / `invalid_jwks_uri` は構造化コードを持つ別クラスとして400のまま・将来の標準化対象）。
 
 ---
 
@@ -891,9 +891,9 @@ MVPでは、エラーを過度に作り込まない。ただし、実装済み�
 
 - `ETag` / `If-Match`: Document全体保存の楽観ロックとして実装済み。個別エンティティの差分同期ではない。
 - 認証/認可: `AuthContext` 正規化、strict provisioning、access-control adapter、readOnly / SafeMode優先判定を提供する。完全な組織権限管理UIやRBACエンジンは含まない。
-- 監査: view/export/context/proposal 系のイベント連携点を持つ。監査ログ閲覧UIや保持期限管理は含まない。
+- 監査: view/export/context/proposal系のイベント連携点を持つ。監査ログ閲覧UIや保持期限管理は含まない。
 - AI/Context: proposal-only、mock-first、closed-world契約を中心に提供する。AI提案の自動適用や確定昇格は含まない。
-- Merge decision / Similar candidate: append-read / derived の限定契約として提供する。Document内エンティティの個別CRUDではない。
+- Merge decision / Similar candidate: append-read / derivedの限定契約として提供する。Document内エンティティの個別CRUDではない。
 
 ### 5.2 非MVPまたは別Issueで扱う拡張
 
@@ -916,14 +916,14 @@ MVPでは、エラーを過度に作り込まない。ただし、実装済み�
 ## 7. Publishing metadata の扱い（FB-RM-PUB-01）
 
 - `view.json` / `packs/index.json` の `visibility` は **公開範囲ラベル用メタデータ** として扱う。
-- `visibility` の値は `Public | Unlisted | Org | Restricted` を採用し、不正値は validator で拒否する。
+- `visibility` の値は `Public | Unlisted | Org | Restricted` を採用し、不正値はvalidatorで拒否する。
 - 後方互換として、`view.json` 欠損時は `Restricted`、`packs/index.json` 欠損時は `Public` を補完する。
-- `visibility` は APIの共有可否判定を上書きしない。外部サービスとの共有制御は引き続き SafeMode / share/export policy を正本とする。
+- `visibility` はAPIの共有可否判定を上書きしない。外部サービスとの共有制御は引き続きSafeMode / share/export policyを正本とする。
 
 
 ## 8. AccessControlAdapter API契約（FB-RM-PUB-04）
 
-roles/groups/policyRef に基づく認可判定は、API本体ではなく `AccessControlAdapter` へ外部委譲する。
+roles/groups/policyRefに基づく認可判定は、API本体ではなく `AccessControlAdapter` へ外部委譲する。
 
 ### 8.1 入力（API → adapter/hook）
 
@@ -937,11 +937,11 @@ roles/groups/policyRef に基づく認可判定は、API本体ではなく `Acce
 - `safeMode`: ルート側のsafeMode（export-auditではpayload.safeMode）
 - `readOnly`: `X-Read-Only` ヘッダ（`1`/`true`）
 
-正規化ルール:
+正規化ルールは次のとおりです。
 
 - `x-auth-roles` / `x-auth-groups` が未指定・空文字・`null` 相当値のときは `[]` として扱う。
-- `x-policy-ref` は trim 後に空文字なら `null` として扱う。
-- API本体は roles/groups/policyRef の意味解釈を行わない（外部委譲）。
+- `x-policy-ref` はtrim後に空文字なら `null` として扱う。
+- API本体はroles/groups/policyRefの意味解釈を行わない（外部委譲）。
 
 上記visibility/policyRef headerはsingle-tenant互換resolverだけの契約である。SaaS profileでは公開headerを無視し、`tenantId + docId`で取得したserver-owned `document_access_metadata`のvisibilityと非秘密`policyBindingId/version`を使う。生のpolicyRefはDBへ保存せず、trusted runtime binding resolverがbinding IDから一時的に解決した値だけをPDPへ渡す。metadata、binding、runtime resolverのいずれかが欠損・不正・到達不能なら、`Restricted + policyRef欠損`としてdeny fail-safeへ倒す。
 
@@ -955,9 +955,9 @@ type AccessDecision = {
 };
 ```
 
-- `allow=false` の場合は API は `403` を返す。
+- `allow=false` の場合はAPIは `403` を返す。
 - `reason` は `Access denied: <reason>` として観測可能。
-- 本体は decision の解釈のみを行い、roles/groups の評価規則は持たない。
+- 本体はdecisionの解釈のみを行い、roles/groupsの評価規則は持たない。
 
 ### 8.3 fail-safe
 
@@ -965,7 +965,7 @@ SafeMode/readOnly 優先順:
 
 1. `safeMode=true` かつ `action in {export, share}` は常に拒否（`reason=safe_mode`）
 2. `readOnly=true` かつ `action in {write, export, share}` は常に拒否（`reason=read_only`）
-3. その後に adapter判定と policyRef fail-safe を評価
+3. その後にadapter判定とpolicyRef fail-safeを評価
 
 
 - 条件: `visibility in {Org, Restricted}` かつ `policyRef` 欠損。
@@ -987,7 +987,7 @@ fail-safe マトリクス:
 - `GET /docs/{doc_id}` でアクセス許可後に `eventType=view` を送信。
 - `POST /docs/{doc_id}/export-audit` でアクセス許可後に `eventType=export` を送信。
 - `POST /docs/{doc_id}/context-audit` でアクセス許可後に `eventType=query|bundle|proposal|apply` を送信。
-- 監査送信は既存の fail-open dispatcher 方針を維持する（監査送信失敗で本体機能は停止しない）。
+- 監査送信は既存のfail-open dispatcher方針を維持する（監査送信失敗で本体機能は停止しない）。
 - event envelopeの`tenantId`は、認可・repositoryと同じserver-resolved TenantContextから設定する必須fieldであり、自由形式metadataやclient入力から補完しない。欠損、空値、前後空白、制御文字、256文字超のtenantIdではeventを構築しない。
 - HTTP送信payloadは64KiB以下、metadataは32 field以下、keyは128文字以下、文字列値は1,024文字以下に制限する。本文・credential系keyは固定値へredactし、過大値や非finite numberをそのままqueue／送信先へ渡さない。transport失敗時のfail-open方針はこの構造検証を迂回しない。
 
@@ -995,15 +995,15 @@ fail-safe マトリクス:
 
 - 必須: `eventType`, `schemaVersion`, `occurredAt`, `tenantId`, `docId`, `action`, `decision.allow`, `policyRefPresent`
 - 任意: `decision.readOnly`, `decision.reason`, `visibility`, `adapterName`, `traceId`, `amr`, `acr`, `aal`, `authTime`
-- 非保存: `policyRef` 生値、`roles/groups` 生値、token/assertion 生値、WebAuthn credential id、ドキュメント本文
+- 非保存: `policyRef` 生値、`roles/groups` 生値、token/assertion生値、WebAuthn credential id、ドキュメント本文
 
 ### 8.5 実運用アダプタ設定（OIDC/SAML接続）
 
-- `SUI_ACCESS_CONTROL_ADAPTER=external_http` で、APIは外部 policy 接続先（endpoint）へ `POST` 委譲する。
+- `SUI_ACCESS_CONTROL_ADAPTER=external_http` で、APIは外部policy接続先（endpoint）へ `POST` 委譲する。
 - endpointはcredential/query/fragmentを含まないHTTPS、またはloopback HTTPに限定する。`external_http` を選択した場合はendpointを必須とし、欠損、固定bearerやIdP issuerだけが残る不完全設定、0以下または30秒超のtimeoutを起動時に拒否する。
-- request body は `AccessRequest` 契約から構成し、`auth.roles/groups` と `resource.policyRef` の意味解釈は行わない。一方で送信前の安全境界として、UTF-8 JSON全体を64KiB以下、識別子を256文字以下、`policyRef`を2,048文字以下、roles/groupsを各64件以下の重複なしcanonical文字列に限定する。
+- request bodyは `AccessRequest` 契約から構成し、`auth.roles/groups` と `resource.policyRef` の意味解釈は行わない。一方で送信前の安全境界として、UTF-8 JSON全体を64KiB以下、識別子を256文字以下、`policyRef`を2,048文字以下、roles/groupsを各64件以下の重複なしcanonical文字列に限定する。
 - subject/resource欠損、制御文字・前後空白、未知のaction/visibility、型不正、上限超過を含むserver-composed requestはtransport前に拒否し、raw値をclient・logへ反射せず`adapter_error`としてfail-safeを適用する。
-- request header には `x-acl-auth-mode: none|oidc|saml` を付与し、必要時のみ `Authorization: Bearer <static>` / `x-idp-issuer` / `x-trace-id` を付与する。
+- request headerには `x-acl-auth-mode: none|oidc|saml` を付与し、必要時のみ `Authorization: Bearer <static>` / `x-idp-issuer` / `x-trace-id` を付与する。
 - 応答は `allow:boolean`（必須）+ `readOnly:boolean?` + `reason:string?` の最小契約。object以外、余分なfield、64KiB超、非UTF-8/非JSON、512文字超または制御文字を含むreasonは受理せず、応答値をclient・logへ反射せずに`policy_ref_invalid`としてfail-safeを適用する。
 - `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_ENDPOINT` が未設定の場合、`external_http` を `noop` へフォールバックせず、設定不備として起動を拒否する（`ADR-0062`）。明示的な `noop` と、完全設定後のPDP実行時障害に対する `read_only|deny` は従来どおり維持する。
 
@@ -1016,17 +1016,17 @@ fail-safe マトリクス:
 
 ### 9.1 AuthContext 正規化
 
-- single-tenant の forwarded-header identity path の入力ヘッダ（設定差し替え可。`saas-multitenant` の trusted JWT/cookie path では使用しない）:
+- single-tenantのforwarded-header identity pathの入力ヘッダ（設定差し替え可。`saas-multitenant` のtrusted JWT/cookie pathでは使用しない）:
   - `SUI_AUTH_PROVIDER_FIELD`（既定 `x-auth-provider`）
   - `SUI_AUTH_USER_FIELD`（既定 `x-forwarded-user`）
   - `SUI_AUTH_SUBJECT_FIELD`（既定 `x-auth-subject`）
   - `SUI_AUTH_EMAIL_FIELD`（既定 `x-forwarded-email`）
   - `SUI_AUTH_NAME_FIELD`（既定 `x-forwarded-name`）
 - header意味:
-  - external UID は `AUTH_SUBJECT_FIELD` を第一候補とし、欠損時だけ legacy `AUTH_USER_FIELD` へfallbackする。`AUTH_USER_FIELD` は内部 `users.id` の指定ではない。
-  - provider はtrim・lowercase正規化し、欠損/空値は `header` とする。
-  - email/name はJIT provisioningで新規 `UserRow` を作る時の初期値にだけ使い、既存user属性をheaderで上書きしない。
-- 正規化後:
+  - external UIDは `AUTH_SUBJECT_FIELD` を第一候補とし、欠損時だけlegacy `AUTH_USER_FIELD` へfallbackする。`AUTH_USER_FIELD` は内部 `users.id` の指定ではない。
+  - providerはtrim・lowercase正規化し、欠損/空値は `header` とする。
+  - email/nameはJIT provisioningで新規 `UserRow` を作る時の初期値にだけ使い、既存user属性をheaderで上書きしない。
+- 正規化後は次のとおりです。
   - `AuthContext.userId`: `users.id`
   - `AuthContext.actorRef`: `user:<users.id>`
   - `AuthContext.provider` / `AuthContext.externalUid`
@@ -1036,9 +1036,9 @@ fail-safe マトリクス:
   - profile:
     - `user_id`: `user:<users.id>`（未認証は `actorRef` → `null`）
     - `sso_subject`: `user:sso:<provider>:<externalUid>`（不足時は `user_id` フォールバック）
-  - 責務境界: resolverは reviewerRef/ownerRef生成のみを行い、reviewEvents/export/import schemaを変更しない（opaque string互換維持）。
-  - adapter未設定時は Settings の既定値 `user_id` を使う。不正値は Settings validation で起動時に拒否し、公開設定経路ではフォールバックしない（factory 内部の未知 adapter 名への `user_id` フォールバックは防御的実装）。
-- 属性境界:
+  - 責務境界: resolverはreviewerRef/ownerRef生成のみを行い、reviewEvents/export/import schemaを変更しない（opaque string互換維持）。
+  - adapter未設定時はSettingsの既定値 `user_id` を使う。不正値はSettings validationで起動時に拒否し、公開設定経路ではフォールバックしない（factory内部の未知adapter名への `user_id` フォールバックは防御的実装）。
+- 属性境界は次のとおりです。
   - persist: `provider`, `external_uid`, `display_name`, `email`
   - transient only: `roles`, `groups`, `policyRef`, `amr`, `acr`, `aal`, `auth_time`, `trace_id`
   - forbidden: password/hash/secret, WebAuthn credential id, raw policy token
@@ -1046,10 +1046,10 @@ fail-safe マトリクス:
 ### 9.2 strict mode 拒否契約
 
 - 条件: `SUI_ALLOW_JIT_PROVISIONING=false` かつ `provider+external_uid` が `user_identities` に未登録。
-- 応答: `403 Forbidden`
+- 応答: `403 Forbidden`は次のとおりです。
 - エラーボディ（最小契約）: `{ "code": "identity_not_provisioned", "message": "Identity not provisioned. Pre-provision via /admin/provision/users before access." }`
 
-型契約（モック互換のための最小）:
+型契約（モック互換のための最小）は次のとおりです。
 
 ```ts
 export type StrictProvisioningError = {
@@ -1067,20 +1067,20 @@ export type StrictProvisioningError = {
 ### 9.2.1 strict mode の運用責任境界（承認フロー固定）
 
 - backend 実装責務:
-  - strict mode 条件に一致した要求を例外なく `403` で拒否する。
+  - strict mode条件に一致した要求を例外なく `403` で拒否する。
   - 緊急時でもアプリ内の一時バイパス（特定ユーザー許可など）を実装しない。
-- 例外承認責務:
-  - `SUI_ALLOW_JIT_PROVISIONING` の切替承認は **Security Officer + System Owner の2者承認** を必須とする。
-  - 実行（環境変数変更/再起動）は Platform Operator が行い、変更記録（時刻・理由・承認者）を監査証跡に残す。
-- 承認なき例外は不許可:
-  - 開発者判断のみで strict mode を緩和してはならない。
+- 例外承認責務は次のとおりです。
+  - `SUI_ALLOW_JIT_PROVISIONING` の切替承認は **Security Officer + System Ownerの2者承認** を必須とする。
+  - 実行（環境変数変更/再起動）はPlatform Operatorが行い、変更記録（時刻・理由・承認者）を監査証跡に残す。
+- 承認なき例外は不許可は次のとおりです。
+  - 開発者判断のみでstrict modeを緩和してはならない。
   - 監査時は「承認記録がない緩和設定」を設定不備として扱う。
 
 ### 9.3 事前プロビジョニング API（最小）
 
 - `POST /admin/provision/users`
   - request: `{ provider, externalUid, displayName?, email?, roles? }`
-  - `roles?`: **server-verified ロール識別子の配列**（SEC-AUTH-ATTRIB-01）。この列から identity 解決が読み出し、認可サービスはクライアントヘッダ由来ではなく server 導出の roles を受領する。
+  - `roles?`: **server-verifiedロール識別子の配列**（SEC-AUTH-ATTRIB-01）。この列からidentity解決が読み出し、認可サービスはクライアントヘッダ由来ではなくserver導出のrolesを受領する。
   - `201` response (created): `{ userId, reviewerRef, ownerRef, provisioned=true }`
   - `200` response (idempotent retry): `{ userId, reviewerRef, ownerRef, provisioned=false }`
   - 冪等: 同一 `provider+externalUid` の再試行は `provisioned=false` を返す
@@ -1119,11 +1119,11 @@ export type AdminProvisionUserConflictError = {
 
 - expand: `users` / `user_identities` 追加後、Alembic `20260717_0007`以降は作成処理で旧`provider+external_uid`と`identity_provider_id+subject`を二重書きし、解決時は後者を優先する。expand列が空の旧行だけは旧keyへbounded fallbackし、成功時に新bindingを補完する。両keyが異なるUserへ一致する場合や既存bindingと入力が不一致の場合は`identity_mapping_conflict`で拒否する。互換IdPはsingle-tenant移行用であり、検証済みissuer/audienceに基づくSaaS認証とは扱わない。
 - contract: attribution APIは `reviewerRef` / `ownerRef` を `user:<users.id>` に統一し、外部subject直参照を受け付けない。
-- strict modeは contract 側の強制条件として扱い、未登録subjectを `403` で拒否する。
+- strict modeはcontract側の強制条件として扱い、未登録subjectを `403` で拒否する。
 
 ### 9.5 エージェント登録 API（契約先行固定、`DATA-MODEL-OPS-02` D3/AC-5）
 
-`agent_registrations` をサーバー正本として採用する（実装は `EXT-CONN-02` で行う。本節は `EXT-CONN-02` 着手前提の契約先行固定であり、実装そのものの許可を意味しない）。§9.3の事前プロビジョニングAPIと同じ strict provisioning 型を採用し、通常の文書owner操作とは分離する。
+`agent_registrations` をサーバー正本として採用する（実装は `EXT-CONN-02` で行う。本節は `EXT-CONN-02` 着手前提の契約先行固定であり、実装そのものの許可を意味しない）。§9.3の事前プロビジョニングAPIと同じstrict provisioning型を採用し、通常の文書owner操作とは分離する。
 
 - 登録・失効はadminのstrict provisioning型操作に限定する。文書ownerによるtoken発行は不採用とする。
 - 平文tokenは保存しない。作成時のレスポンスで一度だけ表示し、以後は `tokenHash` のみで照合する。再取得APIは提供しない。
@@ -1317,15 +1317,15 @@ Tenant Adminは`document.policy.manage`、`membership.provision`と`agent.regist
 
 ## 11. Inquiry bundle lifecycle API（L0 Planned、ADR-0057 / SAAS-TENANT-01）
 
-Inquiry bundle は `DocumentV1` の optional field ではなく、W型累積探究の lifecycle を保存する独立リソースである。backend は payload の内部schemaを解釈せず、client が管理する opaque JSON bundle を tenant と `journey_id` の組で保持する。これにより、このAPIの追加は `DocumentV1`、既存の import/export、または SafeMode の契約を変更しない。
+Inquiry bundleは `DocumentV1` のoptional fieldではなく、W型累積探究のlifecycleを保存する独立リソースである。backendはpayloadの内部schemaを解釈せず、clientが管理するopaque JSON bundleをtenantと `journey_id` の組で保持する。これにより、このAPIの追加は `DocumentV1`、既存のimport/export、またはSafeModeの契約を変更しない。
 
 ### 11.1 共通境界
 
-- tenant は request body、path、query、header の利用者入力から決定しない。server-resolved identity と active membership から解決された trusted `TenantContext` のみを使用する。
-- tenant session precondition がある構成では、既存の `tenantSessionVersion` guard を適用する。trusted tenant context を解決できない場合は fail-closed（`403 tenant_context_untrusted`）とする。
-- `journey_id` は空でない、前後に空白がない、printable、最大256文字の canonical文字列でなければならない。不正値は `422`（`invalid_journey_id`）とする。
-- request body は JSON として有限値だけを受け付け、UTF-8 serialized payload が **20 MiBを超える場合は保存せず `413`**（`inquiry_bundle_too_large`）とする（`MAX_INQUIRY_BUNDLE_PAYLOAD_BYTES`。`SUI_MAX_DOCUMENT_BYTES` の文書サイズ上限 20 MiB と整合。**ドッグフーディング iteration 83 で実装値と契約の乖離を検出し api.md を修正**）。
-- backend は payload の未知keyや将来versionを解釈・変換しない。Inquiry bundle のstrict import/export、SafeMode projection、DocumentV1との関係は既存のfrontend/domain契約が保持する。
+- tenantはrequest body、path、query、headerの利用者入力から決定しない。server-resolved identityとactive membershipから解決されたtrusted `TenantContext` のみを使用する。
+- tenant session preconditionがある構成では、既存の `tenantSessionVersion` guardを適用する。trusted tenant contextを解決できない場合はfail-closed（`403 tenant_context_untrusted`）とする。
+- `journey_id` は空でない、前後に空白がない、printable、最大256文字のcanonical文字列でなければならない。不正値は `422`（`invalid_journey_id`）とする。
+- request bodyはJSONとして有限値だけを受け付け、UTF-8 serialized payloadが **20 MiBを超える場合は保存せず `413`**（`inquiry_bundle_too_large`）とする（`MAX_INQUIRY_BUNDLE_PAYLOAD_BYTES`。`SUI_MAX_DOCUMENT_BYTES` の文書サイズ上限20 MiBと整合。**ドッグフーディングiteration 83で実装値と契約の乖離を検出しapi.mdを修正**）。
+- backendはpayloadの未知keyや将来versionを解釈・変換しない。Inquiry bundleのstrict import/export、SafeMode projection、DocumentV1との関係は既存のfrontend/domain契約が保持する。
 - **保持契約（DATA-INQUIRY-RETENTION-01 D1=案A）**: 探究bundleは **明示DELETEまで永続** する。自動期限・purge・保持例外（legal hold等）は**存在しない**。期限切れと長期停止は区別されず、backendはpayload内の日時・stage・個人情報有無から期限を推測しない。明示DELETEのみが削除経路で、削除時は本文なし監査を同一transactionで記録する。
 
 ### 11.2 Endpoint契約
@@ -1334,32 +1334,32 @@ Inquiry bundle は `DocumentV1` の optional field ではなく、W型累積探�
 
 - Request body: JSON object/value（opaque Inquiry bundle payload）
 - 前提条件（DATA-INQUIRY-CONCURRENCY-01、案A）:
-  - `If-None-Match: *` — **create only**。`tenant_id + journey_id` の行が存在しなければ revision 1 で作成し `201 Created` + `ETag: "1"` を返す。既に存在すれば `409`（`inquiry_bundle_conflict`）で上書きしない。
-  - `If-Match: "<n>"` — **update only**。`tenant_id + journey_id + revision == n` の単一 atomic UPDATE で置換し revision を n+1 へ増加、`204 No Content` + `ETag: "<n+1>"` を返す。revision 不一致・行欠損は `409`（`inquiry_bundle_conflict`）で何も変更しない。
+  - `If-None-Match: *` — **create only**。`tenant_id + journey_id` の行が存在しなければrevision 1で作成し `201 Created` + `ETag: "1"` を返す。既に存在すれば `409`（`inquiry_bundle_conflict`）で上書きしない。
+  - `If-Match: "<n>"` — **update only**。`tenant_id + journey_id + revision == n` の単一atomic UPDATEで置換しrevisionをn+1へ増加、`204 No Content` + `ETag: "<n+1>"` を返す。revision不一致・行欠損は `409`（`inquiry_bundle_conflict`）で何も変更しない。
   - 前提条件なし — `428`（`precondition_required`）。
-  - `If-Match` が wildcard `*`・複数値・非正整数、または `If-Match` と `If-None-Match` の両方 — `422`（`invalid_if_match` / `invalid_if_none_match` / `conflicting_preconditions`）。
+  - `If-Match` がwildcard `*`・複数値・非正整数、または `If-Match` と `If-None-Match` の両方 — `422`（`invalid_if_match` / `invalid_if_none_match` / `conflicting_preconditions`）。
 - validation error: `422`（JSONでない、非有限値、または不正な `journey_id`）
-- size error: `413`（serialized payload が20 MiB超）
+- size error: `413`（serialized payloadが20 MiB超）
 
 **GET** `/inquiry-bundles/{journey_id}`
 
-- Response: 保存時の opaque JSON payload（`DocumentV1` ではない）＋ `ETag: "<revision>"` header（server-owned revision のopaque表現）。
+- Response: 保存時のopaque JSON payload（`DocumentV1` ではない）＋ `ETag: "<revision>"` header（server-owned revisionのopaque表現）。
 - Not found: `404 Inquiry bundle not found`
-- `journey_id` validation、trusted tenant resolution、tenant session precondition はPOSTと同じである。
+- `journey_id` validation、trusted tenant resolution、tenant session preconditionはPOSTと同じである。
 
 **DELETE** `/inquiry-bundles/{journey_id}`
 
 - 前提条件（DATA-INQUIRY-CONCURRENCY-01、案A）: `If-Match: "<n>"` を要求。欠損は `428`（`precondition_required`）、wildcard・複数値・非正整数は `422`。
-- `tenant_id + journey_id + revision == n` の単一 atomic DELETE で成功したときのみ `204 No Content`。revision 不一致・行欠損は `409`（`inquiry_bundle_conflict`）で何も変更しない。
+- `tenant_id + journey_id + revision == n` の単一atomic DELETEで成功したときのみ `204 No Content`。revision不一致・行欠損は `409`（`inquiry_bundle_conflict`）で何も変更しない。
 - 削除単位は一つの探究全体（`tenant_id + journey_id`）であり、ラウンド単体や `DocumentV1` の一部は削除しない。
 - 対象行の削除と本文なしの削除監査イベントは同一DB transactionで原子的に確定する。監査には `event_id`、server-resolved `tenant_id`、`journey_id`、`principal_id`、action=`inquiry_bundle.delete`、outcome=`deleted`、`occurred_at` のみを記録し、payload本文・カード本文・秘密情報を複製しない。
 
 ### 11.3 Migration / persistence model
 
-- `inquiry_bundles`: primary key `(tenant_id, journey_id)`、`payload_json`、`updated_at`、`revision`（server-owned 正整数、既定1、DATA-INQUIRY-CONCURRENCY-01 案A）。`tenant_id` は `tenants.id` を参照し、PostgreSQLではRLSを有効化して tenant setting と一致する行だけを許可する。
+- `inquiry_bundles`: primary key `(tenant_id, journey_id)`、`payload_json`、`updated_at`、`revision`（server-owned正整数、既定1、DATA-INQUIRY-CONCURRENCY-01案A）。`tenant_id` は `tenants.id` を参照し、PostgreSQLではRLSを有効化してtenant settingと一致する行だけを許可する。
 - `inquiry_bundle_deletion_audit_events`: deletion evidence専用のappend record。`tenant_id` は `tenants.id` を参照し、action/outcomeを固定値制約で制限する。PostgreSQLではこの表にもRLSを適用する。
-- migration revision: `20260806_0014_add_inquiry_bundle_storage`（前 revision `20260720_0013`）。`revision` カラム追加は `20260813_0026_add_inquiry_bundle_revision`（前 revision `20260811_0025`）。
-- retention期限、保持件数、backend上の履歴削除・purge job はこの追加だけでは定義・実装しない。したがってInquiry/W型のsupport levelは **`L0: Planned`** のままであり、AC-11を完了扱いにしない。
+- migration revision: `20260806_0014_add_inquiry_bundle_storage`（前revision `20260720_0013`）。`revision` カラム追加は `20260813_0026_add_inquiry_bundle_revision`（前revision `20260811_0025`）。
+- retention期限、保持件数、backend上の履歴削除・purge jobはこの追加だけでは定義・実装しない。したがってInquiry/W型のsupport levelは **`L0: Planned`** のままであり、AC-11を完了扱いにしない。
 
 ### 11.4 非対象・互換性
 
@@ -1376,13 +1376,13 @@ Inquiry bundle は `DocumentV1` の optional field ではなく、W型累積探�
 
 ドリフト検出器は「本書に記載があるが実装に無い」という**差分**を見つけるが、その差分が **まだ作っていないから** 生じたのか、**作ったが原則違反として捨てたから** 生じたのかを見分ける情報を持たない。両者は検出器から見て同じ形をしている。
 
-このため実際に事故が起きた。カード重要度評価は `AI-IMPORTANCE-SCORING-01` が製品不変条件（`00_Prompt/domain.md`「AIは内容を採点せず」）との抵触として意図的に削除したのに、2026-08-12 に本書へ「未実装（計画）。実装前にこの契約を正本として使用すること」という**誤った注記**が入った。検出結果に意図が乗っていなかったことが原因である。
+このため実際に事故が起きた。カード重要度評価は `AI-IMPORTANCE-SCORING-01` が製品不変条件（`00_Prompt/domain.md`「AIは内容を採点せず」）との抵触として意図的に削除したのに、2026-08-12に本書へ「未実装（計画）。実装前にこの契約を正本として使用すること」という**誤った注記**が入った。検出結果に意図が乗っていなかったことが原因である。
 
-さらに、契約を本書から単に削除するだけでも別の副作用が出る。**廃止された機能を正当に論じている設計文書（廃止を決めた issue 自身を含む）が、一律に「api.md に無いエンドポイントを参照している」警告になる。** 実測で7件発生した。
+さらに、契約を本書から単に削除するだけでも別の副作用が出る。**廃止された機能を正当に論じている設計文書（廃止を決めたissue自身を含む）が、一律に「api.mdに無いエンドポイントを参照している」警告になる。** 実測で7件発生した。
 
 ### 13.2 書式
 
-廃止した endpoint は、本書の該当箇所に次の1行を置く。
+廃止したendpointは、本書の該当箇所に次の1行を置く。
 
 ```
 - 廃止: <METHOD> <path> — <廃止を決めたissue ID>（<廃止日>、<採択した方向>）
@@ -1390,12 +1390,12 @@ Inquiry bundle は `DocumentV1` の optional field ではなく、W型累積探�
 
 この行は `check_design_consistency.py` が `RETIRED_ENDPOINT_RE` で読む。効果は次の2点である。
 
-1. 当該 endpoint を参照する設計文書は警告されない（**廃止として文書化されている**ため、未文書化ではない）。
-2. 実装が復活した場合は検出対象として残る（`check_contract_drift.py` の routes→api.md 方向、および不変条件由来の廃止については専用の回帰テスト）。
+1. 当該endpointを参照する設計文書は警告されない（**廃止として文書化されている**ため、未文書化ではない）。
+2. 実装が復活した場合は検出対象として残る（`check_contract_drift.py` のroutes→api.md方向、および不変条件由来の廃止については専用の回帰テスト）。
 
 ### 13.3 併記すべきこと
 
-機械可読な1行に加えて、散文で次を書く。**実装可能なrequest/responseスキーマは残さない。** スキーマが残っていれば、それは仕様として読まれる（13.1 の事故の直接原因）。
+機械可読な1行に加えて、散文で次を書く。**実装可能なrequest/responseスキーマは残さない。** スキーマが残っていれば、それは仕様として読まれる（13.1の事故の直接原因）。
 
 - 廃止の理由（どの不変条件・どの判断に抵触したか）
 - 再実装の可否。禁止する場合は、それを固定しているテスト

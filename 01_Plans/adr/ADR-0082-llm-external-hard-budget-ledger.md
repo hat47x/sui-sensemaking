@@ -7,7 +7,7 @@
 
 ## Context
 
-`OPS-LLM-COST-01` 段階2で、provider別の呼出回数と provider-reported input/output token usage は観測できるようになった。しかし現状はcurrent process内の観測値であり、複数workerが同時に外部providerへ到達したときに共有上限を守る機構はない。
+`OPS-LLM-COST-01` 段階2で、provider別の呼出回数とprovider-reported input/output token usageは観測できるようになった。しかし現状はcurrent process内の観測値であり、複数workerが同時に外部providerへ到達したときに共有上限を守る機構はない。
 
 未決のまま実装へ進めない論点は次の4点である。
 
@@ -88,7 +88,7 @@ provider-reported usageは応答後にしか得られず、現行backendはprovi
 - payloadが既存 `MAX_LLM_PROVIDER_REQUEST_BYTES` を超える場合はprovider validationで先に拒否し、budgetを消費しない。
 - `LLMRequest.max_tokens` は既存 `MAX_LLM_OUTPUT_TOKENS` の範囲内でなければならない。
 
-重要な意味境界:
+重要な意味境界は次のとおりです。
 
 - input reservation unitsを「provider-reported input tokens」「local tokenizer推定token」と呼ばない。
 - hard guaranteeはDB上の**reservation units上限を超えて外部callを開始しないこと**であり、異種provider間の課金tokenを1 tokenizerで正確に再現するという保証ではない。
@@ -137,7 +137,7 @@ budget deny/store outageから別の外部providerへfallbackしてはならな�
 - deny reason（calls / token units / store unavailable / invariant violation）
 - settle coverage（complete / partial / missing）
 
-保存・表示しないもの:
+保存・表示しないもの。
 
 - prompt本文、response本文、raw token列
 - card/document本文

@@ -5,7 +5,7 @@ This document is the single source of truth for provider abstraction in sui-sens
 
 # llm_provider_spec — LLMプロバイダ抽象仕様（正本）
 
-本仕様は、sui-sensemaking における LLM 連携の唯一の正本である。
+本仕様は、sui-sensemakingにおけるLLM連携の唯一の正本である。
 `llm_provider.md` の内容は本仕様へ統合し、重複定義を持たない。
 
 ---
@@ -13,18 +13,18 @@ This document is the single source of truth for provider abstraction in sui-sens
 
 ## CE1 Contract Handoff Boundary（Stream C / 2026-05-04）
 
-- Provider層は CE1 v1 契約を入力境界として扱い、`ContextQueryV1` / `ContextBundleV1` のキー追加・再定義を行わない。
-- 固定エラー語彙は provider 実装差異に依存させず、`preview_required` / `unknown_contract_key` / `nondeterministic_bundle` を共通運用語彙として保持する。
+- Provider層はCE1 v1契約を入力境界として扱い、`ContextQueryV1` / `ContextBundleV1` のキー追加・再定義を行わない。
+- 固定エラー語彙はprovider実装差異に依存させず、`preview_required` / `unknown_contract_key` / `nondeterministic_bundle` を共通運用語彙として保持する。
 - `LLMResponse.metadata.trace_id` と併せて `queryCanonicalHash` / `bundleHash` を監査相関キーとして扱えることを必須とする。
-- CE2/CE4 連携は mock-first を許容し、provider 実装完了を前提条件にしない（contract-only handoff）。
+- CE2/CE4連携はmock-firstを許容し、provider実装完了を前提条件にしない（contract-only handoff）。
 
 ## 1. 目的と原則
 
 - safeMode既定ONと漏えい防止を優先し、既定は `none`（LLM無効）とする。
 - provider抽象はベンダロックインを避け、実装差異を吸収する。
 - Provider分類は**通信プロトコルではなく信頼境界**で定義する。
-  - 通信プロトコルは `transport`（in-process / ipc / http など）で別管理する。
-- テスト再現性のため FixtureProvider を正式サポートする。
+  - 通信プロトコルは `transport`（in-process / ipc / httpなど）で別管理する。
+- テスト再現性のためFixtureProviderを正式サポートする。
 - 入力は構造化テキストのみ（画像・バイナリは対象外）。
 
 ---
@@ -40,7 +40,7 @@ This document is the single source of truth for provider abstraction in sui-sens
 
 ### 2.1 この分類を採用する理由
 
-1. `local` と `external` は outbound 制御・監査・safeMode赤線化要件が異なるため、同一値へ統合しない。
+1. `local` と `external` はoutbound制御・監査・safeMode赤線化要件が異なるため、同一値へ統合しない。
 2. `transport` は同一provider内で差し替え可能（例: local + ipc/local + http）であり、provider enumと役割が異なる。
 3. `fixture` は決定論回帰のための特別実行形態で、`none/local/external` と同列に独立管理する必要がある。
 
@@ -50,7 +50,7 @@ This document is the single source of truth for provider abstraction in sui-sens
 
 ## 3. 設定キー（`SUI_*` に完全統一）
 
-互換aliasは持たない。接頭辞のない旧 LLM 設定キーは非対応とする。
+互換aliasは持たない。接頭辞のない旧LLM設定キーは非対応とする。
 
 ```text
 SUI_LLM_PROVIDER=none|local|local_http|large-scale|large_scale|external|deepseek
@@ -79,7 +79,7 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 - `SUI_LLM_PROVIDER` の役割は次の2つに整理される。
   1. **起動時fail-fast対象**: `validate_llm_provider_guards()` はこの値が指す `providerKind` の設定完全性のみを起動時に検査する（本節冒頭の3箇条は不変）。
   2. **既定/フォールバックtransport**: `model` を指定しないAI呼び出し（suggest-layout / suggest-merges / check-narrative / detect-contradiction）はこの値をそのまま使う。
-- **model単位のdispatch**: `model` を指定するAI呼び出しは、その model の登録先 `providerId` → `providerKind` を解決し、`ProviderRegistry.resolve(providerKind)` で対応するtransport（`local`/`large-scale`/`deepseek`）へ直接dispatchする。判定は `SUI_LLM_PROVIDER` と一致するかではなく、その `providerKind` **自身**の設定完全性（`provider_kind_readiness_errors()`、起動時チェックと同一関数を共用）で行う。したがって `SUI_LLM_PROVIDER=local` のプロセスでも、`SUI_DEEPSEEK_API_KEY` が設定済みなら `deepseek` 配下のmodelへ正しくdispatchできる。
+- **model単位のdispatch**: `model` を指定するAI呼び出しは、そのmodelの登録先 `providerId` → `providerKind` を解決し、`ProviderRegistry.resolve(providerKind)` で対応するtransport（`local`/`large-scale`/`deepseek`）へ直接dispatchする。判定は `SUI_LLM_PROVIDER` と一致するかではなく、その `providerKind` **自身**の設定完全性（`provider_kind_readiness_errors()`、起動時チェックと同一関数を共用）で行う。したがって `SUI_LLM_PROVIDER=local` のプロセスでも、`SUI_DEEPSEEK_API_KEY` が設定済みなら `deepseek` 配下のmodelへ正しくdispatchできる。
 - **`none` は無条件のkill switch**: `SUI_LLM_PROVIDER=none` のときは、registryに他の `providerKind` が設定済みであっても動的dispatchを一切行わない。model単位の判定より先にこの条件を評価する（AGENTS.md安全不変条件「`SUI_LLM_PROVIDER=none` でも主要価値が成立する」を維持するための設計判断）。
 - **未設定providerの扱い**: 判定に失敗したmodel（`providerKind` 自身の設定不足、`none`、未対応kind）は、LLM呼び出し前に `503 model_provider_unavailable` で拒否する（`ProviderRequestError`由来の生例外を返さない）。
 - **apiKeyRef**: registry行の `apiKeyRef`（AC-4で参照形式のみ受理）は、dispatch先の資格情報として直接使わない。各transportは従来どおり `SUI_*_API_KEY` 環境変数を直接読む。dispatchはどのtransport factoryを呼ぶかだけを決め、資格情報の読み出し経路は変更しない。
@@ -103,7 +103,7 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 
 - `task` は自由文字列（例: `re_layout`・`merge_cards` 等、呼び出し元ルートが指定する）。
 - HTTP送信時の`task`は128文字以下のlowercase canonical ID、`prompt`は非空文字列とする。JSON envelope全体はUTF-8で1MiB以下とし、超過時はprovider transportを呼ばず`provider_validation`で停止する。prompt本文をerrorへ反射しない。
-- `temperature`・`max_tokens` は既定値を持つ optional フィールド。HTTP送信時はfiniteな`0 <= temperature <= 2`と`1 <= max_tokens <= 32768`だけを受理し、JSONの`NaN`/`Infinity`拡張表現を送信しない。
+- `temperature`・`max_tokens` は既定値を持つoptionalフィールド。HTTP送信時はfiniteな`0 <= temperature <= 2`と`1 <= max_tokens <= 32768`だけを受理し、JSONの`NaN`/`Infinity`拡張表現を送信しない。
 - `inputs` は `llm_input_ir_spec.md` の構造化IRをroute→provider境界まで保持する内部フィールドであり、IR移行済みrouteだけが設定する。HTTP transportのJSON envelopeには含めず、providerが読むのはIRからrender済みの `prompt` である。したがって `cluster_candidates.score` 等の内部構造値は、prompt rendererが明示的に採用しない限りproviderへ送られない（`ADR-0090` の「内部計算と意味づけの分離」）。
 
 ### 4.2 `LLMResponse`（実装済み・`provider.py` の `LLMResponse`/`LLMCallMetadata` dataclass 準拠）
@@ -124,7 +124,7 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 }
 ```
 
-- `raw_text` は provider が返した生テキスト（構造化 `output` ではない）。呼び出し元ルート（`03_Implement/backend/src/sui_sensemaking_api/routes/ai.py`）がタスクごとに JSON としてパース・検証する。
+- `raw_text` はproviderが返した生テキスト（構造化 `output` ではない）。呼び出し元ルート（`03_Implement/backend/src/sui_sensemaking_api/routes/ai.py`）がタスクごとにJSONとしてパース・検証する。
 - `usage`（トークン数）は未実装。
 
 ### 4.3 失敗時契約（実装済み）
@@ -132,19 +132,19 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 - HTTP provider応答は1MiB以下の`{"text": string}`単独objectだけを受理する。非UTF-8/非JSON、object以外、余分なfield、size超過、`text`型不正は値をclient・logへ反射せずfail-fastとし、再整形で救済しない。`ProviderRequestError.validation` として `422` を返す。
 - HTTP base URLはcredential/query/fragment、空白・制御文字・backslashを含まないHTTPS、またはloopback HTTPだけを受理する。model IDは256文字以下のcanonical値とする。large-scaleはbase URL・model・canonical host allowlistを完全セットで必須とし、URL/wildcard/port/path/重複hostやbase URLとの不一致を起動時に拒否する。
 - `provider_validation`は設定済みfallbackの有無に関係なく`none`へ変換せず、そのまま`422`として返す。request/response契約違反をprovider不達の`503`へ隠さない。timeout/unavailableだけが既存fallback対象になり得る。
-- `large-scale`（設定エイリアス `external`/`large_scale` も同じ provider を指す）が無効設定時はフォールバックしない。`ProviderRequestError.unavailable`（`503`）。
+- `large-scale`（設定エイリアス `external`/`large_scale` も同じproviderを指す）が無効設定時はフォールバックしない。`ProviderRequestError.unavailable`（`503`）。
 - 失敗時も `metadata.trace_id` を監査ログへ残す（`ProviderError.to_contract()`）。
-- HTTP ステータス対応: `provider_timeout→504` / `provider_validation→422` / `provider_unavailable→503`（`ProviderDisabledError` も `503`、`disabled_reason` 付き）。
+- HTTPステータス対応: `provider_timeout→504` / `provider_validation→422` / `provider_unavailable→503`（`ProviderDisabledError` も `503`、`disabled_reason` 付き）。
 
 ### 4.4 Phase-2（未配線・Pending）
 
 以下は `llm_input_ir_spec.md` 等で仕様は存在するが、`LLMRequest`/`LLMResponse` への実配線はまだ無い。実装時期は未定であり、本節の記載は「仕様が先行して存在する」ことを示すに留める。
 
-- `LLMRequest.output_schema`: JSON Schema を渡し provider にスキーマ準拠出力を強制させる経路。現状はルート側で受信後にパース・検証している。
+- `LLMRequest.output_schema`: JSON Schemaを渡しproviderにスキーマ準拠出力を強制させる経路。現状はルート側で受信後にパース・検証している。
 - `LLMRequest.options.timeout_ms`/`seed`: 決定論的再現・タイムアウト制御の明示指定。
-- `LLMRequest.context.trace_id`/`safe_mode`: 呼び出し側からの trace_id 引き継ぎ・safe_mode フラグの明示伝播（現状 `trace_id` は provider 層が `_new_metadata()` で新規採番する）。
+- `LLMRequest.context.trace_id`/`safe_mode`: 呼び出し側からのtrace_id引き継ぎ・safe_modeフラグの明示伝播（現状 `trace_id` はprovider層が `_new_metadata()` で新規採番する）。
 - `LLMResponse.usage`: トークン数計測。
-- `LLMResponse` の構造化 `output`: `raw_text` に代えて JSON Schema 準拠のオブジェクトを直接返す経路。
+- `LLMResponse` の構造化 `output`: `raw_text` に代えてJSON Schema準拠のオブジェクトを直接返す経路。
 
 ---
 
@@ -159,14 +159,14 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 - fallback_to_none
 - trace_id
 
-監査ログに payload 本文・PII・秘匿トークンを保存しない。
+監査ログにpayload本文・PII・秘匿トークンを保存しない。
 
 ---
 
 ## 6. Attachments 制約
 
-- 入力データは KJ構造データ由来の構造化テキストのみ。
-- バイナリ添付、画像、音声を `LLMRequest.prompt`（および §4.4 で Phase-2 とした将来の `inputs`）に含めない。
+- 入力データはKJ構造データ由来の構造化テキストのみ。
+- バイナリ添付、画像、音声を `LLMRequest.prompt`（および §4.4でPhase-2とした将来の `inputs`）に含めない。
 
 ---
 
@@ -189,74 +189,74 @@ model registry（`LLMProviderRegistryRow`/`LLMModelRegistryRow`）は `providerI
 
 ## 9. CE1 ContextQuery/ContextBundle Contract Bridge（contract-only / mock-first）
 
-本仕様は provider 抽象の正本であるが、CE1基盤の query/bundle 契約整合を次の通り固定する。
+本仕様はprovider抽象の正本であるが、CE1基盤のquery/bundle契約整合を次の通り固定する。
 
 ### 9.1 Closed-world contract（v1）
 
-- `ContextQueryV1` / `ContextBundleV1` は v1 で closed-world とし、未定義キーを拒否する。
+- `ContextQueryV1` / `ContextBundleV1` はv1でclosed-worldとし、未定義キーを拒否する。
 - 未定義キーは `400 unknown_contract_key` を返す。
-- `previewConfirmed=false` は provider 呼び出し前に `422 preview_required` として失敗させる。
+- `previewConfirmed=false` はprovider呼び出し前に `422 preview_required` として失敗させる。
 
 ### 9.2 Deterministic hash gate
 
 - `queryCanonicalHash` と `bundleHash` は監査キーとして必須扱いにする。
-- 同一 canonical query で `bundleHash` が一致しない場合は `409 nondeterministic_bundle` を返し、provider実行を継続しない。
+- 同一canonical queryで `bundleHash` が一致しない場合は `409 nondeterministic_bundle` を返し、provider実行を継続しない。
 
 ### 9.3 Mock validation profile（実装依存切断）
 
-実LLM接続未確定でも以下を fixture で検証できる状態を DoD とする。
+実LLM接続未確定でも以下をfixtureで検証できる状態をDoDとする。
 
 1. `previewConfirmed=false -> 422 preview_required`
 2. 未定義キー -> `400 unknown_contract_key`
-3. 同一 canonical query 3回実行で `queryCanonicalHash` / `bundleHash` が 3/3 一致
+3. 同一canonical query 3回実行で `queryCanonicalHash` / `bundleHash` が3/3一致
 4. 3回中1回でも不一致なら `409 nondeterministic_bundle`
 
 ## 10. Stream B CE0/CE1 mock-first provider alignment（2026-05-06）
 
-- Scope: CE0/CE1 契約整合（contract-only）。
-- Provider は `previewConfirmed` ゲート通過後にのみ呼び出される前提を維持する。
-- CE1 v1 closed-world により未定義キーは provider 層到達前に `400 unknown_contract_key` で拒否する。
-- `bundleHash` 非決定論検知時は `409 nondeterministic_bundle` を返し fail-closed とする。
-- 本節は mock-first 連携を想定し、実LLM実装差分を契約語彙へ反映しない。
+- Scope: CE0/CE1契約整合（contract-only）。
+- Providerは `previewConfirmed` ゲート通過後にのみ呼び出される前提を維持する。
+- CE1 v1 closed-worldにより未定義キーはprovider層到達前に `400 unknown_contract_key` で拒否する。
+- `bundleHash` 非決定論検知時は `409 nondeterministic_bundle` を返しfail-closedとする。
+- 本節はmock-first連携を想定し、実LLM実装差分を契約語彙へ反映しない。
 
 ## CE1 mock-first contract reaffirmation（2026-05-07 / Stream B）
 
-- Provider は CE1 v1 契約の下流であり、`ContextQueryV1` / `ContextBundleV1` のキー再定義を行わない。
-- Provider 到達前ゲートを固定する：
+- ProviderはCE1 v1契約の下流であり、`ContextQueryV1` / `ContextBundleV1` のキー再定義を行わない。
+- Provider到達前ゲートを固定する。
   - `previewConfirmed=false` -> `422 preview_required`
   - unknown key -> `400 unknown_contract_key`
   - hash非決定論 -> `409 nondeterministic_bundle`
 - 監査相関キーは `queryCanonicalHash` / `bundleHash` / `LLMResponse.metadata.trace_id` を最小集合として保持する。
-- 本再確認は contract-only であり、接続実装・リトライ戦略・モデル選定は本凍結範囲外とする。
+- 本再確認はcontract-onlyであり、接続実装・リトライ戦略・モデル選定は本凍結範囲外とする。
 
 
 ## Stream B contract stabilization addendum（2026-05-18 / CE1-independent）
 
 ### Context
-Provider 抽象の差異で CE1 契約語彙が揺れると、CE2/CE4 の監査再現性が崩れる。
+Provider抽象の差異でCE1契約語彙が揺れると、CE2/CE4の監査再現性が崩れる。
 
 ### Decision
-- Provider 層は CE1 契約語彙を変更しない。
+- Provider層はCE1契約語彙を変更しない。
 - 固定語彙は `preview_required` / `unknown_contract_key` / `nondeterministic_bundle` のみ。
-- Provider 実装差異による fallback は **契約エラーを書き換えてはならない**。
+- Provider実装差異によるfallbackは **契約エラーを書き換えてはならない**。
 - `queryCanonicalHash` / `bundleHash` / `LLMResponse.metadata.trace_id` を最小監査相関キーとして固定。
-- mock-first contract test は provider 種別に依存させない（fixture で同一判定）。
+- mock-first contract testはprovider種別に依存させない（fixtureで同一判定）。
 
 ### Consequences
-- provider 切替（none/fixture/local/external）でも CE1 I/F 契約は不変。
-- CE2/CE4 は provider 実装進捗と独立して契約連携を継続できる。
+- provider切替（none/fixture/local/external）でもCE1 I/F契約は不変。
+- CE2/CE4はprovider実装進捗と独立して契約連携を継続できる。
 
 
 ## Stream B CE1 provider contract freeze addendum（2026-05-20 / I/F-first + mock-first）
 
 ### Context
-Provider切替時にCE1語彙が変化すると、query/bundle 契約の監査相関が崩れる。
+Provider切替時にCE1語彙が変化すると、query/bundle契約の監査相関が崩れる。
 
 ### Decision
-- Provider層は CE1 v1 closed-world 契約語彙を変更しない。
+- Provider層はCE1 v1 closed-world契約語彙を変更しない。
 - 固定エラーは `422 preview_required` / `400 unknown_contract_key` / `409 nondeterministic_bundle`。
-- mock-first 検証で `stubDatasetId=A2-minimal-v1` を利用し、実DB/実LLM依存なしで契約判定可能とする。
+- mock-first検証で `stubDatasetId=A2-minimal-v1` を利用し、実DB/実LLM依存なしで契約判定可能とする。
 
 ### Consequences
-- provider 実装状態に依存せず、CE1契約を先に凍結して下流へ handoff できる。
-- 衝突検知時は provider側で意味変換せず、停止して上流契約へ戻す運用を徹底できる。
+- provider実装状態に依存せず、CE1契約を先に凍結して下流へhandoffできる。
+- 衝突検知時はprovider側で意味変換せず、停止して上流契約へ戻す運用を徹底できる。

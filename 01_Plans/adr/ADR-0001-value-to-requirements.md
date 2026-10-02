@@ -5,7 +5,7 @@
 - Deciders: Project Maintainers
 - Scope: `01_Plans/`
 - Migrated-from: `01_Plans/value_to_requirements.md`
-- Norms: `DOM-AI-08, DOM-AIOK-01, DOM-AIOK-02`（P-08 の `AI-08-1`/`AI-08-2` がこれらの直接の先行要件）
+- Norms: `DOM-AI-08, DOM-AIOK-01, DOM-AIOK-02`（P-08の `AI-08-1`/`AI-08-2` がこれらの直接の先行要件）
 
 ## Context
 
@@ -21,7 +21,7 @@
 
 # 価値観→要求マッピング設計（価値整合ドキュメント）
 
-本ドキュメントは、sui-sensemaking の価値観（思想）を、Issue/Epicへ分解可能な要求に変換するための設計資料である。  
+本ドキュメントは、sui-sensemakingの価値観（思想）を、Issue/Epicへ分解可能な要求に変換するための設計資料である。  
 目的は次の2点。
 
 - 価値観と実装要求の対応を固定し、スコープドリフトを防ぐ。
@@ -103,11 +103,11 @@
 - UX
   - `UX-05-1`: 類似カードの統合候補を確認し、採否を選べる。
   - `UX-05-2`: 統合前後の差分確認とロールバックができる。
-  - `UX-05-3`: canonical card と source card の対応をUI上で追跡できる。
+  - `UX-05-3`: canonical cardとsource cardの対応をUI上で追跡できる。
 - Data
-  - `DATA-05-1`: canonical card と派生/別名カードの対応を表現できる。
+  - `DATA-05-1`: canonical cardと派生/別名カードの対応を表現できる。
   - `DATA-05-2`: merge提案の状態（提案中/採用/却下）を保持できる。
-  - `DATA-05-3`: canonical化後も source card の参照経路を欠落なく保持できる。
+  - `DATA-05-3`: canonical化後もsource cardの参照経路を欠落なく保持できる。
 - AI
   - `AI-05-1`: AIは統合候補を提案できるが自動確定しない。
   - `AI-05-2`: 意味差の大きい要素を強制統合してはならない。
@@ -118,17 +118,17 @@
 - UX
   - `UX-06-1`: 全体俯瞰と局所詳細を往復できる。
   - `UX-06-2`: クラスタ単位の折りたたみ/展開を行える。
-  - `UX-06-3`: focus 操作で局所ビューに入り、解除で俯瞰へ可逆に戻れる。
-  - `UX-06-4`: depth filter と peek で詳細確認できる。
+  - `UX-06-3`: focus操作で局所ビューに入り、解除で俯瞰へ可逆に戻れる。
+  - `UX-06-4`: depth filterとpeekで詳細確認できる。
 - Data
   - `DATA-06-1`: ビュー状態（ズーム/フォーカス/折りたたみ）を保持できる。
   - `DATA-06-2`: 階層ビュー導入に備えた拡張点を持てる。
-  - `DATA-06-3`: depth filter は表示制御として保持し、内容削除と分離する。
+  - `DATA-06-3`: depth filterは表示制御として保持し、内容削除と分離する。
   - `DATA-06-4`: collapse状態とpeek情報を永続化可能にする。
 - AI
   - `AI-06-1`: AIは指定された視点粒度を入力条件として扱う。
   - `AI-06-2`: 指定外粒度への一方的再編成を行わない。
-  - `AI-06-3`: focus/depth filter 条件を無視した再配置提案を行わない。
+  - `AI-06-3`: focus/depth filter条件を無視した再配置提案を行わない。
 
 ### P-07 Self-host / ローカルLLM親和 / プライバシーデフォルト
 
@@ -214,7 +214,7 @@ kind-specific payload、Relation拡張、Authority Scope、Consensus participant
 
 `future_backlog` 系列の管理項目として、以下を価値観に紐付ける（ファイル有無に関わらずIDは固定運用）。
 
-- **F-01 非矩形Island**
+- **F-01非矩形Island**
   - 主要対応原則: `P-01`, `P-06`
   - 要件到達目安: 曖昧なまとまりを矩形以外で表現し、俯瞰時に判読性を維持する。
   - 追加要求: 形状定義（shapes）・編集（editing）・永続化（persistence）を分離して管理する。
@@ -239,25 +239,25 @@ kind-specific payload、Relation拡張、Authority Scope、Consensus participant
   - focus中でも元キャンバスの文脈（親クラスタ/近傍関係）へ再接続できる導線を維持すること。
 - depth filter
   - 関係深度（例: 1-hop/2-hop）で表示範囲を制御できること。
-  - depth filter は内容を削除せず、表示制御として扱うこと。
-  - depth指定は focus と併用可能で、衝突時の優先順（focus優先）を仕様化すること。
+  - depth filterは内容を削除せず、表示制御として扱うこと。
+  - depth指定はfocusと併用可能で、衝突時の優先順（focus優先）を仕様化すること。
 - peek
   - 折りたたみ中でも要約的なプレビュー（peek）で局所確認できること。
-  - peek は確定編集ではなく、文脈確認の軽量操作として定義すること。
-  - peek表示の要約/説明は AI 由来の場合でも `unreviewed` を維持すること。
+  - peekは確定編集ではなく、文脈確認の軽量操作として定義すること。
+  - peek表示の要約/説明はAI由来の場合でも `unreviewed` を維持すること。
 
 ### 3.2 Canonicalization requirements（方向性追記）
 
-`P-05` の canonical 化を実装都合で逸脱させないため、以下を必須要件として固定する。
+`P-05` のcanonical化を実装都合で逸脱させないため、以下を必須要件として固定する。
 
 - canonical cards
-  - canonical card を基準に、候補カードとの対応関係を明示的に保持すること。
-  - canonical への採用は常に人間承認ステップを経ること（自動確定禁止）。
-  - canonical/source の両方向参照（canonical→source, source→canonical）を保持すること。
+  - canonical cardを基準に、候補カードとの対応関係を明示的に保持すること。
+  - canonicalへの採用は常に人間承認ステップを経ること（自動確定禁止）。
+  - canonical/sourceの両方向参照（canonical→source, source→canonical）を保持すること。
 - source visibility
-  - canonical 化後も、元カード（source）の参照経路をUI/データの両面で追跡可能にすること。
-  - source 情報の不可視化によって意味差分が失われないよう、差分確認導線を維持すること。
-  - source を非表示にする場合は visibility 状態（visible/hidden/collapsed）を明示保持し、復元可能にすること。
+  - canonical化後も、元カード（source）の参照経路をUI/データの両面で追跡可能にすること。
+  - source情報の不可視化によって意味差分が失われないよう、差分確認導線を維持すること。
+  - sourceを非表示にする場合はvisibility状態（visible/hidden/collapsed）を明示保持し、復元可能にすること。
 
 ### 3.3 Non-rect shape requirements（方向性追記）
 
@@ -282,9 +282,9 @@ kind-specific payload、Relation拡張、Authority Scope、Consensus participant
 
 タスクID接続（固定）:
 
-- `V*` は viewpoint controls（collapse/focus/depth/peek）系タスク群を指す。
-- `W*` は canonicalization / merge / visibility 系タスク群を指す。
-- `F-*` は phaseX_future_backlog 管理ID（`F-01`/`F-02`/`F-03`）に対応する。
+- `V*` はviewpoint controls（collapse/focus/depth/peek）系タスク群を指す。
+- `W*` はcanonicalization / merge / visibility系タスク群を指す。
+- `F-*` はphaseX_future_backlog管理ID（`F-01`/`F-02`/`F-03`）に対応する。
 
 #### 3.4.1 V/W → F backlog link matrix（固定）
 
@@ -300,7 +300,7 @@ kind-specific payload、Relation拡張、Authority Scope、Consensus participant
 
 #### 3.4.2 運用ルール
 
-- backlog 起票時は、`V*` または `W*` の起点IDと `F-*` の到達IDを同時に記載する。
+- backlog起票時は、`V*` または `W*` の起点IDと `F-*` の到達IDを同時に記載する。
 - `F-01/F-02/F-03` のいずれかに未接続の `V*`/`W*` タスクは計画未整合として扱う。
 - 依存線を跨ぐスキップ実装（例: `W3` 未完了で `F-03` 実装着手）は禁止する。
 
@@ -313,7 +313,7 @@ kind-specific payload、Relation拡張、Authority Scope、Consensus participant
 ### Phase A（次の1〜2スプリント）: 安全な追加
 
 - 対象
-  - review flags の可視化・保存（AI生成は常に未レビュー開始）。
+  - review flagsの可視化・保存（AI生成は常に未レビュー開始）。
   - Critique入力（理由任意）と再提案1ループ。
   - merge提案の提示（提案のみ。自動確定なし）。
 - 完了判定
@@ -324,7 +324,7 @@ kind-specific payload、Relation拡張、Authority Scope、Consensus participant
 - 対象
   - `F-01` 非矩形Island。
   - `F-02` collapse/expand。
-  - `F-03` canonical cards 構造。
+  - `F-03` canonical cards構造。
 - 完了判定
   - `P-05`, `P-06` の運用負荷が低減している。
 
