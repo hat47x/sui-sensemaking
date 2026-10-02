@@ -2656,7 +2656,7 @@ MAX_ATTENTION_FOCUS_PAIRS = 8
 
 
 def _attention_source_digest(ir: dict) -> str:
-    """Fingerprint only the projected inputs that can change attention cues."""
+    """Fingerprint the meaning-bearing projected source for attention cues."""
     meta = ir.get("meta", {})
     source = {
         "ir_version": ir.get("ir_version"),
