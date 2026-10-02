@@ -2656,15 +2656,38 @@ MAX_ATTENTION_FOCUS_PAIRS = 8
 
 
 def _attention_source_digest(ir: dict) -> str:
-    """Fingerprint the meaning-bearing projected source for attention cues."""
+    """Fingerprint only the projected structure that determines attention cues."""
     meta = ir.get("meta", {})
+    cards = [
+        {
+            "id": card["id"],
+            **({"hold_state": card["hold_state"]} if card.get("hold_state") else {}),
+        }
+        for card in ir.get("cards", [])
+    ]
+    relations = [
+        {
+            "from": relation["from"],
+            "to": relation["to"],
+            "type": relation["type"],
+        }
+        for relation in ir.get("relations", [])
+        if relation["type"] in {"related", "causal"}
+    ]
+    islands = [
+        {
+            "id": island["id"],
+            "card_ids": island["card_ids"],
+        }
+        for island in ir.get("islands", [])
+    ]
     source = {
         "ir_version": ir.get("ir_version"),
         "doc_id": meta.get("doc_id"),
         "doc_version": meta.get("doc_version"),
-        "cards": ir.get("cards", []),
-        "relations": ir.get("relations", []),
-        "islands": ir.get("islands", []),
+        "cards": cards,
+        "relations": relations,
+        "islands": islands,
     }
     if "coordinates" in ir:
         source["coordinates"] = ir["coordinates"]
