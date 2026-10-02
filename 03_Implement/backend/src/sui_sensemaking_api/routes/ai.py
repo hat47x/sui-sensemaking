@@ -2651,6 +2651,9 @@ def _card_group_candidates(
     return candidates, withheld
 
 
+MAX_ATTENTION_FOCUS_PAIRS = 8
+
+
 def _attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
     """Expose only structurally novel, proposal-only cues from deterministic IR.
 
@@ -2707,6 +2710,13 @@ def _attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
             focus_pairs = sorted(not_co_islanded)
             cue = "cross_island"
         else:
+            continue
+
+        # ADR-0043: an attention aid must not turn a large connected component
+        # into an O(n^2) review task. There is no value-grounded ranking that
+        # would justify silently picking an arbitrary subset, so fail quiet
+        # until a more local deterministic cue can explain which pairs matter.
+        if len(focus_pairs) > MAX_ATTENTION_FOCUS_PAIRS:
             continue
 
         result.append(
