@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import math
@@ -2654,6 +2655,28 @@ def _card_group_candidates(
 MAX_ATTENTION_FOCUS_PAIRS = 8
 
 
+def _attention_source_digest(ir: dict) -> str:
+    """Fingerprint only the projected inputs that can change attention cues."""
+    meta = ir.get("meta", {})
+    source = {
+        "ir_version": ir.get("ir_version"),
+        "doc_id": meta.get("doc_id"),
+        "doc_version": meta.get("doc_version"),
+        "cards": ir.get("cards", []),
+        "relations": ir.get("relations", []),
+        "islands": ir.get("islands", []),
+    }
+    if "coordinates" in ir:
+        source["coordinates"] = ir["coordinates"]
+    canonical = json.dumps(
+        source,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def _attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
     """Expose only structurally novel, proposal-only cues from deterministic IR.
 
@@ -3064,6 +3087,7 @@ def suggest_attention_candidates(
         raise HTTPException(status_code=422, detail=exc.to_contract()) from exc
 
     return SuggestAttentionCandidatesResponse(
+        sourceDigest=_attention_source_digest(ir),
         candidates=_attention_candidates_from_ir(ir),
         excludedCardIds=held_card_ids(ir),
         truncated=bool(ir.get("truncation", {}).get("truncated")),
