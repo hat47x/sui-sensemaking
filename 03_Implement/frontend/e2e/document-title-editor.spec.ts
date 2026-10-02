@@ -16,6 +16,14 @@ async function routeEssentials(page: Page, providerKind: string): Promise<void> 
       body: JSON.stringify({ providerKind }),
     });
   });
+  // The suggest button also needs at least one allowed model (AI-MODEL-GOVERNANCE-01).
+  await page.route("**/ai/available-models", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ models: [{ id: "e2e-model", displayName: "E2E Model" }] }),
+    });
+  });
   // Accept any PUT (triggered by onTitleChange → applyDocumentChange) so the
   // test doesn't stall on an unhandled network request.
   await page.route("**/docs/*", async (route) => {

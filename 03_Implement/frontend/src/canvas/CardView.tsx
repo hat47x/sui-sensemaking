@@ -264,6 +264,10 @@ function CardViewComponent({
       onPointerCancel={handlePointerCancel}
       style={{
         position: "absolute",
+        // Shift/Ctrl+click multi-select must not paint native text selection over
+        // card bodies; the inline editor textarea below stays selectable.
+        userSelect: isEditing ? "text" : "none",
+        WebkitUserSelect: isEditing ? "text" : "none",
         left: card.x,
         top: card.y,
         width: markerMode ? 10 : 220,

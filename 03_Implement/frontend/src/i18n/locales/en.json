@@ -583,7 +583,7 @@
   "app.status.import.view_metadata_load_failed": "View metadata could not be loaded: {detail}",
   "app.status.import.view_loaded": "{statusPrefix} (visibility: {visibility})",
   "app.status.import.view_loaded_focus_missing": "{statusPrefix} (visibility: {visibility}); focus island not found ({islandId}). Focus was cleared.",
-  "app.status.public_pack.loaded": "Public pack loaded: {packId} (visibility: {visibility})",
+  "app.status.public_pack.loaded": "Sample loaded. Changes stay on screen until you save.",
   "app.status.public_pack.loaded_prefix": "Public pack loaded",
   "app.status.public_pack.invalid_index_json": "The public-pack index could not be read as JSON. Check packs/index.json.",
   "app.status.public_pack.invalid_index": "The public-pack index is invalid: {detail}",

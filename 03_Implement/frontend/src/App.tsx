@@ -1261,6 +1261,15 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   const [docEtag, setDocEtag] = useState<string | null>(null);
   const [hasSaveConflict, setHasSaveConflict] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
+  // Status toasts are transient: clearing them keeps the bottom-right corner from
+  // covering the bulk-action bar and minimap long after the news is stale.
+  useEffect(() => {
+    if (statusMessage === "") {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setStatusMessage(""), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [statusMessage]);
   const locationSearch = window.location.search;
   const isReadOnly = useMemo(
     () => resolveReadOnlyFromSearch(locationSearch) || isActiveDocumentArchived,
@@ -9114,8 +9123,12 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           && availableModels.length > 0
         }
         modelSelectionVisible={
-          (providerKind !== null && providerKind !== "none")
-          || availableModels !== null
+          // Model choice is an AI feature: keep it behind the Advanced toggle so a
+          // first-time user on the default (no-AI) setup is not shown an "unavailable
+          // model" warning they cannot act on.
+          isAdvancedUiEnabled
+          && ((providerKind !== null && providerKind !== "none")
+          || availableModels !== null)
         }
         documentTitleModel={documentTitleModel}
         onDocumentTitleModelChange={setDocumentTitleModel}
@@ -12734,6 +12747,11 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           lineHeight: 1.4,
           overflowWrap: "break-word",
           whiteSpace: "pre-wrap",
+          // Keep the live region mounted so announcements work, but do not paint an
+          // empty dark pill over the canvas while there is nothing to say.
+          opacity: statusMessage === "" ? 0 : 1,
+          pointerEvents: "none",
+          transition: "opacity 0.15s",
         }}
       >
         {statusMessage}

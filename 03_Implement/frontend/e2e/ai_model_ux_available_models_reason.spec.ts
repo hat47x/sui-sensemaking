@@ -152,6 +152,11 @@ async function reenterWorkspace(page: Page): Promise<void> {
   await expect(page.locator(START_PANEL)).toBeVisible();
   await page.getByRole("button", { name: "Create new document" }).click();
   await expect(page.locator(START_PANEL)).toBeHidden();
+  // The title-area model selector is an AI feature shown only with Advanced on.
+  const advanced = page.getByRole("button", { name: "Advanced", exact: true });
+  if ((await advanced.getAttribute("aria-pressed")) !== "true") {
+    await advanced.click();
+  }
 }
 
 function modelSelectorStatus(page: Page): Locator {

@@ -583,7 +583,7 @@
   "app.status.import.view_metadata_load_failed": "表示メタデータを読み込めませんでした: {detail}",
   "app.status.import.view_loaded": "{statusPrefix}（公開範囲: {visibility}）",
   "app.status.import.view_loaded_focus_missing": "{statusPrefix}（公開範囲: {visibility}）。フォーカス先の島 {islandId} が見つからなかったため、フォーカスを解除しました。",
-  "app.status.public_pack.loaded": "公開パックを読み込みました: {packId}（公開範囲: {visibility}）",
+  "app.status.public_pack.loaded": "サンプルを読み込みました。保存するまで、変更は画面内の作業です。",
   "app.status.public_pack.loaded_prefix": "公開パックを読み込みました",
   "app.status.public_pack.invalid_index_json": "公開パックの一覧情報をJSONとして読み込めませんでした。packs/index.json を確認してください。",
   "app.status.public_pack.invalid_index": "公開パックの一覧情報が正しくありません: {detail}",

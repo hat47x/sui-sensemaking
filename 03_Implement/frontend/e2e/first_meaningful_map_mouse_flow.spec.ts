@@ -89,7 +89,8 @@ test("mouse first-value flow creates a visible first island from the sample", as
   await expect(selectionPanel).toContainText("first value user problem");
   await expect(selectionPanel).toContainText("first value observation memo");
 
-  const islandTitleInput = page.getByLabel(/タイトル|Title/);
+  // The document title button also carries a "Title" aria-label, so address the island field by id.
+  const islandTitleInput = page.locator("#selected-island-title");
   await expect(islandTitleInput).toHaveValue("");
 
   await expect(selectionPanel).not.toContainText(/選択: 2 件のカードを選択中|Selection: 2 cards selected/);
@@ -120,5 +121,5 @@ test("the same untitled island document keeps the English numbered fallback", as
 
   const selectionPanel = page.locator('[data-ui-region="selection-context"]');
   await expect(selectionPanel).toContainText("Island 1");
-  await expect(page.getByLabel("Title")).toHaveValue("");
+  await expect(page.locator("#selected-island-title")).toHaveValue("");
 });
