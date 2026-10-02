@@ -446,7 +446,7 @@ Polygon auto-fitのbackend接続準備として、A2比較キーの最小契約�
 - Response: モデルID・表示名・"auto" 既定の選択肢。UIの `ModelSelector` がこの一覧でモデル選択肢を限定する。
 - 一覧取得後に状態が変わった場合を含め、実行APIへ利用不可なmodel IDを直接指定すると、LLM送信前に503 `model_provider_unavailable`で拒否する（一覧と実行gateは同一の判定関数を使うため乖離しない）。
 
-### 2.12 AI/LLM生成API
+### 2.12 AI支援／LLM生成API
 
 全エンドポイント共通は次のとおりです。
 - tenant-scoped precondition必須（§10参照）
