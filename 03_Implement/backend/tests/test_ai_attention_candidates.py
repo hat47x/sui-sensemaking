@@ -53,6 +53,9 @@ def test_transitive_relation_exposes_attention_without_score_or_provider() -> No
 
     assert response.status_code == 200, response.text
     body = response.json()
+    source_digest = body.pop("sourceDigest")
+    assert len(source_digest) == 64
+    assert set(source_digest) <= set("0123456789abcdef")
     assert body == {
         "candidates": [
             {
@@ -157,3 +160,49 @@ def test_focus_pair_budget_keeps_small_actionable_candidate_visible() -> None:
     candidates = response.json()["candidates"]
     assert len(candidates) == 1
     assert len(candidates[0]["focusPairs"]) <= ai.MAX_ATTENTION_FOCUS_PAIRS
+
+
+
+def test_source_digest_changes_only_for_inputs_used_by_attention_candidates() -> None:
+    base = _doc()
+
+    with TestClient(app) as client:
+        first = client.post("/ai/suggest-attention-candidates", json={"doc": base})
+        repeated = client.post("/ai/suggest-attention-candidates", json={"doc": base})
+
+        moved = _doc()
+        moved["cards"][0]["x"] = 999
+        non_spatial_move = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": moved},
+        )
+
+        changed_text = _doc()
+        changed_text["cards"][0]["text"] = "観察一を別の内容として確認する"
+        text_edit = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": changed_text},
+        )
+
+        spatial_before = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": base, "includeSpatial": True},
+        )
+        spatial_after = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": moved, "includeSpatial": True},
+        )
+
+    responses = [
+        first,
+        repeated,
+        non_spatial_move,
+        text_edit,
+        spatial_before,
+        spatial_after,
+    ]
+    assert all(response.status_code == 200 for response in responses)
+    assert first.json()["sourceDigest"] == repeated.json()["sourceDigest"]
+    assert first.json()["sourceDigest"] == non_spatial_move.json()["sourceDigest"]
+    assert first.json()["sourceDigest"] != text_edit.json()["sourceDigest"]
+    assert spatial_before.json()["sourceDigest"] != spatial_after.json()["sourceDigest"]
