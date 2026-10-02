@@ -467,6 +467,35 @@ class _SuggestedGroup(BaseModel):
     rationale: str | None = None
 
 
+class AttentionCandidate(BaseModel):
+    """Provider-free cue that redirects attention without changing the document."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    candidateId: str = Field(min_length=1)
+    cardIds: list[str] = Field(min_length=2)
+    basis: Literal["relation", "spatial"]
+    cue: Literal["cross_island", "indirect_relation", "unassigned"]
+
+
+class SuggestAttentionCandidatesRequest(BaseModel):
+    """Request deterministic attention cues from the current human-authored structure."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    doc: DocumentV1
+    includeSpatial: bool = False
+    allowUnreviewedText: bool | None = None
+
+
+class SuggestAttentionCandidatesResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    candidates: list[AttentionCandidate]
+    excludedCardIds: list[str] = Field(default_factory=list)
+    truncated: bool = False
+
+
 class DetectContradictionRequest(BaseModel):
     """Request to detect contradiction between two KJ-method cards."""
 
