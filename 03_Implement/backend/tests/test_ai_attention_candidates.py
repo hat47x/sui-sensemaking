@@ -162,7 +162,6 @@ def test_focus_pair_budget_keeps_small_actionable_candidate_visible() -> None:
     assert len(candidates[0]["focusPairs"]) <= ai.MAX_ATTENTION_FOCUS_PAIRS
 
 
-
 def test_source_digest_tracks_candidate_relevant_projection() -> None:
     base = _doc()
 
