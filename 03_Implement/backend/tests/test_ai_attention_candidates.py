@@ -177,6 +177,13 @@ def test_source_digest_tracks_candidate_relevant_projection() -> None:
             json={"doc": moved},
         )
 
+        changed_text = _doc()
+        changed_text["cards"][0]["text"] = "観察一を別の内容として確認する"
+        text_edit = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": changed_text},
+        )
+
         held = _doc(held="held")
         held_edit = client.post(
             "/ai/suggest-attention-candidates",
@@ -196,6 +203,7 @@ def test_source_digest_tracks_candidate_relevant_projection() -> None:
         first,
         repeated,
         non_spatial_move,
+        text_edit,
         held_edit,
         spatial_before,
         spatial_after,
@@ -203,5 +211,6 @@ def test_source_digest_tracks_candidate_relevant_projection() -> None:
     assert all(response.status_code == 200 for response in responses)
     assert first.json()["sourceDigest"] == repeated.json()["sourceDigest"]
     assert first.json()["sourceDigest"] == non_spatial_move.json()["sourceDigest"]
+    assert first.json()["sourceDigest"] == text_edit.json()["sourceDigest"]
     assert first.json()["sourceDigest"] != held_edit.json()["sourceDigest"]
     assert spatial_before.json()["sourceDigest"] != spatial_after.json()["sourceDigest"]
