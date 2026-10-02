@@ -4,10 +4,6 @@
 
 目的: すべての公開環境変数、安全な既定値、設定変更後の確認方法を示します。
 
-範囲外: 組織固有の秘密管理、未公開ネットワーク情報、承認履歴。
-
-公開区分: 運用者向け公開候補。ここでは利用者が設定する `SUI_*` と既存の既定値だけを扱い、内部adapterの秘密値や未承認の設定変更は扱いません。
-
 ## 基本方針
 
 - sui-sensemakingの利用者・運用者が設定する環境変数は、すべて例外なく `SUI_` で始まります。
@@ -70,7 +66,7 @@
 
 `SUI_RUNTIME_PROFILE`でprofile名を指定します。Docker Composeの既定は`evaluation`、backendを直接起動したときの未指定既定は`local-dev`です。
 
-> 注意: `SUI_ALLOW_JIT_PROVISIONING` の実装既定値は **`false`（fail-closed、2026-08-13 変更）**です。`local-dev` / `evaluation` でヘッダー由来のユーザー自動作成を使う場合は明示 `true` を設定してください。既定 `false` は未認証の未知ヘッダーからのユーザー自動作成（濫用可能）を防ぎます（SEC-RATE-LIMIT-01）。
+> 注意: `SUI_ALLOW_JIT_PROVISIONING` の実装既定値は **`false`（fail-closed）**です。`local-dev` / `evaluation` でヘッダー由来のユーザー自動作成を使う場合は明示 `true` を設定してください。既定 `false` は未認証の未知ヘッダーからのユーザー自動作成（濫用可能）を防ぎます。
 > 補足: `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE` は実装既定値 `read_only` ですが、`enterprise-production` では `read_only` と `deny` のどちらを採るかを事前に固定してください。
 
 ## 最小設定
@@ -103,8 +99,8 @@ export SUI_LLM_PROVIDER=none
 | `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`, `evaluation`, `enterprise-production`, `saas-multitenant`。SaaSは共有認証表を含む最新migrationと必須policyを起動前検査。 |
 | `SUI_DATABASE_URL` | `sqlite:///./sui_sensemaking.db` | backend が使うSQLAlchemy接続URL。正式対応DB、検証済みdriver、single-tenant／shared-schema SaaSの範囲は[DB対応表](../02_Architecture/database_portability.md)を正本とする。driver省略URLと対応済みasync URLは検証済み同期driverへ正規化され、未検証driverと未知DBはengine生成前に拒否される |
 | `SUI_LLM_PROVIDER` | `none` | `none`, `local`, `local_http`, `large-scale`, `large_scale`, `external`, `deepseek` |
-| `SUI_LOG_LEVEL` | `INFO` | アプリケーションログ（JSON／人間可読）とuvicornログの出力レベル（OPS-OBSERV-01）。`CRITICAL`/`ERROR`/`WARNING`/`INFO`/`DEBUG`、未知値（`NOTSET` を含む）は `INFO` へフォールバック |
-| `SUI_APP_REVISION` | `unknown` | ビルドリビジョン（OPS-OBSERV-01）。1〜64文字のASCII英数字・`.`・`_`・`-`だけをcanonical値として受理し、それ以外は`unknown`へ丸める。`/version` と全アプリケーションログ（JSON／人間可読）、frontend 診断バンドルの `app.revision` に反映。Compose では build-arg + `api.environment` から配線 |
+| `SUI_LOG_LEVEL` | `INFO` | アプリケーションログ（JSON／人間可読）とuvicornログの出力レベル。`CRITICAL`/`ERROR`/`WARNING`/`INFO`/`DEBUG`、未知値（`NOTSET` を含む）は `INFO` へフォールバック |
+| `SUI_APP_REVISION` | `unknown` | ビルドリビジョン。1〜64文字のASCII英数字・`.`・`_`・`-`だけをcanonical値として受理し、それ以外は`unknown`へ丸める。`/version` と全アプリケーションログ（JSON／人間可読）、frontend 診断バンドルの `app.revision` に反映。Compose では build-arg + `api.environment` から配線 |
 | `SUI_LOCAL_LLM_BASE_URL` | 未設定 | local LLMのHTTPSまたはloopback HTTP base URL |
 | `SUI_LOCAL_LLM_MODEL` | 未設定 | local LLMで使う256文字以下のmodel ID |
 | `SUI_LARGE_SCALE_LLM_BASE_URL` | 未設定 | large-scale LLMのHTTPSまたはloopback HTTP base URL |
@@ -118,17 +114,17 @@ export SUI_LLM_PROVIDER=none
 | `SUI_DEEPSEEK_MODEL` | `deepseek-v4-flash` | DeepSeek API に渡す256文字以下のcanonical model ID（空白・制御文字・backslash不可） |
 | `SUI_DEEPSEEK_THINKING_MODE` | `disabled` | DeepSeek V4 thinking mode（`disabled` / `enabled`）。primary DeepSeek とmodel registry経由のregistered DeepSeekの送信payload `thinking.type` に反映し、local / large-scaleのgeneric HTTP payloadには作用しない。旧既定のnon-thinking挙動を維持するため既定はdisabled |
 | `SUI_LLM_TASK_MODEL_MAP` | 未設定（空文字） | タスク別モデル割当（`task=model,...`）。未設定タスクは既定モデル |
-| `SUI_LLM_HIGH_REASONING_MODEL` | 未設定 | final_judgement系タスク（check_narrative / detect_contradiction）の既定モデル。未設定時は既定モデルへフォールバック（AI-ROUTE-01 MMR-04） |
+| `SUI_LLM_HIGH_REASONING_MODEL` | 未設定 | final_judgement系タスク（check_narrative / detect_contradiction）の既定モデル。未設定時は既定モデルへフォールバック |
 | `SUI_API_KEY` | 未設定 | business-plane APIを `X-API-Key` で保護。`enterprise-production` では起動必須。`saas-multitenant` はtrusted JWT/cookie identityを使うためbusiness key自体は起動必須ではない。`/healthz` / `/readyz` / `/version` は運用probeとして対象外。`/admin/*` もbusiness key対象外で、別のcontrol-plane認可（`X-Admin-Api-Key` / provision capability）を使う |
 | `SUI_ADMIN_API_KEY` | 未設定 | control-plane の Stage A bootstrap 資格情報。`X-Admin-Api-Key` で提示する。Stage B では trusted SaaS session の `tenant.provision` capability でも `/admin/provision/**` を認可でき、request に admin bearer は不要。業務面 `SUI_API_KEY` は管理面で受理せず、同じ秘密値を `SUI_API_KEY` と `SUI_ADMIN_API_KEY` の両方へ設定する構成も起動時に拒否する。`enterprise-production` / `saas-multitenant` では設定自体が**必須**（未設定なら起動しない）。`local-dev` / `evaluation` は admin key 未設定時だけ development 用に管理面を開く |
-| `SUI_LOG_JSON` | `true` | 既定は1行1JSON。`true` では `extra={...}` の `tenantId` / `docId` / `queueLength` / LLM `trace_id` などを構造化fieldとして出力する。`false` ではこれらextra fieldは出力せず、人間可読書式に `requestId` / `actorRefHash` / `appRevision` を残す（OPS-OBSERV-01） |
+| `SUI_LOG_JSON` | `true` | 既定は1行1JSON。`true` では `extra={...}` の `tenantId` / `docId` / `queueLength` / LLM `trace_id` などを構造化fieldとして出力する。`false` ではこれらextra fieldは出力せず、人間可読書式に `requestId` / `actorRefHash` / `appRevision` を残す |
 | `SUI_AUDIT_EXPORT_ENABLED` | `false` | audit export のdispatch master gate。`false` ではvalidation済みtransport設定に関係なく外部送信せず `NoopAuditTransport` を使う。ただし `SUI_AUDIT_TRANSPORT=http` の完全設定validationは独立して適用され、export無効でもendpoint欠損は起動時に拒否する。`true` のときだけtransport設定が実送信に使われる |
 | `SUI_AUDIT_TRANSPORT` | `noop` | `noop` または `http`。`http` はexport flagと独立してendpoint必須の完全設定validationを受ける。validation通過後、実送信に使われるのは `SUI_AUDIT_EXPORT_ENABLED=true` の場合だけで、export無効時は `http` 指定でも dispatcher は `NoopAuditTransport` を使う |
 | `SUI_AUDIT_HTTP_ENDPOINT` | 未設定 | 監査ログ連携の接続先 URL。credential/query/fragmentなしのHTTPS、またはloopback HTTPだけを許可し、`SUI_AUDIT_TRANSPORT=http` 時は必須 |
 | `SUI_AUDIT_HTTP_API_KEY` | 未設定 | 監査ログの HTTP 連携用 API key。非空のcanonical bearer値（空白・制御文字不可） |
 | `SUI_AUDIT_HTTP_TIMEOUT_SECONDS` | `2.0` | 監査ログの HTTP 連携の timeout 秒数 |
 | `SUI_AUDIT_QUEUE_SIZE` | `100` | 外部監査送信失敗時のfail-open retry buffer上限。正常送信時やexport無効時はqueueへ積まない |
-| `SUI_AUDIT_DEDUP_WINDOW_SECONDS` | `5.0` | `context-audit` / `export-audit` が渡す同一論理操作のdedup keyに対する重複排除ウィンドウ（SEC-AUDIT-DUP-01）。`view` / `LLM` / `proposal` 監査には適用しない。`0` で無効化 |
+| `SUI_AUDIT_DEDUP_WINDOW_SECONDS` | `5.0` | `context-audit` / `export-audit` が渡す同一論理操作のdedup keyに対する重複排除ウィンドウ。`view` / `LLM` / `proposal` 監査には適用しない。`0` で無効化 |
 | `SUI_AUDIT_ALLOW_IN_SAFE_MODE` | `false` | `AuditEvent.safeMode=true` の外部監査送出を許可するevent-level gate。`false` ではviewおよびsafeMode=trueのcontext/export系を抑止する。LLM / proposal監査はproducerがsafeMode=falseを明示するため対象外 |
 | `SUI_ACCESS_CONTROL_ADAPTER` | `noop` | `noop`, `mock`, `external_http` |
 | `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE` | `read_only` | Org/Restricted 文書の `policyRef` 欠損または access-control adapter 障害時の fail-safe。`read_only` は read だけ allow + read-only、write / export / share は deny。`deny` は read を含む全 action を deny |
@@ -145,17 +141,17 @@ export SUI_LLM_PROVIDER=none
 | `SUI_TENANT_CAPABILITY_HTTP_ENDPOINT` | 未設定 | capability resolverのHTTPS接続先。ローカル検証だけloopback HTTP可 |
 | `SUI_TENANT_CAPABILITY_HTTP_API_KEY` | 未設定 | capability resolver専用bearer token。非空のcanonical bearer値（空白・制御文字不可）。Git、DB、監査へ保存しない |
 | `SUI_TENANT_CAPABILITY_HTTP_TIMEOUT_SECONDS` | `1.5` | capability resolverのtimeout秒数（0より大きく30以下） |
-| `SUI_ALLOW_JIT_PROVISIONING` | `false` | single-tenant の forwarded-header identity path でだけ未登録identityのJIT provisioningを許可する。`true` なら user・identity binding・local-default membershipを作成し、`false` なら403 `identity_not_provisioned`。`saas-multitenant` は起動時に `false` が必須で、trusted JWT/cookie pathはこの設定に関係なく未登録subjectを403で拒否する（SEC-RATE-LIMIT-01・2026-08-13変更） |
-| `SUI_SAAS_OAUTH_BROKER_HTTP_AUTHORIZE_ENDPOINT` | 未設定 | ADR-0074 BFF: OAuth authorization-code フロー開始 URL。credential/query/fragment なしの HTTPS、または loopback HTTP だけを許可。`saas-multitenant` では必須（`TrustedSaasRuntimePolicy` が起動前検査） |
-| `SUI_SAAS_OAUTH_BROKER_HTTP_TOKEN_ENDPOINT` | 未設定 | ADR-0074 BFF: code 交換用 token endpoint。credential/query/fragment なしの HTTPS、または loopback HTTP だけを許可。起動必須ではないが、callbackでは redirect URI / client ID / client secret と4項目完全セットで必要。欠損時503 |
-| `SUI_SAAS_OAUTH_BROKER_HTTP_REDIRECT_URI` | 未設定 | ADR-0074 BFF: OAuth callback の redirect URI。credential/query/fragment なしの HTTPS、または loopback HTTP だけを許可し、path は `/session/callback` 固定。起動必須ではないが、login開始では client ID とともに必要、callbackでは4項目完全セットの一部。欠損時は該当requestを503 |
-| `SUI_SAAS_OAUTH_BROKER_HTTP_CLIENT_ID` | 未設定 | ADR-0074 BFF: OAuth client ID。2,048文字以下のcanonical値（空白・制御文字不可）。起動必須ではないが、login開始では redirect URI とともに必要、callbackでは4項目完全セットの一部。欠損時は該当requestを503 |
-| `SUI_SAAS_OAUTH_BROKER_HTTP_CLIENT_SECRET` | 未設定 | ADR-0074 BFF: OAuth client secret（秘密。ログ・監査・DBへ保存しない）。非空のcanonical bearer値（空白・制御文字不可）。起動必須ではないがcallbackの4項目完全セットで必要。欠損時503 |
-| `SUI_SAAS_OAUTH_BROKER_HTTP_TIMEOUT_SECONDS` | `5.0` | ADR-0074 BFF: broker HTTP timeout 秒数（0 より大きく 30 以下） |
-| `SUI_SAAS_AUTH_SESSION_HASH_KEY` | 未設定 | ADR-0074 / ADR-0080: member SaaS auth session、guest auth session、guest redeem state のHMAC-SHA256導出に共有するキー（64文字 lowercase hex = 32 bytes）。`saas-multitenant` では必須。guest redeem state はdomain separationを通し、生cookie/state値はDBへ平文保存しない。キーをローテーションすると既存member/guest sessionと未使用redeem stateは無効化される |
-| `SUI_MAX_DOCUMENT_BYTES` | `20971520` | DocumentV1 保存ペイロードの UTF-8 バイト上限（20 MiB・SEC-DOC-BOUND-01） |
-| `SUI_MAX_DOCUMENT_CARDS` | `50000` | DocumentV1 のカード件数（SEC-DOC-BOUND-01。meta-dogfoodingの数万枚規模と20,000-card targetに対する余白を確保） |
-| `SUI_ALLOW_UNREVIEWED_AI_TEXT` | `false` | AI リクエストの `allowUnreviewedText` 緩和を許可するか（SEC-AI-SAFEMODE-01・ADR-0068） |
+| `SUI_ALLOW_JIT_PROVISIONING` | `false` | single-tenant の forwarded-header identity path でだけ未登録identityのJIT provisioningを許可する。`true` なら user・identity binding・local-default membershipを作成し、`false` なら403 `identity_not_provisioned`。`saas-multitenant` は起動時に `false` が必須で、trusted JWT/cookie pathはこの設定に関係なく未登録subjectを403で拒否する |
+| `SUI_SAAS_OAUTH_BROKER_HTTP_AUTHORIZE_ENDPOINT` | 未設定 | OAuth authorization-code フロー開始 URL。credential/query/fragment なしの HTTPS、または loopback HTTP だけを許可。`saas-multitenant` では必須（`TrustedSaasRuntimePolicy` が起動前検査） |
+| `SUI_SAAS_OAUTH_BROKER_HTTP_TOKEN_ENDPOINT` | 未設定 | code 交換用 token endpoint。credential/query/fragment なしの HTTPS、または loopback HTTP だけを許可。起動必須ではないが、callbackでは redirect URI / client ID / client secret と4項目完全セットで必要。欠損時503 |
+| `SUI_SAAS_OAUTH_BROKER_HTTP_REDIRECT_URI` | 未設定 | OAuth callback の redirect URI。credential/query/fragment なしの HTTPS、または loopback HTTP だけを許可し、path は `/session/callback` 固定。起動必須ではないが、login開始では client ID とともに必要、callbackでは4項目完全セットの一部。欠損時は該当requestを503 |
+| `SUI_SAAS_OAUTH_BROKER_HTTP_CLIENT_ID` | 未設定 | OAuth client ID。2,048文字以下のcanonical値（空白・制御文字不可）。起動必須ではないが、login開始では redirect URI とともに必要、callbackでは4項目完全セットの一部。欠損時は該当requestを503 |
+| `SUI_SAAS_OAUTH_BROKER_HTTP_CLIENT_SECRET` | 未設定 | OAuth client secret（秘密。ログ・監査・DBへ保存しない）。非空のcanonical bearer値（空白・制御文字不可）。起動必須ではないがcallbackの4項目完全セットで必要。欠損時503 |
+| `SUI_SAAS_OAUTH_BROKER_HTTP_TIMEOUT_SECONDS` | `5.0` | broker HTTP timeout 秒数（0 より大きく 30 以下） |
+| `SUI_SAAS_AUTH_SESSION_HASH_KEY` | 未設定 | member SaaS auth session、guest auth session、guest redeem state のHMAC-SHA256導出に共有するキー（64文字 lowercase hex = 32 bytes）。`saas-multitenant` では必須。guest redeem state はdomain separationを通し、生cookie/state値はDBへ平文保存しない。キーをローテーションすると既存member/guest sessionと未使用redeem stateは無効化される |
+| `SUI_MAX_DOCUMENT_BYTES` | `20971520` | DocumentV1 保存ペイロードの UTF-8 バイト上限（20 MiB） |
+| `SUI_MAX_DOCUMENT_CARDS` | `50000` | DocumentV1 のカード件数 |
+| `SUI_ALLOW_UNREVIEWED_AI_TEXT` | `false` | AI リクエストの `allowUnreviewedText` 緩和を許可するか |
 | `SUI_AUTH_PROVIDER_FIELD` | `x-auth-provider` | single-tenant の forwarded-header identity path で external identity provider を受け取る header 名。値はtrim・lowercase正規化され、欠損/空値は `header`。`saas-multitenant` の trusted JWT/cookie path では使用しない |
 | `SUI_AUTH_USER_FIELD` | `x-forwarded-user` | single-tenant の forwarded-header identity path で `AUTH_SUBJECT_FIELD` 欠損時の external UID/subject fallback を受け取る legacy header 名。内部 `users.id` を直接指定しない。`saas-multitenant` の trusted JWT/cookie path では使用しない |
 | `SUI_AUTH_EMAIL_FIELD` | `x-forwarded-email` | single-tenant の forwarded-header identity path でJIT provisioning時に新規 `UserRow.email` を初期化する header 名。既存user属性は更新しない。`saas-multitenant` の trusted JWT/cookie path では使用しない |

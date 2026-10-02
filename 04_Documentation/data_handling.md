@@ -4,10 +4,6 @@
 
 目的: データがどこに保存され、どの場面で外部サービスと共有される可能性があり、共有前に何を確認するかを説明します。
 
-範囲外: 組織固有の個人情報保護方針、法務判断、インシデント報告書、外部サービスとの契約条件、実装スキーマの詳細。
-
-公開区分: 利用者/運用者向け公開候補。保存、share/export、ログ共有前確認を扱い、秘密情報や未レビュー本文を外部共有しないための境界を説明します。
-
 読後にできること: 入力、保存、AI提案、export、share、障害調査の前に、残してよい情報と削るべき情報を判断できます。
 
 ## 最初に押さえること
@@ -95,7 +91,7 @@
 
 ### サポート診断バンドル
 
-画面から生成できる診断バンドル（`diag-bundle.v1`）は、上記「残してよい情報」よりさらに狭い固定の許可リストだけを含みます。対象ドキュメントの本文・ID、entity id/ref、API key/token/password、内部URL、個人情報、生のUserAgent、error message/stackはSafeModeの状態に関わらず常に除外されます。含まれる項目、除外項目、UI契約の詳細は [diagnostics.md](diagnostics.md) と [ADR-0053](https://github.com/hat47x/sui-sensemaking/blob/main/01_Plans/adr/ADR-0053-support-diagnostics-bundle-boundary.md) を参照してください。生成は明示操作のみで、自動送信は行いません。
+画面から生成できる診断バンドル（`diag-bundle.v1`）は、上記「残してよい情報」よりさらに狭い固定の許可リストだけを含みます。対象ドキュメントの本文・ID、entity id/ref、API key/token/password、内部URL、個人情報、生のUserAgent、error message/stackはSafeModeの状態に関わらず常に除外されます。含まれる項目と除外項目は [diagnostics.md](diagnostics.md) を参照してください。生成は明示操作のみで、自動送信は行いません。
 
 ## 詳細仕様を確認したい場合
 

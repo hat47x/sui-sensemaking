@@ -59,7 +59,6 @@
 
 - このREADME。
 - [assets/screenshots/README.md](assets/screenshots/README.md)。
-- [e2e_testing.md](e2e_testing.md)（移転案内のみ。正本は `../03_Implement/frontend/docs/e2e_testing.md`）。
 - 公開作業のmanifest、commit hash、PR、issue、ADR、内部作業ログ。
 
 ## 画面例の管理

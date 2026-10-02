@@ -4,10 +4,6 @@
 
 目的: 起動、停止、状態確認、更新、バックアップ、障害時の初動を再現できる手順としてまとめます。
 
-範囲外: 組織固有の承認フロー、秘密情報管理、インフラ監視基盤の構築。
-
-公開区分: 運用者向け公開候補。起動、停止、確認、バックアップ、共有前確認の運用境界を扱い、組織固有の承認履歴や内部計画は含めません。
-
 ## 標準構成
 
 Docker Composeの標準構成は次の3サービスです。
@@ -75,10 +71,10 @@ BFF Cookie経路では、次を運用上の前提とします。
 明示的なBearer credentialを使う互換経路は、SPAからBFF Cookie経路への移行が完了するまで残ります。この経路では次を別の安全境界として扱います。
 
 - Bearer access tokenは短命にし、署名、issuer、audience、期限を検証します。`jti`は任意のtoken識別子であり、同じ有効tokenを通常の連続API要求へ使用できます。`jti`を一回使用nonceとして扱いません。
-- 現行Bearer方式はsender-constrained tokenではないため、窃取されたBearer tokenそのものの再利用を検出しません。より強いreplay防御の方式判断は`AUTH-ONE-TIME-JWT-01`を正本とします。
+- 現行Bearer方式はsender-constrained tokenではないため、窃取されたBearer tokenそのものの再利用を検出しません。
 - principal-keyed互換経路で使う`Sui-Sensemaking-Tenant-Session-Version` Cookieを、認証session ownershipやanti-forgeryの証拠として扱いません。BFF session-keyed経路ではこのversion Cookieを新たに発行せず、server-owned `Sui-Sensemaking-Auth-Session`と共有DB行を正本にします。unsafe requestのanti-forgeryは別途CSRF middlewareが担います。
 
-現行実装では、request処理用のDB sessionを保持している間に、認証session storeが別のDB sessionを開く経路があります。実PostgreSQLの複数app検証では、1 instanceあたり`pool_size=1`かつ`max_overflow=0`まで絞ると、共有sessionの解決前にconnection pool timeoutとなり503へfail-closedすることを確認しました。本番では「1 requestにつき常に1接続」と仮定せず、API replica数と同時request数に対して接続poolへ余力を持たせてください。pool timeoutが見えた場合は、DB停止だけでなくpool枯渇も切り分け対象です。
+現行実装では、request処理用のDB sessionを保持している間に、認証session storeが別のDB sessionを開く経路があります。1 instanceあたり`pool_size=1`かつ`max_overflow=0`まで絞ると、共有sessionの解決前にconnection pool timeoutとなり503へfail-closedします。本番では「1 requestにつき常に1接続」と仮定せず、API replica数と同時request数に対して接続poolへ余力を持たせてください。pool timeoutが見えた場合は、DB停止だけでなくpool枯渇も切り分け対象です。
 
 ### SaaSのmigrationとrolling restart
 
@@ -89,8 +85,6 @@ BFF Cookie経路では、次を運用上の前提とします。
 3. API instanceを一つずつ更新し、各instanceがreadyになってから次へ進みます。可能なら同じ認証sessionを旧instanceと新instanceの双方へ到達させ、active tenantとversionが一致することを確認します。
 4. 認証session hash keyを変更すると、旧keyで発行されたCookieは新keyのinstanceでは別hashとなり、既存sessionを解決できません。現行実装は旧keyへのfallbackや推測を行わないため、key rotationは既存sessionの再loginを伴う計画変更として扱い、rolling restartの途中でinstanceごとに異なるkeyを混在させないでください。
 5. `saas_auth_sessions`を削除するdowngradeは既存BFF sessionを維持できません。新しいschemaを必要とするinstanceが残っている間はdowngradeせず、rollback時はsession失効と再loginを利用者影響として明示します。
-
-実PostgreSQLの回帰テスト`test_saas_auth_session_postgres_multi_instance.py`は、migrationのupgrade→downgrade→head再upgradeに加え、別engineを持つ複数FastAPI appから同じsessionを処理し、tenant/version共有、stale CAS拒否、別login非干渉、logout失効、idle expiry、再起動後の継続、hash key変更時のfail-closedを確認します。
 
 ### SaaS session障害時の初動
 
@@ -122,7 +116,7 @@ docker compose logs api --tail=100
 - `/api/healthz` が `{"status":"ok"}` を返す（**livenessのみ。DBの状態は見ていません**）。
 - `/api/readyz` が `{"status":"ready"}` を返す（DB到達性とスキーマ世代を検査します）。DBを失った状態でも `/api/healthz` は成功するため、依存の確認はこちらを使ってください。
 
-> **ヘルスチェックの意味（OPS-OBSERV-01）**: `/healthz` は **liveness（プロセス生存）のみ**で、DB には触れません（DB を失っても `{"status":"ok"}` を返します）。依存（DB 到達性・migration の適用状態）まで確認するには `/readyz` を使います。DB 停止時に `/readyz` は 503、schema が migration head より古い場合も 503 `schema_mismatch` を返します。ビルドリビジョンは `/version` で確認できます。
+> **ヘルスチェックの意味**: `/healthz` は **liveness（プロセス生存）のみ**で、DB には触れません（DB を失っても `{"status":"ok"}` を返します）。依存（DB 到達性・migration の適用状態）まで確認するには `/readyz` を使います。DB 停止時に `/readyz` は 503、schema が migration head より古い場合も 503 `schema_mismatch` を返します。ビルドリビジョンは `/version` で確認できます。
 
 `docker compose ps` はサービスの生死を見るコマンドです。`curl` はAPIの応答を見るコマンドです。どちらか片方だけでは原因を絞り切れないため、両方を確認します。
 

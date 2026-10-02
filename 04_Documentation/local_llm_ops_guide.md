@@ -4,10 +4,6 @@
 
 目的: local providerの設定、HTTP contract、確認方法、失敗時の切り分けを示します。
 
-範囲外: 特定モデルの導入手順、外部large-scale LLMの契約管理、秘密情報の配布。
-
-公開区分: 運用者向け公開候補。local LLM連携の設定・戻し方を扱い、external providerやescalationは明示的opt-inがない限り既定OFFとして扱います。
-
 読後にできること: 既定ではLLMが無効であることを理解し、local LLMを有効にするときの設定、疎通確認、戻し方を判断できます。
 
 ## 既定値

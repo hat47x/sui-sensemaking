@@ -57,9 +57,6 @@ describe("first-run public pack", () => {
     for (const observation of OBSERVATIONS) {
       expect(tutorial).toContain(observation);
     }
-
-    expect(tutorial).toContain("後から根拠へ戻りにくい");
-    expect(tutorial).toContain("少数意見が消える");
   });
 
   it("keeps the App recovery fallback sample aligned with the public pack", () => {

@@ -4,10 +4,6 @@
 
 目的: Docker Composeを使った標準起動手順と、Dockerが使えない場合の最小代替手順を示します。
 
-範囲外: 本番用の認証基盤、組織固有のネットワーク設定、秘密情報の配布手順。
-
-公開区分: 初回利用者/運用者向け公開候補。現行リポジトリで確認できる起動経路を案内し、開発者向け自動テストや未実装機能の手順は正本化しません。
-
 ## 前提
 
 - Git
@@ -50,7 +46,7 @@ docker compose up --build -d
 
 `--build` はDocker imageを作り直す指定、`-d` は裏側で起動し続ける指定です。初回や依存関係が変わった後は `--build` を付けます。
 
-標準構成は **同一ホストからだけ使う評価構成**です。`web` は `127.0.0.1` へbindされるため、`http://localhost:8080` は起動したホスト自身からだけ開けます。別端末や同じLAN上の他利用者からの接続は既定で届きません。組織内で複数端末から使う場合は、認証proxy・TLS・接続元制限を伴う別構成が必要です（`DEPLOY-NET-01`）。
+標準構成は **同一ホストからだけ使う評価構成**です。`web` は `127.0.0.1` へbindされるため、`http://localhost:8080` は起動したホスト自身からだけ開けます。別端末や同じLAN上の他利用者からの接続は既定で届きません。組織内で複数端末から使う場合は、認証proxy・TLS・接続元制限を伴う別構成が必要です。
 
 4. サービス状態を確認します。
 
@@ -181,7 +177,7 @@ Docker EngineとDocker Compose v2をインストールしてください。Docke
 
 ### `permission denied while trying to connect to the Docker API at unix:///var/run/docker.sock`
 
-これはDockerfileやファイル配置の問題ではなく、Dockerデーモン（ソケット）への接続権限がない状態です。`docker compose up --build` はイメージをビルドする前のデーモン接続の段階で失敗します。同時に表示される `unable to get image 'deploy-api'` は異常なimage名ではなく、「Composeのプロジェクト名（composeファイルのあるディレクトリ名 `deploy`）＋ サービス名 `api`」という既定の命名で、デーモンへ接続できずにimage情報を取得できなかったことを示しています。利用環境に応じて次を確認します。
+Dockerデーモン（ソケット）への接続権限がない状態です。`unable to get image 'deploy-api'` も同じ原因で表示されます。利用環境に応じて次を確認します。
 
 - Docker Desktop（Windows / macOS、WSL2を含む）: Docker Desktopが起動しているか確認します。WSL2上で実行している場合は、Docker Desktopの `Settings` → `Resources` → `WSL Integration` で対象のディストリビューションを有効化し、シェルを開き直してから再試行します。
 - Linux（Docker Engineを直接利用）: 実行ユーザーを `docker` グループに追加します。
@@ -278,7 +274,7 @@ docker compose logs api --tail=100
 docker compose logs db --tail=100
 ```
 
-`SUI_API_KEY` を設定している場合は注意が必要です。ブラウザの同梱画面（SPA）は `X-API-Key` を送れないため、キーを設定すると画面からの保存・読み込みが401になります。ブラウザでの動作検証中は `SUI_API_KEY` を未設定（既定）にしてください。
+画面から保存・読み込みが401になる場合は、上の「API が 401 を返す」を確認してください。
 
 ## 関連文書
 

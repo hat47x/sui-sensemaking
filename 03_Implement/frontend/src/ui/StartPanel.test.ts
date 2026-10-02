@@ -51,4 +51,22 @@ describe("StartPanel", () => {
     expect(html).toContain("Import review pack");
     expect(html).toContain("SafeMode: OFF");
   });
+
+  it("keeps reopening the saved document disabled unless the active copy is not server-backed", () => {
+    setActiveLocale("ja");
+    const same = {
+      currentDocumentId: "doc-first-run-value",
+      recentDocumentIds: ["doc-first-run-value"],
+      selectedRecentDocumentId: "doc-first-run-value",
+    };
+    const openButton = (html: string) => html.match(/<button[^>]*>前回の文書を開く<\/button>/)?.[0] ?? "";
+
+    const serverBacked = renderToStaticMarkup(React.createElement(StartPanel, buildProps(same)));
+    const packCopy = renderToStaticMarkup(
+      React.createElement(StartPanel, buildProps({ ...same, canReopenCurrent: true })),
+    );
+
+    expect(openButton(serverBacked)).toContain("disabled");
+    expect(openButton(packCopy)).not.toContain("disabled");
+  });
 });

@@ -2,34 +2,9 @@
 
 対象読者: sui-sensemakingの画面構成を一覧で把握したい利用者・運用者・評価担当者。
 
-目的は次のとおりです。
+目的: 現在の画面に「どのUI要素があり、何のためにあるか」を、スクリーンショット付きで一望できるようにします。最初の操作は[最初の意味ある配置を作る](getting_started.md)、機能全体の確認は[受け入れ確認](acceptance_check.md)を参照してください。
 
-現在の画面に「どのUI要素があり、何のためにあるか」を、確認済みスクリーンショット付きで一望できるようにします。最初の操作は[最初の意味ある配置を作る](getting_started.md)、機能全体の確認は[受け入れ確認](acceptance_check.md)を参照してください。
-
-範囲外: 開発者向けの設計・実装手順と、現在提供していない機能の説明。
-
-## 確認情報
-
-| 項目 | 値 |
-| --- | --- |
-| 確認対象revision | `1367740d8d03cf53bc0ad1eb09ffc45684ff51e1` |
-| 最終確認日 | 2026-07-11 |
-| 表示条件 | 日本語、`SUI_LLM_PROVIDER=none`、SafeMode ON、秘密情報を含まない固定サンプル |
-| 画像検証 | 入口・全体5状態、価値状態6状態、UI要素12状態を再生成し、全23状態成功 |
-| 公開状態 | Go。下記の再確認条件に該当した場合は、再撮影が終わるまで要再確認へ戻す |
-
-画面ラベル、主要レイアウト、固定サンプル、locale、viewport、SafeMode/共有前確認、または撮影スクリプトが変わった場合は画像を再生成し、revision・確認日・検証結果を更新します。画像と実画面の差異を見つけた場合も、確認が終わるまで「現行」とみなしません。
-
-## 撮影条件
-
-- サンプル文書: `doc_phase1_canvas`（決定論的フィクスチャ。秘密情報・API key・顧客データを含まない）
-- UI locale: `ja` / LLM provider: `SUI_LLM_PROVIDER=none`（AI無効・既定構成）
-- 既定ビューポート: 1440×900（レスポンシブ節は390 / 768 / 960px）
-- 再生成スクリプト（リポジトリ正本）は次のとおりです。
-  - `03_Implement/frontend/scripts/capture_release_screenshots.mjs`（入口・全体・選択・共有・モバイル）
-  - `03_Implement/frontend/scripts/capture_product_value_screenshots.mjs`（価値状態）
-  - `03_Implement/frontend/scripts/capture_ui_catalog.mjs`（本書のUI要素カタログ）
-- ローカルにPlaywrightブラウザ依存が無い場合はPlaywright公式Dockerイメージ内で実行します（手順は [assets/screenshots/README.md](assets/screenshots/README.md)）。
+表示条件: 日本語、`SUI_LLM_PROVIDER=none`、SafeMode ON、標準サンプル `doc_phase1_canvas`。
 
 ---
 

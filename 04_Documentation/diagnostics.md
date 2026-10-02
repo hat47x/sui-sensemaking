@@ -4,10 +4,6 @@
 
 目的: 障害時に最初に見る場所、切り分け順、記録すべき情報をまとめます。
 
-範囲外: 非公開の監視基盤、個別インシデントの詳細ログ、秘密情報を含む調査記録。
-
-公開区分: 利用者/一次対応者向け公開候補。安全に共有できる再現情報、画面症状、非機微ログの切り分けに限定し、内部監査ログや秘密情報の本文共有は求めません。
-
 読後にできること: 画面、API、DB、外部接続のどこで問題が起きているかを切り分け、共有に必要な情報を安全に記録できます。
 
 ## 最初に確認すること
@@ -58,7 +54,7 @@ docker compose logs api --tail=200
 curl -fsS http://127.0.0.1:8000/healthz
 ```
 
-> **ヘルスチェックの意味（OPS-OBSERV-01）**: `/healthz` は **liveness（プロセス生存）のみ**で、DB には触れません。DB 到達性・migration の適用状態（schema が head と一致しているか）まで確認するには `/readyz` を使います（DB 停止・schema 不一致時に 503）。ビルドリビジョンは `/version` で確認できます。
+> **ヘルスチェックの意味**: `/healthz` は **liveness（プロセス生存）のみ**で、DB には触れません。DB 到達性・migration の適用状態（schema が head と一致しているか）まで確認するには `/readyz` を使います（DB 停止・schema 不一致時に 503）。ビルドリビジョンは `/version` で確認できます。
 
 ## ブラウザで見る場所
 
@@ -149,7 +145,7 @@ API status:
 秘密情報の除去確認: 済 / 未
 ```
 
-## サポート診断バンドル（PRODUCT-OPS-02 / ADR-0053）
+## サポート診断バンドル
 
 上のテンプレートを手入力する代わりに、画面ヘッダーの「サポート診断バンドル」から、共有してよい情報だけをその場で組み立てられます。
 
@@ -157,7 +153,7 @@ API status:
 - 生成後は必ず全文プレビューが表示されます。コピーまたはダウンロード（`diag-bundle.v1` 形式のJSON）は、内容を確認したあとにのみ行えます。
 - 自動送信は一切行いません。生成・プレビュー・コピー・ダウンロードはすべてローカルの操作です。
 - 含まれるのは、アプリrevision（検証できない場合は `unknown`）、正規化済みブラウザfamily/major・OS family、選択した障害分類・任意のHTTP status、SafeMode状態、provider種別、対象文書のversion/updatedAtとカード/島/エッジの**件数のみ**です。
-- カード・島・narrative等の本文、文書ID、entity id/ref、API key/token/password、内部URL、個人情報、生のUserAgent、error message/stackはSafeModeのON/OFFに関わらず一切含まれません。許可リストの詳細は [ADR-0053](https://github.com/hat47x/sui-sensemaking/blob/main/01_Plans/adr/ADR-0053-support-diagnostics-bundle-boundary.md) を参照してください。
+- カード・島・narrative等の本文、文書ID、entity id/ref、API key/token/password、内部URL、個人情報、生のUserAgent、error message/stackはSafeModeのON/OFFに関わらず一切含まれません。
 - パネルを閉じる（Escape・×・キャンセル）と、生成済みの内容はメモリから破棄されます。
 
 ## 障害分類と一次切り分け
