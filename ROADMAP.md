@@ -19,8 +19,8 @@ KJキャンバス、島・関係・保留、SafeModeのshare/export、import har
 ## 未完・次の作業
 
 1. **`check-narrative` のscale方式**: 現行は全量送信で入力約14万token（無料枠モデルでの参考値）。本番で使うprovider/modelの実token予算を確認し、全量維持か分割かを決める。
-2. **価値の検証**: 一次利用仕事（`ADR-0089` §1）が、AI模擬参加者（T3）・自分の実務利用（T2）・実在の第三者（T1）のどれで支持/修正/棄却されるかを確かめる。判定は証拠階層を明記し、T3のみなら `provisional` とする。
-3. **初回体験**: 初回サンプル（`03_Implement/frontend/public/packs/`）とgetting startedの題材を揃え、`App.tsx` の回復用フォールバックと食い違わないようにする。
+2. **価値の検証**: T3パイロット（2026-10-02）で H1 は narrow、H3 は modify、H4 は narrow（`ADR-0089` §5、`provisional`）。次は、答えを先に与えない初回体験への再構成を実画面で確認し、T2（自分の実務利用）で追う。
+3. **初回体験**: 回復用フォールバックは公開パックと同期済み（テスト追加。frontendテストは未実行）。getting startedを、答えを先に書かず自分の判断と理由を残す手順へ再構成する（H3）。
 4. **認知支援のT2確認**: `ADR-0090` に従い、まずprovider不要の決定論的候補をMaintainer自身のSUI以外の実務資料で確認する。候補提示前後で「新たに注意した材料」「構造の見直し」「保留・異論の維持」「ノイズ／誘導」を分けて観察する。T2で認知増分が再現しなければ製品候補へ昇格せず、下位方式では埋まらない欠落が残る場合にだけ軽量統計・疎方式を次に検討する。
    - 実行補助: backend rootで `python scripts/review_cognitive_candidate_t2.py --document <DocumentV1.json> --phase baseline` を先に実行して人間側の見立てを記録し、文書を変更せず `--phase candidates` を実行する。両出力の `Source SHA-256` が一致することを確認する。
 

@@ -427,9 +427,9 @@ async function routeStartAreaFixture(page, shouldReturnSample) {
   await page.route("**/docs/doc_phase1_canvas", async (route) => {
     const document = shouldReturnSample.value
       ? buildStartAreaDocument([
-          "ユーザー課題を集める",
-          "観察メモをカード化する",
-          "似ている内容を近くに置く",
+          "インタビュー後、メモがチャットの奥に流れて、見つけ直すのに時間がかかった。",
+          "結論は残っているのに、どの発言を根拠にしたのか後から分からなくなった。",
+          "一人だけ違う意見だったので、そのまま議事録から落ちた。",
           "検索でこの一致を確認する",
         ])
       : buildStartAreaDocument([]);

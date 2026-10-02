@@ -61,4 +61,12 @@ describe("first-run public pack", () => {
     expect(tutorial).toContain("後から根拠へ戻りにくい");
     expect(tutorial).toContain("少数意見が消える");
   });
+
+  it("keeps the App recovery fallback sample aligned with the public pack", () => {
+    const appSource = readUtf8("../App.tsx");
+
+    for (const observation of OBSERVATIONS) {
+      expect(appSource).toContain(observation);
+    }
+  });
 });

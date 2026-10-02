@@ -125,7 +125,7 @@ test("first-run sample entry opens the sample and exposes selection context", as
   let shouldReturnSample = false;
   await page.route("**/docs/doc_phase1_canvas", async (route) => {
     const document = shouldReturnSample
-      ? buildDocument(["ユーザー課題を集める", "観察メモをカード化する", "似ている内容を近くに置く"])
+      ? buildDocument(["インタビュー後、メモがチャットの奥に流れて、見つけ直すのに時間がかかった。", "結論は残っているのに、どの発言を根拠にしたのか後から分からなくなった。", "一人だけ違う意見だったので、そのまま議事録から落ちた。"])
       : buildDocument([]);
 
     await route.fulfill({
@@ -138,23 +138,23 @@ test("first-run sample entry opens the sample and exposes selection context", as
 
   await page.goto("/");
   await expect(page.locator(START_PANEL)).toBeVisible();
-  await expect(page.getByRole("button", { name: "ユーザー課題を集める" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "インタビュー後、メモがチャットの奥に流れて、見つけ直すのに時間がかかった。" })).toHaveCount(0);
 
   shouldReturnSample = true;
   await page.getByRole("button", { name: /サンプルを開く|Open sample/ }).click();
 
   await expect(page.locator(START_PANEL)).toBeHidden();
-  const sampleCard = page.getByRole("button", { name: "ユーザー課題を集める" });
+  const sampleCard = page.getByRole("button", { name: "インタビュー後、メモがチャットの奥に流れて、見つけ直すのに時間がかかった。" });
   await expect(sampleCard).toBeVisible();
-  await expect(page.getByRole("button", { name: "観察メモをカード化する" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "似ている内容を近くに置く" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "結論は残っているのに、どの発言を根拠にしたのか後から分からなくなった。" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "一人だけ違う意見だったので、そのまま議事録から落ちた。" })).toBeVisible();
 
   await sampleCard.click();
 
   const selectionContext = page.locator('[data-panel="selection-context"]');
   await expect(selectionContext).toContainText(/現在の選択|Current selection/);
   await expect(selectionContext).toContainText(/カードを選択中|Card selected/);
-  await expect(selectionContext).toContainText(/対象: ユーザー課題を集める|Target: ユーザー課題を集める/);
+  await expect(selectionContext).toContainText(/対象: インタビュー後、メモがチャットの奥に流れて、見つけ直すのに時間がかかった。|Target: インタビュー後、メモがチャットの奥に流れて、見つけ直すのに時間がかかった。/);
   await expect(selectionContext).toContainText(/レビュー状態: 未レビュー|Review state: Unreviewed/);
 });
 
