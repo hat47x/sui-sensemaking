@@ -116,7 +116,7 @@ def test_large_relation_component_fails_quiet_instead_of_dumping_pair_explosion(
             "y": 0,
             "textReviewed": True,
         }
-        for index in range(1, 7)
+        for index in range(1, 8)
     ]
     edges = [
         {
@@ -125,7 +125,7 @@ def test_large_relation_component_fails_quiet_instead_of_dumping_pair_explosion(
             "toId": f"c{index + 1:02d}",
             "type": "related",
         }
-        for index in range(1, 6)
+        for index in range(1, 7)
     ]
     doc = {
         "version": 1,
@@ -137,7 +137,7 @@ def test_large_relation_component_fails_quiet_instead_of_dumping_pair_explosion(
         "edges": edges,
         "islands": [
             {"id": "i-left", "cardIds": ["c01", "c02", "c03"], "title": "左側", "titleReviewed": True},
-            {"id": "i-right", "cardIds": ["c04", "c05", "c06"], "title": "右側", "titleReviewed": True},
+            {"id": "i-right", "cardIds": ["c04", "c05", "c06", "c07"], "title": "右側", "titleReviewed": True},
         ],
         "evidenceLinks": [],
     }
