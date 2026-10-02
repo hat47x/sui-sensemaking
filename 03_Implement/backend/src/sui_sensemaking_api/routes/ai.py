@@ -2696,13 +2696,15 @@ def _attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
         touched = sum(bool(members & island) for island in islands)
         basis = cluster["basis"]
         if basis == "relation":
-            indirect = not_co_islanded - direct_relation_pairs
-            if not indirect:
+            focus_pairs = sorted(not_co_islanded - direct_relation_pairs)
+            if not focus_pairs:
                 continue
             cue = "indirect_relation"
         elif unassigned:
+            focus_pairs = sorted(not_co_islanded)
             cue = "unassigned"
         elif touched >= 2:
+            focus_pairs = sorted(not_co_islanded)
             cue = "cross_island"
         else:
             continue
@@ -2711,6 +2713,7 @@ def _attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
             AttentionCandidate(
                 candidateId=str(cluster["cluster_id"]),
                 cardIds=card_ids,
+                focusPairs=[list(pair) for pair in focus_pairs],
                 basis=basis,
                 cue=cue,
             )
