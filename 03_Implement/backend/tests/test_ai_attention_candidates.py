@@ -105,3 +105,55 @@ def test_unreviewed_text_stays_fail_closed() -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "unreviewed_text_not_allowed"
+
+
+def test_large_relation_component_fails_quiet_instead_of_dumping_pair_explosion() -> None:
+    cards = [
+        {
+            "id": f"c{index:02d}",
+            "text": f"観察{index:02d}を確認する",
+            "x": index * 10,
+            "y": 0,
+            "textReviewed": True,
+        }
+        for index in range(1, 7)
+    ]
+    edges = [
+        {
+            "id": f"e{index:02d}",
+            "fromId": f"c{index:02d}",
+            "toId": f"c{index + 1:02d}",
+            "type": "related",
+        }
+        for index in range(1, 6)
+    ]
+    doc = {
+        "version": 1,
+        "id": "attention-large-component",
+        "createdAt": "2026-10-02T00:00:00Z",
+        "updatedAt": "2026-10-02T00:00:00Z",
+        "transform": {"panX": 0, "panY": 0, "zoom": 1},
+        "cards": cards,
+        "edges": edges,
+        "islands": [
+            {"id": "i-left", "cardIds": ["c01", "c02", "c03"], "title": "左側", "titleReviewed": True},
+            {"id": "i-right", "cardIds": ["c04", "c05", "c06"], "title": "右側", "titleReviewed": True},
+        ],
+        "evidenceLinks": [],
+    }
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": doc})
+
+    assert response.status_code == 200, response.text
+    assert response.json()["candidates"] == []
+
+
+def test_focus_pair_budget_keeps_small_actionable_candidate_visible() -> None:
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": _doc()})
+
+    assert response.status_code == 200, response.text
+    candidates = response.json()["candidates"]
+    assert len(candidates) == 1
+    assert len(candidates[0]["focusPairs"]) <= ai.MAX_ATTENTION_FOCUS_PAIRS
