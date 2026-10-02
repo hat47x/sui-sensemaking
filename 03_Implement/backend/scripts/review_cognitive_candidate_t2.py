@@ -21,14 +21,13 @@ import hashlib
 from pathlib import Path
 from typing import Literal
 
+from sui_sensemaking_api.attention_candidates import (
+    attention_candidates_from_ir,
+    attention_source_digest,
+    build_attention_ir,
+)
+from sui_sensemaking_api.llm_input_ir import IRGenerationError, held_card_ids
 from sui_sensemaking_api.models import DocumentV1
-
-try:
-    from scripts.measure_cognitive_candidate_novelty import measure_document
-except ModuleNotFoundError as exc:
-    if exc.name != "scripts":
-        raise
-    from measure_cognitive_candidate_novelty import measure_document
 
 
 Phase = Literal["baseline", "candidates"]
@@ -47,6 +46,8 @@ def render_baseline(
     *,
     source_sha256: str | None = None,
 ) -> str:
+    ir = build_attention_ir(document)
+    product_digest = attention_source_digest(ir)
     by_id = _card_text_by_id(document)
     hold_by_id = {
         card.id: getattr(card, "holdState", None)
@@ -62,6 +63,7 @@ def render_baseline(
     ]
     if source_sha256 is not None:
         lines.append(f"Source SHA-256: {source_sha256}")
+    lines.append(f"Attention sourceDigest: {product_digest}")
     lines.extend(
         [
             "",
@@ -108,55 +110,37 @@ def render_candidates(
     *,
     source_sha256: str,
 ) -> str:
-    measurement = measure_document(
-        document,
-        source_sha256=source_sha256,
-        include_spatial=False,
-    )
+    ir = build_attention_ir(document)
+    product_digest = attention_source_digest(ir)
+    candidates = attention_candidates_from_ir(ir)
     by_id = _card_text_by_id(document)
 
     lines = [
         "# Cognitive T2 review — deterministic candidates",
         "",
-        "候補は提案であり、採用・順位・確信度を表さない。",
+        "候補は製品APIと同じ決定論ロジックから得た提案であり、採用・順位・確信度を表さない。",
         "held/pending/shelved を含む候補は表示しない。",
         f"Source SHA-256: {source_sha256}",
+        f"Attention sourceDigest: {product_digest}",
+        "Excluded hold card IDs: "
+        + (", ".join(held_card_ids(ir)) if held_card_ids(ir) else "none"),
         "",
     ]
 
-    candidates = measurement["candidates"]
     if not candidates:
         lines.append("Eligible deterministic candidates: none")
     else:
         for candidate in candidates:
             lines.append(
-                f"## {candidate['clusterId']} ({candidate['basis']})"
+                f"## {candidate.candidateId} ({candidate.basis} / {candidate.cue})"
             )
-            for card_id in candidate["cardIds"]:
+            for card_id in candidate.cardIds:
                 lines.append(f"- {card_id}: {by_id[card_id]}")
-
-            not_co = candidate["notAlreadyCoIslandedPairs"]
-            indirect = candidate["indirectRegroupingPairs"]
             lines.append(
-                "既存島に同居していない組: "
-                + (
-                    ", ".join(
-                        f"{pair['left']}↔{pair['right']}"
-                        for pair in not_co
-                    )
-                    if not_co
-                    else "なし"
-                )
-            )
-            lines.append(
-                "直接relationでもない間接再構成: "
-                + (
-                    ", ".join(
-                        f"{pair['left']}↔{pair['right']}"
-                        for pair in indirect
-                    )
-                    if indirect
-                    else "なし"
+                "注目組: "
+                + ", ".join(
+                    f"{left}↔{right}"
+                    for left, right in candidate.focusPairs
                 )
             )
             lines.append("")
@@ -216,13 +200,17 @@ def main() -> int:
         print(f"FAIL: {exc}")
         return 1
 
-    print(
-        render_review(
+    try:
+        rendered = render_review(
             document,
             phase=args.phase,
             source_sha256=_sha256(raw),
         )
-    )
+    except IRGenerationError as exc:
+        print(f"FAIL: {exc.to_contract()}")
+        return 1
+
+    print(rendered)
     return 0
 
 

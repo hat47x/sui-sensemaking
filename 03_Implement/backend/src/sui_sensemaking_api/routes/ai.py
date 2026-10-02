@@ -1,8 +1,6 @@
-import hashlib
 import json
 import logging
 import math
-from itertools import combinations
 from dataclasses import replace
 from typing import Literal
 from uuid import uuid4
@@ -12,6 +10,11 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from sui_sensemaking_api.attention_candidates import (
+    attention_candidates_from_ir,
+    attention_source_digest,
+    build_attention_ir,
+)
 from sui_sensemaking_api.audit import build_event
 from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.llm_input_ir import (
@@ -67,7 +70,6 @@ from sui_sensemaking_api.models_ai import (
     SuggestCardGroupsResponse,
     SuggestAttentionCandidatesRequest,
     SuggestAttentionCandidatesResponse,
-    AttentionCandidate,
     SuggestDocumentTitleRequest,
     SuggestDocumentTitleResponse,
     SuggestIslandSummaryRequest,
@@ -2652,131 +2654,6 @@ def _card_group_candidates(
     return candidates, withheld
 
 
-MAX_ATTENTION_FOCUS_PAIRS = 8
-
-
-def _attention_source_digest(ir: dict) -> str:
-    """Fingerprint only the projected structure that determines attention cues."""
-    meta = ir.get("meta", {})
-    cards = [
-        {
-            "id": card["id"],
-            **({"hold_state": card["hold_state"]} if card.get("hold_state") else {}),
-        }
-        for card in ir.get("cards", [])
-    ]
-    relations = [
-        {
-            "from": relation["from"],
-            "to": relation["to"],
-            "type": relation["type"],
-        }
-        for relation in ir.get("relations", [])
-        if relation["type"] in {"related", "causal"}
-    ]
-    islands = [
-        {
-            "id": island["id"],
-            "card_ids": island["card_ids"],
-        }
-        for island in ir.get("islands", [])
-    ]
-    source = {
-        "ir_version": ir.get("ir_version"),
-        "doc_id": meta.get("doc_id"),
-        "doc_version": meta.get("doc_version"),
-        "cards": cards,
-        "relations": relations,
-        "islands": islands,
-    }
-    if "coordinates" in ir:
-        source["coordinates"] = ir["coordinates"]
-    canonical = json.dumps(
-        source,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return hashlib.sha256(canonical).hexdigest()
-
-
-def _attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
-    """Expose only structurally novel, proposal-only cues from deterministic IR.
-
-    This is intentionally stricter than forwarding cluster_candidates. Existing
-    island membership is not a discovery. A two-card relation is also already
-    visible on the canvas, so relation candidates are surfaced only when the
-    connected structure implies at least one indirect pair. Spatial cues are
-    opt-in and must cross an island boundary or involve an unassigned card.
-    Internal IR scores never cross this product boundary.
-    """
-    held = set(held_card_ids(ir))
-    islands = [set(island["card_ids"]) for island in ir.get("islands", [])]
-    assigned = set().union(*islands) if islands else set()
-    co_island_pairs = {
-        tuple(sorted(pair))
-        for members in islands
-        for pair in combinations(sorted(members), 2)
-    }
-    direct_relation_pairs = {
-        tuple(sorted((relation["from"], relation["to"])))
-        for relation in ir.get("relations", [])
-        if relation["type"] in {"related", "causal"}
-        and relation["from"] != relation["to"]
-    }
-
-    result: list[AttentionCandidate] = []
-    for cluster in ir.get("cluster_candidates", []):
-        card_ids = sorted(str(card_id) for card_id in cluster["card_ids"])
-        members = set(card_ids)
-        if members & held:
-            continue
-        # A subset of one existing island is already represented by the user's
-        # current structure and does not deserve scarce attention.
-        if any(members <= island for island in islands):
-            continue
-
-        pairs = set(combinations(card_ids, 2))
-        not_co_islanded = pairs - co_island_pairs
-        if not not_co_islanded:
-            continue
-
-        unassigned = bool(members - assigned)
-        touched = sum(bool(members & island) for island in islands)
-        basis = cluster["basis"]
-        if basis == "relation":
-            focus_pairs = sorted(not_co_islanded - direct_relation_pairs)
-            if not focus_pairs:
-                continue
-            cue = "indirect_relation"
-        elif unassigned:
-            focus_pairs = sorted(not_co_islanded)
-            cue = "unassigned"
-        elif touched >= 2:
-            focus_pairs = sorted(not_co_islanded)
-            cue = "cross_island"
-        else:
-            continue
-
-        # ADR-0043: an attention aid must not turn a large connected component
-        # into an O(n^2) review task. There is no value-grounded ranking that
-        # would justify silently picking an arbitrary subset, so fail quiet
-        # until a more local deterministic cue can explain which pairs matter.
-        if len(focus_pairs) > MAX_ATTENTION_FOCUS_PAIRS:
-            continue
-
-        result.append(
-            AttentionCandidate(
-                candidateId=str(cluster["cluster_id"]),
-                cardIds=card_ids,
-                focusPairs=[list(pair) for pair in focus_pairs],
-                basis=basis,
-                cue=cue,
-            )
-        )
-    return result
-
-
 def _build_suggest_card_groups_prompt(
     payload: SuggestCardGroupsRequest,
     ir: dict | None = None,
@@ -3100,18 +2977,17 @@ def suggest_attention_candidates(
         payload.allowUnreviewedText is True and settings.allow_unreviewed_ai_text
     )
     try:
-        ir = build_llm_input_ir(
-            source_from_document(payload.doc),
-            include_coordinates=payload.includeSpatial,
-            safe_mode=True,
+        ir = build_attention_ir(
+            payload.doc,
+            include_spatial=payload.includeSpatial,
             allow_unreviewed_text=allow_unreviewed,
         )
     except IRGenerationError as exc:
         raise HTTPException(status_code=422, detail=exc.to_contract()) from exc
 
     return SuggestAttentionCandidatesResponse(
-        sourceDigest=_attention_source_digest(ir),
-        candidates=_attention_candidates_from_ir(ir),
+        sourceDigest=attention_source_digest(ir),
+        candidates=attention_candidates_from_ir(ir),
         excludedCardIds=held_card_ids(ir),
         truncated=bool(ir.get("truncation", {}).get("truncated")),
     )
