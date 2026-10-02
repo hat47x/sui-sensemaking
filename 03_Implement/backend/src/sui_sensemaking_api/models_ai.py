@@ -474,6 +474,7 @@ class AttentionCandidate(BaseModel):
 
     candidateId: str = Field(min_length=1)
     cardIds: list[str] = Field(min_length=2)
+    focusPairs: list[list[str]] = Field(min_length=1)
     basis: Literal["relation", "spatial"]
     cue: Literal["cross_island", "indirect_relation", "unassigned"]
 
