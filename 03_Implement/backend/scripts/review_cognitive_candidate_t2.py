@@ -5,10 +5,11 @@ The tool never writes a result ledger. It reads a local DocumentV1 JSON and
 prints either the current human-authored structure (baseline phase) or eligible
 deterministic regrouping candidates (candidates phase).
 
-Run the baseline phase first, note your current interpretation without machine
-candidates, then run the candidates phase. Candidate output includes card text
-because a human must judge whether attention actually moved, but the text stays
-in local stdout unless the caller redirects it.
+Run the baseline phase first, record the current interpretation without machine
+candidates in a local note, then pass both the printed baseline receipt and that
+note to the candidates phase. Candidate output includes card text because a
+human must judge whether attention actually moved, but neither the source note
+nor its contents are reprinted; only its digest and byte count are shown.
 
 This tool does not turn a run into ADR-0089 T2 evidence by itself. T2 requires
 the Maintainer's own non-SUI practical use and qualitative observation.
