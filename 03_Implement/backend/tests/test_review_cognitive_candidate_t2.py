@@ -141,7 +141,6 @@ def test_candidate_phase_matches_product_candidate_contract() -> None:
             assert f"{left}↔{right}" in rendered
 
 
-
 def test_t2_rejects_truncated_attention_projection(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
