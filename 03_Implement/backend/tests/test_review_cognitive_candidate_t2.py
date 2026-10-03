@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -34,8 +35,6 @@ def _gate(document: DocumentV1, source_sha256: str) -> tuple[str, bytes]:
 
 
 def _sha256_for_test(raw: bytes) -> str:
-    import hashlib
-
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -61,6 +60,7 @@ def test_two_phases_expose_the_same_source_digest() -> None:
         source_sha256="same-source",
     )
     receipt, observation = _gate(document, "same-source")
+    assert f"Baseline receipt: {receipt}" in baseline
     candidates = render_review(
         document,
         phase="candidates",
@@ -190,7 +190,6 @@ def test_t2_rejects_truncated_attention_projection(
             baseline_receipt=None,
             baseline_observation=None,
         )
-
 
 
 def test_candidate_phase_requires_same_snapshot_receipt_and_nonempty_note() -> None:
