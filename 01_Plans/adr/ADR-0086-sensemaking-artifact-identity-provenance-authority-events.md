@@ -3,23 +3,23 @@
 - Status: Accepted
 - Date: 2026-09-18
 - Deciders: Maintainer
-- Scope: sensemaking semantic artifact identity, provenance, review, authority transition, Review Capsule, retention
+- Scope: sensemaking semantic artifactのidentity、provenance、review、authority transition、Review Capsule、保持期間
 - Related: `ADR-0070`, `ADR-0084`, `ADR-0085`
-- Runtime impact: None in this change
-- Schema impact: None in this change
+- Runtime impact: この変更では影響なし
+- Schema impact: この変更では影響なし
 
 ## Context
 
-ADR-0085では、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを、別の意味成果物として扱うことを決めた。あわせて、review、authority、lifecycle、visibility、provenanceを、semantic kindと直交させることも決めた。
+ADR-0085では、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを、別の意味成果物として扱うことを決めた。あわせて、review、authority、ライフサイクル、visibility、provenanceを、semantic kindと直交させることも決めた。
 
 次に必要なのは、その成果物を将来永続化するときの、identityとeventの境界である。
 
 既存のcanvas revisionの設計（ADR-0070）は、次の重要な原則をすでに持つ。
 
 - アプリケーションのrevision identityと、コンテンツダイジェストを分ける
-- ダイジェストを、認可、真正性、human reviewの証明に使わない
-- AI提案を人間が採用しても、AI提案のrevision自体をhuman-authoredへ書き換えない
-- AI実行の詳細は、`ai_generation_runs` などの別のレコードへ置き、revisionのmetadataへプロバイダ、モデル、プロンプトを複製しない
+- ダイジェストを、認可、真正性、人間によるレビューの証明に使わない
+- AI提案を人間が採用しても、AI提案のrevision自体を人間が作成したものへ書き換えない
+- AI実行の詳細は、`ai_generation_runs` などの別のレコードへ置き、revisionのメタデータへプロバイダ、モデル、プロンプトを複製しない
 
 sensemaking artifactも同じ原則を引き継がないと、次のような問題が生じる。
 
@@ -48,7 +48,7 @@ contentDigest
 - `revisionId` も不透明なIDとし、コンテンツダイジェストそのものをIDにはしない。
 - `contentDigest` は、正規化したsemantic payloadのSHA-256などで計算できる。ただし、認可、真正性、review、authorityの証明には使わない。
 - 同じpayloadのダイジェストを持つ別のartifactを、重複排除して一つの論理identityへまとめることはしない。
-- 同じartifactの中でpayloadが同一でも、由来、reviewの対象、ブランチの意味が異なる場合は、別のrevisionを作り得る。何も変わらない更新を抑えるかどうかは、上位のoperationポリシーで決める。
+- 同じartifactの中でpayloadが同一でも、由来、reviewの対象、ブランチの意味が異なる場合は、別のrevisionを作り得る。何も変わらない更新を抑えるかどうかは、上位の操作のポリシーで決める。
 
 ### D2. semantic kindは、論理artifactの存続期間中は変更しない
 
@@ -68,7 +68,7 @@ ObservationをHypothesisへ変える場合は、同じ `artifactId` のrevision�
 
 ### D3. revisionは不変とし、修正は新しいrevisionで表現する
 
-一度でも、Review、Authority transition、Decision、別のartifactのprovenanceから参照されたrevisionは、内容をin-placeで変更しない。
+一度でも、Review、Authority transition、Decision、別のartifactのprovenanceから参照されたrevisionは、内容をその場で変更しない。
 
 修正するときは、同じ `artifactId` の新しいrevisionを作り、親のrevisionを参照する。
 
@@ -94,13 +94,13 @@ contentDigest
 
 ### D5. 最小限のprovenance envelopeを、artifact revisionへ結び付ける
 
-各revisionには、後から由来をたどるためのprovenance envelopeを持たせる。
+各revisionには、後から由来をたどるためのprovenanceのエンベロープを持たせる。
 
 概念上の最小の要素は次である。
 
-- actor kind
+- actorの種別
 - 不透明なactor ref（分かる場合）
-- method kind
+- methodの種別
 - method ref（分かる場合）
 - 実行または生成のrun ref（該当する場合）
 - 入力のartifact revision ref
@@ -113,7 +113,7 @@ AIやモデルによる生成の場合は、`runRef` を用いて、プロバイ
 
 人間による生成の場合も、生のメールアドレスなどをactor refへ直接入れず、既存の不透明なidentityの方針に従う。
 
-legacyのimportなどでactorが不明な場合は、推測して補わず、`actorKind=unknown` を許容する。
+旧形式のimportなどでactorが不明な場合は、推測して補わず、`actorKind=unknown` を許容する。
 
 ### D6. Reviewは追記専用のレコードとして扱い、Authority transitionと分ける
 
@@ -126,7 +126,7 @@ Reviewのレコードには、概念上、次を持たせる。
 - reviewer actor
 - review purpose
 - disposition
-- objectionまたはholdのref
+- 異議または保留のref
 - createdAt
 - supersedesReviewId（訂正時、任意）
 
@@ -140,7 +140,7 @@ Reviewのdispositionには、Authorityを意味する `accepted` や `consensus`
 - held
 - changes_requested
 
-Reviewを訂正する場合も、古いレコードは書き換えず、新しいReviewでsupersedeする。
+Reviewを訂正する場合も、古いレコードは書き換えず、新しいReviewで置き換える。
 
 ### D7. Authorityは、追記専用のtransition eventとして扱う
 
@@ -154,7 +154,7 @@ Authorityの現在値だけを、artifactへ直接書き込むことは、正本
 - to
 - scopeRef
 - authorizedByのactorまたはポリシーのref
-- basisのReviewまたはDecisionのref
+- 根拠となるReviewまたはDecisionのref
 - policyRef（必要な場合）
 - participant-setまたはconsensus-policyのref（Consensusの場合）
 - createdAt
@@ -216,7 +216,7 @@ AIの要約が変わっても、Reviewの対象と根拠の集合が同一かを
 
 ### D10. 「主要な代替案」を保持する最低限の条件を定める
 
-AI内部の全trialや、非公開のchain-of-thoughtは保存しない。
+AI内部の全試行や、非公開のchain-of-thoughtは保存しない。
 
 一方、次のいずれかに該当するartifact revisionは、少なくとも、上位の保持判断の候補として保護する。
 
@@ -228,13 +228,13 @@ AI内部の全trialや、非公開のchain-of-thoughtは保存しない。
 - 強いcontradictionまたはobjectionの対象になった
 - 利用者またはポリシーによりpinされた
 
-これらに該当せず、子孫、review、authority、decision、pinから到達できないWorking-onlyのmicrotrialは、保持ポリシーのもとでGCの対象にできる。
+これらに該当せず、子孫、review、authority、decision、pinから到達できないWorkingだけの微小な試行は、保持ポリシーのもとでGCの対象にできる。
 
 ### D11. Review Capsuleは、保持のrootにしない
 
-Review Capsuleは、再構築できるProjectionである。それ自体を、正本の保持のrootにはしない。
+Review Capsuleは、再構築できるProjectionである。それ自体を、正本の保持のルートにはしない。
 
-Capsuleが参照するartifact、Review、Authority event、Decisionのうち、保持の対象となるものが、rootを形成する。
+Capsuleが参照するartifact、Review、Authority event、Decisionのうち、保持の対象となるものが、ルートを形成する。
 
 これにより、キャッシュされたCapsuleを削除して再生成しても、意味の履歴を失わない。
 
@@ -247,7 +247,7 @@ Capsuleが参照するartifact、Review、Authority event、Decisionのうち、
 - `DocumentV1` / canvas revision: sourceまたはcontextのrevision ref
 - `RoundSnapshotV1`: 不変のsource snapshotへのref
 - `CardLineageEdgeV1`: 既存のラウンド間のlineage。汎用のartifact provenanceへは、暗黙に変換しない
-- `ReviewAttribution`: 現行のdocument単位のhuman review metadata。汎用のReviewレコードの、互換Projectionの候補
+- `ReviewAttribution`: 現行のdocument単位の人間によるレビューのメタデータ。汎用のReviewレコードの、互換Projectionの候補
 - `ai_generation_runs`: AI provenanceのrunRef
 - WorkingGraph / ConsensusGraph: artifactを表示して統合する、surfaceまたはprojection
 
@@ -318,7 +318,7 @@ Reviewは、semantic artifactのkindではなく、独立したレコードと�
 |---|---|---|
 | **業務設計** | AIが広い探索を担っても、人間が、厳密なrevision、主要な根拠、反証、代替案を確認できる。Reviewと採用の操作も分けられる | データ: ReviewとAuthority transitionは、追記専用のレコードにする。機能: Review Capsuleは、元のrefへ戻れる |
 | **データ設計** | artifactId、revisionId、ダイジェスト、provenance、review、authority eventを分離する | 業務: AI由来を人間由来へ書き換えない。機能: 古い対象や、expectedFromの不一致を、安全側で拒否する |
-| **機能設計** | Structural CapsuleとNarrative Explanationを分離し、chain-of-thoughtを全部保存しなくても、reviewできるようにする | 業務: 人間は、全trialを読む必要がない。データ: Capsuleは、正本でも保持のrootでもない |
+| **機能設計** | Structural CapsuleとNarrative Explanationを分離し、chain-of-thoughtを全部保存しなくても、reviewできるようにする | 業務: 人間は、全試行を読む必要がない。データ: Capsuleは、正本でも保持のルートでもない |
 
 ## Consequences
 

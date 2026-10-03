@@ -43,15 +43,15 @@
     </div>
     <h1 style="font-size:29px; line-height:1.34; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">外部定額AIエージェント非同期協調 仕様</h1>
     <p style="font-size:15px; line-height:1.7; color:#52606d; margin:14px 0 0; max-width:38em; text-wrap:pretty;">
-      組織が定額課金で契約済みのAIエージェント（Copilot Studio / ChatGPT Enterprise等）に思考ワークロードを委ね、sui-sensemakingは<strong>文脈の供給・結果の検証・人間レビュー・可逆な適用</strong>に徹する（AgentTaskPackage / AgentResponse v1）。
+      組織が定額課金で契約済みのAIエージェント（Copilot StudioやChatGPT Enterpriseなど）に思考にかかる作業を委ね、sui-sensemakingは<strong>文脈の供給・結果の検証・人間レビュー・可逆な適用</strong>に徹する（AgentTaskPackageとAgentResponse v1）。
     </p>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:22px;">
-      <span class="badge" style="background:#ecfeff; color:#0e7490; border-color:#a5f3fc;">Tier 0=人間仲介・非同期</span>
-      <span class="badge" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">反スコアリング（score/rank/confidence禁止）</span>
+      <span class="badge" style="background:#ecfeff; color:#0e7490; border-color:#a5f3fc;">Tier 0は人間が仲介する非同期方式</span>
+      <span class="badge" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">反スコアリング（score、rank、confidenceを禁止）</span>
       <span class="badge" style="background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;">提案のみ・全て可逆</span>
     </div>
     <p style="font-size:12.5px; line-height:1.7; color:#6b7280; margin:20px 0 0; padding:10px 13px; background:#f8fafc; border-left:3px solid #cbd5e1;">
-      本書が正本（新規設計文書はHTML単独。<code>AGENTS.md</code> §3）。正本区分: 本書が外部エージェント連携契約の正本（決定は<code>ADR-0049</code>）。対象読者: 実装者、Copilot Studio等でエージェントを構成する運用者。
+      本書が正本である（新規設計文書はHTML単独とする。<code>AGENTS.md</code> §3）。正本の区分としては、本書が外部エージェント連携契約の正本であり、決定は<code>ADR-0049</code>にある。対象読者は、実装者と、Copilot Studioなどでエージェントを構成する運用者である。
     </p>
   </header>
 
@@ -64,10 +64,10 @@
     <table class="grid">
       <thead><tr><th style="width:8%;">#</th><th style="width:22%;">原則</th><th>内容</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>非同期・人間仲介</td><td>sui-sensemakingは外部と直接通信しない（Tier 0）。書き出し・取り込みは人間の明示操作</td></tr>
-        <tr><td>2</td><td>提案のみ</td><td>エージェント出力は常にAI由来・未レビューの提案。自動確定なし。適用は人間操作・全て可逆・監査記録</td></tr>
-        <tr><td>3</td><td>反スコアリング</td><td>応答契約に数値スコア・順位・確度を含めない（存在すれば取り込み時に破棄）</td></tr>
-        <tr><td>4</td><td>境界の再利用</td><td>出力は共有・書き出し境界（SafeMode/preflight/export-audit）、入力はimport信頼境界（検証・サニタイズ）を通る。新しい抜け道を作らない</td></tr>
+        <tr><td>1</td><td>非同期・人間仲介</td><td>sui-sensemakingは外部と直接通信しない（Tier 0）。書き出しと取り込みは、人間の明示的な操作で行う</td></tr>
+        <tr><td>2</td><td>提案のみ</td><td>エージェントの出力は常に、AI由来で未レビューの提案として扱う。自動では確定しない。適用は人間の操作で行い、すべて可逆とし、監査に記録する</td></tr>
+        <tr><td>3</td><td>反スコアリング</td><td>応答契約に数値スコア・順位・確度を含めない（含まれていた場合は取り込み時に破棄する）</td></tr>
+        <tr><td>4</td><td>境界の再利用</td><td>出力は共有・書き出し境界（SafeMode、preflight、export-audit）を通り、入力は取り込みの信頼境界（検証とサニタイズ）を通る。新しい抜け道は作らない</td></tr>
         <tr><td>5</td><td>ベンダー非依存</td><td>契約は汎用である。Copilot Studioは代表的なプロファイル（§7）</td></tr>
       </tbody>
     </table>
@@ -85,7 +85,7 @@
         <tr><td>sui-sensemaking（自己ホスト）</td><td style="color:#15803d;">信頼</td><td>パッケージ生成・応答検証・提案化・レビュー・適用・監査</td></tr>
         <tr><td>利用者（人間）</td><td style="color:#15803d;">信頼（操作主体）</td><td>書き出し確認・エージェントへの投函・応答の持ち帰り・提案の採否</td></tr>
         <tr><td>外部エージェント</td><td style="color:#b91c1c; font-weight:700;">非信頼</td><td>思考の委任先。出力はデータとして扱い、指示として扱わない</td></tr>
-        <tr><td>エージェント基盤（M365等）</td><td>組織の契約に依存</td><td>データ境界は組織のライセンス/テナント設定に従う（本仕様の対象外。§7に注意あり）</td></tr>
+        <tr><td>エージェント基盤（M365等）</td><td>組織の契約に依存</td><td>データ境界は組織のライセンスとテナントの設定に従う（本仕様の対象外。§7に注意あり）</td></tr>
       </tbody>
     </table>
 
@@ -106,7 +106,7 @@ flowchart LR
     classDef trusted fill:#ecfdf5,stroke:#059669,stroke-width:1.5px,color:#065f46
     classDef untrusted fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d
       </pre>
-      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">sui-sensemakingは外部エージェントと直接通信しない。人間が両側の境界（A: 書き出し、B: 取り込み）を必ず仲介する。</figcaption>
+      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">sui-sensemakingは外部エージェントと直接通信しない。人間が両側の境界（Aは書き出し、Bは取り込み）を必ず仲介する。</figcaption>
     </figure>
   </section>
 
@@ -116,7 +116,7 @@ flowchart LR
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">03</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">AgentTaskPackage v1（依頼パッケージ）</h2>
     </div>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;"><strong>形態:</strong> 正は単一のMarkdown「タスクシート」（チャットへ貼り付けまたは添付でき、人間が読める）。随伴（任意）は<code>task.json</code>＋<code>context_bundle.json</code>（Tier 1のフォルダでの受け渡しでは、こちらを正とする）。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;"><strong>形態</strong>　正本は単一のMarkdown「タスクシート」で、チャットに貼り付けるか添付でき、人間が読める。任意の随伴ファイルとして<code>task.json</code>と<code>context_bundle.json</code>を付ける。Tier 1のフォルダでの受け渡しでは、随伴ファイルを正本とする。</p>
 
     <pre class="block">{
   "schemaVersion": "agent-task.v1",
@@ -130,18 +130,18 @@ flowchart LR
   "locale": "ja"
 }</pre>
 
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:16px 0 0;"><strong>タスクシート構成（生成順序固定）:</strong></p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:16px 0 0;"><strong>タスクシートの構成（生成順序は固定）</strong></p>
     <table class="grid">
       <thead><tr><th style="width:6%;">#</th><th style="width:20%;">節</th><th>内容</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>依頼</td><td>taskKind別の指示文（何を・どの範囲で・何件程度）</td></tr>
+        <tr><td>1</td><td>依頼</td><td>taskKindごとの指示文（何を、どの範囲で、何件程度か）</td></tr>
         <tr><td>2</td><td>ガードレール（固定文）</td><td>「出力は提案であり確定しない／点数・順位・％を付けない／曖昧・対立はそのまま保持／出典のない断定をしない／応答はJSONのみ」</td></tr>
-        <tr><td>3</td><td>文脈</td><td>ContextBundle抜粋。Preview確認済み範囲のみ、SafeMode適用済み</td></tr>
-        <tr><td>4</td><td>応答契約</td><td>§4スキーマのインライン提示＋最小記入例</td></tr>
-        <tr><td>5</td><td>相関ブロック</td><td>§3.2のJSONをコードフェンスで埋め込み（エコーバック指示付き）</td></tr>
+        <tr><td>3</td><td>文脈</td><td>ContextBundleの抜粋。Preview確認済みの範囲だけを含め、SafeModeを適用済みとする</td></tr>
+        <tr><td>4</td><td>応答契約</td><td>§4のスキーマをそのまま載せ、最小の記入例を添える</td></tr>
+        <tr><td>5</td><td>相関ブロック</td><td>§3.2のJSONをコードフェンスで埋め込み、エコーバックの指示を付ける</td></tr>
       </tbody>
     </table>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>出力境界（必須）:</strong> SafeMode状態表示・未レビュー本文は既定除外・出典参照は既定OFF・主体メタ（CARD-META-UI-01）は別ゲート確定まで含めない。出力前に<code>/ai/external-tasks/register</code>へ本文なしの相関を登録し、失敗時は書き出さない。完了後は<code>/docs/{id}/export-audit</code> に <code>exportKind: "agent-task"</code> を記録する。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>出力境界（必須）</strong>　SafeModeの状態を表示し、未レビューの本文は既定で除外し、出典参照は既定でOFFとし、主体メタ（CARD-META-UI-01）は別ゲートが確定するまで含めない。出力前に<code>/ai/external-tasks/register</code>へ本文なしの相関を登録し、失敗時は書き出さない。完了後は<code>/docs/{id}/export-audit</code>に<code>exportKind: "agent-task"</code>を記録する。</p>
   </section>
 
   <!-- 4. AgentResponse -->
@@ -167,21 +167,21 @@ flowchart LR
     }
   ]
 }</pre>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>制約:</strong> <code>correlation</code>は端末内のテナントスコープ付き出力台帳および現在文書と照合する。完全相関がない旧形式は寛容モードだけで受理し「由来未検証」と表示、厳格モードでは拒否する。<code>score/rank/confidence/priority</code>等の数値評価は禁止フィールド（厳格=拒否、寛容=破棄して警告）。<code>rationale</code>欠落は厳格=拒否、寛容=「根拠未記載」ラベル付きで受理（提案として保全）。<code>patch.ops</code>はCE3ホワイトリストのみ、<code>delete_*</code>含む場合は警告バッジ。文字列は全て<code>markdown_sanitize</code>を通す。応答本文中の指示的文言はデータとして表示するのみで自動動作に接続しない（プロンプトインジェクション境界）。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>制約</strong>　<code>correlation</code>は端末内のテナントスコープ付き出力台帳および現在文書と照合する。完全相関がない旧形式は、寛容モードだけで受理して「由来未検証」と表示し、厳格モードでは拒否する。<code>score/rank/confidence/priority</code>などの数値評価は禁止フィールドであり、厳格モードでは拒否し、寛容モードでは破棄して警告する。<code>rationale</code>が欠落している場合は、厳格モードでは拒否し、寛容モードでは「根拠未記載」のラベルを付けて提案として保全する。<code>patch.ops</code>はCE3の許可リストにあるものだけを受け付け、<code>delete_*</code>を含む場合は警告バッジを付ける。文字列はすべて<code>markdown_sanitize</code>を通す。応答本文中の指示的な文言は、データとして表示するだけで、自動の動作には接続しない（プロンプトインジェクションに対する境界）。</p>
 
     <table class="grid">
       <thead><tr><th style="width:22%;">kind</th><th>行き先（すべてAI由来・未レビューの提案として）</th></tr></thead>
       <tbody>
-        <tr><td><code>island_title</code></td><td>島タイトル候補（複数候補・選択/編集/破棄）</td></tr>
-        <tr><td><code>merge_candidate</code></td><td>MergeSuggestions（既存の採否・監査 <code>merge-decision-logs</code>）。<code>content.mergeMethod</code> は <code>near_duplicate</code> / <code>kernel_fusion</code> のいずれかを必須とし、欠落・未知値は推測せず取り込まない。</td></tr>
+        <tr><td><code>island_title</code></td><td>島タイトルの候補（複数の候補から、選択、編集、破棄ができる）</td></tr>
+        <tr><td><code>merge_candidate</code></td><td>MergeSuggestions（既存の採否と監査は <code>merge-decision-logs</code>）。<code>content.mergeMethod</code> は <code>near_duplicate</code> / <code>kernel_fusion</code> のいずれかを必須とし、欠落や未知の値は推測せず取り込まない。</td></tr>
         <tr><td><code>narrative_draft</code></td><td>Narrativesの草稿（レビュー必須）</td></tr>
         <tr><td><code>opposing_viewpoint</code> / <code>critique</code></td><td>選択コンテキストの違和感候補（人間が確定して初めてcritiqueInputsになる）</td></tr>
-        <tr><td><code>patch</code></td><td>PatchWorkspace（lint→conflict検出→採否/保留→ロールバック）</td></tr>
+        <tr><td><code>patch</code></td><td>PatchWorkspace（lint、競合の検出、採否と保留、ロールバックの順）</td></tr>
       </tbody>
     </table>
 
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>非同期での整合（staleness）:</strong> 取り込み時に<code>baseDocSignature</code>を照合。不一致時、patchはCE3 conflict/rediff経路で再突合、非patchは<code>targetRef</code>解決を試み、解決不能な提案は<strong>破棄せず「孤立提案」として保持表示</strong>（一匹狼と同じ保全思想）。同一<code>taskId</code>＋同一応答ハッシュの再取込は冪等。</p>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;"><strong>判断監査:</strong> 正規化済み提案のSHA-256指紋だけを<code>/ai/external-proposals/register</code>へ登録する。採用・破棄は<code>/ai/external-proposals/audit</code>の成功後にだけ画面状態または文書へ反映する。由来は真正性を主張しない<code>user_presented_unsigned</code>として保持し、内部で生成した提案用のエンドポイントとは交差させない。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>非同期での整合（staleness）</strong>　取り込み時に<code>baseDocSignature</code>を照合する。一致しない場合、patchはCE3の競合解決とrediffの経路で再突合し、patch以外は<code>targetRef</code>の解決を試みる。解決できない提案は、<strong>破棄せず「孤立提案」として保持して表示</strong>する（一匹狼と同じ保全の考え方）。同一の<code>taskId</code>と同一の応答ハッシュによる再取り込みは冪等である。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;"><strong>判断監査</strong>　正規化済み提案のSHA-256指紋だけを<code>/ai/external-proposals/register</code>へ登録する。採用・破棄は<code>/ai/external-proposals/audit</code>の成功後にだけ画面状態または文書へ反映する。由来は真正性を主張しない<code>user_presented_unsigned</code>として保持し、内部で生成した提案用のエンドポイントとは交差させない。</p>
   </section>
 
   <!-- 5. 状態機械(核心図) -->
@@ -219,14 +219,14 @@ stateDiagram-v2
   <section style="padding:32px 0 0;">
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">06</span>
-      <h2 style="font-size:20px; font-weight:700; margin:0;">検証レベル（Expected verification）</h2>
+      <h2 style="font-size:20px; font-weight:700; margin:0;">検証レベル（期待する検証）</h2>
     </div>
     <table class="grid">
       <thead><tr><th style="width:26%;">レベル</th><th>対象</th></tr></thead>
       <tbody>
-        <tr><td>unit/integration</td><td>契約: golden fixture（task packageの生成のスナップショットと、responseの取り込みのラウンドトリップ）</td></tr>
-        <tr><td>integration</td><td>不変条件:「自動確定なし」「スコア破棄」「サニタイズ」「stale時の非破壊」</td></tr>
-        <tr><td>e2e</td><td>利用フロー: 依頼書き出し→（模擬応答貼付け）→提案出現（未レビュー）→1件採用→⌘Zで復帰</td></tr>
+        <tr><td>ユニットと統合</td><td>契約。ゴールデンフィクスチャ（タスクパッケージ生成のスナップショットと、応答取り込みのラウンドトリップ）を使う</td></tr>
+        <tr><td>統合</td><td>不変条件。「自動確定なし」「スコア破棄」「サニタイズ」「基準が古い場合の非破壊」を確認する</td></tr>
+        <tr><td>E2E</td><td>利用フロー。依頼を書き出し、模擬応答を貼り付けると、未レビューの提案が現れる。1件を採用し、⌘Zで元に戻す</td></tr>
       </tbody>
     </table>
   </section>
@@ -235,7 +235,7 @@ stateDiagram-v2
   <section style="padding:32px 0 0;">
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">07</span>
-      <h2 style="font-size:20px; font-weight:700; margin:0;">Copilot / Copilot Studio プロファイル（代表運用）</h2>
+      <h2 style="font-size:20px; font-weight:700; margin:0;">Copilot / Copilot Studioのプロファイル（代表的な運用）</h2>
     </div>
     <figure style="margin:16px 0 0;">
       <pre class="mermaid">
@@ -249,11 +249,11 @@ flowchart LR
       </pre>
       <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">§7.1 最短運用（追加構築なし・M365 Copilotチャット）。</figcaption>
     </figure>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>§7.2 Copilot Studioエージェント化（推奨・再現性向上）:</strong> Instructionsテンプレートに役割「KJ法支援の候補生成器。確定しない」、§3.3のガードレール全文、「応答はagent-response.v1のJSONのみ」を含める。ナレッジは不要（文脈は毎回タスクシートで供給）。逸脱時リカバリ定型文を用意する。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>§7.2 Copilot Studioエージェント化（推奨・再現性向上）</strong>　Instructionsテンプレートには、役割（「KJ法支援の候補生成器。確定しない」）、§3.3のガードレール全文、「応答はagent-response.v1のJSONのみ」という指示を含める。ナレッジは不要である（文脈は毎回タスクシートで供給する）。逸脱した場合に備えて、復旧用の定型文を用意する。</p>
     <div style="margin:14px 0 0; padding:13px 15px; background:#fffbeb; border-left:3px solid #f59e0b; border-radius:0 4px 4px 0;">
-      <p style="font-size:13px; line-height:1.7; color:#78350f; margin:0;"><strong>§7.3 注意（データ境界）:</strong> タスクシートに載るのはSafeMode適用済み・人間確認済みの範囲のみだが、<strong>組織のエージェント基盤のデータ取り扱い（テナント境界・ログ保持・学習利用設定）は組織側の契約・設定に従う</strong>。</p>
+      <p style="font-size:13px; line-height:1.7; color:#78350f; margin:0;"><strong>§7.3 注意（データ境界）</strong>　タスクシートに載るのは、SafeModeを適用済みで、人間が確認済みの範囲だけだが、<strong>組織のエージェント基盤のデータ取り扱い（テナントの境界、ログの保持、学習への利用の設定）は組織側の契約と設定に従う</strong>。</p>
     </div>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>§7.4 Tier 1/2（将来・概要のみ）:</strong> Tier 1=受け渡しフォルダ（SharePoint/OneDrive）に投函・回収、Power Automateで仲介、sui-sensemaking本体は無改修。Tier 2=Copilot StudioアクションからAPI直接呼び出し（AUTH-*決裁後に別途仕様化。本書は予約のみ）。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>§7.4 Tier 1/2（将来・概要のみ）</strong>　Tier 1は、受け渡しフォルダ（SharePointやOneDrive）への投函と回収をPower Automateで仲介し、sui-sensemaking本体は改修しない。Tier 2は、Copilot StudioのアクションからAPIを直接呼び出す（AUTH-*の決裁後に別途仕様化し、本書では予約のみとする）。</p>
   </section>
 
   <!-- 8. 実装マッピング -->
@@ -266,7 +266,7 @@ flowchart LR
       <thead><tr><th style="width:22%;">要素</th><th style="width:38%;">実装先</th><th>再利用</th></tr></thead>
       <tbody>
         <tr><td>依頼書き出し</td><td>フロントエンド（SharePanel系または専用パネル）と <code>export/</code></td><td>ContextQueryPreviewPanel・SafeModePolicy・bundle_export・export-audit</td></tr>
-        <tr><td>応答取り込み</td><td>フロントエンドの <code>import/agent_response_import.ts</code>（新規）</td><td>zip_importの制限値・markdown_sanitize・import検証パターン</td></tr>
+        <tr><td>応答取り込み</td><td>フロントエンドの <code>import/agent_response_import.ts</code>（新規）</td><td>zip_importの制限値・markdown_sanitize・取り込みの検証パターン</td></tr>
         <tr><td>提案化</td><td>既存面へ変換（§4.3）</td><td>MergeSuggestions・Narratives・PatchWorkspace・critique候補</td></tr>
         <tr><td>監査</td><td>既存ルート</td><td>/export-audit・/context-audit・merge-decision-logs</td></tr>
         <tr><td>バックエンド</td><td><strong>新規エンドポイント不要</strong>（Tier 0）</td><td>なし</td></tr>
@@ -281,10 +281,10 @@ flowchart LR
       <h2 style="font-size:20px; font-weight:700; margin:0;">総括</h2>
     </div>
     <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0; text-wrap:pretty;">
-      本仕様の骨格は「境界を増やさない」ことにある。新しい輸送・新しいAI権限を作らず、<strong>既存の共有/書き出し境界とimport信頼境界に、外部エージェントとの往復を乗せる</strong>。状態機械が示すとおり、sui-sensemakingが管理下に置くのは書き出しと取り込み以降だけであり、外部での滞在時間（<code>awaiting</code>）は意図的に追跡しない ─ 非信頼領域を無理に可視化しようとしないことも、境界設計の一部である。
+      本仕様の骨格は「境界を増やさない」ことにある。新しい輸送手段も新しいAI権限も作らず、<strong>既存の共有と書き出しの境界、および取り込みの信頼境界を使って、外部エージェントとの往復を行う</strong>。状態機械が示すとおり、sui-sensemakingが管理下に置くのは書き出しと取り込み以降だけであり、外部での滞在時間（<code>awaiting</code>）は意図的に追跡しない。非信頼領域を無理に可視化しないことも、境界設計の一部である。
     </p>
     <p style="font-size:12px; line-height:1.6; color:#94a3b8; margin:14px 0 0;">
-      Decision: <code>ADR-0049-external-flat-rate-agent-collaboration.md</code> ・ Related: <code>llm_provider_spec.md</code>, <code>enterprise_architecture.html</code> §4, <code>api.md</code>, <code>schemas.md</code> ・ Related issues: <code>EXT-AGENT-01/02/03</code>
+      決定：<code>ADR-0049-external-flat-rate-agent-collaboration.md</code> ・ 関連文書：<code>llm_provider_spec.md</code>、<code>enterprise_architecture.html</code> §4、<code>api.md</code>、<code>schemas.md</code> ・ 関連issue：<code>EXT-AGENT-01/02/03</code>
     </p>
   </section>
 

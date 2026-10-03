@@ -13,7 +13,7 @@ SaaS対応を、画面上のtenant選択や外部PDPのポリシー追加だけ�
 
 - IDOR
 - 一覧、検索、キャッシュからの存在の漏えい
-- workerやオブジェクトストレージでのscopeの欠落
+- workerやオブジェクトストレージでの対象範囲の欠落
 - 管理者権限の過大化
 
 tenantはroleの一種ではない。データの所在と認可の評価範囲を決める構造的な境界として扱う必要がある。
@@ -37,7 +37,7 @@ TenantContext
 - active tenantは、署名、issuer、audienceを検証したclaim、または外部入力を除去できる、信頼できるプロキシやホストのマッピングから解決する。
 - browserのheader、query、path、localStorageの値を、そのまま認可の根拠にしない。複数のmembershipを持つ利用者によるtenantの選択は、contextの変更要求にすぎない。backendがmembershipを再確認して、新しいcontextを発行する。
 - プロキシ連携でtenantのheaderを使う場合は、外部から届いた同名のheaderを境界で削除し、検証済みの値だけを付け直す。
-- tenantが不明な場合、候補が複数で一意に解決できない場合、membershipが停止中の場合は、readを含めてdenyする。
+- tenantが不明な場合、候補が複数で一意に解決できない場合、membershipが停止中の場合は、readを含めて拒否する。
 
 ### D6: IdentityとTenantMembershipを分離する
 
@@ -74,7 +74,7 @@ TenantMembership(tenantId, userId, lifecycleState, ...)
 1. AuthContextとTenantContextを、信頼できる境界で解決する。
 2. active membershipを検証する。
 3. resourceを、`tenantId + resourceId` でサーバー側で参照する。
-4. 主体のtenantと資源のtenantが一致するかを、アプリ内で検証する。不一致または不明なら、PDPを呼ばずにdenyする。
+4. 主体のtenantと資源のtenantが一致するかを、アプリ内で検証する。不一致または不明なら、PDPを呼ばずに拒否する。
 5. SafeModeやread-onlyなど、ローカルの安全ガードを適用する。
 6. 外部PDPで、`document.read` などのcapabilityを評価する。
 7. APIで最終的に強制し、tenantIdを含む最小限の監査イベントを残す。
@@ -91,7 +91,7 @@ SaaSの実行時プロファイルは、実際に判定できるaccess-control�
 
 `read_only` のフォールバックでは、readを許可しない。現行のsingle-tenantプロファイルでは、互換性のために従来の選択肢を維持できる。ただし、SaaSプロファイルと混同できない名称と検証にする。
 
-他のtenantの資源のIDを指定した公開APIは、原則としてnot-foundに相当する応答とし、存在を推測させない。現在のtenant内で認証済みだがcapabilityが足りない場合は、permission deniedとしてよい。内部の監査には、正確なdenyの理由、ポリシーのバージョン、correlation IDを残す。本文、文書のタイトル、tokenは残さない。
+他のtenantの資源のIDを指定した公開APIは、原則としてnot-foundに相当する応答とし、存在を推測させない。現在のtenant内で認証済みだがcapabilityが足りない場合は、permission deniedとしてよい。内部の監査には、正確な拒否の理由、ポリシーのバージョン、correlation IDを残す。本文、文書のタイトル、tokenは残さない。
 
 ### D9: Data Plane、Tenant Admin、Platform Control Planeを分離する
 
@@ -111,7 +111,7 @@ SaaSの実行時プロファイルは、実際に判定できるaccess-control�
 ### D10: single-tenantとの互換と、SaaSへの移行を分ける
 
 - 既存のデータは、内部の `local-default` tenantへバックフィルする。single-tenantのadapterがTenantContextを内部で注入し、公開するDocument契約と、通常のローカルでの操作を維持する。
-- `enterprise-production` は、当面、単一組織のデプロイ向けのままとする。共有SaaSは別の実行時プロファイルとし、tenantの解決、外部PDP、denyで安全側に倒す設定、DBのtenantガードのいずれかが欠ける構成を、起動時に拒否する。
+- `enterprise-production` は、当面、単一組織のデプロイ向けのままとする。共有SaaSは別の実行時プロファイルとし、tenantの解決、外部PDP、拒否で安全側に倒す設定、DBのtenantガードのいずれかが欠ける構成を、起動時に拒否する。
 - exportには、内部のtenantId、membership、capabilityを、既定では含めない。importは、移送されたtenantの権限を採用しない。import先のactive tenantで、新規の入力として、認可、検証、人手によるレビューを行う。
 - browserの保存は、`deployment origin + tenantId + principalId` で名前空間を分離する。tenantの切り替えとlogoutの際に、次のものを破棄する。文書、選択、検索、work mode、importのプレビュー、最近使った項目、QueryPreset、requestのキャッシュ、object URL。
 - active tenantは、認証sessionごとに1つとする。複数のタブ、同時の切り替え、bfcache、遅れて届いたresponseによる古いcontextは、`ADR-0061` のサーバーが発行する `tenantSessionVersion` により、resourceを参照する前に拒否する。クライアント間の通知だけを、安全の境界にしない。
@@ -141,7 +141,7 @@ SaaSの実行時プロファイルは、実際に判定できるaccess-control�
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 相互に信頼しない複数の顧客を、同じサービスへ収容するには、tenantをUIのフィルタではなく、構造的な境界として扱う必要がある。tenantが不明な場合と、membershipが停止中の場合は、readを含めてdenyする | 機能: 全APIでTenantContextを必須とする。データ: tenantIdはサーバーが生成する不透明なIDとし、表示名を認可のキーにしない |
+| **業務設計** | 相互に信頼しない複数の顧客を、同じサービスへ収容するには、tenantをUIのフィルタではなく、構造的な境界として扱う必要がある。tenantが不明な場合と、membershipが停止中の場合は、readを含めて拒否する | 機能: 全APIでTenantContextを必須とする。データ: tenantIdはサーバーが生成する不透明なIDとし、表示名を認可のキーにしない |
 | **データ設計** | tenantIdを、全リソース（Document、MergeDecisionLog、InquiryBundle、AuditEvent、キャッシュ、オブジェクトストレージのキー）へ伝播する。共有スキーマでは、PostgreSQL RLSなどのDB側のガードを必須とする | 業務: SQLiteはsingle-tenantに限る。機能: docIdだけによる既存のDBアクセスは、全面的な棚卸しが必要 |
 | **機能設計** | TenantContextは、署名、issuer、audienceを検証済みのclaim、または信頼できるプロキシのマッピングからだけ解決する。browserの入力を認可の根拠にしない。active tenantは、サーバーが発行するtenantSessionVersionでガードする | データ: tenantIdを、localStorageや表示名から復元しない。業務: tenantの切り替えはcontextの変更要求であり、backendがmembershipを再確認して新しいcontextを発行する |
 

@@ -8,14 +8,14 @@
 
 ## Context
 
-社会的目標は、「散らばった暗黙知、主観、多様な意見を、early collapseさせずに、レビュー可能で可逆で説明可能な形へ構造化する場」を広げること（`README.md` / `domain.md` / `ai_cognitive_externalization_requirements.md`）。その中核は、domain.mdの概念群（保留HoldState / 違和感Critique / 未統合PendingItems・Shelf / 根拠EvidenceLink / 矛盾Contradiction / claimType）である。
+社会的目標は、「散らばった暗黙知、主観、多様な意見を、早すぎる収束を起こさせずに、レビュー可能で可逆で説明可能な形へ構造化する場」を広げること（`README.md` / `domain.md` / `ai_cognitive_externalization_requirements.md`）。その中核は、domain.mdの概念群（保留HoldState / 違和感Critique / 未統合PendingItems・Shelf / 根拠EvidenceLink / 矛盾Contradiction / claimType）である。
 
 しかし現状、これらは「概念の憲法」と「往復保存される型」の間で、どちらにも定まっていない。
 
 - `schemas.md` は `critiqueInputs` / `evidenceLinks` / `claimType` / `reviewAttribution` を持つが、432行目が「MVPでは画面上の個別編集や個別CRUDを提供せず、import/export/API保存時の型、検証、監査の境界を固定する」と明記しており、利用者が触れる日常のUIも視覚言語もない。
 - frontendの実装に `shelf` / `pending` / `holdState` は一つもない（コードの走査で0件）。`PendingItems/Shelf`（未統合の退避場所）は、型すらない。
 - `value_traceability.md` §2.1.1は、「保留と違和感の日常操作」「根拠、主張、反対意見の追跡」を、不足している設計の観点として明記している。
-- `PRODUCT-VALUE-02` のRepresentation boundary tableは、5つの語彙のすべてで「現行の構造で不足する範囲」を挙げ、各行を「schema issueを起こすか判断する」として保留している。さらに、同issueのOpen化の条件は「`ADR-0032` がAccepted」であり、`ADR-0032` 自身が同issueのOpen-readyを待っている。つまり循環したデッドロックである。
+- `PRODUCT-VALUE-02` のRepresentation boundary tableは、5つの語彙のすべてで「現行の構造で不足する範囲」を挙げ、各行を「schemaに関するissueを起こすか判断する」として保留している。さらに、同issueのOpen化の条件は「`ADR-0032` がAccepted」であり、`ADR-0032` 自身が同issueのOpen-readyを待っている。つまり循環したデッドロックである。
 
 この保留の状態のままでは、sui-sensemakingは「単なるカード配置ツール」に見え、認知外在化フレームワークとしての価値が利用者の体験に届かない。保留された設計判断を確定する必要がある。
 
@@ -56,7 +56,7 @@
 |------|----------------|---------------|
 | **業務設計** | 中核概念（保留HoldState・違和感Critique・未統合Shelf・根拠EvidenceLink・矛盾Contradiction）が、「概念の憲法」と「往復保存される型」の間でどちらにも定まらず、sui-sensemakingが単なるカード配置ツールに見える。中核概念を、段階的に、加算的に、後方互換を保って第一級化し、利用者が触れる作業状態へ昇格させる | 機能: Phase 1は、既存の往復状態の読み取りUI（バッジ、絞り込み）でschema変更なしの低リスク。データ: 非目標は、正解の判定、採点、ランキング、AIによる保留の自動解除、矛盾の自動での解決 |
 | **データ設計** | schemaの変更は、違和感、根拠、矛盾、claimTypeは変更なし（既存の往復フィールドを読み取りUIへ）、保留HoldStateは加算的で任意の`holdState?`を新設、未統合Shelfは加算的で任意のShelf membershipを新設する。新しいフィールドはすべてoptionalで、欠けているときは従来の挙動とする | 業務: 退避と復帰は可逆で、内容の削除とは分ける。機能: schemaの変更は、schemas.mdを先に更新し、import/export/validate/testsが追随する |
-| **機能設計** | 4フェーズ（読み取りUI→保留と未統合→違和感から再提案へのループ→根拠と矛盾をレビューの対象へ接続）を、DOMAIN-EXPR-01..04に分割する。循環したデッドロックは、ADR-0032をAcceptedにして解消する | 業務: 緩和禁止は、proposal-only、human_reviewedの人手での昇格、SafeMode既定ON、provider=noneでも主要な価値が成立すること。データ: AIはHold/Critiqueを解消せず、保持の対象として扱う |
+| **機能設計** | 4フェーズ（読み取りUI→保留と未統合→違和感から再提案へのループ→根拠と矛盾をレビューの対象へ接続）を、DOMAIN-EXPR-01..04に分割する。循環したデッドロックは、ADR-0032をAcceptedにして解消する | 業務: 緩和禁止は、proposal-only、human_reviewedの人手での昇格、SafeMode既定ON、プロバイダをnoneにしても主要な価値が成立すること。データ: AIはHold/Critiqueを解消せず、保持の対象として扱う |
 
 ## Consequences
 

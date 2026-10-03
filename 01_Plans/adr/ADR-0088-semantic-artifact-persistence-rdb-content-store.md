@@ -3,10 +3,10 @@
 - Status: Accepted
 - Date: 2026-09-18
 - Deciders: Maintainer
-- Scope: semantic artifact physical persistence candidate
+- Scope: semantic artifactの物理的な永続化の候補
 - Related: `ADR-0066`, `ADR-0070`, `ADR-0071`, `ADR-0085`, `ADR-0086`, `ADR-0087`
-- Runtime impact: None in this change
-- Migration impact: None in this change
+- Runtime impact: この変更では影響なし
+- Migration impact: この変更では影響なし
 
 ## Context
 
@@ -18,7 +18,7 @@ semantic artifact契約は、Evidence / Observation / Relation / Hypothesis / St
 - JSON集約にする
 - グラフデータベースにする
 - オブジェクトストアまたはコンテンツストアを中心にする
-- RDBのメタデータ + 内容アドレス指定のpayload + materializedグラフにする
+- RDBのメタデータ + 内容アドレス指定のpayload + マテリアライズしたグラフにする
 
 SUIにはすでに次の設計資産がある。
 
@@ -36,7 +36,7 @@ semantic artifactだけグラフDBを正本にすると、テナント認可、�
 
 ### D1. 第一候補を「RDB metadata/event + Content Store payload」とする
 
-正本となるmetadataとeventは、検証済みRDBへ置く。
+正本となるメタデータとeventは、検証済みRDBへ置く。
 
 種別ごとのsemantic payloadは、正規化したJSONのcontent objectとして、Content Store契約の背後へ置く。
 
@@ -109,7 +109,7 @@ semantic artifact専用の第二のContent Storeは作らない。
 
 既存のContent Storeが次を満たせるなら、同じportとblob契約を再利用する。
 
-- テナント単位のmetadata
+- テナント単位のメタデータ
 - UTF-8バイト列
 - バイトサイズ
 - SHA-256
@@ -122,9 +122,9 @@ semantic artifact専用の第二のContent Storeは作らない。
 
 Relation専用のエッジテーブルを正本にはしない。
 
-Relation artifactのpayloadはContent Storeへ置き、revisionのmetadataをRDBで管理する。
+Relation artifactのpayloadはContent Storeへ置き、revisionのメタデータをRDBで管理する。
 
-問い合わせの性能のために、次の項目はmaterializedなインデックスやプロジェクションへ展開してよい。
+問い合わせの性能のために、次の項目はマテリアライズしたインデックスやプロジェクションへ展開してよい。
 
 - predicate
 - 参加者への参照
@@ -137,7 +137,7 @@ Relation artifactのpayloadはContent Storeへ置き、revisionのmetadataをRDB
 
 グラフDBを正本にはしない。
 
-必要なら、次のいずれかへInformation Networkをmaterializeできる。
+必要なら、次のいずれかへInformation Networkをマテリアライズできる。
 
 - RDBのプロジェクションテーブル
 - インメモリのグラフ
@@ -161,7 +161,7 @@ materializer
 
 authority transitionは、追記専用でRDBへ保存する。
 
-性能のために、次の対応を持つmaterializedなキャッシュを置ける。
+性能のために、次の対応を持つマテリアライズしたキャッシュを置ける。
 
 ```text
 artifact revision + scope -> current authority state
@@ -189,7 +189,7 @@ UI上で「Reviewして採用」を一つの操作に見せる場合も、アプ
 
 ### D9. provenance relationは、厳密なrevisionへの外部キー相当で検証する
 
-artifact間のinputとlineageの参照は、次をアプリケーション制約またはDB制約で検証できなければならない。
+artifact間の入力と系譜の参照は、次をアプリケーション制約またはDB制約で検証できなければならない。
 
 - 同じテナントであること
 - 厳密なartifact revisionが存在すること
@@ -205,7 +205,7 @@ artifact間のinputとlineageの参照は、次をアプリケーション制約
 - identity
 - 外部キー
 - 一意制約
-- lifecycleとauthorityの状態
+- ライフサイクルとauthorityの状態
 - createdAt
 - スキーマ参照
 - ダイジェスト
@@ -216,15 +216,15 @@ PostgreSQL固有のJSONBや再帰クエリなどは、最適化としてのみ�
 
 ### D11. テナントとSaaSの境界は、既存のDB方針を引き継ぐ
 
-shared-schemaのSaaSでは、semantic artifactのmetadata、Review、Authority event、content metadataのすべてにテナントガードを適用する。
+共有スキーマのSaaSでは、semantic artifactのメタデータ、Review、Authority event、contentのメタデータのすべてにテナントガードを適用する。
 
-PostgreSQL以外でshared-schemaのSaaSに対応できるとは、新たに推論しない。
+PostgreSQL以外で共有スキーマのSaaSに対応できるとは、新たに推論しない。
 
 actor ref、source ref、import mappingを通じたテナント越境は許可しない。
 
 ### D12. exchange importは、ステージング、検証、正本へのコミットの順とする
 
-artifact exchange bundleのimportは、正本のテーブルへ直接、逐次書き込まない。
+artifactの交換バンドルのimportは、正本のテーブルへ直接、逐次書き込まない。
 
 概念上は、次の順で扱う。
 
@@ -238,17 +238,17 @@ parse
   -> canonical commit
 ```
 
-大規模なbundleで単一のトランザクションが不適切な場合でも、「一部だけがローカルのauthorityへ入った」状態を作らないステージング契約を設ける。
+大規模なバンドルで単一のトランザクションが不適切な場合でも、「一部だけがローカルのauthorityへ入った」状態を作らないステージング契約を設ける。
 
 ### D13. backupとrestoreに、exchange importの経路を流用しない
 
-backupと災害復旧は、同じauthorityドメインを正しく復元するための運用契約である。source authorityの特権を外すexchangeとは、意味が異なる。
+バックアップと災害復旧は、同じauthorityドメインを正しく復元するための運用契約である。source authorityの特権を外すexchangeとは、意味が異なる。
 
 同じAPIやモードフラグで、両者を曖昧に切り替えない。
 
 ### D14. 保持とGCは、正本への参照をrootとする
 
-semantic artifactのGCは、少なくとも次をroot、または保護の入力として扱う。
+semantic artifactのGCは、少なくとも次をルート、または保護の入力として扱う。
 
 - 現在および過去のAuthority event
 - Reviewの対象
@@ -261,7 +261,7 @@ semantic artifactのGCは、少なくとも次をroot、または保護の入力
 
 payload blobは、revisionからの参照がなくなっても、Content Storeの既存方針に従い、保留期間と参照の再確認を経てから削除する。
 
-プロジェクションとReview Capsuleのキャッシュは、保持のrootにしない。
+プロジェクションとReview Capsuleのキャッシュは、保持のルートにしない。
 
 ### D15. 物理スキーマの実装は、別のissueへ分ける
 
@@ -282,19 +282,19 @@ payload blobは、revisionからの参照がなくなっても、Content Store�
 
 | Candidate | 長所 | 主な問題 | 判断 |
 |---|---|---|---|
-| giant JSON aggregate | 初期実装が容易 | 厳密なrevisionの外部キー、同時実行のauthority、部分的な問い合わせ、GCが弱い | 不採用 |
-| fully normalized payload columns | 制約が強い | semantic kindを足すたびにマイグレーションが要り、自由度が下がる | payloadの正本としては不採用 |
-| graph DB canonical | Relationの問い合わせに強い | テナント、トランザクション、ポータビリティ、authority eventが二重になる | 不採用 |
-| object store canonical | contentに強い | ReviewとAuthorityのCAS、外部キー、問い合わせ用metadataに弱い | 不採用 |
-| **RDB metadata/event + Content Store payload** | 既存のポータビリティとトランザクションを保ちつつ、payloadを柔軟にできる | materializerとblobのlifecycleが必要 | **第一候補** |
+| 巨大なJSONの集約 | 初期実装が容易 | 厳密なrevisionの外部キー、同時実行のauthority、部分的な問い合わせ、GCが弱い | 不採用 |
+| 完全に正規化したpayloadの列 | 制約が強い | semantic kindを足すたびにマイグレーションが要り、自由度が下がる | payloadの正本としては不採用 |
+| グラフDBを正本にする案 | Relationの問い合わせに強い | テナント、トランザクション、ポータビリティ、authority eventが二重になる | 不採用 |
+| オブジェクトストアを正本にする案 | contentに強い | ReviewとAuthorityのCAS、外部キー、問い合わせ用メタデータに弱い | 不採用 |
+| **RDBのメタデータとevent + Content Storeのpayload** | 既存のポータビリティとトランザクションを保ちつつ、payloadを柔軟にできる | マテリアライザとblobのライフサイクルが必要 | **第一候補** |
 
 ## Three-Element Verification（ADR-0067）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |---|---|---|
 | **業務設計** | 厳密なrevisionへのReview、scopeごとのauthority、exchangeでの特権剥奪を、トランザクションで守る | データ: Review、Authority、import mappingを独立したレコードにする。機能: 部分的なimportや古い昇格は、安全側で拒否する |
-| **データ設計** | RDB metadata/event + Content Store payloadを正本とし、グラフとネットワークはプロジェクションにする | 業務: payloadの自由度を保ちつつ、authorityの正しさはRDBの列と制約で守る。機能: プロジェクションを再構築できる |
-| **機能設計** | importのステージング、authorityのCAS、materializer、GCを、正本への参照を中心に実装する | 業務: backupとexchangeを混同しない。データ: キャッシュとグラフストアを正本にしない |
+| **データ設計** | RDBのメタデータ/event + Content Store payloadを正本とし、グラフとネットワークはプロジェクションにする | 業務: payloadの自由度を保ちつつ、authorityの正しさはRDBの列と制約で守る。機能: プロジェクションを再構築できる |
+| **機能設計** | importのステージング、authorityのCAS、マテリアライザ、GCを、正本への参照を中心に実装する | 業務: バックアップとexchangeを混同しない。データ: キャッシュとグラフストアを正本にしない |
 
 ## Consequences
 
@@ -310,8 +310,8 @@ payload blobは、revisionからの参照がなくなっても、Content Store�
 
 - 具体的なテーブルとインデックスの形は未確定である。
 - payloadのContent Storeでコーデックを共有できるかは、ベンチマークが必要である。
-- Relationプロジェクションの更新方式（同期かoutboxか）は未決である。
-- 大規模bundleのステージング方式は未決である。
+- Relationプロジェクションの更新方式（同期かアウトボックスか）は未決である。
+- 大規模バンドルのステージング方式は未決である。
 - ポータブルな再帰的到達可能性とGCの実装方式は、検証が必要である。
 
 ## Non-goals

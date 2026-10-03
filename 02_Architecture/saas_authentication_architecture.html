@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>sui-sensemaking SaaS 認証アーキテクチャ：SAML/OIDC/Broker/JWT 協調フロー</title>
+<title>sui-sensemaking SaaS認証アーキテクチャ：SAML、OIDC、ブローカー、JWTの協調フロー</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 24px; color: #0f172a; background: #f8fafc; }
@@ -19,8 +19,8 @@
 </head>
 <body>
 
-<h1>sui-sensemaking SaaS 認証アーキテクチャ</h1>
-<p>ADR-0063 / ADR-0064 に基づく SAML / OIDC / Broker / JWT 協調認証フロー</p>
+<h1>sui-sensemaking SaaS認証アーキテクチャ</h1>
+<p>ADR-0063とADR-0064に基づく、SAML、OIDC、ブローカー、JWTの協調認証フロー</p>
 
 <nav style="background:#f1f5f9;padding:12px;border-radius:8px;margin:16px 0;">
   <a href="README.md">アーキテクチャ索引に戻る</a> |
@@ -32,11 +32,11 @@
 <details open>
 <summary style="font-size:1.2em;font-weight:bold;cursor:pointer;padding:8px 0;">クイックサマリー（1分で理解する）</summary>
 <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;margin:8px 0;">
-<p><strong>sui-sensemaking は認証を自前実装しません。</strong> 外部IdP（Google、Azure AD、SAML IdP）がユーザーを認証し、Broker（Keycloak）がSAMLからOIDCへの変換とJWTの発行を行い、sui-sensemakingのバックエンドがJWTを検証します。</p>
-<p><strong>3つの層</strong>: External IdP → Identity Broker → sui-sensemaking Backend</p>
-<p><strong>認可コードグラント + PKCE (S256)</strong>: CSRFと認可コードの横取りを防ぎます</p>
-<p><strong>JWT クレーム</strong>: <code>tenant_ref</code> でテナントを識別し、<code>sub</code> でユーザーを識別します</p>
-<p><strong>テスト</strong>: 569件（ユニット、統合、E2E、Playwright）。Ruffのlintはエラーなし</p>
+<p><strong>sui-sensemakingは認証を自前で実装しません。</strong>外部IdP（Google、Azure AD、SAML IdP）がユーザーを認証し、ブローカー（Keycloak）がSAMLからOIDCへの変換とJWTの発行を行い、sui-sensemakingのバックエンドがJWTを検証します。</p>
+<p><strong>3つの層</strong>は、外部IdP、IDブローカー、sui-sensemakingのバックエンドの順です</p>
+<p><strong>認可コードグラントとPKCE（S256）</strong>により、CSRFと認可コードの横取りを防ぎます</p>
+<p><strong>JWTのクレーム</strong>では、<code>tenant_ref</code> でテナントを識別し、<code>sub</code> でユーザーを識別します</p>
+<p><strong>テスト</strong>は569件（ユニット、統合、E2E、Playwright）です。Ruffの静的検査はエラーなしです</p>
 </div>
 </details>
 
@@ -76,7 +76,7 @@ graph TB
 </div>
 
 <details>
-<summary style="font-size:1.1em;font-weight:bold;cursor:pointer;padding:8px 0;">2. OAuth 2.0 認可コードグラント + PKCE フロー（クリックで展開）</summary>
+<summary style="font-size:1.1em;font-weight:bold;cursor:pointer;padding:8px 0;">2. OAuth 2.0の認可コードグラントとPKCEのフロー（クリックで展開）</summary>
 <div class="mermaid">
 sequenceDiagram
     actor User
@@ -117,7 +117,7 @@ sequenceDiagram
 
 </details>
 
-<h2>3. JWT 検証パイプライン</h2>
+<h2>3. JWT検証パイプライン</h2>
 <div class="mermaid">
 flowchart LR
     A[Request] --> B[_extract_bearer_token]
@@ -220,13 +220,13 @@ sequenceDiagram
 
 <h2>6. テスト戦略</h2>
 <table>
-<tr><th>Level</th><th>内容</th><th>テスト数</th><th>状態</th></tr>
-<tr><td>0 (unit)</td><td>JWT resolver, JWKS store, tenant resolver, session persister</td><td>42</td><td class="status-ok">完了</td></tr>
-<tr><td>1 (HTTP E2E)</td><td>JWT → tenant isolation (10), OAuth login → API (11), coordinated flow (6)</td><td>27</td><td class="status-ok">完了</td></tr>
-<tr><td>2 (mock login)</td><td>OAuth 2.0 + PKCE + refresh-token rejection + logout + UserInfo + OIDC Discovery</td><td>11</td><td class="status-ok">完了</td></tr>
-<tr><td>3 (broker E2E)</td><td>実際のKeycloakとsui-sensemakingの統合テスト</td><td>なし</td><td class="status-pending">Phase 2（計画）</td></tr>
-<tr><td>4 (external IdP)</td><td>Google、Azure AD、SAML IdPとの連携</td><td>なし</td><td class="status-pending">Phase 2（計画）</td></tr>
-<tr><td>Playwright</td><td>マルチタブのテナント切替, bfcache, auth-required, stale 409</td><td>8</td><td class="status-ok">完了</td></tr>
+<tr><th>レベル</th><th>内容</th><th>テスト数</th><th>状態</th></tr>
+<tr><td>0（ユニット）</td><td>JWTの解決処理、JWKSストア、テナントの解決処理、セッションの永続化処理</td><td>42</td><td class="status-ok">完了</td></tr>
+<tr><td>1（HTTPのE2E）</td><td>JWTからテナント分離まで（10件）、OAuthログインからAPIまで（11件）、協調フロー（6件）</td><td>27</td><td class="status-ok">完了</td></tr>
+<tr><td>2（模擬ログイン）</td><td>OAuth 2.0、PKCE、リフレッシュトークンの拒否、ログアウト、UserInfo、OIDC Discovery</td><td>11</td><td class="status-ok">完了</td></tr>
+<tr><td>3（ブローカーのE2E）</td><td>実際のKeycloakとsui-sensemakingの統合テスト</td><td>なし</td><td class="status-pending">Phase 2（計画）</td></tr>
+<tr><td>4（外部IdP）</td><td>Google、Azure AD、SAML IdPとの連携</td><td>なし</td><td class="status-pending">Phase 2（計画）</td></tr>
+<tr><td>Playwright</td><td>複数タブでのテナント切替、bfcache、認証必須、古いバージョンによる409</td><td>8</td><td class="status-ok">完了</td></tr>
 </table>
 
 <h2>7. 設定リファレンス</h2>
@@ -234,20 +234,20 @@ sequenceDiagram
 <tr><th>キー</th><th>既定値</th><th>説明</th></tr>
 <tr><td><code>SUI_RUNTIME_PROFILE</code></td><td><code>local-dev</code></td><td>実行プロファイル。SaaSでは <code>saas-multitenant</code></td></tr>
 <tr><td><code>SUI_JWT_ALGORITHMS</code></td><td><code>RS256,ES256</code></td><td>JWT署名アルゴリズムの許可リスト</td></tr>
-<tr><td><code>SUI_TENANT_CLAIM_NAME</code></td><td><code>tenant_ref</code></td><td>テナント識別子を運ぶJWTのclaim名</td></tr>
+<tr><td><code>SUI_TENANT_CLAIM_NAME</code></td><td><code>tenant_ref</code></td><td>テナント識別子を運ぶJWTのクレーム名</td></tr>
 <tr><td><code>SUI_TRUSTED_PROXIES</code></td><td>（空）</td><td>ヘッダー認証で信頼するプロキシのCIDRリスト</td></tr>
-<tr><td><code>SUI_BROKER_BASE_URL</code></td><td><code>http://localhost:18081</code></td><td>Identity brokerのベースURL（フロントエンド用）</td></tr>
+<tr><td><code>SUI_BROKER_BASE_URL</code></td><td><code>http://localhost:18081</code></td><td>IDブローカーのベースURL（フロントエンド用）</td></tr>
 </table>
 
 <h2>8. 主要コンポーネント一覧</h2>
 <table>
 <tr><th>コンポーネント</th><th>ファイル</th><th>責務</th></tr>
-<tr><td>JwtSaasIdentityContextResolver</td><td><code>trusted_auth_edge.py</code></td><td>JWTの検証、subjectの解決、テナントclaimの抽出</td></tr>
-<tr><td>JwksStore</td><td><code>jwks_store.py</code></td><td>JWKSのキャッシュ（600秒のTTL、60秒のクールダウン、最大1800秒のstale）</td></tr>
-<tr><td>DatabaseSaasAuthStateStore</td><td><code>saas_auth_state.py</code></td><td>PostgreSQLで共有する、principal単位のバージョン更新。認証のセッションIDとアクティブなテナントを一元的に管理する処理は未実装</td></tr>
-<tr><td>ClaimBasedTenantContextResolver</td><td><code>tenant_context.py</code></td><td>VerifiedTenantClaim → TenantContext</td></tr>
-<tr><td>DatabaseActiveTenantSessionPersister</td><td><code>active_tenant_session.py</code></td><td>複数のインスタンス間でprincipal単位のバージョンを共有（暫定）。<code>SAAS-TENANT-SESSION-BINDING-01</code>が完了するまで、本番のゲートは満たされない</td></tr>
-<tr><td>TrustedSaasRuntimePolicy</td><td><code>trusted_saas_runtime.py</code></td><td>SaaSの起動前のポリシー検証（DB/JIT/PDP/binding/capability/JWT）</td></tr>
+<tr><td>JwtSaasIdentityContextResolver</td><td><code>trusted_auth_edge.py</code></td><td>JWTの検証、サブジェクトの解決、テナントクレームの抽出</td></tr>
+<tr><td>JwksStore</td><td><code>jwks_store.py</code></td><td>JWKSのキャッシュ（600秒のTTL、60秒のクールダウン、最大1800秒は古いキャッシュも使う）</td></tr>
+<tr><td>DatabaseSaasAuthStateStore</td><td><code>saas_auth_state.py</code></td><td>PostgreSQLで共有する、プリンシパル単位のバージョン更新。認証のセッションIDとアクティブなテナントを一元的に管理する処理は未実装</td></tr>
+<tr><td>ClaimBasedTenantContextResolver</td><td><code>tenant_context.py</code></td><td>VerifiedTenantClaimからTenantContextへの変換</td></tr>
+<tr><td>DatabaseActiveTenantSessionPersister</td><td><code>active_tenant_session.py</code></td><td>複数のインスタンス間でプリンシパル単位のバージョンを共有（暫定）。<code>SAAS-TENANT-SESSION-BINDING-01</code>が完了するまで、本番のゲートは満たされない</td></tr>
+<tr><td>TrustedSaasRuntimePolicy</td><td><code>trusted_saas_runtime.py</code></td><td>SaaSの起動前のポリシー検証（DB、JIT、PDP、束縛、ケイパビリティ、JWT）</td></tr>
 <tr><td>ServerOwnedDocumentResourceResolver</td><td><code>document_access_resource.py</code></td><td>テナント範囲の文書リソースの解決</td></tr>
 <tr><td>RegisterIdentityProviderRequest</td><td><code>routes/admin.py</code></td><td>IdPの登録を管理するAPI</td></tr>
 </table>

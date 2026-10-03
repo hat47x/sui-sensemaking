@@ -8,7 +8,7 @@
 実装・ドキュメント・AIプロンプトは、原則として本ファイルに定義された
 語彙・意味・対応関係に従います。
 
-> domain.md は 本アプリケーションにおける「概念の憲法」です。
+> domain.mdは本アプリケーションにおける「概念の憲法」です。
 > 実装上の都合で意味を変更してはなりません。
 
 ### 識別子について
@@ -32,8 +32,8 @@
 
 ## 1. このドキュメントの位置づけ
 
-- 本ファイルは 00_Promptと02_Architectureの両方に影響 します
-- 実装（03_Implement）よりも 必ず上位 に位置づけます
+- 本ファイルは00_Promptと02_Architectureの両方に影響します
+- 実装（03_Implement）よりも必ず上位に位置づけます
 - AIへの指示・構造定義・UI文言は、本定義を参照してください
 
 ---
@@ -160,16 +160,16 @@
   Evidenceは根拠として参照される資料・記録であり、その内容が真であること、Acceptedであることを意味しない。相反するEvidenceや誤りを含む元資料も、来歴を保持して扱える。
 
 - DOM-SM-02 Semantic kind ≠ Maturity state  
-  Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionは成熟段階ではない。ObservationをHypothesisへ、HypothesisをSynthesisへin-placeで型変更しない。新しい意味成果物を作り、元成果物へ来歴関係で接続する。
+  Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionは成熟段階ではない。ObservationをHypothesisへ、HypothesisをSynthesisへその場で型変更しない。新しい意味成果物を作り、元成果物へ来歴関係で接続する。
 
 - DOM-SM-03 Observation is actor-attributed  
-  Observationは「誰／どの認知Providerが、何を入力として、何を認識したか」を外在化した記録である。同じEvidenceから複数の異なるObservationが生じてよく、不一致を一つのscoreへ自動統合しない。
+  Observationは「誰／どの認知プロバイダが、何を入力として、何を認識したか」を外在化した記録である。同じEvidenceから複数の異なるObservationが生じてよく、不一致を一つのスコアへ自動統合しない。
 
 - DOM-SM-04 Review ≠ Acceptance  
   Review済みであることはAccepted / Consensus / Truthを意味しない。AI Reviewを人間Reviewとして記録してはならず、現行`human_reviewed`は引き続き人間の明示操作だけで成立する。
 
 - DOM-SM-05 Authority is orthogonal  
-  Working / Candidate / Accepted / Consensus等のauthority上の位置づけは、HypothesisやSynthesis等のsemantic kindと別軸である。visibility / access controlもauthorityの代用品にしない。
+  Working / Candidate / Accepted / Consensus等のauthority上の位置づけは、HypothesisやSynthesis等のsemantic kindと別軸である。可視性やアクセス制御もauthorityの代用品にしない。
 
 - DOM-SM-06 Rejected / Superseded ≠ Deleted  
   後続理解へ影響した主要な棄却案、反証、置換済み成果物は参照可能に残す。棄却や置換を根拠の消去として実装しない。
@@ -178,19 +178,19 @@
   統合された理解と、何を採るかというDecisionと、実際の外部Executionは別である。Decision Authorityは別途確認可能でなければならない。
 
 - DOM-SM-08 Traceability ≠ private chain-of-thought retention  
-  後から検証・再開・異議に必要な入力範囲、Evidence、actor、Provider / Method、派生関係、主要根拠・反証・代替案を保持する。一方、AI内部のtoken単位推論やprivate chain-of-thought全文を保存要件にしない。
+  後から検証・再開・異議に必要な入力範囲、Evidence、actor、プロバイダ / Method、派生関係、主要根拠・反証・代替案を保持する。一方、AI内部のトークン単位の推論や、非公開のchain-of-thought全文を保存要件にしない。
 
 - DOM-SM-09 Current schema ≠ future semantic model  
   現行`Card` / `Edge` / `EvidenceLink` / `Island` / `Narrative` / `ReviewAttribution`を、将来の意味成果物へ一対一で読み替えない。`DocumentV1`の意味はこの概念モデルだけを理由に変更しない。
 
 - DOM-SM-10 Authority Scope ≠ Permission / Visibility  
-  Accepted / Consensus等のAuthorityは、どの意味上のscopeで成立したかを明示する。閲覧可能、公開済み、同じworkspaceに属する、といった事実をAuthorityへ読み替えない。parent scopeのAuthorityも子・兄弟・外部scopeへ自動継承しない。
+  Accepted / Consensus等のAuthorityは、どの意味上のscopeで成立したかを明示する。閲覧可能、公開済み、同じワークスペースに属する、といった事実をAuthorityへ読み替えない。親のscopeのAuthorityも子・兄弟・外部のscopeへ自動継承しない。
 
 - DOM-SM-11 Imported Authority ≠ Local Authority  
-  別workspace / network / systemからimportしたAccepted / Consensus / Human Reviewは、source contextの来歴として保持できるが、local Accepted / Consensus / `human_reviewed`を自動成立させない。local authorityへ昇格する場合はlocal scopeで新しいReview / Authority操作を行う。
+  別のワークスペース / ネットワーク / システムからimportしたAccepted / Consensus / Human Reviewは、sourceの文脈の来歴として保持できるが、ローカルのAccepted / Consensus / `human_reviewed`を自動成立させない。ローカルのauthorityへ昇格する場合はローカルのscopeで新しいReview / Authority操作を行う。
 
 - DOM-SM-12 Extension Relation ≠ Core Semantics  
-  domain / method / experiment固有のRelationを保持できるが、明示policyがないextension relationをAuthority、Consensus、Permission、Truth、Importance、retention rootへ利用しない。未知relationは破棄せずopaque relationとして保持できる。
+  domain / method / experiment固有のRelationを保持できるが、明示的なポリシーがない拡張relationをAuthority、Consensus、Permission、Truth、Importance、保持のルートへ利用しない。未知のrelationは破棄せず、不透明なrelationとして保持できる。
 
 ---
 
@@ -269,7 +269,7 @@
 
 > §2 の `DOM-CORE-*` はAIにも適用される。本節はそれに追加される、AI固有の規定である。
 > AI内部の探索権限と、人間承認済みの意味へ昇格する権限を分ける。
-> 現行runtimeのSafeMode・proposal-only・`human_reviewed`境界は維持するが、
+> 現行の実行時のSafeMode・proposal-only・`human_reviewed`境界は維持するが、
 > proposal-onlyを「AIは一段階の候補しか生成できない」という意味には解釈しない（ADR-0084）。
 
 AI は以下を **行ってよい**：
@@ -328,9 +328,9 @@ AI は以下を **行ってはならない**：
 
 ### 2026-09-18 Authority Scope・import authority・Relation拡張境界
 
-ADR-0087に基づき、Accepted / Consensusの成立scopeをpermission / visibilityから分離し、
-外部からimportしたAuthority / Human Reviewをlocal authorityへ自動継承しないこと、
-およびextension RelationをCore semanticsへ暗黙昇格しないことを
+ADR-0087に基づき、Accepted / Consensusの成立するscopeを、権限や可視性（permission / visibility）から分離し、
+外部からimportしたAuthority / Human Reviewをローカルのauthorityへ自動継承しないこと、
+および拡張RelationをCore semanticsへ暗黙昇格しないことを
 `DOM-SM-10..12`として追加した。
 
 これはAI・人間いずれの成果物でも、別文脈への持込み時に権威を洗い替えないための境界である。
@@ -340,7 +340,7 @@ ADR-0087に基づき、Accepted / Consensusの成立scopeをpermission / visibil
 ADR-0084に基づき、SUIの長期射程を人間主導のKJ法キャンバスだけに固定せず、
 AI Workspaceでの自律的なObservation / Hypothesis / Structure / Synthesis形成を許容する方向へ拡張した。
 一方、`human_reviewed`、Accepted / Consensus、元Evidenceの改変は別の権限操作として分離し、
-現行runtimeのSafeMode・proposal-only運用は変更していない。
+現行の実行時のSafeMode・proposal-only運用は変更していない。
 
 この変更は「AIが人間承認なしに確定できる」という規範変更ではなく、
 AI内部の探索を逐次承認させる必要はないことと、人間承認済み状態への昇格を同一視しない

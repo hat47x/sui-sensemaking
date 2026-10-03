@@ -18,7 +18,7 @@
 
 1. **意味の保留**を維持した探索（P-01）。
 2. **単一正解の否定**を維持した複数案比較（P-02）。
-3. **Human-in-the-loop反復**（Critique→再提案）とレビュー追跡（P-04/P-03）。
+3. **人間が介在する反復**（Human-in-the-loop。Critique→再提案）とレビュー追跡（P-04/P-03）。
 
 上記を満たすため、次フェーズは大規模一括実装ではなく、契約先行で可逆統合ループを段階導入する計画へ固定する。
 
@@ -50,11 +50,11 @@
 ### D4. Gate（着手・停止・再開）
 
 - 着手条件
-  - `issue-HIL-RS-01-next-phase-human-loop-reversible-synthesis.md` がOpenで、AC/Validation planが充足している。
+  - `issue-HIL-RS-01-next-phase-human-loop-reversible-synthesis.md` がOpenで、ACと検証計画が充足している。
 - 停止条件
   1. `domain.md`（保留/違和感/可逆性）と矛盾する設計が必要になった場合。
   2. SafeMode契約の後退が前提になる場合。
-  3. 共有リソース（dashboard / issues index）で同時編集競合が発生した場合。
+  3. 共有リソース（ダッシュボードとissueの索引）で同時編集の競合が発生した場合。
 - 再開条件
   - 上位層（00〜02）へ修正提案を先に反映し、Deciders合意後に再開する。
 
@@ -63,7 +63,7 @@
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
 | **業務設計** | 次フェーズは精度競争でなく「保留を維持した探索支援」の強化。AI提案は常に候補扱いとし確定操作は人間操作でのみ行う。意味の保留（P-01）・単一正解の否定（P-02）・HITL反復（P-04）を優先する | 機能: Critique入力・再提案差分・レビュー帰属の最小I/Fを契約先行で定義。データ: AI提案は常に候補として扱い自動確定しない |
-| **データ設計** | 可逆統合ループを段階導入し、共有リソース（dashboard/issues index）の同時編集競合を回避。SafeMode後退を禁止 | 業務: 契約先行（Plan→Architecture→Implement→Documentation）でfrontend実装の手戻りを抑制。機能: 停止条件を満たしたまま下流へ進める |
+| **データ設計** | 可逆統合ループを段階導入し、共有リソース（ダッシュボードとissueの索引）の同時編集の競合を回避。SafeMode後退を禁止 | 業務: 契約先行（Plan→Architecture→Implement→Documentation）でfrontend実装の手戻りを抑制。機能: 停止条件を満たしたまま下流へ進める |
 | **機能設計** | HIL-RS-01フェーズを開始し、最小I/F（Critique入力・再提案差分・レビュー帰属）を定義してfrontendを小粒度タスクへ分割実装 | 業務: LLMプロバイダの全面再設計は非目標。データ: 短期の機能追加速度は抑制されるが01/02/03/04の同期運用コストが増える |
 
 ## Consequences
@@ -98,7 +98,7 @@
 
 ## Verify
 
-- 検証観点1: `HIL-RS-01` がActive issueとして `issues/README.md` とdashboardの双方に同期されている。
+- 検証観点1: `HIL-RS-01` がアクティブなissueとして `issues/README.md` とダッシュボードの双方に同期されている。
 - 検証観点2: ACに「安全」「可逆」「検証コマンド」が含まれる。
 - 検証観点3: docs-check（validator/unittest）が成功する。
 
@@ -106,8 +106,8 @@
 
 ### Read
 
-- `python 01_Plans/triage_actionable_plans.py` の出力を正とし、active issue逆引きで対象ADRを抽出した。
-- 抽出結果: active issueに直接連動するADRは `ADR-0026` / `ADR-0027` の2件。
+- `python 01_Plans/triage_actionable_plans.py` の出力を正とし、アクティブなissueからの逆引きで対象ADRを抽出した。
+- 抽出結果: アクティブなissueに直接連動するADRは `ADR-0026` / `ADR-0027` の2件。
 
 ### ADR/CDC
 
@@ -116,7 +116,7 @@
 
 ### Plan
 
-- active issue連動ADRでCDC欠損が検出された場合のみ、欠損見出しを最小追記する。
+- アクティブなissueに連動するADRでCDCの欠損が検出された場合のみ、欠損見出しを最小追記する。
 - 欠損なしの場合は「未処理ADRなし」をADR本文へ明文化し、Proceedで逆引き表を固定する。
 
 ### Execute
@@ -154,17 +154,17 @@
 ### Phase 2: ADR明文化（Context / Decision / Consequences）
 - Context: A1契約凍結未完了のままA2/A3を前進させると `A1 -> A2 -> A3` 依存が崩れる。
 - Decision: `HIL-RS-02-A1-CONTRACT-FREEZE-v1` / `schemaVersion=1.0.0` / `overridePolicy=human_dual_control_only` / `safeModeDefault=ON` を固定継続。
-- Consequences: 承認待ちの間はProceed判定を `Conditional/Needs-decision` に維持し、確定化を行わない。
+- Consequences: 承認待ちの間はProceedの判定を `Conditional/Needs-decision` に維持し、確定化を行わない。
 
 ### Phase 4: Proceed Gate
-- 前提差分: fixed keys diff=`0`（再読時点）。
+- 前提差分: 固定キーの差分=`0`（再読時点）。
 - 判定: **Needs-decision（停止可能状態）**。承認未充足のため、次工程は人間承認入力後に再開する。
 
 ## Stream A serial gate verification（2026-04-29, critical path）
 
 ### Phase 1: Read同期
 - 許可リスト対象4ファイルを再読し、`schemaVersion=1.0.0` / `overridePolicy=human_dual_control_only` / `Freeze Pack ID=HIL-RS-02-A1-CONTRACT-FREEZE-v1` の一致を確認した。
-- fixed keys drift: `0`。
+- 固定キーのドリフト: `0`。
 
 ### Phase 2-5: 判定
 - ADR側のContext / Decision / Consequencesは欠損なし。
@@ -192,7 +192,7 @@
 - AC-2: `Pending -> Approved | Pending -> Rejected` 以外の遷移を導入しない。
 - AC-3: A1完了前のA2/A3 Open化を行わない。
 - DoD-1: `Plan -> Execute -> Verify -> Proceed` の直列運用を維持する。
-- DoD-2: self-correction試行回数を `0/3` から記録し、4回目相当で停止する。
+- DoD-2: 自己修正の試行回数を `0/3` から記録し、4回目に相当する時点で停止する。
 - DoD-3: `Approval Record` 未入力時は `Needs-decision` で停止またはConditional維持。
 
 ## Stream A Phase 2 explicit CDC addendum（Contract freeze wording）
@@ -274,7 +274,7 @@
 - Consequences: 承認完了まで下流は準備作業のみ可能、契約変更と実装指示は不可。
 
 ### Phase 3: Contract Freeze（読み取り専用の契約）
-- API signature（固定）
+- APIシグネチャ（固定）
   - `HIL_RS_DECISION_GATE_V1(issueId, phase, approvalRecord) -> {gateStatus, held[]}`
   - `HIL_RS_PATCH_PROPOSAL_V1(sourceBundleHash, proposalId, actor) -> {patchDraft, riskLabels[]}`
   - `HIL_RS_APPLY_JUDGEMENT_V1(proposalId, humanDecision, approvedBy) -> {applyResult, rollbackRef}`
@@ -307,14 +307,14 @@
 - 下流依存はモック参照で切断し、外部レーン完了待ちを開始条件にしない。
 
 ### Phase 3: 親Issue反映ポリシー
-- 親IssueにはA1固定契約の読み取り専用参照・Gate条件・Hold運用のみ反映する。
+- 親issueにはA1固定契約の読み取り専用参照・Gate条件・Hold運用のみ反映する。
 - 未承認論点は `Hold list` に隔離し、推測で確定しない。
 
 ### Phase 4: 検証
 - AC/DoD照合: pass（固定語彙再定義なし、SafeMode後退なし、Pending bypass禁止）。
 - リンク整合: pass（NoGo return pathはA1 Issueを維持）。
 - 状態遷移妥当性: pass（`Pending -> Approved | Rejected` 以外を不許可）。
-- Self-Correction: `0/3`。
+- 自己修正: `0/3`。
 
 ### Phase 5: 完了報告（Stream A）
 - 変更要約: ADR-0026は「契約再定義禁止・A1参照専用・Hold継続」を明文化。
@@ -333,19 +333,19 @@
   - `freezeContractId=HIL-RS-02-A1-CONTRACT-FREEZE-v1`
   - `contractIds=A1-CRITIQUE-IF|A1-REDIFF-IF|A1-ATTR-IF|A1-ERROR-IF`
   - `schemaVersion=1.0.0`
-  - API signatures: `CritiqueV1`, `ReDiffV1`, `AttributionV1`, `A1ErrorV1`
+  - APIシグネチャ: `CritiqueV1`, `ReDiffV1`, `AttributionV1`, `A1ErrorV1`
   - `overridePolicy=human_dual_control_only`
   - `safeModeDefault=ON`, `safeModeBoundary=SAFE_MODE_STRICT_ON`
   - `decisionQueueTransition=Pending -> Approved | Pending -> Rejected`
-  - unlock gate: `A2A3_OPEN_ALLOWED`（同値条件含む）
+  - 解放のゲート: `A2A3_OPEN_ALLOWED`（同値条件を含む）
 - 変更可能領域（実装準備で可変）
   - モックを先に作る検証手順
   - 引き渡しの記述の可読性改善
-  - reason codeの補助説明（意味不変）
+  - 理由コードの補助説明（意味不変）
 
 ### Consequences
 - A2/A3はモック依存で先行可能（backend完了待ち不要）だが、契約キー・型・版の再定義は不可。
-- Verify失敗時はself-correction最大3回、超過時は停止（推測実行禁止）。
+- 検証に失敗したときの自己修正は最大3回とし、超過したときは停止する（推測での実行を禁止する）。
 - `pendingDecisionQueueCount>0` の間、判定は `Hold/Needs-decision` を維持する。
 
 
@@ -397,7 +397,7 @@
   - `overridePolicy=human_dual_control_only`
   - `safeModeDefault=ON`
   - `safeModeBoundary=SAFE_MODE_STRICT_ON`
-- Gateは既存式を継続し、`Pending` 残存時は `Hold/Needs-decision` を強制する。
+- ゲートは既存の式を継続し、`Pending` 残存時は `Hold/Needs-decision` を強制する。
 
 ### Consequences
 - A1/RS-02-A1/親計画の契約語彙ドリフトを抑制し、下流の誤解放を防止できる。
@@ -411,12 +411,12 @@
 ### Decision
 - 競合を防ぐため、ファイル単位の境界を以下で固定する。
   - Stream A: `ADR-0026/0027/0028`、`issue-HIL-RS-01-*`、`issue-HIL-RS-02-A1-*`、`issue-CE0-contract-freeze.md`
-  - Stream B/C等: 上記以外（特にA2/A3 issue、実装コード、dashboard）
+  - Stream B/C等: 上記以外（特にA2/A3のissue、実装コード、ダッシュボード）
 - Stream Aは `contract/value/governance` 記述のみ更新し、実装仕様確定・コード変更を行わない。
 
 ### Consequences
 - 競合可能性は `issue-CE0-contract-freeze.md` のみ（Stream B担当と重複）であり、更新時は「契約語彙の再定義禁止・追記のみ」を厳守する。
-- A2/A3は本ADR群の読み取り専用の契約 summaryを参照してモック実装の準備を継続できる。
+- A2/A3は本ADR群の読み取り専用の契約の要約を参照してモック実装の準備を継続できる。
 
 
 ## Stream A serial governance pass (2026-05-20)
@@ -461,9 +461,9 @@
 
 ### Decision
 - HIL-RS最小I/Fは次の契約語彙を読み取り専用で下流へ渡す。
-  - inputs: `issueId`, `phase`, `sourceBundleHash`, `proposalId`, `approvalRecord`, `policySnapshot`。
-  - outputs: `gateStatus`, `held[]`, `patchDraft`, `riskLabels[]`, `applyResult`, `rollbackRef`。
-  - audit events: `query`, `bundle`, `proposal`, `apply`。4種のうち欠損がある場合はNo-GoまたはHoldとする。
+  - 入力: `issueId`, `phase`, `sourceBundleHash`, `proposalId`, `approvalRecord`, `policySnapshot`。
+  - 出力: `gateStatus`, `held[]`, `patchDraft`, `riskLabels[]`, `applyResult`, `rollbackRef`。
+  - 監査イベント: `query`, `bundle`, `proposal`, `apply`。4種のうち欠損がある場合はNo-GoまたはHoldとする。
 - `Approval Record` は `approved_by`, `approved_at`, `evidence`, `decision`, `segregation_of_duties_check` が揃うまで `Pending` として扱う。
 - AI候補は常にproposal-onlyであり、`human_reviewed` 昇格、auto-apply、SafeMode後退、未承認の共有/export解放を禁止する。
 - rollbackは `rollbackRef` を必須証跡とし、適用判断の前後を可逆に辿れる状態だけを契約上の成立条件にする。
@@ -471,4 +471,4 @@
 ### Consequences
 - ADRのStatusは変更しない。人間承認の証跡なしに `Accepted` 以外の新状態やProceed Goを推定しない。
 - A2はFrontend実装レーン、A3はDocs/Ops同期レーンへ渡す準備情報だけを受け取り、本Streamでは実装や `04_Documentation/` 編集を行わない。
-- Parent issueは `Approval Record=Pending` またはheld item残存時に `In Progress継続 / Hold` と分類し、`pendingDecisionQueueCount==0` になるまでGoを保留する。
+- 親issueは `Approval Record=Pending` または保留項目の残存時に `In Progress継続 / Hold` と分類し、`pendingDecisionQueueCount==0` になるまでGoを保留する。

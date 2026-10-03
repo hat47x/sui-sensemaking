@@ -33,7 +33,7 @@ Evidence
 - SynthesisからDecisionへ進んだ結果、採らなかった主要代替案や反証が失われる。
 - 現行`DocumentV1`のCard / Edge / Island等を新概念へ直接読み替えると、既存契約の意味を後付けで変更する。
 
-必要なのは、sensemakingの**意味種別**と、review・authority・lifecycle・visibility・provenanceを別々の軸として扱うことである。
+必要なのは、sensemakingの**意味種別**と、review・authority・ライフサイクル・visibility・provenanceを別々の軸として扱うことである。
 
 ## Decision
 
@@ -206,7 +206,7 @@ AI内部のトークン単位の推論、隠れ状態（hidden state）、非公
 | `EvidenceLink` | Card間のsupports / contradicts関係。Evidence entityそのものではない |
 | `Island` / `Cluster` | StructureのProjectionになり得る |
 | `Narrative` / `RelationSummary` | SynthesisのProjectionになり得る |
-| `ReviewAttribution` | 現行の文書単位Review metadata。汎用Review artifactとはみなさない |
+| `ReviewAttribution` | 現行の文書単位Reviewのメタデータ。汎用Review artifactとはみなさない |
 | `WorkingGraph` / `ConsensusGraph` | authority / work surfaceであり、意味種別ではない |
 
 本ADRでは`DocumentV1`のフィールド追加・意味変更・バージョン変更を行わない。
@@ -218,7 +218,7 @@ AI内部のトークン単位の推論、隠れ状態（hidden state）、非公
 | 次元 | このADRでの主張 | 他次元への制約 |
 |---|---|---|
 | **業務設計** | 人間・AIが形成した意味を、元資料、解釈、統合、レビュー、採用、判断へ分解して後から読み直せる | データ: 型変換で元意味を失わない。機能: Review Surfaceは主要根拠・反証・代替案へ戻れる |
-| **データ設計** | semantic kind / provenance / review / authority / lifecycleを直交軸として扱い、派生は新しいartifactとrelationで表現する | 業務: AI生成物を人間承認済みに見せない。機能: 昇格やレビューは対象のrevisionを明示する |
+| **データ設計** | semantic kind / provenance / review / authority / ライフサイクルを直交軸として扱い、派生は新しいartifactとrelationで表現する | 業務: AI生成物を人間承認済みに見せない。機能: 昇格やレビューは対象のrevisionを明示する |
 | **機能設計** | AI Workspace内の探索とReview Capsuleによる人間理解を両立する | 業務: 全AI内部推論を読むことを要求しない。データ: Review Capsuleは再構築可能Projectionであり正本化しない |
 
 ## Consequences

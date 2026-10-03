@@ -10,7 +10,7 @@
 ## Context
 
 `ADR-0026` はHIL-RS-01の価値軸とA1→A2→A3の契約先行を固定した。
-一方で、次フェーズ着手に必要な「会議ログの定型」「Decision Queueの未確定管理」「dashboard同期手順」は単一文書として固定されていない。
+一方で、次フェーズ着手に必要な「会議ログの定型」「Decision Queueの未確定管理」「ダッシュボードの同期手順」は単一文書として固定されていない。
 このままでは、議論と実行ログが分散し、再開時に判断根拠が追跡しづらい。
 
 ## Decision
@@ -31,7 +31,7 @@
 
 1. Umbrella issue（HIL-RS-02）でAC/非スコープ/検証計画を固定する。
 2. A1（Governance contract hardening）をOpen化し、A2/A3の着手条件を明示する。
-3. A2（frontend適用）/A3（ops & docs同期）はDraftで先行準備し、A1完了後にOpen化する。
+3. A2（frontend適用）/A3（運用と文書の同期）はDraftで先行準備し、A1完了後にOpen化する。
 
 ### D4. Exit Criteria
 
@@ -44,12 +44,12 @@
 ### D5. HIL-RS凍結I/F（Contract/Governance）
 
 - Freeze Pack ID: `HIL-RS-02-A1-CONTRACT-FREEZE-v1`
-- Contract IDs（変更禁止）
+- 契約ID（変更禁止）
   - `A1-CRITIQUE-IF`
   - `A1-REDIFF-IF`
   - `A1-ATTR-IF`
   - `A1-ERROR-IF`
-- Fixed identifiers（変更禁止）
+- 固定の識別子（変更禁止）
   - `schemaVersion=1.0.0`（Critique / Attribution / TieBreak / Error）
   - `overridePolicy=human_dual_control_only`
   - `contractLinkLocked=true`
@@ -59,22 +59,22 @@
 
 ### D6. 固定状態遷移 / 停止条件
 
-- State transitions（固定）
+- 状態遷移（固定）
   - A2/A3公開判定: `Draft -> Open` は `A1 Done` かつ `DecisionQueue Pending=0` のときのみ許可。
   - Decision Queue: `Pending -> Approved` または `Pending -> Rejected` のみ許可。
 - 禁止遷移
   - `Pending` を経由しない確定化。
   - A1完了前のA2/A3 `Draft -> Open`。
-- Stop conditions（即停止）
+- 停止条件（即停止）
   1. 契約ID / schemaVersion / overridePolicy / SSOTの不一致。
   2. SafeMode既定ON、share/export漏えい防止、`human_dual_control_only` の後退要求。
-  3. 凍結対象共有リソース（dashboard/README）への未承認更新要求。
+  3. 凍結対象の共有リソース（ダッシュボードとREADME）への未承認更新要求。
 
 ### D7. 最小インターフェース契約（HIL-RS/CE0 bridge）
 
 - 契約は「型先行」で固定し、実装詳細（ロジック/画面挙動）は後続で確定する。
 - 最小監査イベントは `query` / `bundle` / `proposal` / `apply` の4点セットを必須とし、欠損時はNo-Go。
-- `A1 -> A2 -> A3` への引き渡しは次の署名をcanonicalとする。
+- `A1 -> A2 -> A3` への引き渡しは次の署名を正本とする。
 
 | Signature ID | Input | Output | Failure |
 | --- | --- | --- | --- |
@@ -86,9 +86,9 @@
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 「議論→意思決定→文書化→進捗同期」を1サイクルで完結させる計画フェーズとし、議論と実行ログの分散による判断根拠の追跡困難を防ぐ。会議ログ定型・Decision Queue未確定管理・dashboard同期を単一文書として固定する | 機能: A1（Governance contract hardening）をOpen化し、A2（frontend適用）/A3（ops & docs同期）はDraftで先行準備、A1完了後にOpen化。データ: 実装変更はA2/A3 issueがOpen化されるまで行わない |
+| **業務設計** | 「議論→意思決定→文書化→進捗同期」を1サイクルで完結させる計画フェーズとし、議論と実行ログの分散による判断根拠の追跡困難を防ぐ。会議ログの定型、Decision Queueの未確定管理、ダッシュボードの同期を、単一文書として固定する | 機能: A1（Governance contract hardening）をOpen化し、A2（frontend適用）/A3（運用と文書の同期）はDraftで先行準備、A1完了後にOpen化。データ: 実装変更はA2/A3 issueがOpen化されるまで行わない |
 | **データ設計** | 未確定項目はDecision Queueへ記録し確定扱いしない。HIL-RS凍結I/F（A1-CRITIQUE-IF等のContract IDs）は変更禁止。SafeMode既定ON・share/export漏えい防止・責務分離（human_dual_control_only）を後退させない | 業務: 議事録は論点ごとに「提案・懸念・反証・結論」を含む。機能: docs-check（validator+unittest+diff check）がExit Criteriaとして成功必須 |
-| **機能設計** | Exit Criteria（EC-1議事録/EC-2 ADR完全性/EC-3 issue最小分解/EC-4 dashboard同期/EC-5 docs-check）を固定。planフェーズの判断根拠を1サイクルで追跡可能にする | 業務: 実装速度より監査容易性を優先し短期速度は低下する。データ: Active issue数が増え同期ドキュメントの更新コストが増加する |
+| **機能設計** | Exit Criteria（EC-1議事録/EC-2 ADR完全性/EC-3 issue最小分解/EC-4 ダッシュボードの同期/EC-5 docs-check）を固定。計画フェーズの判断根拠を1サイクルで追跡可能にする | 業務: 実装速度より監査容易性を優先し短期速度は低下する。データ: アクティブなissueの数が増え、同期する文書の更新コストが増加する |
 
 ## Consequences
 
@@ -96,7 +96,7 @@
   - 計画フェーズの判断根拠が1サイクルで追跡可能になる。
   - A1依存を明示することで、A2/A3の手戻りを抑制できる。
 - 副作用と制約
-  - Active issue数が増え、同期ドキュメントの更新コストが増加する。
+  - アクティブなissueの数が増え、同期する文書の更新コストが増加する。
   - 実装速度より監査容易性を優先するため短期速度は低下する。
 
 ## Alternatives
@@ -120,8 +120,8 @@
 
 ### Read
 
-- `01_Plans/issues` のactive status（Draft/Open/In Progress）と `triage_actionable_plans.py` の逆引き結果で、監査対象ADRを抽出した。
-- 対象: `ADR-0026` / `ADR-0027`（active issue直結）。
+- `01_Plans/issues` のアクティブな状態（Draft/Open/In Progress）と `triage_actionable_plans.py` の逆引き結果で、監査対象ADRを抽出した。
+- 対象: `ADR-0026` / `ADR-0027`（アクティブなissueに直結）。
 
 ### ADR/CDC
 
@@ -131,7 +131,7 @@
 ### Plan
 
 - 欠損ADRがある場合のみ、該当ADRへ欠損見出しを最小追記する。
-- 欠損がない場合は、active issue連動観点で「追加補完不要」を本文に固定する。
+- 欠損がない場合は、アクティブなissueに連動する観点で「追加補完不要」を本文に固定する。
 
 ### Execute
 
@@ -161,16 +161,16 @@
 
 ### Plan（対象/非対象宣言）
 - 対象: `ADR-0026/0027` とHIL-RS-01/02 issue（許可リスト内）
-- 非対象: 実装コード、dashboard、許可リスト外issue。
+- 非対象: 実装コード、ダッシュボード、許可リスト外issue。
 
 ### Execute（HIL-RS-01-A1 -> HIL-RS-02-A1 -> next-phase）
-1. HIL-RS-01-A1契約固定の再確認（fixed keys driftなし）。
+1. HIL-RS-01-A1契約固定の再確認（固定キーのドリフトなし）。
 2. HIL-RS-02-A1統治ゲート（Pending bypass禁止・NoGo return path固定）を再確認。
 3. next-phase計画は `Approval Record` 完了までDraft/Conditionalを維持。
 
 ### Verify（AC/DoD照合）
-- AC: fixed keys diff=`0`、`unlockRule` 一致、`Pending -> Approved/Rejected` 以外の遷移追加なし。
-- DoD: `Plan -> Execute -> Verify -> Proceed` を維持し、self-correctionは `0/3`。
+- AC: 固定キーの差分=`0`、`unlockRule` 一致、`Pending -> Approved/Rejected` 以外の遷移追加なし。
+- DoD: `Plan -> Execute -> Verify -> Proceed` を維持し、自己修正は `0/3`。
 - ゲート結果: **Conditional**（承認待ち継続）。
 
 ## Stream A contract-governance checkpoint（2026-04-29）
@@ -207,7 +207,7 @@
 ## Stream A critical-path contract freeze update（2026-04-30）
 
 ### Phase 1: Read（Status / Decision / 未解決論点の再棚卸し）
-- Read対象: `ADR-0026` / `ADR-0027` / `issue-HIL-RS-02-A1-governance-contract-hardening.md` / `issue-HIL-RS-02-next-phase-delivery-plan.md` / `02_Architecture/hil_rs_01_a1_minimum_interface_contract.md`。
+- 読み込み対象: `ADR-0026` / `ADR-0027` / `issue-HIL-RS-02-A1-governance-contract-hardening.md` / `issue-HIL-RS-02-next-phase-delivery-plan.md` / `02_Architecture/hil_rs_01_a1_minimum_interface_contract.md`。
 - Status要約
   - A1契約固定値（`freezeContractId` / `schemaVersion` / `overridePolicy` / `safeModeDefault`）は差分 `0`。
   - A2/A3開放条件は `A2A3_OPEN_ALLOWED` の固定式を継続参照。
@@ -219,19 +219,19 @@
 
 ### Phase 2: ADR明文化（Context / Decision / Consequences）
 - Context: HIL-RS/CEの上位契約を先行固定しない場合、A2/A3で契約派生が発生し依存順が崩れる。
-- Decision: `HIL-RS-02-A1-CONTRACT-FREEZE-v1` と `schemaVersion=1.0.0` を上位契約の固定参照として維持し、A2/A3はmock/contract参照のみに限定する。
+- Decision: `HIL-RS-02-A1-CONTRACT-FREEZE-v1` と `schemaVersion=1.0.0` を上位契約の固定参照として維持し、A2/A3はモックと契約の参照のみに限定する。
 - Consequences: 承認証跡が未入力の間は `Conditional / Needs-decision` を維持し、実装確定へ進まない。
 
 ### Phase 3: 契約凍結（インターフェースのみ）
 - 固定対象I/F: `A1-CRITIQUE-IF` / `A1-REDIFF-IF` / `A1-ATTR-IF` / `A1-ERROR-IF`。
 - 責務境界: `overridePolicy=human_dual_control_only`、`Pending -> Approved | Pending -> Rejected` 以外は禁止。
-- 外部依存の扱い: A2/A3は `readOnly=true` のcontract artifact参照で吸収し、待機依存を作らない。
+- 外部依存の扱い: A2/A3は `readOnly=true` の契約成果物の参照で吸収し、待機依存を作らない。
 
 ### Phase 4: 整合チェック（Issue/ADRリンク・用語・優先度）
 - リンク整合: `ADR-0026`/`ADR-0027` ⇄ HIL-RS-02 A1 / next-phase issueの相互参照を維持。
 - 用語整合: `safeModeDefault=ON` / `safeModeBoundary=SAFE_MODE_STRICT_ON` / `human_dual_control_only` を統一。
 - 優先度整合: critical path（A1先行、A2/A3後続）を維持。
-- self-correction: `0/3`（不整合未検知）。
+- 自己修正: `0/3`（不整合未検知）。
 
 ### Phase 5: 完了判定
 - 判定: **Conditional / Needs-decision**。
@@ -305,14 +305,14 @@
 
 ### Phase 3-5: Plan / Execute / Verify
 - 固定I/Fの引き渡しは `A1-CRITIQUE-IF` / `A1-REDIFF-IF` / `A1-ATTR-IF` / `A1-ERROR-IF` の4点を読み取り専用に限定する。
-- Self-Correctionは `0/3`。即時停止条件（前提崩壊 / 未定義競合 / 許可リスト外編集要求 / 4回目相当）は未発火。
+- 自己修正は `0/3`。即時停止条件（前提崩壊 / 未定義競合 / 許可リスト外編集要求 / 4回目相当）は未発火。
 - Proceed判定: **Conditional / Needs-decision**（`approved_by` / `approved_at` / `evidence` が未入力）。
 
 
 ## Stream B Planning Sync Addendum（2026-05-04）
 
 ### Context
-- HIL-RS-02ではA1依存が明示されている一方、Issue実務ではAC/DoDの不足判定とblocker記法が不統一で、triage出力のReady/Blocked判定に揺れがあった。
+- HIL-RS-02ではA1依存が明示されている一方、issueの実務ではAC/DoDの不足の判定と阻害要因の記法が不統一で、triageの出力のReady/Blocked判定に揺れがあった。
 
 ### Decision
 - HIL-RS-02配下Issueの運用規則として以下を固定する。
@@ -321,27 +321,27 @@
   - AC/DoD不足時はPhase 2（ADR/CDC）でドラフト補完し、合意完了まで `held` を維持する。
 
 ### Consequences
-- triage CLIの再計算時にunlocks判定の機械可読性が上がる。
+- triageのCLIで再計算するときに、解放判定の機械可読性が上がる。
 - 実装依存の曖昧な待ち状態を削減し、契約依存ベースで並行可能な作業を可視化できる。
 
 
 ## Stream C Alignment Update（2026-05-06）
 
 ### Context
-- HIL-RS-02 deliveryとA3 operations syncを、他ストリーム非依存で実行するために、実務フェーズを5段へ再編した。
+- HIL-RS-02のデリバリーとA3の運用同期を、他ストリームに依存せず実行するために、実務フェーズを5段へ再編した。
 - 既存の統治制約（SafeMode既定ON、human_dual_control_only、A1先行依存）は維持が必須。
 
 ### Decision
 - Stream Cの実行規律をADRレベルで固定する。
   1. フェーズ固定: `Read -> ADR整合 -> Delivery具体化 -> 運用同期条件定義 -> Verify`
   2. 各フェーズ必須: `Plan -> Execute -> Verify -> Proceed`
-  3. Self-correction上限: `<=3`（4回目相当は即停止）
+  3. 自己修正の上限: `<=3`（4回目に相当する時点で即停止）
   4. A3 Open条件: `A1 Done` かつ `pendingDecisionQueueCount==0` を満たすまで `Conditional` 維持
   5. 運用同期観点: 用語一致（Security Officer / System Owner / Platform Operator）、2者承認と実行責務分離、DOC-OPS-02の固定同期順序を必須化
 
 ### Consequences
-- delivery計画と運用同期計画の判定軸が一本化され、再開時の判断負荷が下がる。
-- A1未完時の先行Openを防止しつつ、準備作業（docs planning）は継続可能となる。
+- デリバリー計画と運用同期計画の判定軸が一本化され、再開時の判断負荷が下がる。
+- A1未完時の先行Openを防止しつつ、準備作業（文書の計画）は継続可能となる。
 - 競合判定は `許可リスト外差分ゼロ` を必須化し、越境編集を抑止する。
 
 ## Stream A Contract Freeze synchronization（2026-05-07）
@@ -351,7 +351,7 @@
 
 ### Decision
 - Contract Freeze Pack `HIL-RS-02-A1-CONTRACT-FREEZE-v1` を継続参照し、次を固定する。
-  - API signature群: `A1-CRITIQUE-IF|A1-REDIFF-IF|A1-ATTR-IF|A1-ERROR-IF`
+  - APIシグネチャ群: `A1-CRITIQUE-IF|A1-REDIFF-IF|A1-ATTR-IF|A1-ERROR-IF`
   - `schemaVersion=1.0.0`（v1互換固定）
   - `A2A3_OPEN_ALLOWED` 判定式の前提（`a1Status=="Done" && pendingDecisionQueueCount==0`）
 - 変更不可範囲: 契約ID変更、`schemaVersion` 改版、Pending bypass、SafeMode境界後退。
@@ -396,15 +396,15 @@
   - AC-2: `Pending -> Approved|Rejected` 以外の遷移追加0件。
   - AC-3: A1未完了時は `Proceed=Hold` 維持。
 - Execute
-  - 本更新はplanning/contract freeze文書明文化のみ（実装変更なし）。
+  - 本更新は計画と契約凍結の文書の明文化のみ（実装変更なし）。
 - Verify
   - AC/DoD照合で矛盾0件。
-  - self-correction使用回数 `0/3`。
+  - 自己修正の使用回数 `0/3`。
 
 ### Phase 4: Proceed Gate
 - 判定: **Hold/Needs-decision維持**。
-- 理由: `Approval Record` が `Pending` のためunlock条件 `a1Status=="Done" && pendingDecisionQueueCount==0` が未成立。
-- 停止条件: self-correction>3 / 前提崩れ / 未定義競合を検知した場合は即Stop。
+- 理由: `Approval Record` が `Pending` のため解放条件 `a1Status=="Done" && pendingDecisionQueueCount==0` が未成立。
+- 停止条件: 自己修正が3回を超えた場合 / 前提崩れ / 未定義競合を検知した場合は即停止。
 
 
 ## Stream A governance contract hardening update（2026-05-10）
@@ -423,8 +423,8 @@
 - 判定は `Hold/NoGo` 優先となり、承認証跡が揃うまでProceedは停止される。
 
 ### Pending Decision Queue（as of 2026-05-10）
-- `PD-20260507-A1-001`（Approval evidence format）
-- `PD-20260507-A1-002`（reviewerRef匿名化パターン）
+- `PD-20260507-A1-001`（承認証跡の形式）
+- `PD-20260507-A1-002`（reviewerRefの匿名化パターン）
 
 
 ## Stream A governance contract clarification（2026-05-18）
@@ -434,7 +434,7 @@ A1契約固定前にA2/A3が承認境界を実装すると、`Pending bypass` �
 
 ### Decision
 - `A2A3_UNLOCK = (a1Status=="Done" && pendingDecisionQueueCount==0)` を唯一の解放条件として固定する。
-- trusted human interaction境界を次で固定する。
+- 信頼できる人間の操作の境界を次で固定する。
   - AI: `decision/reasonCodes` の提示まで。
   - Human: 承認確定（2者承認）と例外判断。
 - 禁止事項: `auto-confirm`, `auto-approve`, `Pending->Execute`, `Rejected->Execute`, `Draft->Approved`。
@@ -445,20 +445,20 @@ A2/A3はモックI/Fで先行実装可能だが、承認確定の責務はA1ガ�
 ## Stream A critical-path freeze handoff（2026-05-19）
 
 ### Phase 1: Read（契約未確定項目と依存差分）
-- Read対象（許可リスト）: `ADR-0026`, `ADR-0027`, `issue-HIL-RS-01-next-phase-human-loop-reversible-synthesis.md`, `issue-HIL-RS-02-A1-governance-contract-hardening.md`, `contract_reading_guide.md`, `runtime_parameter_registry.md`。
+- 読み込み対象（許可リスト）: `ADR-0026`, `ADR-0027`, `issue-HIL-RS-01-next-phase-human-loop-reversible-synthesis.md`, `issue-HIL-RS-02-A1-governance-contract-hardening.md`, `contract_reading_guide.md`, `runtime_parameter_registry.md`。
 - 未確定項目（承認待ち）: `approved_by`, `approved_at`, `evidence`, `HIL-RS-02-GOV-EXCEPTION-01`。
 - 依存関係固定: `HIL-RS-01-A1 -> HIL-RS-02-A1 -> A2/A3 unlock`（差分なし）。
 
 ### Phase 2: ADR明文化（Context / Decision / Consequences）
 - Context: 承認入力未充足のままA2/A3を開放すると `Pending bypass` が発生し、統治契約違反となる。
 - Decision: 承認待ち論点を `Decision Queue` に保持し、`Proceed=Hold/Needs-decision` を継続する。
-- Consequences: 下流はmock検証のみ並行可。契約値更新・状態確定は禁止。
+- Consequences: 下流はモック検証のみ並行可。契約値更新・状態確定は禁止。
 
 ### Phase 3: 契約凍結（変更禁止境界）
-- API signature（固定）: `A1-GOV-GATE-V1`, `A2-PROPOSAL-ENVELOPE-V1`, `A3-DOC-SYNC-CHECK-V1`。
-- Data/type（固定）: `schemaVersion=1.0.0`, `overridePolicy=human_dual_control_only`, `safeModeDefault=ON`, `safeModeBoundary=SAFE_MODE_STRICT_ON`。
-- Transition（固定）: `Pending -> Approved | Pending -> Rejected` のみ。
-- 変更禁止境界: fixed keyの再定義、SafeMode後退、A1完了前のA2/A3 `Draft->Open`。
+- APIシグネチャ（固定）: `A1-GOV-GATE-V1`, `A2-PROPOSAL-ENVELOPE-V1`, `A3-DOC-SYNC-CHECK-V1`。
+- データと型（固定）: `schemaVersion=1.0.0`, `overridePolicy=human_dual_control_only`, `safeModeDefault=ON`, `safeModeBoundary=SAFE_MODE_STRICT_ON`。
+- 遷移（固定）: `Pending -> Approved | Pending -> Rejected` のみ。
+- 変更禁止境界: 固定キーの再定義、SafeMode後退、A1完了前のA2/A3 `Draft->Open`。
 
 ### Phase 4: 受け渡し仕様（B〜F向け）
 - 固定済みI/F一覧
@@ -466,10 +466,10 @@ A2/A3はモックI/Fで先行実装可能だが、承認確定の責務はA1ガ�
   - `contractIds=A1-CRITIQUE-IF|A1-REDIFF-IF|A1-ATTR-IF|A1-ERROR-IF`
   - `Decision gate`: `A2A3_UNLOCK = (a1Status=="Done" && pendingDecisionQueueCount==0)`
 - 変更不可の項目
-  - fixed keys（上記）
+  - 固定キー（上記）
   - `overridePolicy=human_dual_control_only`
   - `decisionQueueTransition`
-- mock許可項目
+- モックを許可する項目
   - 監査4イベント（`query`,`bundle`,`proposal`,`apply`）の存在検証
   - 入出力型の適合検証
   - `pendingDecisionQueueCount>0` のHold判定検証
@@ -488,7 +488,7 @@ A2/A3はモックI/Fで先行実装可能だが、承認確定の責務はA1ガ�
   - `HIL-RS-02-A1` = Open(In Progress運用) / P1
   - `CE0 contract freeze` = Open / P1
 - 依存固定: `HIL-RS-01-A1 -> HIL-RS-02-A1 -> parent Proceed`、`HIL-RS-01-A1 -> CE0 contract freeze`。
-- mock方針固定: `decision/executeAllowed/reasonCodes` まで先行可能、`Pending -> Approved|Rejected` 確定は人間のみ。
+- モックの方針固定: `decision/executeAllowed/reasonCodes` まで先行可能、`Pending -> Approved|Rejected` 確定は人間のみ。
 
 ### Phase 2: ADR合意（Context / Decision / Consequences）
 - Context: 承認待ちを残したままA2/A3相当の下流開放を行うと `Pending bypass` となり統治違反。
@@ -496,15 +496,15 @@ A2/A3はモックI/Fで先行実装可能だが、承認確定の責務はA1ガ�
 - Consequences: `Approval Record` 未充足時は `Hold/Needs-decision` を維持し、Proceed=Goを出さない。
 
 ### Phase 3: HIL-RS最小I/F凍結（downstream mock可）
-- API signatures（凍結）
+- APIシグネチャ（凍結）
   - `A1-GOV-GATE-V1(approvalRecord, decisionQueueState) -> (gateStatus, held[], no_go_reason)`
   - `A2-PROPOSAL-ENVELOPE-V1(sourceBundleHash, proposalId, policySnapshot) -> (proposalEnvelope | schema_mismatch)`
   - `A3-DOC-SYNC-CHECK-V1(contractId, syncTargets[], auditDigest) -> (syncResult, drift[] | drift_detected)`
-- Payload schema最小集合（凍結）
-  - required keys: `freezeContractId`, `contractIds`, `schemaVersion`, `overridePolicy`, `safeModeDefault`, `safeModeBoundary`, `pendingDecisionQueueCount`, `approvalRecord`。
-- Event contract（凍結）
+- ペイロードschemaの最小集合（凍結）
+  - 必須キー: `freezeContractId`, `contractIds`, `schemaVersion`, `overridePolicy`, `safeModeDefault`, `safeModeBoundary`, `pendingDecisionQueueCount`, `approvalRecord`。
+- イベント契約（凍結）
   - `query|bundle|proposal|apply` の4点欠損時はNo-Go。
-- versioning方針
+- バージョニング方針
   - 破壊的変更（必須キー変更・遷移追加・承認主体変更）は `v2` へ隔離し、`v1` は読み取り専用維持。
 
 ### Phase 4-6: Execute / Verify / Proceed
@@ -540,7 +540,7 @@ A2/A3はモックI/Fで先行実装可能だが、承認確定の責務はA1ガ�
 - 不一致検知なし。修正ループ実行回数: 0/3。
 
 ### Phase 7: Publish-ready
-- 次ストリーム非依存で読めるよう、判定根拠・停止条件・読み取り専用 handoffを明示した。
+- 次ストリーム非依存で読めるよう、判定根拠、停止条件、読み取り専用の引き渡しを明示した。
 
 ### Phase 8: Final status
 - 判定: **Hold/Needs-decision**（`pendingDecisionQueueCount>0` のため）。
@@ -549,15 +549,15 @@ A2/A3はモックI/Fで先行実装可能だが、承認確定の責務はA1ガ�
 ## Stream D execution contract clarification（2026-06-13）
 
 ### Context
-- HIL-RS-02はHIL-RS-01-A1の最小I/Fを再定義せず、統治契約を硬化してA2/A3へ読み取り専用 handoffする段階である。
+- HIL-RS-02はHIL-RS-01-A1の最小I/Fを再定義せず、統治契約を硬化してA2/A3へ読み取り専用で引き渡す段階である。
 - `Approval Record` と `HIL-RS-02-GOV-EXCEPTION-01` に未解決在庫が残るため、Proceed Goは未成立である。
 
 ### Decision
 - 固定順序は `A1 -> RS-02-A1 -> A2 handoff -> A3 handoff -> delivery plan` とし、A2/A3の実作業は各専任Streamに分離する。
 - RS-02-A1の実行許可は `a1Status==Done && pendingDecisionQueueCount==0 && fixedKeyDrift==0 && safeModeRetreat==false` のときだけ成立する。
-- mockで先行可能な範囲は `decision`, `executeAllowed`, `reasonCodes`, `auditEventRef` の読取・検証までに限定する。
+- モックで先行可能な範囲は `decision`, `executeAllowed`, `reasonCodes`, `auditEventRef` の読取・検証までに限定する。
 - 将来版に隔離する事項は、必須キー追加/削除、承認主体変更、新規状態遷移、GOV例外の恒久化、SafeMode境界変更である。
 
 ### Consequences
 - A2/A3へは「参照契約」と「Stop条件」を渡し、Frontend/UI/E2E/04文書の実装完了を本計画の前提にしない。
-- Pending bypass、contract redefinition、approval inferenceが検出された場合は `Proceed=Stop` とし、承認在庫へ戻す。
+- Pending bypass、契約の再定義、承認の推測が検出された場合は `Proceed=Stop` とし、承認在庫へ戻す。

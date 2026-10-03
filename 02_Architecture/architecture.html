@@ -44,17 +44,17 @@
     </div>
     <h1 style="font-size:30px; line-height:1.34; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">全体アーキテクチャ</h1>
     <p style="font-size:15px; line-height:1.7; color:#52606d; margin:14px 0 0; max-width:38em; text-wrap:pretty;">
-      sui-sensemakingの<strong>構成要素、責務の境界、デプロイの形態</strong>を定義する。上位の文書（README、<code>00_Prompt</code>、<code>01_Plans</code>）を前提とし、思想や要件は足さずに、<strong>実装できる構造</strong>に落とし込む。最小のMVPは Phase 0〜3 を主な対象とし、AIは後から付けられる境界だけを先に定義する。
+      sui-sensemakingの<strong>構成要素、責務の境界、デプロイの形態</strong>を定義する。上位の文書（README、<code>00_Prompt</code>、<code>01_Plans</code>）を前提とし、思想や要件は足さずに、<strong>実装できる構造</strong>に落とし込む。最小のMVPは、Phase 0〜3を主な対象とし、AIは後から付けられる境界だけを先に定義する。
     </p>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:22px;">
       <span class="badge" style="background:#f0fdfa; color:#0f766e; border-color:#99f6e4;">責務境界の正本</span>
-      <span class="badge" style="background:#f8fafc; color:#475569; border-color:#cbd5e1;">型は schemas.md ／ エンドポイントは api.md</span>
+      <span class="badge" style="background:#f8fafc; color:#475569; border-color:#cbd5e1;">型はschemas.md ／ エンドポイントはapi.md</span>
     </div>
     <div style="margin:20px 0 0; padding:12px 14px; background:#f8fafc; border-left:3px solid #cbd5e1; border-radius:0 4px 4px 0;">
       <p style="font-size:12.5px; line-height:1.8; color:#52606d; margin:0;">
         本書が正本である（<code>AGENTS.md</code> §3）。環境変数と実行パラメータの正本は <a href="runtime_parameter_registry.md">runtime_parameter_registry.md</a> である。<br>
-        価値判断と設計要素の対応 → <a href="value_traceability.md">value_traceability.md</a>　／　現行契約と履歴ログの読み分け → <a href="contract_reading_guide.md">contract_reading_guide.md</a><br>
-        MVPで運用サポートするデータ構造 → <a href="data_model_operations_overview.html">data_model_operations_overview.html</a>　／　CE0/CE1の凍結に至った記録 → <a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">contract-freeze formation history</a>
+        価値判断と設計要素の対応は<a href="value_traceability.md">value_traceability.md</a>　／　現行契約と履歴ログの読み分けは<a href="contract_reading_guide.md">contract_reading_guide.md</a><br>
+        MVPで運用サポートするデータ構造は<a href="data_model_operations_overview.html">data_model_operations_overview.html</a>　／　CE0/CE1の凍結に至った記録は<a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">contract-freeze formation history</a>
       </p>
     </div>
   </header>
@@ -163,7 +163,7 @@ flowchart TB
     <table class="grid">
       <thead><tr><th style="width:34%;">エンドポイント</th><th>備考</th></tr></thead>
       <tbody>
-        <tr><td><code>GET /docs/{doc_id}</code></td><td>—</td></tr>
+        <tr><td><code>GET /docs/{doc_id}</code></td><td>なし</td></tr>
         <tr><td><code>PUT /docs/{doc_id}</code></td><td>スナップショット保存。現行MVPでは存在しないIDへのPUTを作成として扱う</td></tr>
         <tr><td><code>POST /docs</code></td><td>サーバーが採番する新規作成の候補。MVPでは必須ではなく、実装の契約にするのは <code>DATA-CONTRACT-01</code> で扱う</td></tr>
       </tbody>
@@ -250,12 +250,12 @@ flowchart LR
 
     linkStyle 6,7 stroke:#dc2626,stroke-width:2px,color:#dc2626
       </pre>
-      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">赤い破線は禁止された経路（Non-Regression）を示す。ConsensusGraphに到達できるのは、人間の承認を経た <code>applyPatch</code> だけである。<code>mode=autonomous</code> でも proposal-only を維持する。</figcaption>
+      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">赤い破線は禁止された経路（退行の防止）を示す。ConsensusGraphに到達できるのは、人間の承認を経た <code>applyPatch</code> だけである。<code>mode=autonomous</code> でもproposal-onlyを維持する。</figcaption>
     </figure>
 
-    <h3 id="ce0-responsibility" style="font-size:15px; font-weight:700; margin:22px 0 0;">5.1 責務境界と Contract ID</h3>
+    <h3 id="ce0-responsibility" style="font-size:15px; font-weight:700; margin:22px 0 0;">5.1 責務境界とContract ID</h3>
     <table class="grid">
-      <thead><tr><th style="width:26%;">Contract ID</th><th>Responsibility boundary</th></tr></thead>
+      <thead><tr><th style="width:26%;">Contract ID</th><th>責務境界</th></tr></thead>
       <tbody>
         <tr><td><code>CE0-CTX-IF</code></td><td>ContextQueryとContextBundleの安全境界、Query Previewを必須とする経路、決定論的なbundleの生成。具体的なキーは <a href="schemas.md">schemas.md</a> を参照</td></tr>
         <tr><td><code>CE0-SAFEMODE-IF</code></td><td>safeModeは既定でON、<code>allowUnreviewedText=false</code> が既定、未レビューの本文を保護する</td></tr>
@@ -274,12 +274,12 @@ flowchart LR
       </tbody>
     </table>
 
-    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">5.3 禁止事項（Non-Regression）</h3>
+    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">5.3 禁止事項（退行の防止）</h3>
     <ul class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:10px 0 0;">
       <li>AIは <code>ConsensusGraph</code> を直接更新してはならない。</li>
       <li><code>human_reviewed</code> 状態をAIが自動付与してはならない。</li>
       <li>safeModeが既定でONのとき、未レビューの本文をAIの入力に含めてはならない。</li>
-      <li><code>mode=autonomous</code> でも proposal-only を維持する。監査の4点セット（query / bundle / proposal / apply）が欠けている場合は、失敗として扱う。</li>
+      <li><code>mode=autonomous</code> でもproposal-onlyを維持する。監査の4点セット（query / bundle / proposal / apply）が欠けている場合は、失敗として扱う。</li>
       <!-- retired-vocabulary: historical — 禁止規則そのものが対象語を名指しする必要がある -->
       <li><code>Core Graph</code> を契約の語彙に再び導入してはならない（履歴の注記としてだけ許可する）。
           検証は <code>DC-VOCAB-001</code> が行う。</li>
@@ -289,15 +289,15 @@ flowchart LR
     <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">5.4 Go/NoGo Key（実装に着手するためのゲート）</h3>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:16px; margin-top:12px;">
       <div style="padding:14px 16px; background:#ecfdf5; border-radius:6px; border:1px solid #a7f3d0;">
-        <h4 style="font-size:13px; font-weight:700; margin:0 0 8px; color:#047857;">Go 条件</h4>
+        <h4 style="font-size:13px; font-weight:700; margin:0 0 8px; color:#047857;">Go条件</h4>
         <ul class="compact" style="font-size:12.5px; color:#065f46; padding-left:18px; margin:0;">
           <li>Query Previewを必須の経路として維持する</li>
           <li><code>Working → Consensus</code> の更新経路は <code>patch + approval</code> だけにする</li>
-          <li><code>mode=autonomous</code> でも proposal-only（自動適用の禁止）を維持する</li>
+          <li><code>mode=autonomous</code> でもproposal-only（自動適用の禁止）を維持する</li>
         </ul>
       </div>
       <div style="padding:14px 16px; background:#fef2f2; border-radius:6px; border:1px solid #fecaca;">
-        <h4 style="font-size:13px; font-weight:700; margin:0 0 8px; color:#b91c1c;">No-Go 条件</h4>
+        <h4 style="font-size:13px; font-weight:700; margin:0 0 8px; color:#b91c1c;">No-Go条件</h4>
         <ul class="compact" style="font-size:12.5px; color:#7f1d1d; padding-left:18px; margin:0;">
           <li>Query Previewを迂回できる導線がある</li>
           <li><code>ConsensusGraph</code> への直接の書き込みを許す導線がある</li>
@@ -306,27 +306,27 @@ flowchart LR
         </ul>
       </div>
     </div>
-    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">No-Goの判定は、次の正規のIDを正本とし、表記のゆれは同義語として扱うことに限る。 <code>preview_bypass</code> ／ <code>consensus_direct_write</code> ／ <code>auto_apply_or_publish</code> ／ <code>ai_review_auto_promotion</code> ／ <code>safemode_default_relaxation</code>。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">No-Goの判定は、次の正規のIDを正本とする。正規のIDと異なる表記は、同義語として扱う場合に限って認める。<code>preview_bypass</code> ／ <code>consensus_direct_write</code> ／ <code>auto_apply_or_publish</code> ／ <code>ai_review_auto_promotion</code> ／ <code>safemode_default_relaxation</code>。</p>
 
-    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">5.5 CDCの固定とDrift-stop</h3>
+    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">5.5 CDCの固定とドリフト停止</h3>
     <ul class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:10px 0 0;">
       <li>CE0とCE1のContract IDは、参照専用の固定値として扱い、再採番と異なる意味での定義を禁止する。Contract IDの衝突は0件で固定する。</li>
       <li>CE1、CE2、CE4は、モックのI/Fを前提に、依存先を待たずに検証を続ける。</li>
       <li>本節の契約は責務の境界だけを扱い、推測で実装の要件（APIの詳細、CLI、UIの具体）を追加しない。</li>
       <li>語彙の衝突は0件で固定する（契約の語彙は <code>ConsensusGraph</code> / <code>WorkingGraph</code> / <code>ContextProjectionGraph</code> に統一する）。</li>
-      <li>Verifyでの自己修復は最大3回とする。4回目に相当する時点で停止し、推測で続けることを禁止する。</li>
+      <li>検証での自己修復は最大3回とする。4回目に相当する時点で停止し、推測で続けることを禁止する。</li>
     </ul>
-    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;"><strong>Interface contract references:</strong> 本書は、型シグネチャ、required/optional key、エンドポイント、status/errorを再定義しない。型、キー、列挙、versionの互換 → <a href="schemas.md#12-ce1ce2ce4-型契約実装非依存">schemas.md §1.2</a>、エンドポイント、認証、status/error、副作用 → <a href="api.md#27-ce4-audit-integration-contractapicli-equivalence">api.md §2.7〜§2.9</a>、CE1 v1のlogical/transport/handoffの所属 → <a href="schemas.md#ce1-v1-layer-ownership-matrixlogical--transport--handoff">schemas.md layer ownership matrix</a>。旧Interface Freezeの型、method、event-orderの再掲と、CE0の入力snapshotの識別子は <a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">形成履歴</a> へ移した。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;"><strong>インターフェース契約の参照先</strong>　本書は、型シグネチャ、必須キーとオプションキー、エンドポイント、ステータス、エラーを再定義しない。型、キー、列挙、バージョンの互換は<a href="schemas.md#12-ce1ce2ce4-型契約実装非依存">schemas.md §1.2</a>、エンドポイント、認証、ステータス、エラー、副作用は<a href="api.md#27-ce4-audit-integration-contractapicli-equivalence">api.md §2.7〜§2.9</a>、CE1 v1のlogical、transport、handoffの所属は<a href="schemas.md#ce1-v1-layer-ownership-matrixlogical--transport--handoff">schemas.md layer ownership matrix</a>を参照する。旧Interface Freezeの型、メソッド、イベント順序の再掲と、CE0の入力スナップショットの識別子は<a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">形成履歴</a> へ移した。</p>
   </section>
 
   <!-- 06 CE-1/2/4 -->
   <section style="padding:32px 0 0;">
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">06</span>
-      <h2 style="font-size:20px; font-weight:700; margin:0;">CE-1 / CE-2 / CE-4 責務境界</h2>
-      <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">mock-first</span>
+      <h2 style="font-size:20px; font-weight:700; margin:0;">CE-1 / CE-2 / CE-4の責務境界</h2>
+      <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">モック先行</span>
     </div>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:10px 0 0;">本節は、各CEが守る責務と信頼境界だけを定義する。型、required/optional key、列挙、versionの互換は <a href="schemas.md">schemas.md</a> を、エンドポイント、status/error、副作用は <a href="api.md">api.md</a> を正本とし、本書では再定義しない。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:10px 0 0;">本節は、各CEが守る責務と信頼境界だけを定義する。型、必須キーとオプションキー、列挙、バージョンの互換は<a href="schemas.md">schemas.md</a>を、エンドポイント、ステータス、エラー、副作用は<a href="api.md">api.md</a>を正本とし、本書では再定義しない。</p>
     <table class="grid">
       <thead><tr><th style="width:16%;">CE</th><th style="width:30%;">責務</th><th style="width:28%;">禁止</th><th>正本</th></tr></thead>
       <tbody>
@@ -339,13 +339,13 @@ flowchart LR
         <tr>
           <td><strong>CE2</strong><br/>LOW-RISK-AI-ASSIST<br/><span style="font-size:11px; color:#6b7280;"><code>CE2-PROPOSAL-IF</code> / <code>CE2-LIFECYCLE-IF</code> / <code>CE2-DRIFT-STOP-IF</code> / <code>CE2-NO-AUTOAPPLY-IF</code></span></td>
           <td>AIの出力をproposal-onlyとして管理し、CE1由来のbundleとの整合を確認してから、人間の判断に渡す</td>
-          <td>API、UI、workerからの自動適用、AIによるレビュー状態の昇格、契約の差異を推測で補って続けること</td>
+          <td>API、UI、ワーカーからの自動適用、AIによるレビュー状態の昇格、契約の差異を推測で補って続けること</td>
           <td><a href="schemas.md#ce2-low-risk-ai-assist">schemas.md</a>／<a href="api.md#290-proposal-only--apicli監査責務境界">api.md</a></td>
         </tr>
         <tr>
           <td><strong>CE4</strong><br/>API-CLI-AUDIT</td>
-          <td>API、CLI、GUIの同値性、監査の4点セット、dry-runに副作用がないことを、横断して検証する</td>
-          <td>監査の欠損を成功として扱うこと、dry-runでの永続化、外部共有、レビュー状態の昇格、未実装の依存を理由に契約の検証を止めること</td>
+          <td>API、CLI、GUIの同値性、監査の4点セット、ドライランに副作用がないことを、横断して検証する</td>
+          <td>監査の欠損を成功として扱うこと、ドライランでの永続化、外部共有、レビュー状態の昇格、未実装の依存を理由に契約の検証を止めること</td>
           <td><a href="schemas.md#ce4-api-cli-audit">schemas.md</a>／<a href="api.md#29-ce4-apicligui-同値性監査契約ce4-api-cli-audit">api.md</a></td>
         </tr>
       </tbody>
@@ -363,7 +363,7 @@ flowchart LR
     <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;">MVPでは、高度な権限管理は後回しにする。ただしイントラでの利用を想定し、外部サービスとの共有（LLMを含む）は設定で無効にでき、LLMの接続先は明示的に設定する（既定では外部サービスにデータを渡さない）。strict modeの例外承認フローは <a href="strict_mode_exception_approval_flow.html">strict_mode_exception_approval_flow.html</a> を正本とする。</p>
 
     <h3 style="font-size:15px; font-weight:700; margin:20px 0 0;">7.2 公開とアクセスの可視性メタデータ <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">FB-RM-PUB-01</span></h3>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;">公開pack（<code>packs/index.json</code>）とviewのメタデータ（<code>view.json</code>）は、共通の <code>visibility</code> の列挙値 <code>"Public" | "Unlisted" | "Org" | "Restricted"</code> を持つ。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;">公開パック（<code>packs/index.json</code>）とビューのメタデータ（<code>view.json</code>）は、共通の <code>visibility</code> の列挙値 <code>"Public" | "Unlisted" | "Org" | "Restricted"</code> を持つ。</p>
     <ul class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:8px 0 0;">
       <li>旧 <code>view.json</code> で <code>visibility</code> が未設定のときは、<code>Restricted</code> として解釈する。</li>
       <li>旧 <code>packs/index.json</code> で <code>visibility</code> が未設定のときは、<code>Public</code> として解釈する。</li>
@@ -371,22 +371,22 @@ flowchart LR
       <li>SafeModeの既定ONと、共有とエクスポートでの漏えいを防ぐ方針を優先し、<code>visibility</code> の導入によって既存の安全制御を弱めない。</li>
     </ul>
 
-    <h3 style="font-size:15px; font-weight:700; margin:20px 0 0;">7.3 AuthContext / JIT / strict の境界 <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">AUTH-ARCH-01</span></h3>
+    <h3 style="font-size:15px; font-weight:700; margin:20px 0 0;">7.3 AuthContext、JIT、strictの境界 <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">AUTH-ARCH-01</span></h3>
     <ul class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:8px 0 0;">
       <li>認証の境界の正本は <code>ADR-0020</code> とし、実装の契約は <a href="schemas.md">schemas.md</a>、<a href="api.md">api.md</a>、<a href="review_attribution.md">review_attribution.md</a> の間で、同じ論点について同期する。</li>
-      <li><code>SUI_ALLOW_JIT_PROVISIONING=true</code> では、未登録のsubjectをJITで <code>users</code> と <code>user_identities</code> に作成する。<code>false</code> では <code>403</code> で拒否し、事前のプロビジョニングの導線へ誘導する。</li>
-      <li>attributionの正規のキーは <code>users.id</code> で、外部のsubjectは <code>user_identities</code> でのみ解決する。</li>
+      <li><code>SUI_ALLOW_JIT_PROVISIONING=true</code> では、未登録のサブジェクトをJITで <code>users</code> と <code>user_identities</code> に作成する。<code>false</code> では <code>403</code> で拒否し、事前のプロビジョニングの導線へ誘導する。</li>
+      <li>帰属の正規のキーは <code>users.id</code> で、外部のサブジェクトは <code>user_identities</code> でのみ解決する。</li>
     </ul>
 
-    <h3 style="font-size:15px; font-weight:700; margin:20px 0 0;">7.4 SAAS-TENANT-01 の境界 <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">ADR-0059・現存するsurfaceは実装済み</span></h3>
+    <h3 style="font-size:15px; font-weight:700; margin:20px 0 0;">7.4 SAAS-TENANT-01の境界 <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">ADR-0059・現存する面は実装済み</span></h3>
     <ul class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:8px 0 0;">
       <li>現行 <code>local-dev</code> / <code>evaluation</code> / <code>enterprise-production</code> はシングルテナントに相当するものとし、共有のSaaSとしては運用しない。</li>
-      <li>独立したprofileの <code>saas-multitenant</code> では、AuthContextに加えて、検証済みのTenantContextと有効なTenantMembershipを、requestごとに必ず解決する。不完全なdeploymentの構成は、起動前にfail-fastで拒否する。</li>
-      <li><strong>tenantの一致はアプリ本体の不変条件とし、外部のPDPへ委譲しない。</strong>roles/groupsの意味の評価だけを、AccessControlAdapterへ委譲する。</li>
-      <li>tenantに従属するデータは、DBの複合制約とDB側のtenant guardで分離する。cache、job、auditなど現存するconsumerも、tenantとsessionの世代で分離する。MCPは、tenant-bound credentialがない間は <code>saas-multitenant</code> をfail-fastで拒否し、clientが入力したtenantIdで代替しない。</li>
-      <li>Workspace Data Plane、Tenant Admin、Platform Control Planeは、route、auth audience、capabilityを分離する。Platformの運用権限から、文書のreadを暗黙に導き出さない。</li>
-      <li>tenantが不明または不一致のとき、membershipが停止しているとき、PDPやadapterに障害があるとき、DB guardが成立しないときは、readを含めて安全側で拒否する。</li>
-      <li>型と永続の制約は <a href="schemas.md">schemas.md</a>、エンドポイントとstatus/errorは <a href="api.md">api.md</a>、profile gateは <a href="runtime_parameter_registry.md">runtime_parameter_registry.md</a>、実装と検証の履歴は <code>01_Plans/issues/done/issue-SAAS-TENANT-01-tenant-context-and-storage-foundation.md</code> を正本とする。</li>
+      <li>独立したプロファイルの <code>saas-multitenant</code> では、AuthContextに加えて、検証済みのTenantContextと有効なTenantMembershipを、リクエストごとに必ず解決する。不完全なデプロイの構成は、起動前に拒否する。</li>
+      <li><strong>テナントの一致はアプリ本体の不変条件とし、外部のPDPへ委譲しない。</strong>ロールとグループの意味の評価だけを、AccessControlAdapterへ委譲する。</li>
+      <li>テナントに従属するデータは、DBの複合制約とDB側のテナントガードで分離する。キャッシュ、ジョブ、監査など現存する利用側も、テナントとセッションの世代で分離する。MCPは、テナントに束縛された認証情報がない間は <code>saas-multitenant</code> を起動前に拒否し、クライアントが入力したtenantIdでは代替しない。</li>
+      <li>ワークスペースのデータ面、テナント管理、プラットフォームの制御面は、ルート、認証のオーディエンス、ケイパビリティを分離する。プラットフォームの運用権限から、文書の読み取りを暗黙に導き出さない。</li>
+      <li>テナントが不明または不一致のとき、メンバーシップが停止しているとき、PDPやアダプタに障害があるとき、DBのガードが成立しないときは、読み取りを含めて安全側で拒否する。</li>
+      <li>型と永続の制約は <a href="schemas.md">schemas.md</a>、エンドポイントとステータス、エラーは<a href="api.md">api.md</a>、プロファイルのゲートは<a href="runtime_parameter_registry.md">runtime_parameter_registry.md</a>、実装と検証の履歴は <code>01_Plans/issues/done/issue-SAAS-TENANT-01-tenant-context-and-storage-foundation.md</code> を正本とする。</li>
     </ul>
   </section>
 
@@ -406,7 +406,7 @@ flowchart LR
         <li>自動最適配置（正解クラスタ提示）</li>
       </ul>
     </div>
-    <p style="font-size:12.5px; line-height:1.75; color:#6b7280; margin:16px 0 0;"><strong>形成履歴（参考）:</strong> 2026-05-04のinterface-onlyのbaselineとStream Bの反映メモは、現行の契約と誤認されないよう、<a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">Architecture contract-freeze formation history</a> へ分離した。現行の責務境界は本書、型は <a href="schemas.md">schemas.md</a>、エンドポイントとstatus/errorは <a href="api.md">api.md</a> を正本とする。</p>
+    <p style="font-size:12.5px; line-height:1.75; color:#6b7280; margin:16px 0 0;"><strong>形成履歴（参考）</strong>　2026-05-04のインターフェースのみのベースラインとStream Bの反映メモは、現行の契約と誤認されないよう、<a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">Architecture contract-freeze formation history</a> へ分離した。現行の責務境界は本書、型は <a href="schemas.md">schemas.md</a>、エンドポイントとステータス、エラーは<a href="api.md">api.md</a>を正本とする。</p>
   </section>
 
 </main>

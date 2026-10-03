@@ -1,7 +1,7 @@
 # 概要
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md` である。本書には必要最小限だけを書き、追加や改名のときは正本を先に更新する。
-本書は、ADR-0009のPhase Bを完了させるため、次の項目を定義する。決定論的なKJ入力の正規化、LLMを使わないグラフの前処理、厳密なLLM入力IRのスキーマ、切り詰めの動作、fixture生成の検証手順、安全性とプライバシーの整合チェックである。
+本書は、ADR-0009のPhase Bを完了させるため、次の項目を定義する。決定論的なKJ入力の正規化、LLMを使わないグラフの前処理、厳密なLLM入力IRのスキーマ、切り詰めの動作、フィクスチャ生成の検証手順、安全性とプライバシーの整合チェックである。
 
 # llm_input_ir_spec: LLM投入IR仕様（ADR-0009 Phase B 完了）
 
@@ -10,7 +10,7 @@
 
 > **現行の `ir_version` は `1.2`**（2026-08-30、`cards[*].hold_state` を加算）。1.1は、同日の `ADR-0069` D1=B / D2=A / D3=A / D4=A を反映した版である。版数を判断した根拠と、各版の差分は、§7.4を参照。
 
-> CE1 Context foundation integration note: `ContextQuery` / `ContextBundle` の契約固定（`previewConfirmed` 必須、canonical hash）は、`02_Architecture/api.md` と `01_Plans/issues/done/issue-CE1-context-query-bundle-foundation.md` を正本とする。本書では、IRと接続するときの整合条件だけを規定する。
+> CE1のContext基盤との統合メモ: `ContextQuery` / `ContextBundle` の契約固定（`previewConfirmed` 必須、正準ハッシュ）は、`02_Architecture/api.md` と `01_Plans/issues/done/issue-CE1-context-query-bundle-foundation.md` を正本とする。本書では、IRと接続するときの整合条件だけを規定する。
 
 ---
 
@@ -27,7 +27,7 @@
 ### 0.2 対象外
 
 1. LLMの出力スキーマ（`LLMRequest.output_schema` の中身）の設計。
-2. プロバイダのtransport実装（HTTP / IPC / in-process）の選定。
+2. プロバイダのトランスポートの実装（HTTP / IPC / in-process）の選定。
 3. エスカレーションを有効にする手順そのもの（`02_Architecture/llm_escalation_policy.html` の領域）。
 4. 画像・音声・バイナリの添付の取り扱い。
 
@@ -43,14 +43,14 @@
 
 ## 1. 用語と識別子
 
-- **canonical card id**: `Card.id` の正規ID。
+- **正準のカードID**: `Card.id` の正規ID。
 - **relation id**: `"<type>:<fromId>:<toId>"`（文字列の連結）で、決定論的に生成する。
 - **negation relation**: `relations[*].type == "negate"`。
 - **関係型の語彙（AI-REL-VOCAB-DRIFT-01 / ADR-0069 D2=A）**: `relations[*].type` は、キャンバスの語彙5値 `related | negate | causal | mutual | equivalence` に統一する。IR独自の `arrow`（因果か方向か曖昧）は `causal` へ、綴り違いの `negation` は `negate` へ写像する。バックエンドだけにある `unknown`（未分類）は、IRに含めない。逆方向（IRからキャンバス）の写像は行わない。
 - **IR**: `LLMRequest.inputs` に格納するJSON。
 - **structured text only**: JSONで表現できる文字列・数値・配列・オブジェクトだけを許可し、バイナリを禁止する。
-- **queryCanonicalHash**: canonical化した `ContextQuery` から算出する、sha256の16進小文字。
-- **bundleHash**: canonical化した `ContextBundle` から算出する、sha256の16進小文字。
+- **queryCanonicalHash**: 正準化した `ContextQuery` から算出する、sha256の16進小文字。
+- **bundleHash**: 正準化した `ContextBundle` から算出する、sha256の16進小文字。
 
 ---
 
@@ -60,8 +60,8 @@
 
 1. `previewConfirmed != true` の `ContextQuery` から、IRの生成を始めてはならない（APIは `422 preview_required` を返す前提）。
 2. `queryCanonicalHash` と `bundleHash` は、IRのメタデータに監査キーとして保持できなければならない。
-3. IRの生成パイプラインは、同じcanonical queryに対する `bundleHash` の不一致を検知したら、`nondeterministic_bundle` として失敗扱いにする。
-4. CE2/CE4との連携では、バックエンドが未実装のときも、mockの `ContextQuery/ContextBundle` 契約で検証を続け、CE1の完了を待つことを禁止する。
+3. IRの生成パイプラインは、同じ正準queryに対する `bundleHash` の不一致を検知したら、`nondeterministic_bundle` として失敗扱いにする。
+4. CE2/CE4との連携では、バックエンドが未実装のときも、モックの `ContextQuery/ContextBundle` 契約で検証を続け、CE1の完了を待つことを禁止する。
 5. 実行の順序は `Plan -> Execute -> Verify -> Proceed` に固定し、`Proceed` では、CE2/CE4への参照専用の引き継ぎだけを許可する。
 6. Verifyが失敗したときの自己修復は最大3回までとし、3回を超えたら、処理を続けずに停止する（安全側で拒否する）。
 7. `ContextQuery/ContextBundle` は、CE1 v1の最小I/F以外の未定義キーを受理してはならない（拡張は、v2契約の改訂でのみ許可する）。
@@ -78,14 +78,14 @@
 
 ### CE1 A2 Stub Contract Profile（検証用）
 
-CE1のIR接続の検証（A2）では、バックエンドの完了を待つことを禁止し、次のstub contractを最小のプロファイルとして固定する。
+CE1のIR接続の検証（A2）では、バックエンドの完了を待つことを禁止し、次のスタブの契約を最小のプロファイルとして固定する。
 
 - `POST /context/query`
-  - request: `ContextQueryV1`（closed-world、未定義キーは禁止）
+  - リクエスト: `ContextQueryV1`（closed-world、未定義キーは禁止）
   - success: `200 { accepted: true, queryCanonicalHash }`
   - error: `422 preview_required` / `400 unknown_contract_key`
 - `POST /context/bundle`
-  - request: `{ query: ContextQueryV1, stubDatasetId: "A2-minimal-v1" }`
+  - リクエスト: `{ query: ContextQueryV1, stubDatasetId: "A2-minimal-v1" }`
   - success: `200 ContextBundleV1 + queryCanonicalHash`
   - error: `409 nondeterministic_bundle` / `400 unknown_contract_key`
 
@@ -99,20 +99,20 @@ CE1のContract作業では、次の順序を固定し、逆順にすることも
 2. Phase 2 ADR CDC
 3. Phase 3 Plan（AC/DoDの提案への合意を先に確定する）
 4. Phase 4 Execute（契約の固定: `ContextQuery` / `ContextBundle` / `bundleHash` / `previewConfirmed`）
-5. Phase 5 Verify（preview gate + 決定論hash。自己修復は3回まで）
-6. Phase 6 Proceed（参照専用のhandoff）
+5. Phase 5 Verify（プレビューのゲート + 決定論hash。自己修復は3回まで）
+6. Phase 6 Proceed（参照専用の引き渡し）
 
 Phase 5 Verifyは、最低限、次の機械判定を満たすこと。
 
 - `previewConfirmed=false -> 422 preview_required`
-- 同じcanonical queryを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致
+- 同じ正準queryを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致
 - 未定義のキーは、常に `400 unknown_contract_key`
 
-Phase 6 Proceedでは、CE2/CE4への参照専用の連携だけを許可し、実装の変更の要求を禁止する。CE2/CE4は、mock契約で依存を切り離したまま進め、CE1の完了を待つことを禁止する。
+Phase 6 Proceedでは、CE2/CE4への参照専用の連携だけを許可し、実装の変更の要求を禁止する。CE2/CE4は、モック契約で依存を切り離したまま進め、CE1の完了を待つことを禁止する。
 
-A2 contract testでは、次を機械判定する。
+A2の契約テストでは、次を機械判定する。
 
-1. 同じcanonical queryを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致。
+1. 同じ正準queryを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致。
 2. `previewConfirmed=false` は、常に `422 preview_required`。
 3. 未定義のキーは、常に `400 unknown_contract_key`。
 4. CE2連携のキー `sourceBundleHash === bundleHash` を比較できる。
@@ -125,9 +125,9 @@ A2 contract testでは、次を機械判定する。
 
 - 本仕様でのCE1の責務は **契約の固定だけ** とし、実装の詳細（handler/UI/DB/worker）は追加しない。
 - `ContextQueryV1` / `ContextBundleV1` は、closed-worldのv1を維持し、未定義のキーは常に `400 unknown_contract_key` とする。
-- preview gateは `previewConfirmed=false -> 422 preview_required` に固定し、IRの生成を始めない。
-- hashの決定性は、同じcanonical queryで `queryCanonicalHash` / `bundleHash` が3/3一致することを要件とし、不一致は `409 nondeterministic_bundle` とする。
-- CE2/CE4は、mock-firstで依存の切り離しを維持し、CE1の実装を待つことを禁止する（contract handoffだけで前進する）。
+- プレビューのゲートは `previewConfirmed=false -> 422 preview_required` に固定し、IRの生成を始めない。
+- hashの決定性は、同じ正準queryで `queryCanonicalHash` / `bundleHash` が3/3一致することを要件とし、不一致は `409 nondeterministic_bundle` とする。
+- CE2/CE4は、mock-firstで依存の切り離しを維持し、CE1の実装を待つことを禁止する（契約の引き渡しだけで前進する）。
 
 ## 2. KJ入力の正規化（固定仕様）
 
@@ -154,12 +154,12 @@ A2 contract testでは、次を機械判定する。
    - 連続する空白を、1つのスペースへ畳み込む
    - 前後の空白を除去する
 4. `char_len` は、`text_norm` の文字数とする。
-5. 同じ `id` が複数ある場合は、入力不正としてrejectする。
+5. 同じ `id` が複数ある場合は、入力不正として拒否する。
 6. **正規化後の並び順は `id` の昇順**とする（ir_version 1.1で明文化）。入力配列の順序に依存しないため、カードを並べ替えただけの文書からも、同じ `llm_ir.json` が得られる（§6の検証の成功条件「同じ `document.json` から常に同じ `llm_ir.json`」を、入力のわずかな差分に対しても成立させる）。
-7. 正規化した後に、`text` または `text_norm` が空文字になるカードは、rejectする（§4.2が `minLength: 1` を課しているため、空のままではIRへ入れられない）。
+7. 正規化した後に、`text` または `text_norm` が空文字になるカードは、拒否する（§4.2が `minLength: 1` を課しているため、空のままではIRへ入れられない）。
 8. **`hold_state`（ir_version 1.2で追加）**: `DocumentV1.cards[*].holdState`（`schemas.md` §14.1）を投影する。値は、`held` / `pending` / `shelved` の3値だけとする。
-   - **値を持たないカードでは、キーごと省略する**（`null` は書かない）。省略は「保留していない通常のカード」を表す符号化であり、`schemas.md` §14.1の「欠落時は従来の挙動」と一致する。`islands`（§2.2A）が `null` を明示するのとは扱いが異なる。島では「タイトル未設定」と「タイトル欠落」を区別する必要があるが、カードのhold状態には、区別すべき第2の欠落状態がない。また、全カードへ `"hold_state": null` を書くのは、毎回のリクエストのトークン費用に見合わない。
-   - 3値以外の値はrejectせず、**除外**する（キーの省略として扱う）。§2.3の規則6が未知の関係型を除外するのと同じ理由による。未知のhold状態は、IRが使える構造を持たないが、それによって、正常な文書を投影できなくしてはならない。
+   - **値を持たないカードでは、キーごと省略する**（`null` は書かない）。省略は「保留していない通常のカード」を表す符号化であり、`schemas.md` §14.1の「欠落時は従来の挙動」と一致する。`islands`（§2.2A）が `null` を明示するのとは扱いが異なる。島では「タイトル未設定」と「タイトル欠落」を区別する必要があるが、カードの保留状態には、区別すべき第2の欠落状態がない。また、全カードへ `"hold_state": null` を書くのは、毎回のリクエストのトークン費用に見合わない。
+   - 3値以外の値は拒否せず、**除外**する（キーの省略として扱う）。§2.3の規則6が未知の関係型を除外するのと同じ理由による。未知の保留状態は、IRが使える構造を持たないが、それによって、正常な文書を投影できなくしてはならない。
    - **意味**: 3値はいずれも、「人間が意図的に判断を保留したり、退避させたりした」ことの記録である。IRを消費する側は、この状態のカードを、**新規のグループや島の構成員として提案してはならない**（`AI-IR-PROJECTION-01` AC-2）。既存の島の構成員として `islands[*].card_ids` に現れることは妨げない（既に決まった構造であり、提案ではない）。
    - AIが、この値を書き換えたり、昇格させたりしてはならない（§2.2Aの規則6の `review_state` と同じ扱い）。
 
@@ -185,7 +185,7 @@ A2 contract testでは、次を機械判定する。
    - 正規化した後 `x = round(x - cx, 3)`, `y = round(y - cy, 3)`
 3. `radius = round(sqrt(x^2 + y^2), 3)`。
 4. `angle_deg = round(atan2(y, x) * 180 / pi, 3)`（範囲は -180.000..180.000）。
-5. `card_id` が `cards.id` に存在しなければ、rejectする。
+5. `card_id` が `cards.id` に存在しなければ、拒否する。
 6. **座標を渡す場合は、必ず本節の正規化を経る。** 生の絶対座標を、IRへ入れてはならない。
 
 #### 2.2.1 エンドポイント別の座標の要否（ADR-0069 D1=B）
@@ -218,7 +218,7 @@ A2 contract testでは、次を機械判定する。
 
 規則は次のとおりです。
 
-1. `id` は、空文字を禁止する。`id` が重複したらreject。
+1. `id` は、空文字を禁止する。`id` が重複したら拒否する。
 2. `card_ids` は、`cards.id` に存在するものだけを残し、昇順にソートする。存在しないIDは、黙って除外する（§5の切り詰めで除外されたカードを、島が参照しうるため）。
 3. **カードから島への一意化の規則は「先勝ち」**とする（`issue-DOMAIN-ISLAND-MEMBERSHIP-01` の暫定規則）。複数の島の `cardIds` に同時に現れるカードは、**入力配列の先頭から見て最初に一致した島にだけ**帰属させ、後続の島の `card_ids` からは除外する。これは読み取り側の投影の規則であり、書き込み側が重複して所属させることを禁止するものではない。
 4. `parent_island_id` は、他の島の `id` に存在しなければ `null` にする（孤立した参照を、IRへ持ち込まない）。
@@ -270,14 +270,14 @@ A2 contract testでは、次を機械判定する。
 1. `from`, `to` は、`cards.id` に存在すること。
 2. `type` は、列挙値だけを許可する。
 3. 重複判定のキー `(from, to, type)` が重複した場合は、1件に重複排除する。
-4. 自己ループ（`from == to`）は、`negate` 以外ならrejectする。
+4. 自己ループ（`from == to`）は、`negate` 以外なら拒否する。
 5. 正規化した後の並び順は、`(type, from, to)` の昇順とする。
-6. **`DocumentV1.edges` からの投影規則（ir_version 1.1で明文化）**: 次のいずれかに該当する辺は、rejectではなく**除外**する（IRは「カード間の論理関係」のIRであり、それ以外の辺は表現の対象外であるため）。
+6. **`DocumentV1.edges` からの投影規則（ir_version 1.1で明文化）**: 次のいずれかに該当する辺は、拒否ではなく**除外**する（IRは「カード間の論理関係」のIRであり、それ以外の辺は表現の対象外であるため）。
    - `fromKind` または `toKind` が `"island"` の辺（島と島のあいだの派生辺は、`islands` の階層で表現する）。
    - `type` が5値の語彙のいずれでもない辺（バックエンドだけにある `unknown` を含む。D2=Aの決定により、IRには含めない）。
    - `from` / `to` が `cards` に存在しない辺。
    
-   上記に該当しない辺のうち、規則1〜5に違反するもの（`negate` 以外の自己ループなど）は、規則どおりrejectする。
+   上記に該当しない辺のうち、規則1〜5に違反するもの（`negate` 以外の自己ループなど）は、規則どおり拒否する。
 
 ### 2.4 meta
 
@@ -328,7 +328,7 @@ A2 contract testでは、次を機械判定する。
 2. spatial-basedの候補: 座標の距離による近傍グラフ（k=3）で連結な集合を、列挙する。`coordinates` がないIR（§2.2.1で非要求のエンドポイント）では、spatialの候補を生成しない。
 3. 同じ `card_ids` は、`basis` を統合して1件にする（`relation` を優先する）。
 4. `score` は、`round(min(1.0, density + cohesion) / 2, 4)` とする。
-   - `score` は、relation/spatialのグラフの**構造上の密度と凝集度を再現するための、内部の診断値**であり、カード内容の意味的な類似度、重要度、確信度、採用の順位ではない。IRや監査には保持できるが、AIのpromptや利用者向けの候補へ数値として露出し、semantic authorityへ読み替えてはならない（`ADR-0090`）。
+   - `score` は、relation/spatialのグラフの**構造上の密度と凝集度を再現するための、内部の診断値**であり、カード内容の意味的な類似度、重要度、確信度、採用の順位ではない。IRや監査には保持できるが、AIのプロンプトや利用者向けの候補へ数値として露出し、semantic authorityへ読み替えてはならない（`ADR-0090`）。
 
 **ir_version 1.1での明文化**（AC-2「曖昧な語なし」を満たすため。1.0は、`density` / `cohesion` / `cluster_id` の採番順と、候補の粒度を定義しておらず、決定論的に再現できなかった）。
 
@@ -672,44 +672,44 @@ A2 contract testでは、次を機械判定する。
 上限を超えたときは、次を上から順に適用し、各段階で上限内に収まったかを判定する。
 
 1. `cluster_candidates` を全削除する（任意のフィールドであるため）。
-2. `centrality.rank` が低位のカードから、カードを除外する。ただし、callerがroute契約上の必須の対象として `required_card_ids` を明示した場合は、その集合を先に保持し、残りの枠だけを、中心性の順位で埋める。
+2. `centrality.rank` が低位のカードから、カードを除外する。ただし、呼び出し側がルート契約上の必須の対象として `required_card_ids` を明示した場合は、その集合を先に保持し、残りの枠だけを、中心性の順位で埋める。
 3. 除外したカードに接続するrelationを、除外する。
 4. それでも超過する場合は、`text` を `text_norm` の先頭240文字へ、固定で切り詰める。
 
 **ir_version 1.1での明文化**（AC-3「同じ入力から同じ切り詰め結果」を、機械的に満たすため。1.0は、各段階の対象・順序・参照整合の扱いが未定義であった）。
 
 5. 判定は、切り詰める前の値で、1度だけ行う。`over_cards = len(cards) > MAX_CARDS`、`over_relations = len(relations) > MAX_RELATIONS`、`over_text = sum(char_len) > MAX_TEXT_CHARS`。いずれかが真なら、段階1を実施する。
-6. 段階2の「低位」は、§3.2の `rank` が**大きい**方（中心性が低い方）である。除外の順序を決める `rank` は、**切り詰める前の全カードの集合に対して1度だけ**算出し、以後の全段階でその値を使う（段階ごとに再計算すると、除外の順が入力の規模に依存して揺れる）。`required_card_ids` が空なら、従来どおり `rank <= MAX_CARDS` のカードだけを残す。required集合がある場合は、requiredのカードを先に保持し、`MAX_CARDS - len(required_card_ids)` の残りの枠を、`rank` の小さい順に埋める。理由コードは `MAX_CARDS`。
+6. 段階2の「低位」は、§3.2の `rank` が**大きい**方（中心性が低い方）である。除外の順序を決める `rank` は、**切り詰める前の全カードの集合に対して1度だけ**算出し、以後の全段階でその値を使う（段階ごとに再計算すると、除外の順が入力の規模に依存して揺れる）。`required_card_ids` が空なら、従来どおり `rank <= MAX_CARDS` のカードだけを残す。必須集合がある場合は、必須のカードを先に保持し、`MAX_CARDS - len(required_card_ids)` の残りの枠を、`rank` の小さい順に埋める。理由コードは `MAX_CARDS`。
    - IRへ出力する `graph_summary` と `cluster_candidates` は、**全段階の除外を終えた後の集合に対して算出する**。除外の順の根拠に使う `rank`（切り詰める前）と、出力する `centrality`（切り詰めた後）は別のものである。こうしないと、`graph_summary` がIRに存在しないカードを参照し、IRが参照として閉じなくなる。
-7. 段階3では、除外したカードを参照する `coordinates` / `islands[*].card_ids` / `evidence_links` も、同時に除外する（参照整合を、IR内で保つ）。島は、`card_ids` が空になっても保持する（§2.2Aの規則7）。required cardどうしを結ぶrelationとevidence linkも、カードを除外する段階では、両端点が残る限り保持される。relationの件数の上限に対する保護は、規則8と§5.2.2に従う。
-8. 段階3の後も、なお `len(relations) > MAX_RELATIONS` の場合は、callerが `required_relation_ids` を指定していれば、その正規化済みのrelationを先に保持し、残りの枠を、`(type, from, to)` の昇順で、requiredでないrelationで埋める。required集合が空なら、従来どおり `(type, from, to)` の昇順で、先頭から `MAX_RELATIONS` 件だけを残す。理由コードは `MAX_RELATIONS`。
+7. 段階3では、除外したカードを参照する `coordinates` / `islands[*].card_ids` / `evidence_links` も、同時に除外する（参照整合を、IR内で保つ）。島は、`card_ids` が空になっても保持する（§2.2Aの規則7）。必須カードどうしを結ぶrelationと根拠リンクも、カードを除外する段階では、両端点が残る限り保持される。relationの件数の上限に対する保護は、規則8と§5.2.2に従う。
+8. 段階3の後も、なお `len(relations) > MAX_RELATIONS` の場合は、呼び出し側が `required_relation_ids` を指定していれば、その正規化済みのrelationを先に保持し、残りの枠を、`(type, from, to)` の昇順で、必須でないrelationで埋める。必須集合が空なら、従来どおり `(type, from, to)` の昇順で、先頭から `MAX_RELATIONS` 件だけを残す。理由コードは `MAX_RELATIONS`。
 9. 段階4では、`text` だけでなく `text_norm` も `text_norm[:240]` に揃え、`char_len = len(text_norm)` を再計算する。`char_len` を据え置くと、`sum(char_len)` が減らず、上限の判定が永久に成立しない。理由コードは `MAX_TEXT_CHARS`。
-10. 段階4の後も、なお `sum(char_len) > MAX_TEXT_CHARS` の場合は、`rank` が大きいカードから1枚ずつ除外し（そのたびに、段階3と同じ参照整合の除外を行う）、上限内へ収める。required cardは、この追加の除外の候補にしてはならない。required card以外をすべて除外しても `MAX_TEXT_CHARS` に収まらない場合は、`required_card_budget_exceeded` で安全側で拒否し、route必須の意味を黙って削除しない。required指定がない場合は、従来どおりカードを最低1枚残す（§4.2の `cards.minItems = 1`）。理由コードは `MAX_TEXT_CHARS` のままとする（新しいtruncationの理由コードは増やさない）。
+10. 段階4の後も、なお `sum(char_len) > MAX_TEXT_CHARS` の場合は、`rank` が大きいカードから1枚ずつ除外し（そのたびに、段階3と同じ参照整合の除外を行う）、上限内へ収める。必須カードは、この追加の除外の候補にしてはならない。必須カード以外をすべて除外しても `MAX_TEXT_CHARS` に収まらない場合は、`required_card_budget_exceeded` で安全側で拒否し、ルート必須の意味を黙って削除しない。必須指定がない場合は、従来どおりカードを最低1枚残す（§4.2の `cards.minItems = 1`）。理由コードは `MAX_TEXT_CHARS` のままとする（新しい切り詰めの理由コードは増やさない）。
 
 ### 5.2.1 route契約上の必須カード（`required_card_ids`）
 
-`required_card_ids` は、callerが「このAI操作の対象そのもの」として明示したカードを、汎用的な中心性の順位による切り詰めから保護するための、**IRビルダーへの入力専用の制約**である。AIやIRビルダーが、重要そうなカードを推測して追加する仕組みではない。
+`required_card_ids` は、呼び出し側が「このAI操作の対象そのもの」として明示したカードを、汎用的な中心性の順位による切り詰めから保護するための、**IRビルダーへの入力専用の制約**である。AIやIRビルダーが、重要そうなカードを推測して追加する仕組みではない。
 
 1. `required_card_ids` は、IRへ直列化しない。§4.2のJSON Schemaに、新しいフィールドを追加するものではない。
-2. required集合は、正規化済みの `cards.id` の部分集合でなければならない。欠落したIDを含む場合は、`required_card_missing` で安全側で拒否する。失敗の応答へ、欠落したIDそのものを反射してはならない。
-3. required集合の件数が `MAX_CARDS` を超える場合は、`required_card_budget_exceeded` で安全側で拒否する。
-4. required集合の入力順は、選別の結果へ影響させない。同じ入力と同じrequired集合からは、required IDの列挙順が異なっても、同じIRを生成する。
-5. required集合が空の場合、§5.2の切り詰めの結果は、本規則を追加する前と同一でなければならない。既存fixtureのcanonical JSON / SHA-256を変えてはならない。
-6. 現時点で `POST /ai/detect-contradiction` は、`cardA.id` / `cardB.id` をrequired集合として渡す。この2枚と、その両端点に対応する `confirmed` / `held` の `evidence_links` は、人間が既に下した判断を再提案しないための、route固有の必要な意味である。
-7. `POST /ai/generate-narrative` は、正規化の対象となるcard-to-cardの `causal` / `negate` relationの両端点を、required cardとして渡す。さらに、relation自体も§5.2.2の `required_relation_ids` として渡し、端点だけが残って論理的な接続が失われる状態を許可しない。
+2. 必須集合は、正規化済みの `cards.id` の部分集合でなければならない。欠落したIDを含む場合は、`required_card_missing` で安全側で拒否する。失敗の応答へ、欠落したIDそのものを反射してはならない。
+3. 必須集合の件数が `MAX_CARDS` を超える場合は、`required_card_budget_exceeded` で安全側で拒否する。
+4. 必須集合の入力順は、選別の結果へ影響させない。同じ入力と同じ必須集合からは、必須IDの列挙順が異なっても、同じIRを生成する。
+5. 必須集合が空の場合、§5.2の切り詰めの結果は、本規則を追加する前と同一でなければならない。既存のフィクスチャの正準JSON / SHA-256を変えてはならない。
+6. 現時点で `POST /ai/detect-contradiction` は、`cardA.id` / `cardB.id` を必須集合として渡す。この2枚と、その両端点に対応する `confirmed` / `held` の `evidence_links` は、人間が既に下した判断を再提案しないための、ルート固有の必要な意味である。
+7. `POST /ai/generate-narrative` は、正規化の対象となるcard-to-cardの `causal` / `negate` relationの両端点を、必須カードとして渡す。さらに、relation自体も§5.2.2の `required_relation_ids` として渡し、端点だけが残って論理的な接続が失われる状態を許可しない。
 
 ### 5.2.2 route契約上の必須relation（`required_relation_ids`）
 
-`required_relation_ids` は、callerが「このAI操作の論理的な接続そのもの」として明示した、正規化済みのrelationを、汎用的な件数による切り詰めから保護するための、**IRビルダーへの入力専用の制約**である。relationの重要度を、AIやIRビルダーが推測する仕組みではない。
+`required_relation_ids` は、呼び出し側が「このAI操作の論理的な接続そのもの」として明示した、正規化済みのrelationを、汎用的な件数による切り詰めから保護するための、**IRビルダーへの入力専用の制約**である。relationの重要度を、AIやIRビルダーが推測する仕組みではない。
 
 1. `required_relation_ids` は、IRへ直列化しない。relation IDは、§2.3の正規化した後のID（`<type>:<fromId>:<toId>`）で指定する。
-2. required集合は、正規化済みの `relations.id` の部分集合でなければならない。欠落したIDを含む場合は、`required_relation_missing` で安全側で拒否し、失敗の応答へ、欠落したIDそのものを反射してはならない。
-3. required集合の件数が `MAX_RELATIONS` を超える場合は、`required_relation_budget_exceeded` で安全側で拒否する。
-4. required relationの両端点は、自動的に `required_card_ids` と同じ保護集合へ加える。これにより、relationを保持しながら端点のカードだけを切り落とすことを、禁止する。結果として、必要な端点が `MAX_CARDS` を超える場合は、`required_card_budget_exceeded` で安全側で拒否する。
-5. relationの件数が `MAX_RELATIONS` を超える場合は、required relationを先に全件保持し、残りの枠を、正規化済みの `(type, from, to)` の昇順で埋め、最終的な配列も同じ順に再整列する。
-6. required集合の入力順は、選別の結果へ影響させない。同じ入力と同じrequired集合からは、同じIRを生成する。
-7. required集合が空の場合、relationの切り詰めの結果は、本規則を追加する前と同一でなければならない。既存fixtureのcanonical JSON / SHA-256を変えてはならない。
-8. `POST /ai/generate-narrative` は、§2.3で正規化できるcard-to-cardの `causal` / `negate` relationを、required集合として渡す。required relationが `MAX_RELATIONS` を超える場合は、B型の文章化に使う論理の骨格を、部分的に送信せず、安全側で拒否する。
+2. 必須集合は、正規化済みの `relations.id` の部分集合でなければならない。欠落したIDを含む場合は、`required_relation_missing` で安全側で拒否し、失敗の応答へ、欠落したIDそのものを反射してはならない。
+3. 必須集合の件数が `MAX_RELATIONS` を超える場合は、`required_relation_budget_exceeded` で安全側で拒否する。
+4. 必須relationの両端点は、自動的に `required_card_ids` と同じ保護集合へ加える。これにより、relationを保持しながら端点のカードだけを切り落とすことを、禁止する。結果として、必要な端点が `MAX_CARDS` を超える場合は、`required_card_budget_exceeded` で安全側で拒否する。
+5. relationの件数が `MAX_RELATIONS` を超える場合は、必須relationを先に全件保持し、残りの枠を、正規化済みの `(type, from, to)` の昇順で埋め、最終的な配列も同じ順に再整列する。
+6. 必須集合の入力順は、選別の結果へ影響させない。同じ入力と同じ必須集合からは、同じIRを生成する。
+7. 必須集合が空の場合、relationの切り詰めの結果は、本規則を追加する前と同一でなければならない。既存のフィクスチャの正準JSON / SHA-256を変えてはならない。
+8. `POST /ai/generate-narrative` は、§2.3で正規化できるcard-to-cardの `causal` / `negate` relationを、必須集合として渡す。必須relationが `MAX_RELATIONS` を超える場合は、B型の文章化に使う論理の骨格を、部分的に送信せず、安全側で拒否する。
 
 ### 5.3 記録
 
@@ -727,7 +727,7 @@ A2 contract testでは、次を機械判定する。
 3. 本仕様の3章の前処理規則を適用して、`graph_features.json` を生成する。
 4. 本仕様の4章のschemaに従って、`llm_ir.json`（= `LLMRequest.inputs`）を生成する。
 5. 本仕様の5章の上限チェックと切り詰めを適用する。
-6. `llm_ir.json` を、fixture keyの唯一の入力として、FixtureProviderの応答を引き当てる。
+6. `llm_ir.json` を、フィクスチャのキーの唯一の入力として、FixtureProviderの応答を引き当てる。
 7. 回帰テストは、`llm_ir.json` のハッシュ（SHA-256）の一致で、前段の再現性を判定する。
 
 検証の成功条件は次のとおりです。
@@ -746,7 +746,7 @@ A2 contract testでは、次を機械判定する。
 
 ファイル名には、版数を含めない（1.1から1.2への繰り上げのたびに改名すると、参照元が増える一方であるため。版数は、期待ファイル内の `irVersion` フィールドが持つ）。
 
-`llm_ir.json` のハッシュは、canonical JSON（キーの辞書順・UTF-8・空白なし・`ensure_ascii=false`）のSHA-256の16進小文字とする（§9.2の `bundleHash` の算出規則と同じ正規化を、IRへ適用したもの）。再生成コマンドは、この仕様の実装を通すだけであり、LLMも外部プロバイダも呼ばない。
+`llm_ir.json` のハッシュは、正準JSON（キーの辞書順・UTF-8・空白なし・`ensure_ascii=false`）のSHA-256の16進小文字とする（§9.2の `bundleHash` の算出規則と同じ正規化を、IRへ適用したもの）。再生成コマンドは、この仕様の実装を通すだけであり、LLMも外部プロバイダも呼ばない。
 
 ---
 
@@ -762,7 +762,7 @@ A2 contract testでは、次を機械判定する。
 
 - 本節のチェックは、**既存のAPI境界でのSafeModeの強制（`ADR-0068` / `SEC-AI-SAFEMODE-01` が配線した `_reject_unreviewed_cards` / `_reject_unreviewed_text`）を置き換えるものではなく、それに追加する第二層である**（`ADR-0069`「ADR-0068との関係」）。IR経路を導入する変更が、既存の呼び出しを除去したり弱めたりすることを禁じる。
 - IRビルダーは、投影の対象のカードが、人間のレビュー済みであること（`textReviewed === true`）を、**ビルダー自身で**再検査する。ルート側のガードが将来失われても、IRが未レビューの本文を組み立てないようにするためであり、二重に検査されること自体が目的である。
-- 緩和（`allowUnreviewedText` ＋ profileの許可）が成立している場合に限り、この再検査は通過してよい。ただし、`safe_mode` フラグそのものの緩和は許可しない（`constraints.safe_mode` は `const true`）。
+- 緩和（`allowUnreviewedText` ＋ プロファイルの許可）が成立している場合に限り、この再検査は通過してよい。ただし、`safe_mode` フラグそのものの緩和は許可しない（`constraints.safe_mode` は `const true`）。
 - 失敗は安全側で拒否することとし、API境界では422とする。**失敗の応答に、違反した入力値（カード本文・検出したPIIの断片）を反射してはならない**（`SEC-VALIDATION-LEAK-01` の作法）。
 
 ### 7.2 PII最小化のチェック
@@ -803,14 +803,14 @@ A2 contract testでは、次を機械判定する。
 | `1.1` | 2026-08-30 | D1（`coordinates` の任意化）、D3（`islands` の追加）、`evidence_links` の追加、`meta` をIRのトップレベルへ明記、§3/§5 の計算規則の明文化 | `ADR-0069`, `issue-AI-IR-PROJECTION-01` |
 | `1.2` | 2026-08-30 | `cards[*].hold_state` の追加（§2.1の規則8） | `issue-AI-IR-PROJECTION-01` AC-2（Stage 2: `suggest-card-groups`） |
 
-**2026-09-03の `required_card_ids` の明文化では、版数を上げない。** `required_card_ids` は、IRビルダーへ渡す入力専用の制約であり、§4.2の直列化スキーマへフィールドを追加しない。required指定が空の経路では、従来のcanonical JSON / SHA-256を維持し、required指定がある経路でも、変わるのは、既存フィールドの部分集合を選ぶ規則だけである。このため、消費する側が `ir_version` で判別すべき新しいIR表現は生じず、現行の `1.2` を維持する。根拠は `AI-IR-FOCUS-PRESERVATION-01` とする。
+**2026-09-03の `required_card_ids` の明文化では、版数を上げない。** `required_card_ids` は、IRビルダーへ渡す入力専用の制約であり、§4.2の直列化スキーマへフィールドを追加しない。必須指定が空の経路では、従来の正準JSON / SHA-256を維持し、必須指定がある経路でも、変わるのは、既存フィールドの部分集合を選ぶ規則だけである。このため、消費する側が `ir_version` で判別すべき新しいIR表現は生じず、現行の `1.2` を維持する。根拠は `AI-IR-FOCUS-PRESERVATION-01` とする。
 
-**なぜ1.2か（`hold_state` の追加）。** `AI-IR-PROJECTION-01` AC-2は、「`suggest-card-groups` が `holdState` を受け取り、保留中のカードを新規グループへ含めない」ことを要求する。1.1のIRには、カードのhold状態を表す場所がなく、**既存のフィールドでは代替できない**。`islands`（§2.2A）は確定した所属を、`evidence_links`（§2.2B）は根拠と矛盾を、`relations`（§2.3）はカード間の論理関係を表すが、いずれも「このカードの扱いを人間が保留している」という単項の状態を表現できない。IRを迂回して `DocumentV1` を直接読めば実装はできるが、それは `ADR-0069`（IRがAI入力の実際の経路である）の主張そのものを崩す。
+**なぜ1.2か（`hold_state` の追加）。** `AI-IR-PROJECTION-01` AC-2は、「`suggest-card-groups` が `holdState` を受け取り、保留中のカードを新規グループへ含めない」ことを要求する。1.1のIRには、カードの保留状態を表す場所がなく、**既存のフィールドでは代替できない**。`islands`（§2.2A）は確定した所属を、`evidence_links`（§2.2B）は根拠と矛盾を、`relations`（§2.3）はカード間の論理関係を表すが、いずれも「このカードの扱いを人間が保留している」という単項の状態を表現できない。IRを迂回して `DocumentV1` を直接読めば実装はできるが、それは `ADR-0069`（IRがAI入力の実際の経路である）の主張そのものを崩す。
 
 1.1から1.2への変更も**加算的**であり、2.0には当たらない。理由は次のとおりです。
 
 - 任意フィールドの追加だけである。`required` は `["id", "text", "text_norm", "char_len"]` のままで、増やしていない。
-- hold状態を持たないカードではキーが現れないため、hold状態を使っていない文書のIRは、1.1と**バイト単位で同一**である（`ir_version` の値を除く）。
+- 保留状態を持たないカードではキーが現れないため、保留状態を使っていない文書のIRは、1.1と**バイト単位で同一**である（`ir_version` の値を除く）。
 - 既存フィールドの意味・列挙値・計算規則を変更していない。`hold_state` は、§3の前処理（中心性・連結成分・クラスタ候補）にも、§5の切り詰めの順序にも**影響しない**。保留は、人間の見立てであって構造ではないためである（`AGENTS.md` §5のR5判定: `holdState` は「利用者の現在の見立て」の側であり、正規化と不変条件の対象にしない）。
 
 `additionalProperties: false` は維持しているため、1.1を想定した消費側は、`hold_state` を未知のキーとして扱う。消費側は、`ir_version` を見て分岐すること。
@@ -834,7 +834,7 @@ A2 contract testでは、次を機械判定する。
 - エスカレーションの運用: `02_Architecture/llm_escalation_policy.html`。
 - 版数1.1の決定の根拠: `01_Plans/adr/ADR-0069-llm-input-ir-as-the-actual-ai-input-path.md`（D1=B / D2=A / D3=A / D4=A）。
 - 版数1.2（`cards[*].hold_state`）の決定の根拠: `01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md` AC-2と「結果（Stage 2）」の節。`holdState` の意味の正本は、`02_Architecture/schemas.md` §14.1。
-- route必須カードの切り詰めからの保護: `01_Plans/issues/done/issue-AI-IR-FOCUS-PRESERVATION-01-preserve-focus-adjudication-under-truncation.md`。共有IRの実装は `03_Implement/backend/src/sui_sensemaking_api/llm_input_ir.py`、`detect-contradiction` の配線は `03_Implement/backend/src/sui_sensemaking_api/routes/ai.py` を参照する。
+- ルート必須カードの切り詰めからの保護: `01_Plans/issues/done/issue-AI-IR-FOCUS-PRESERVATION-01-preserve-focus-adjudication-under-truncation.md`。共有IRの実装は `03_Implement/backend/src/sui_sensemaking_api/llm_input_ir.py`、`detect-contradiction` の配線は `03_Implement/backend/src/sui_sensemaking_api/routes/ai.py` を参照する。
 - 実装課題: `01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md`。
 - SafeModeの第一層（本仕様の§7.1が置き換えてはならない既存の実装）: `01_Plans/adr/ADR-0068-safemode-enforcement-at-api-boundary.md`, `01_Plans/issues/done/issue-SEC-AI-SAFEMODE-01-safemode-not-enforced-at-api-boundary.md`。
 - カードから島への一意化規則（先勝ち）の出典: `01_Plans/issues/done/issue-DOMAIN-ISLAND-MEMBERSHIP-01-cross-island-cardid-duplicate-detection.md`。
@@ -846,7 +846,7 @@ A2 contract testでは、次を機械判定する。
 ### 9.1 Context
 
 - 本章は、ADR-0028 CE-1の「同じqueryなら同じbundleHash」を機械判定できるようにするため、LLM入力IRの前段の契約を固定する。
-- 本章の契約は、mock実装にも同じように適用し、バックエンドとフロントエンドへの依存を切り離す。
+- 本章の契約は、モック実装にも同じように適用し、バックエンドとフロントエンドへの依存を切り離す。
 
 ### 9.2 Decision
 
@@ -886,22 +886,22 @@ A2 contract testでは、次を機械判定する。
 `bundleHash` の算出規則（固定）は次のとおりです。
 1. 非決定論的なフィールド（timestamp/trace/latency）を除外する。
 2. 配列の順序を固定する（selected=id asc, relations=(type,from,to) asc, evidence=cardId asc, contradictions=(weight desc,id asc)）。
-3. canonical JSON化する（キーの辞書順、UTF-8、空白なし）。
+3. 正準JSONにする（キーの辞書順、UTF-8、空白なし）。
 4. `sha256(canonical_json)` の16進小文字を採用する。
 
 ### 9.3 Consequences
 
 - CE-2以降は、`sourceBundleHash` に `ContextBundle.bundleHash` を必ず連携する。
-- `previewConfirmed=false` は、bundleを生成する前に `422 preview_required` とする（Query Previewのバイパスを禁止する）。
-- 未定義のキーを含むrequestは、`400 unknown_contract_key` としてrejectする（CE1 v1 closed-world）。
-- 同じcanonical queryで `bundleHash` が不一致となる場合は、`409 nondeterministic_bundle` として安全側で拒否する。
+- `previewConfirmed=false` は、バンドルを生成する前に `422 preview_required` とする（Query Previewのバイパスを禁止する）。
+- 未定義のキーを含むリクエストは、`400 unknown_contract_key` として拒否する（CE1 v1 closed-world）。
+- 同じ正準queryで `bundleHash` が不一致となる場合は、`409 nondeterministic_bundle` として安全側で拒否する。
 - `safeModePolicy=strict` かつ `reviewFilter=reviewedOnly` では、未レビューの本文を入力IRへ含めない。
 - 機械判定の式: `canonical(queryA)==canonical(queryB) && hashA==hashB` が真であること。
 - CE4の監査では、`queryId` / `queryCanonicalHash` / `bundleHash` / `excludedReason` の4キーを欠落させてはならない。
 
 #### A2-minimal-v1 ambiguity semantics
 
-`A2-minimal-v1` は、曖昧さを解決済みの事実へ変換しないことも検証する。固定stub内の選択項目、関係、根拠、反対意見は、次の意味情報を持つ。
+`A2-minimal-v1` は、曖昧さを解決済みの事実へ変換しないことも検証する。固定スタブ内の選択項目、関係、根拠、反対意見は、次の意味情報を持つ。
 
 - `claimType` は、既存のドメイン語彙を使い、レビュー済みであっても、仮説を事実として扱わない。
 - `resolutionState="unresolved"` は、利用者による判断がまだ完了していないことを示す。
@@ -909,7 +909,7 @@ A2 contract testでは、次を機械判定する。
 - `autoResolve=false` は、AI、worker、APIが、自動的に解決済みへ変更してはならないことを示す。
 - `safeModePolicy=strict` では、未レビューの本文を `selected` から除外する一方、本文を含まない根拠・反対意見・矛盾の存在は、制約として保持できる。
 
-これらは、`ContextBundleV1` のトップレベルのキーを増やすものではなく、固定stubの意味論を検証するための値である。永続データの状態語彙やレビュー権限を変更する場合は、別のissue/ADRで扱う。
+これらは、`ContextBundleV1` のトップレベルのキーを増やすものではなく、固定スタブの意味論を検証するための値である。永続データの状態語彙やレビュー権限を変更する場合は、別のissue/ADRで扱う。
 
 ---
 
@@ -921,13 +921,13 @@ A2 contract testでは、次を機械判定する。
 ### Decision
 - 本仕様のCE1 Bridge Constraintsは、`CE0-HIL-CONTRACT-SNAPSHOT-2026-04-16-v1` を参照し、次を固定する。
   - `previewConfirmed=true` を必須とする
-  - deterministicな `queryCanonicalHash` / `bundleHash`
+  - 決定論的な `queryCanonicalHash` / `bundleHash`
   - safeModeの後退の禁止
-  - proposal-onlyの境界（direct writeとauto-applyの禁止）
+  - proposal-onlyの境界（直接書き込みとauto-applyの禁止）
 
 ### Consequences
-- Verifyで契約のドリフトを検知した場合は、IRの生成を停止し、Self-Correctionは最大3回とする。
-- 下流はsnapshotの参照だけを可とし、契約の更新は、CE0/A1のissue側でのみ実施する。
+- Verifyで契約のドリフトを検知した場合は、IRの生成を停止し、自己修復は最大3回とする。
+- 下流はスナップショットの参照だけを可とし、契約の更新は、CE0/A1のissue側でのみ実施する。
 
 ### スナップショットのメタデータ
 - Snapshot ID: `CE0-HIL-CONTRACT-SNAPSHOT-2026-04-16-v1`
@@ -938,7 +938,7 @@ A2 contract testでは、次を機械判定する。
 
 本書で扱うCE0/CE1/CE2の契約語彙は、次のとおりに固定する。
 
-- CE0: `safeMode` の後退の禁止 / Consensus direct writeの禁止 / auto-applyの禁止
+- CE0: `safeMode` の後退の禁止 / Consensusへの直接書き込みの禁止 / auto-applyの禁止
 - CE1: `ContextQuery` / `ContextBundle` / `queryCanonicalHash` / `bundleHash` / `previewConfirmed`
 - CE2: `proposal-only` / `proposalId` / `diff` / `sourceBundleHash` / `status` / `reviewState` / `held`
 
@@ -947,39 +947,39 @@ A2 contract testでは、次を機械判定する。
 
 ## CE1 contract freeze sync note（2026-05-06 / Stream B）
 
-- `ContextQueryV1` / `ContextBundleV1` のrequired keyと意味論は、v1の凍結を維持する。
+- `ContextQueryV1` / `ContextBundleV1` の必須キーと意味論は、v1の凍結を維持する。
 - IR生成の前提のゲートとして、`previewConfirmed=true` を必須とし、違反は `422 preview_required` とする。
-- unknown keyは `400 unknown_contract_key`、hashの非決定性は `409 nondeterministic_bundle` として、安全側で拒否する状態を維持する。
-- 同じcanonical queryを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致することの検証を、mock-firstの基準とする。
+- 未知のキーは `400 unknown_contract_key`、hashの非決定性は `409 nondeterministic_bundle` として、安全側で拒否する状態を維持する。
+- 同じ正準queryを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致することの検証を、mock-firstの基準とする。
 
 ## CE1 contract-freeze note（2026-05-07 / Stream B）
 
 - 本仕様は、CE1の `ContextQueryV1` / `ContextBundleV1` を、**contract-only / mock-first** の境界として参照する。
 - IRの生成は、Query Previewの完了後にだけ許可し、`previewConfirmed=false` は `422 preview_required` で停止する。
 - v1はclosed-worldとし、未定義のキーは `400 unknown_contract_key` とする。
-- 同じcanonical queryに対して、`queryCanonicalHash` / `bundleHash` が一致しない場合は、`409 nondeterministic_bundle` として安全側で拒否する。
+- 同じ正準queryに対して、`queryCanonicalHash` / `bundleHash` が一致しない場合は、`409 nondeterministic_bundle` として安全側で拒否する。
 - 本節は実装方式を拘束せず、契約の語彙と検証条件だけを固定する。
 
 ## CE0 Contract Matrix Freeze（CTX / SAFEMODE / REVIEW）
 
 本節は、CE0の契約行列を、IR仕様の上で凍結する。実装の進捗に依存せず、後退できない契約の境界として扱う。
 
-| Contract ID | Domain | Frozen rule | Regression check |
+| 契約ID | 領域 | 凍結する規則 | 回帰の確認 |
 | --- | --- | --- | --- |
-| `CE0-CTX-IF` | CTX | `ContextQuery/ContextBundle` は、preview gate (`previewConfirmed=true`) を満たした場合にだけ、IRの生成を許可する。 | `previewConfirmed=false` は常に `422 preview_required`。 |
-| `CE0-SAFEMODE-IF` | SAFEMODE | safeModeの既定を `ON`（`meta.safe_mode=true`）として必須とし、`reviewFilter=reviewedOnly` を既定の境界として保持する。 | safeModeがOFFの入力、unreviewedの混入、既定値の緩和は、安全側で拒否する。 |
+| `CE0-CTX-IF` | CTX | `ContextQuery/ContextBundle` は、プレビューのゲート (`previewConfirmed=true`) を満たした場合にだけ、IRの生成を許可する。 | `previewConfirmed=false` は常に `422 preview_required`。 |
+| `CE0-SAFEMODE-IF` | SAFEMODE | safeModeの既定を `ON`（`meta.safe_mode=true`）として必須とし、`reviewFilter=reviewedOnly` を既定の境界として保持する。 | safeModeがOFFの入力、未レビューの混入、既定値の緩和は、安全側で拒否する。 |
 | `CE0-REVIEW-IF` | REVIEW | `reviewState` は `unreviewed | human_reviewed` のみ。AIによる自動昇格を禁止する。 | `unreviewed -> human_reviewed` が、人の操作以外の経路で発生したら失敗とする。 |
 
 ### Consensus Graph write boundary（CE0-CG-WRITE-IF）
 
-- `ConsensusGraph` へのdirect writeは禁止する。
+- `ConsensusGraph` への直接書き込みは禁止する。
 - AI/worker/APIは、proposalを生成しても、適用は `patch + approval` だけを許可する。
-- 品質ゲートの実行中に、direct writeの経路を1件でも検知した場合は、検証をただちに停止する。
+- 品質ゲートの実行中に、直接書き込みの経路を1件でも検知した場合は、検証をただちに停止する。
 
 ### Freeze invariants
 
 1. Contract IDの追加・改名・削除は禁止する（重複した定義は0を維持する）。
-2. safeModeの既定ON、unreviewedの保護、Consensus Graphのdirect writeの禁止という3点は、同時に成立することが必須である。
+2. safeModeの既定ON、未レビューの保護、Consensus Graphの直接書き込みの禁止という3点は、同時に成立することが必須である。
 3. 本節で扱う契約は、CE1以降の実装の進捗に依存せず、読み取り専用の参照で運用する。
 
 ## Stream B Bridge Freeze Note（2026-05-17）
@@ -988,13 +988,13 @@ A2 contract testでは、次を機械判定する。
 - 失敗の語彙は、`preview_required` / `unknown_contract_key` / `nondeterministic_bundle` の3種に固定する。
 - A2では、`stubDatasetId=A2-minimal-v1` を唯一の検証データセットとし、実DB・実LLM・workerの経路を無効にする。
 - Verifyでは、`queryCanonicalHash` / `bundleHash` の3/3一致を必須とし、自己修復の上限は3回とする。
-- Proceedは、CE2/CE4への読み取り専用のhandoffだけを許可する。
+- Proceedは、CE2/CE4への読み取り専用の引き渡しだけを許可する。
 
 ## CE1 Stream C sync note（2026-05-17 / I/F-first mock-first）
 
-- Phaseを開始するたびに、`issue-CE1-context-query-bundle-foundation.md` / `schemas.md` / 本書を再度Readし、contract driftを禁止する。
+- Phaseを開始するたびに、`issue-CE1-context-query-bundle-foundation.md` / `schemas.md` / 本書を再度読み込み、契約のドリフトを禁止する。
 - `ContextQueryV1` / `ContextBundleV1` は、v1 closed-worldのまま固定し、未定義のキーを受理しない（`400 unknown_contract_key`）。
-- roundtripの検証は、`stubDatasetId=A2-minimal-v1` に固定して行い、同じcanonical queryを3回実行して、`queryCanonicalHash` と `bundleHash` の3/3一致を必須とする。
+- 往復の検証は、`stubDatasetId=A2-minimal-v1` に固定して行い、同じ正準queryを3回実行して、`queryCanonicalHash` と `bundleHash` の3/3一致を必須とする。
 - `previewConfirmed=false` は、IR生成を開始する前に、必ず `422 preview_required` として安全側で拒否する。
 - CE2/CE4への引き渡しは、読み取り専用とし（`sourceBundleHash === bundleHash` を検証できる最小のキーだけ）、CE1側で実装への依存を追加することを禁止する。
 
@@ -1005,17 +1005,17 @@ A2 contract testでは、次を機械判定する。
 CE2/CE4の進行を、CE1の実装の完了待ちにしないため、IRの境界で、ContextQuery/ContextBundle契約の不変条件を固定する。
 
 ### Decision
-1. **Schema/versioningの固定**
+1. **スキーマとバージョン管理の固定**
    - `ContextQueryV1` / `ContextBundleV1` は、closed-worldとする。
    - v1では、未知のキーを拒否する（`400 unknown_contract_key`）。
    - 契約の変更は、v2の改訂でのみ許可する。
-2. **Truncationの境界の固定**
-   - truncationは、IR payload（`LLMRequest.inputs`）の内側でのみ許可する。
-   - Query/Bundleのcanonicalizationの結果（`queryCanonicalHash` / `bundleHash`）を変化させるtruncationを、禁止する。
-3. **Fallbackの固定（安全側で拒否）**
+2. **切り詰めの境界の固定**
+   - 切り詰めは、IR payload（`LLMRequest.inputs`）の内側でのみ許可する。
+   - Query/Bundleの正準化の結果（`queryCanonicalHash` / `bundleHash`）を変化させる切り詰めを、禁止する。
+3. **フォールバックの固定（安全側で拒否）**
    - `previewConfirmed!=true` は、`422 preview_required` で即座に失敗とする。
-   - canonical queryが同値なのにhashが不一致の場合は、`409 nondeterministic_bundle` とする。
-4. **Mock/contract testの固定**
+   - 正準queryが同値なのにhashが不一致の場合は、`409 nondeterministic_bundle` とする。
+4. **モック/契約テストの固定**
    - `stubDatasetId=A2-minimal-v1` を、CE1検証の唯一のプロファイルとして固定する。
 
 ### Consequences
@@ -1027,7 +1027,7 @@ CE2/CE4の進行を、CE1の実装の完了待ちにしないため、IRの境�
 ## Stream B CE1 contract freeze addendum（2026-05-20 / Context-Decision-Consequences）
 
 ### Context
-CE1 v1のquery/bundle契約が揺れると、IR生成の境界で、CE2/CE4の監査の再現性が崩れる。
+CE1 v1のqueryとバンドルの契約が揺れると、IR生成の境界で、CE2/CE4の監査の再現性が崩れる。
 
 ### Decision
 - `ContextQueryV1` / `ContextBundleV1` は、closed-worldのv1として維持する。

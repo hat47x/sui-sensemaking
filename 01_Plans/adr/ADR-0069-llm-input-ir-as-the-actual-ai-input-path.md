@@ -130,24 +130,24 @@ Stage 5の棚卸しで、残っている経路に、次の3種類が混在する
 2. `DocumentV1` は受け取るが、呼出側がAIへ渡してよいgrounding集合を先に限定している経路。
 3. Documentを受け取らず、単一本文や選択済みの概要情報だけを扱う経路。
 
-ここで「すべての `/ai/*` をgeneric Document IRへ通す」ことを目的にすると、2ではgroundingの境界を広げ、3では架空のIDや疑似Documentを作るという、逆の効果が生じる。したがって、AI入力を構造化された実経路へ揃えるという原則と、`llm_input_ir_spec.md` のgeneric Document IRを使う条件を、分けて決める。
+ここで「すべての `/ai/*` を汎用のDocument IRへ通す」ことを目的にすると、2ではgroundingの境界を広げ、3では架空のIDや疑似Documentを作るという、逆の効果が生じる。したがって、AI入力を構造化された実経路へ揃えるという原則と、`llm_input_ir_spec.md` の汎用のDocument IRを使う条件を、分けて決める。
 
 | 案 | 内容 | 評価 |
 |---|---|---|
-| **A（採択）** | AI入力の構造化と実経路化は全AI経路に要求する。generic Document IRは、Document由来の構造を仕事上必要とする経路に適用する。限定groundingとno-docの経路は、task-local structured inputを正式な入力契約として認める | 仕事上の意味と安全境界を保ったまま、IRを使うこと自体を目的にしない |
-| B | すべてのAI経路をgeneric Document IRへ統一する | 形式は揃うが、限定groundingを広げたり、no-docの経路へ虚偽の識別子を作ったりする必要が生じる |
+| **A（採択）** | AI入力の構造化と実経路化は全AI経路に要求する。汎用のDocument IRは、Document由来の構造を仕事上必要とする経路に適用する。限定groundingとDocumentなしの経路は、タスク固有の構造化入力を正式な入力契約として認める | 仕事上の意味と安全境界を保ったまま、IRを使うこと自体を目的にしない |
+| B | すべてのAI経路を汎用のDocument IRへ統一する | 形式は揃うが、限定groundingを広げたり、Documentなしの経路へ虚偽の識別子を作ったりする必要が生じる |
 | C | 各経路を個別実装のままにし、共通原則を置かない | 実入力の迂回や、SafeModeと最小化のばらつきを、再び許す |
 
 **決定（2026-09-03・追補）**: D5=Aを採択。以下を不変条件とする。
 
-- **Document-backed structured task**: 文書のカード、島、relation、evidenceなど、`DocumentV1` 由来の構造が仕事上の判断材料になる経路は、generic Document IR、またはそのroute固有の投影を、プロバイダの実入力の正本とする。Documentの生の値から、同じ意味をpromptへ迂回させない。
-- **Caller-limited grounding task**: 呼び出し側が `groundingCardIds` / `groundingEdgeIds` などで許可の集合を明示する経路では、その許可リストを、安全境界の正本とする。generic Document IRを、検査と正規化に併用してもよい。ただし、最終的なpromptや `LLMRequest.inputs` の実効的な意味の集合を、許可リストより広げてはならない。
-- **No-document task**: Documentや実在するIDを持たない経路では、generic Document IRへ合わせるための、疑似Document、架空のカードID、架空の島IDを作らない。明示的なtask-local structured inputを、正式なAI入力契約とし、プロバイダのpromptは、その構造化入力から描画する。
-- **共通の安全境界**: generic Document IRを使わない経路も、レビュー状態、SafeMode、PII最小化、structured-text-only、決定論的な入力上限など、その入力の型に適用できる境界の保護から、免除されない。必要な保護は、API境界、またはtask-localの入力ビルダーで、安全側で拒否する形にする。
-- **契約変更時の再判定**: no-docの経路が、将来、`DocumentV1` を受け取る仕事へ変わる場合は、既存の例外を暗黙に継承しない。request契約を変更した時点で、generic Document IRを適用するかを、再び判定する。
-- **完了指標**: 11/11をgeneric Document IRへ揃えること自体を、完了条件にしない。各AI経路について、「何がプロバイダの実入力の正本か」「何を送らないか」「どの境界で安全側に拒否するか」が明示され、promptがその契約を迂回しないことを、完了条件とする。
+- **Document由来の構造化タスク**: 文書のカード、島、関係、根拠など、`DocumentV1` 由来の構造が仕事上の判断材料になる経路は、汎用のDocument IR、またはそのルート固有の投影を、プロバイダの実入力の正本とする。Documentの生の値から、同じ意味をプロンプトへ迂回させない。
+- **呼び出し側が限定するgroundingのタスク**: 呼び出し側が `groundingCardIds` / `groundingEdgeIds` などで許可の集合を明示する経路では、その許可リストを、安全境界の正本とする。汎用のDocument IRを、検査と正規化に併用してもよい。ただし、最終的なプロンプトや `LLMRequest.inputs` の実効的な意味の集合を、許可リストより広げてはならない。
+- **Documentを持たないタスク**: Documentや実在するIDを持たない経路では、汎用のDocument IRへ合わせるための、疑似Document、架空のカードID、架空の島IDを作らない。明示的なタスク固有の構造化入力を、正式なAI入力契約とし、プロバイダのプロンプトは、その構造化入力から描画する。
+- **共通の安全境界**: 汎用のDocument IRを使わない経路も、レビュー状態、SafeMode、PII最小化、構造化テキストのみ、決定論的な入力上限など、その入力の型に適用できる境界の保護から、免除されない。必要な保護は、API境界、またはタスク固有の入力ビルダーで、安全側で拒否する形にする。
+- **契約変更時の再判定**: Documentなしの経路が、将来、`DocumentV1` を受け取る仕事へ変わる場合は、既存の例外を暗黙に継承しない。リクエスト契約を変更した時点で、汎用のDocument IRを適用するかを、再び判定する。
+- **完了指標**: 11/11を汎用のDocument IRへ揃えること自体を、完了条件にしない。各AI経路について、「何がプロバイダの実入力の正本か」「何を送らないか」「どの境界で安全側に拒否するか」が明示され、プロンプトがその契約を迂回しないことを、完了条件とする。
 
-この追補により、`summarize-island-relation` はcaller-limited grounding task、`refine-card-text` と `suggest-document-title` はno-document taskとして扱う。これらは、「未移行だから放置する経路」ではない。generic Document IRを適用しないこと自体が、意味を保つための、明示的な設計判断である。
+この追補により、`summarize-island-relation` は呼び出し側が限定するgroundingのタスク、`refine-card-text` と `suggest-document-title` はDocumentを持たないタスクとして扱う。これらは、「未移行だから放置する経路」ではない。汎用のDocument IRを適用しないこと自体が、意味を保つための、明示的な設計判断である。
 
 ### 仕様バージョンについて
 
@@ -166,28 +166,28 @@ Stage 5で、残っている経路を棚卸しした結果、本ADRの「IRをAI
 
 適用境界を次のように固定する。
 
-1. Document-backedで、Documentのカード、島、relation、evidenceなどが、仕事上の意味になる経路
+1. Document由来で、Documentのカード、島、関係、根拠などが、仕事上の意味になる経路
    - `llm_input_ir_spec.md` のDocument IRを、実入力の経路とする。
-   - routeが必要とする意味を保護し、必要な意味が投影の上限で欠ける場合は、プロバイダを呼ぶ前に、安全側で拒否する。
-   - プロバイダのトランスポートがpromptだけを送る場合も、IRで正規化して保護した本文と構造を、promptへ描画する。Documentの生の値を、同じ意味の入力へ迂回させない。
+   - ルートが必要とする意味を保護し、必要な意味が投影の上限で欠ける場合は、プロバイダを呼ぶ前に、安全側で拒否する。
+   - プロバイダのトランスポートがプロンプトだけを送る場合も、IRで正規化して保護した本文と構造を、プロンプトへ描画する。Documentの生の値を、同じ意味の入力へ迂回させない。
 
-2. Document-backedだが、呼び出し側がgroundingの集合を明示的に限定している経路
-   - 限定されたgroundingは、Document全体より強い入力境界として扱う。generic Document IRを使うことで、許可の集合を広げてはならない。
-   - `summarize-island-relation` が、この型である。現行のrequestは、`groundingCardIds` / `groundingEdgeIds` と、それに対応する `cardTexts` / `edgeTexts` を明示している。応答側も、同じ許可リストの部分集合だけを許可している。
-   - 将来IRを併用する場合はhybridとする。IRは、SafeMode、関係語彙、参照の整合などの検査に利用してよい。ただし、プロバイダへ渡す内容は、呼び出し側が許可したgroundingの集合から広げない。永続的なedge IDとIRのrelation ID（`type:from:to`）は別物なので、暗黙に置き換えない。
+2. Document由来だが、呼び出し側がgroundingの集合を明示的に限定している経路
+   - 限定されたgroundingは、Document全体より強い入力境界として扱う。汎用のDocument IRを使うことで、許可の集合を広げてはならない。
+   - `summarize-island-relation` が、この型である。現行のリクエストは、`groundingCardIds` / `groundingEdgeIds` と、それに対応する `cardTexts` / `edgeTexts` を明示している。応答側も、同じ許可リストの部分集合だけを許可している。
+   - 将来IRを併用する場合は、ハイブリッドな構成とする。IRは、SafeMode、関係語彙、参照の整合などの検査に利用してよい。ただし、プロバイダへ渡す内容は、呼び出し側が許可したgroundingの集合から広げない。永続的なedge IDとIRの関係ID（`type:from:to`）は別物なので、暗黙に置き換えない。
    - 現時点では、構造上の具体的な欠落が観測されていないため、IRの使用率を上げることだけを目的とした改修は行わない。
 
-3. Documentを入力契約に持たない、task-localの変換経路
+3. Documentを入力契約に持たない、タスク固有の変換経路
    - `refine-card-text` と `suggest-document-title` は、Document IRの適用外とする。
    - IRを使うためだけに、疑似Document、架空のcard ID、架空のislandを生成しない。追跡可能性のための識別子へ、虚偽の由来を持ち込む方が、本ADRの目的に反する。
-   - Pydanticのrequest、入力の上限、route側のSafeMode、モデルのガバナンスなどからなるtask-local structured inputを、その経路の実入力契約として維持する。
-   - 複数のno-docの経路で、共通の入力ガバナンスの不足が実際に観測された場合に限り、Document IRとは別の共通のenvelopeを検討する。現時点では、新しい抽象層を先回りして作らない。
+   - Pydanticのリクエスト、入力の上限、ルート側のSafeMode、モデルのガバナンスなどからなるタスク固有の構造化入力を、その経路の実入力契約として維持する。
+   - 複数のDocumentなしの経路で、共通の入力ガバナンスの不足が実際に観測された場合に限り、Document IRとは別の共通のエンベロープを検討する。現時点では、新しい抽象層を先回りして作らない。
 
 4. 件数は完了指標にしない
    - 「11経路のうち何件がDocument IRを持つか」は、移行の状況の説明には使える。しかし、品質のKPIや完了条件にはしない。
-   - 明示的な限定grounding契約や、no-docのtask-local契約を、形式上の11/11を達成するために、Document IRへ偽装しない。
+   - 明示的な限定grounding契約や、Documentなしのタスク固有の契約を、形式上の11/11を達成するために、Document IRへ偽装しない。
 
-したがって、Stage 5以降の「AI入力の実経路」では、そのrouteで採択された構造化入力契約から、プロバイダへ送る内容を描画し、その契約を生の入力が迂回しないことを、共通の原則とする。Document IRは重要な実装だが、唯一の入力表現ではない。
+したがって、Stage 5以降の「AI入力の実経路」では、そのルートで採択された構造化入力契約から、プロバイダへ送る内容を描画し、その契約を生の入力が迂回しないことを、共通の原則とする。Document IRは重要な実装だが、唯一の入力表現ではない。
 
 ## Three-Element Verification（ADR-0067 遡及適用）
 
@@ -195,7 +195,7 @@ Stage 5で、残っている経路を棚卸しした結果、本ADRの「IRをAI
 |------|----------------|---------------|
 | **業務設計** | KJ法キャンバスで、座標が意味を持つのは人間側である。AIにとって意味を持つのは、カードと島の論理的な関係である。この非対称性を踏まえ、AIは、論理構造（関係語彙、島階層、holdState）を実際に受け取る必要がある | 機能: `routes/ai.py`の全プロンプト構築関数で、`edges`/`evidenceLinks`/`relationSummaries`/`claimType`/`parentIslandId`を渡す。データ: 関係語彙（related/negate/causal/mutual/equivalence）をAIへ届ける |
 | **データ設計** | 凍結済みの`LLMRequest.inputs` IR（llm_input_ir_spec.md §4）をAI入力の実経路とする。`graph_summary`（中心性、連結成分、矛盾サブグラフ）は、順位や等級を持たない構造的観測に限定する。SafeModeの入力側での強制（constraints.safe_mode）とPII最小化を、サーバ側の契約へ移す | 業務: 矛盾検出が既存の`evidenceLinks`を、グルーピング提案が既存の島を見る。機能: 決定論的な切り詰め（MAX_CARDS=200/MAX_RELATIONS=400/MAX_TEXT_CHARS=12000）で、大規模な文書のAI入力を再現できるようにする |
-| **機能設計** | Document由来の構造を扱うAI経路は、generic Document IRを実入力へ接続する。caller-limited groundingとno-docの経路は、task-local structured inputを正式な契約とし、プロバイダのpromptがその構造化入力を迂回しないようにする | 業務: 経路ごとの仕事に必要な意味と許可の範囲を、先に固定する。データ: 座標は必要な経路だけに限定し、限定groundingやno-docの入力を、generic IRの都合で広げない |
+| **機能設計** | Document由来の構造を扱うAI経路は、汎用のDocument IRを実入力へ接続する。呼び出し側が限定したgroundingとDocumentなしの経路は、タスク固有の構造化入力を正式な契約とし、プロバイダのプロンプトがその構造化入力を迂回しないようにする | 業務: 経路ごとの仕事に必要な意味と許可の範囲を、先に固定する。データ: 座標は必要な経路だけに限定し、限定groundingやDocumentなしの入力を、汎用IRの都合で広げない |
 
 ## Consequences
 
@@ -212,24 +212,24 @@ Stage 5で、残っている経路を棚卸しした結果、本ADRの「IRをAI
 - TS↔Pythonの第2のずれの発生源が生まれる（D4=Aの代償）。`test_ts_python_contract_drift.py` の対象を、投影のロジックへ拡張して管理する。
 - 入力トークンの量が変わる。関係、階層、`graph_summary` が増える一方、生の座標が減る。差し引きは未計測であり、実装時に、代表的な規模（カード300、島30程度）で測ること。
 - `ir_version` の繰り上げが必要である（上述）。`llm_input_ir_spec.md` §8のトレーサビリティと、FixtureProviderの回帰データ（§6）の再生成を伴う。
-- generic Document IRの対象となる既存のAI経路では、呼び出し側とprompt構築の改修が要る。task-local structured inputを採る経路では、既存の限定された入力を広げず、実際にプロバイダへ送る内容との一致を、回帰テストで固定する必要がある。
+- 汎用のDocument IRの対象となる既存のAI経路では、呼び出し側とプロンプト構築の改修が要る。タスク固有の構造化入力を採る経路では、既存の限定された入力を広げず、実際にプロバイダへ送る内容との一致を、回帰テストで固定する必要がある。
 
 ### ADR-0068 との関係（重要）
 
-**更新（2026-08-29）**: 本節の起票時点では、`ADR-0068` はProposedだった。その後Acceptedとなり、実装issue `issue-SEC-AI-SAFEMODE-01`（Done）が、`_reject_unreviewed_cards`/`_reject_unreviewed_text` を、`detect-contradiction` を含む対象のルートへ、すでに配線済みである（コードで確認済み）。同issue自身が、当時、「短期のSafeModeの強制は、ADR-0068を採択して `/ai/*` に適用し、ADR-0069/IRは別途進める併用が現実的」と記録している。吸収ではなく併用（defense-in-depth）が既定路線として、先に実現している。
+**更新（2026-08-29）**: 本節の起票時点では、`ADR-0068` はProposedだった。その後Acceptedとなり、実装issue `issue-SEC-AI-SAFEMODE-01`（Done）が、`_reject_unreviewed_cards`/`_reject_unreviewed_text` を、`detect-contradiction` を含む対象のルートへ、すでに配線済みである（コードで確認済み）。同issue自身が、当時、「短期のSafeModeの強制は、ADR-0068を採択して `/ai/*` に適用し、ADR-0069/IRは別途進める併用が現実的」と記録している。吸収ではなく併用（多層防御）が既定路線として、先に実現している。
 
 `ADR-0068`（SafeMode enforcement at API boundary、Accepted・実装済み）と本ADRは、同じ境界を対象とする。ただし、既存の `_reject_unreviewed_cards`/`_reject_unreviewed_text` を、本ADRの実装が除去したり弱めたりしてはならない。本ADR D4=A（IR §7.1による `safe_mode` の強制）は、既存の境界の保護に追加する第二層として実装すること（唯一の防御手段として置き換えない）。
 
 - `ADR-0068` は、`/ai/*` の各リクエストモデルへ `safeMode` を追加する方向である（実装済み）。
 - 本ADR D4=Aは、IRの構築をサーバ側へ置き、IR §7.1が `safe_mode` を強制する方向である（追加の防御層）。
 
-将来、すべてのAI経路が、generic Document IR、または明示的なtask-local structured inputの実経路で覆われた段階で、`ADR-0068` 由来のAPI境界の実装を退役させるかどうかは、別途判断する。本ADRの実装時点では、二層の防御を維持する。
+将来、すべてのAI経路が、汎用のDocument IR、または明示的なタスク固有の構造化入力の実経路で覆われた段階で、`ADR-0068` 由来のAPI境界の実装を退役させるかどうかは、別途判断する。本ADRの実装時点では、二層の防御を維持する。
 
 ### 移行時に必要な対応
 
 1. `llm_input_ir_spec.md` をD1〜D3の決定に従って改訂し、`ir_version` を繰り上げる。
 2. サーバ側にIRビルダーを実装する（D4=Aの場合）。
-3. 各AI経路をD5の3分類へ当てはめる。Document由来の構造を扱う経路はgeneric Document IRへ、caller-limited groundingとno-docの経路は、明示的なtask-local structured inputへ揃える。いずれも、プロバイダのpromptが、宣言済みの入力契約を迂回しないことを、回帰テストで固定する。
+3. 各AI経路をD5の3分類へ当てはめる。Document由来の構造を扱う経路は汎用のDocument IRへ、呼び出し側が限定したgroundingとDocumentなしの経路は、明示的なタスク固有の構造化入力へ揃える。いずれも、プロバイダのプロンプトが、宣言済みの入力契約を迂回しないことを、回帰テストで固定する。
 4. `test_ts_python_contract_drift.py` を投影ロジックへ拡張する。
 5. `02_Architecture/api.md` のリクエスト契約を同期する。
 

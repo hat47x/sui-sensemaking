@@ -180,8 +180,8 @@ Level 2のmock IdPに、以下を追加する。
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
 | **業務設計** | SAMLの顧客は、BrokerのSAML→OIDC変換を通じてsui-sensemakingを利用できる。開発者は、mockログインでE2Eの認証フローをテストできる。OAuth 2.0のログインフローはBrokerが担当し、sui-sensemaking本体には実装しない | 機能: フロントエンドは、最小限の認証状態管理（リダイレクトとJWTの保持）で済む。データ: SAML assertionの検証は、brokerに委譲する |
-| **データ設計** | SPAへ返す短命のBearer access tokenは、module memoryだけに保持し、`sessionStorage`や`localStorage`へは保存しない。reloadの後は再認証する。refresh token grantは、SPA clientでは無効にする | 業務: tenant-session cookieは`HttpOnly; SameSite=Strict; Path=/`とし、`local-dev`以外では`Secure`を必須にする。機能: ログアウトは、同じ属性とpathで失効させる |
-| **機能設計** | JwtSaasIdentityContextResolver、JwksStore、ClaimBasedTenantContextResolver、mock IdP（/login /oauth/authorize /oauth/token /oauth/userinfo）、mock SPのOAuth login flow proxyを実装済み。共有persisterはprincipal単位の暫定実装 | 業務: active tenantとsessionの束縛は`SAAS-TENANT-SESSION-BINDING-01`が完了するまで、本番利用のgateは満たされない。データ: sender-constrainedな再送への防御は、別のADRで方式を決める |
+| **データ設計** | SPAへ返す短命のBearer access tokenは、モジュールのメモリだけに保持し、`sessionStorage`や`localStorage`へは保存しない。再読み込みの後は再認証する。refresh token grantは、SPA clientでは無効にする | 業務: tenant-session cookieは`HttpOnly; SameSite=Strict; Path=/`とし、`local-dev`以外では`Secure`を必須にする。機能: ログアウトは、同じ属性とpathで失効させる |
+| **機能設計** | JwtSaasIdentityContextResolver、JwksStore、ClaimBasedTenantContextResolver、mock IdP（/login /oauth/authorize /oauth/token /oauth/userinfo）、mock SPのOAuth login flow proxyを実装済み。共有persisterはprincipal単位の暫定実装 | 業務: active tenantとsessionの束縛は`SAAS-TENANT-SESSION-BINDING-01`が完了するまで、本番利用のgateは満たされない。データ: 送信者に束縛した再送への防御は、別のADRで方式を決める |
 
 ## Consequences
 
@@ -189,7 +189,7 @@ Level 2のmock IdPに、以下を追加する。
 - SAMLの顧客は、BrokerのSAML→OIDC変換を通じて、sui-sensemakingを利用できる。
 - OAuth 2.0のログインフローはsui-sensemaking本体に実装されず、Brokerが担当する。
 - フロントエンドは、最小限の認証状態管理（リダイレクトとJWTの保持）で済む。
-- SPAへ返す短命のBearer access tokenは、module memoryだけに保持し、有効期間中の連続したAPI要求に使用できる。`sessionStorage`や`localStorage`へは保存せず、reloadの後は再認証する。refresh token grantと`refresh_token`の応答は、SPA clientでは無効にする。sender-constrainedな再送への防御は、別のADRで方式を決める。
+- SPAへ返す短命のBearer access tokenは、モジュールのメモリだけに保持し、有効期間中の連続したAPI要求に使用できる。`sessionStorage`や`localStorage`へは保存せず、再読み込みの後は再認証する。refresh token grantと`refresh_token`の応答は、SPA clientでは無効にする。送信者に束縛した再送への防御は、別のADRで方式を決める。
 - tenant-session cookieは`HttpOnly; SameSite=Strict; Path=/`とし、`local-dev`以外では`Secure`を必須にする。ログアウトでは、同じ属性とpathで失効させる。
 
 ## Non-goals
