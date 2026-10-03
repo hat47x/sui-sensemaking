@@ -33,6 +33,21 @@ from sui_sensemaking_api.models import DocumentV1
 Phase = Literal["baseline", "candidates"]
 
 
+class IncompleteAttentionProjectionError(ValueError):
+    """T2 cannot interpret an attention projection that lost source material."""
+
+
+def _require_complete_attention_projection(ir: dict) -> None:
+    truncation = ir.get("truncation", {})
+    if not truncation.get("truncated"):
+        return
+    reasons = truncation.get("reason_codes", [])
+    detail = ", ".join(str(reason) for reason in reasons) or "unknown"
+    raise IncompleteAttentionProjectionError(
+        f"attention projection was truncated ({detail}); T2 review is invalid"
+    )
+
+
 def _sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
@@ -47,6 +62,7 @@ def render_baseline(
     source_sha256: str | None = None,
 ) -> str:
     ir = build_attention_ir(document)
+    _require_complete_attention_projection(ir)
     product_digest = attention_source_digest(ir)
     by_id = _card_text_by_id(document)
     hold_by_id = {
@@ -111,6 +127,7 @@ def render_candidates(
     source_sha256: str,
 ) -> str:
     ir = build_attention_ir(document)
+    _require_complete_attention_projection(ir)
     product_digest = attention_source_digest(ir)
     candidates = attention_candidates_from_ir(ir)
     by_id = _card_text_by_id(document)
@@ -208,6 +225,9 @@ def main() -> int:
         )
     except IRGenerationError as exc:
         print(f"FAIL: {exc.to_contract()}")
+        return 1
+    except IncompleteAttentionProjectionError as exc:
+        print(f"FAIL: {exc}")
         return 1
 
     print(rendered)
