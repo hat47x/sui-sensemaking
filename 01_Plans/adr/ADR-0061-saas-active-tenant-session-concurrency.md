@@ -7,86 +7,86 @@
 
 ## Context
 
-`ADR-0059`はactive tenantをbackendが再確認して認証セッションへ保存し、frontendがtenant切替後に旧DOM、memory、browser storage、worker、object URLを破棄する境界を固定した。現行の準備実装も、このsession persisterとhard replacementを前提にしている。
+`ADR-0059` は、backendがactive tenantを再確認して認証セッションへ保存すること、およびfrontendがtenantを切り替えた後に、古いDOM、memory、browser storage、worker、object URLを破棄することを、境界として固定した。現行の準備実装も、このsession persisterとhard replacementを前提にしている。
 
-ただし、同じ認証セッションを複数タブで使う場合の並行性が未定義だった。タブAがtenant Aの文書を表示中に、タブBがactive tenantをtenant Bへ変更すると、タブAの表示、保持中の`docId`、未送信payloadはtenant Aのままでも、次のrequestを解決するserver sessionはtenant Bになりうる。両tenantに同じ`docId`が存在し、利用者が両方へ書込capabilityを持つ場合、tenant越境の権限違反ではなくても、旧tenantの内容を新tenantへ誤って送るscope confusionが成立する。
+ただし、同じ認証セッションを複数のタブで使う場合の並行性が、定義されていなかった。タブAがtenant Aの文書を表示している間に、タブBがactive tenantをtenant Bへ変更したとする。このとき、タブAの表示、保持している`docId`、未送信のpayloadはtenant Aのままである。しかし、次のrequestを解決するserver sessionは、tenant Bになりうる。両方のtenantに同じ`docId`が存在し、利用者が両方への書き込みのcapabilityを持つ場合は、tenantの越境という権限の違反ではなくても、古いtenantの内容を新しいtenantへ誤って送る、scopeの取り違えが成立する。
 
-BroadcastChannel、storage event、focus時再読込は利用者体験を改善するが、通知欠落、background tab、bfcache、suspended process、network response競合を認可境界として防げない。逆に、active tenantをタブ単位へ変更するには、trusted session形式、request binding、CSRF、logout、capability cacheを含む別のcontext契約が必要になる。
+BroadcastChannel、storage event、focus時の再読み込みは、利用者体験を改善する。しかし、通知の欠落、background tab、bfcache、停止したプロセス、ネットワーク応答の競合を、認可の境界として防ぐことはできない。逆に、active tenantをタブ単位へ変更するには、trusted sessionの形式、requestの束縛、CSRF、logout、capabilityのキャッシュを含む、別のcontext契約が必要になる。
 
 ## Decision
 
 ### D1: 1つの認証セッションにactive tenantは1つだけとする
 
-- active tenant変更は同じ認証セッションを使う全タブへ影響する。異なるtenantを同時に操作したい場合は、別の認証セッションまたは将来の明示的なper-tab契約を使う。
-- tenant switcherの確認には「このブラウザの他のタブも切り替わります」を文字で表示する。複数タブの存在を検出できる場合だけ出す条件付き注意にはしない。
-- frontendは別タブで旧tenant本文を操作し続けられるように見せない。context変更を検知した時点で本文、Admin metadata、dialog、未送信previewを非表示にして再確認状態へ移す。
+- active tenantの変更は、同じ認証セッションを使う全タブへ影響する。異なるtenantを同時に操作したい場合は、別の認証セッション、または将来の明示的なタブ単位の契約を使う。
+- tenant switcherの確認には、「このブラウザの他のタブも切り替わります」を文字で表示する。複数のタブの存在を検出できる場合だけ出す、条件付きの注意にはしない。
+- frontendは、別のタブで古いtenantの本文を操作し続けられるように見せない。contextの変更を検知した時点で、本文、Adminのmetadata、dialog、未送信のプレビューを非表示にして、再確認の状態へ移す。
 
-### D2: server-issued `tenantSessionVersion`をcontext整合のpreconditionにする
+### D2: サーバーが発行する`tenantSessionVersion`を、contextの整合の前提条件にする
 
-- trusted auth/session adapterは、認証セッションのactive tenant stateごとに予測不能でopaqueな`tenantSessionVersion`を発行する。値は1〜128文字のcanonical IDとし、active tenant変更時に必ず変更する。
-- `GET /session/context`は`tenantSessionVersion`を返す。`POST /session/active-tenant`は現在値を`expectedTenantSessionVersion`として必須入力し、一致した場合だけ切替を保存して新versionを返す。同時切替や古いdialogからの確定は`tenant_session_changed`で拒否する。
-- SaaS profileのtenant-scoped APIはread/write/list/export/share/import/MCP/webhook/job登録を含め、clientが最後に検証したversionをrequest preconditionとして要求する。backendはtrusted sessionからactive tenantと現versionを解決した後、resource lookupより前に一致を検証する。
-- clientが送るversionはtenantやcapabilityを決める認可根拠ではない。欠損・不一致なら処理を停止するためのexpected-context guardであり、実tenant、membership、capabilityは従来どおりserver正本から解決する。
-- versionをDocument、export、import payload、browser永続設定、URL、監査本文へ保存しない。監査には必要な場合も`tenant_session_changed`という結果だけを残し、生versionを記録しない。
+- trusted auth/session adapterは、認証セッションのactive tenantの状態ごとに、予測できず不透明な`tenantSessionVersion`を発行する。値は1〜128文字の正規のIDとし、active tenantを変更するときに必ず変更する。
+- `GET /session/context`は`tenantSessionVersion`を返す。`POST /session/active-tenant`は、現在の値を`expectedTenantSessionVersion`として必須の入力とし、一致した場合だけ切り替えを保存して、新しいversionを返す。同時の切り替えや、古いdialogからの確定は、`tenant_session_changed`で拒否する。
+- SaaSプロファイルのtenant単位のAPIは、read、write、list、export、share、import、MCP、webhook、jobの登録を含め、clientが最後に検証したversionを、requestの前提条件として要求する。backendは、trusted sessionからactive tenantと現在のversionを解決した後、resourceを参照する前に、一致を検証する。
+- clientが送るversionは、tenantやcapabilityを決める認可の根拠ではない。欠損や不一致の場合に処理を止めるための、expected-contextのガードである。実際のtenant、membership、capabilityは、従来どおり、サーバーの正本から解決する。
+- versionを、Document、export、importのpayload、browserの永続設定、URL、監査の本文へ保存しない。監査には、必要な場合も`tenant_session_changed`という結果だけを残し、versionの生の値は記録しない。
 
-### D3: stale contextはread-onlyや自動再送へ倒さない
+### D3: 古いcontextを、read-onlyにも自動の再送にも寄せない
 
-- version欠損・不一致では本文を返さず、変更も適用せず、`409 tenant_session_changed`または同等のstable errorへfail-closedにする。他tenant資源の存在や現在tenant IDは応答へ反射しない。
-- frontendはstale requestを新contextで自動再送しない。特にPUT、import、share、export、Admin更新は利用者が新しいscopeを確認した後にだけ再実行できる。
-- 旧contextで開始したresponse、worker結果、object URL、optimistic updateは、versionが変わった後にDOM、cache、downloadへcommitしない。
-- capability versionはpolicy snapshotのversionであり、active tenant sessionの並行制御には流用しない。
+- versionの欠損や不一致の場合は、本文を返さず、変更も適用せず、`409 tenant_session_changed`、または同等の安定したエラーで、安全側に拒否する。他のtenantの資源の存在や、現在のtenant IDは、応答へ反映しない。
+- frontendは、古いrequestを新しいcontextで自動的に再送しない。特に、PUT、import、share、export、Adminの更新は、利用者が新しいscopeを確認した後にだけ、再実行できる。
+- 古いcontextで開始したresponse、workerの結果、object URL、楽観的更新は、versionが変わった後に、DOM、キャッシュ、ダウンロードへコミットしない。
+- capability versionは、ポリシーのスナップショットのversionである。active tenant sessionの並行制御には流用しない。
 
-### D4: cross-tab通知とlifecycle再確認をUX層の補助境界にする
+### D4: タブ間の通知と、lifecycleでの再確認を、UX層の補助的な境界にする
 
-- tenant切替成功後、frontendはsame-originのBroadcastChannelまたは同等の一時通知で「session context changed」だけを伝える。tenant ID、principal ID、title、本文、capability、version生値を通知payloadへ含めない。
-- 通知を受けたタブは旧本文を即時blocked stateへ置換し、進行中request/workerをabortして`GET /session/context`から再開する。通知の送受信自体は認可判定に使わない。
-- `pageshow`の`persisted=true`、長時間非表示からの復帰、online復帰、認証更新後は、旧本文を操作可能にする前にsession contextを再確認する。SaaS app shellとsession responseは`no-store`を維持し、bfcacheから戻ったDOMを信頼済みcontextとして扱わない。
-- 通知APIが利用不能でもserver-side version preconditionにより安全側へ停止できることを必須とする。
+- tenantの切り替えに成功した後、frontendは、same-originのBroadcastChannel、または同等の一時的な通知で、「session context changed」だけを伝える。tenant ID、principal ID、タイトル、本文、capability、versionの生の値を、通知のpayloadに含めない。
+- 通知を受けたタブは、古い本文を、すぐにblocked stateへ置き換える。進行中のrequestとworkerをabortして、`GET /session/context`からやり直す。通知を送受信すること自体は、認可の判定に使わない。
+- `pageshow`の`persisted=true`、長時間の非表示からの復帰、onlineへの復帰、認証の更新の後は、古い本文を操作できるようにする前に、session contextを再確認する。SaaSのapp shellとsession responseは`no-store`を維持し、bfcacheから戻ったDOMを、信頼できるcontextとして扱わない。
+- 通知のAPIが使えない場合でも、サーバー側のversionの前提条件により、安全側に停止できることを必須とする。
 
-### D5: capability失効とtenant lifecycle変更も同じblocked UXへ収束させる
+### D5: capabilityの失効とtenantのlifecycleの変更も、同じblocked UXへまとめる
 
-- membership停止、tenant停止、capability resolver不達、PDP不達、session version不一致はEmptyへ偽装しない。既存データを背景に残さないblocked stateとし、再試行、再認証、Workspaceへ戻るのうち安全に実行できる導線だけを示す。
-- raw error、tenant ID、principal ID、policyRef、role/group、tokenをエラー表示へ反射しない。
-- 再確認後に同じtenantへ戻った場合でも、旧未送信mutationを自動復元・送信しない。device-local入力の復元可否はデータ種別ごとに明示し、tenant-bound previewは破棄する。
+- membershipの停止、tenantの停止、capability resolverへの不達、PDPへの不達、session versionの不一致は、Emptyに見せかけない。既存のデータを背景に残さないblocked stateとし、再試行、再認証、Workspaceへ戻るのうち、安全に実行できる導線だけを示す。
+- 生のエラー、tenant ID、principal ID、policyRef、role/group、tokenを、エラーの表示へ反映しない。
+- 再確認の後で同じtenantへ戻った場合でも、古い未送信のmutationを、自動で復元も送信もしない。端末ローカルの入力を復元できるかどうかは、データの種別ごとに明示する。tenantに束縛されたプレビューは破棄する。
 
 ## Implementation gate
 
-共有SaaS profileを有効化する前に、`ADR-0059`のgateに加えて次を満たす。
+共有SaaSプロファイルを有効にする前に、`ADR-0059`のgateに加えて、次を満たす。
 
-1. trusted auth/session adapterがactive tenantと`tenantSessionVersion`を原子的に解決・更新できる。
-2. session contextとactive tenant APIがversionのclosed-world validation、conditional update、no-storeを実装する。
-3. すべてのtenant-scoped public APIと非同期開始点がversion preconditionをresource lookup前に検証する。未対応routeがある間はSaaS profileを起動拒否する。
-4. tenant A/Bに同じ`docId`を用意し、2タブ同時操作、同時tenant切替、stale GET/PUT/export/import/Admin更新、遅延response、worker完了、bfcache復帰のnegative matrixを固定する。
-5. cross-tab通知が欠落・無効でもserver guardが拒否し、通知成功時は旧DOMとfocusがblocked stateへ移ることを1440/390px、ja/enで検証する。
+1. trusted auth/session adapterが、active tenantと`tenantSessionVersion`を、原子的に解決して更新できる。
+2. session contextとactive tenantのAPIが、versionの閉じた検証、条件付きの更新、no-storeを実装する。
+3. すべてのtenant単位の公開APIと、非同期処理の開始点が、versionの前提条件を、resourceを参照する前に検証する。未対応のrouteがある間は、SaaSプロファイルの起動を拒否する。
+4. tenant AとBに同じ`docId`を用意し、2タブでの同時操作、同時のtenant切り替え、古いGET/PUT/export/import/Adminの更新、遅れて届いたresponse、workerの完了、bfcacheからの復帰について、ネガティブマトリクスを固定する。
+5. タブ間の通知が欠落または無効でも、サーバーのガードが拒否することを確認する。通知に成功したときは、古いDOMとフォーカスがblocked stateへ移ることを、1440/390px、ja/enで検証する。
 
 ## Alternatives considered
 
-1. **active tenantをタブ単位にする**: 複数tenantを並行利用しやすいが、tab-bound token、request binding、CSRF、logout、refresh、link-openの新契約が必要で、現行session persisterと整合しない。将来の別ADRなしには採用しない。
-2. **BroadcastChannelだけで同期する**: 通知欠落や停止中タブを防げず、client通知を安全境界にしてしまうため不採用。
-3. **`capabilityVersion`を並行制御に流用する**: tenant切替で必ず変わらず、policy lifecycleとsession lifecycleを混同するため不採用。
-4. **tenantごとにhostを分け、switcherを廃止する**: 強い分離になりうるが、複数membership利用と現行Round 8構想を変更する。trusted host mappingを採用するdeploymentの選択肢としては残すが、共通契約にはしない。
-5. **stale requestを新tenantへ自動再送する**: 旧scopeのpayloadを新scopeへ適用しうるため不採用。
+1. **active tenantをタブ単位にする**: 複数のtenantを並行して利用しやすい。しかし、タブに束縛したtoken、requestの束縛、CSRF、logout、refresh、リンクを開く動作について、新しい契約が必要になり、現行のsession persisterと整合しない。将来の別のADRなしには採用しない。
+2. **BroadcastChannelだけで同期する**: 通知の欠落や、停止中のタブを防げない。クライアントの通知を、安全の境界にしてしまうため、不採用。
+3. **`capabilityVersion`を並行制御に流用する**: tenantを切り替えても必ずしも変わらない。ポリシーのlifecycleとsessionのlifecycleを混同するため、不採用。
+4. **tenantごとにhostを分け、switcherを廃止する**: 強い分離になりうる。しかし、複数のmembershipを持つ利用と、現行のRound 8の構想を変更することになる。trusted host mappingを採用するデプロイの選択肢としては残すが、共通の契約にはしない。
+5. **古いrequestを新しいtenantへ自動的に再送する**: 古いscopeのpayloadを、新しいscopeへ適用してしまいうるため、不採用。
 
 ## Consequences
 
-- 別タブでtenantを切り替えると、他タブも再確認が必要になり、異なるtenantを同一sessionで並行編集できない。
-- active tenant switchと全tenant-scoped APIへversion guardを追加する実装コストが発生する。
-- client通知やUI cleanupが失敗しても、serverがstale requestとresponseを閉じる二重境界になる。
-- Claude Designのtenant切替レッドラインには、他タブへの影響、scope失効、bfcache/復帰、stale save拒否の状態が必要になる。
+- 別のタブでtenantを切り替えると、他のタブも再確認が必要になる。異なるtenantを、同じsessionで並行して編集することはできない。
+- active tenantの切り替えと、全tenant単位のAPIへ、versionのガードを追加する実装コストが発生する。
+- クライアントの通知やUIの後始末が失敗しても、サーバーが、古いrequestとresponseを閉じる。二重の境界になる。
+- Claude Designのtenant切り替えのレッドラインには、他のタブへの影響、scopeの失効、bfcacheと復帰、古い保存の拒否という状態が必要になる。
 
 ## Three-Element Verification（ADR-0067 遡及適用）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 1つの認証セッションにactive tenantは1つだけ。切替は全タブへ波及し、異なるtenantの同時操作は別セッションまたは将来のper-tab契約で対応する | 切替確認UIは「このブラウザの他のタブも切り替わります」を常時表示。context変更検知時に本文・Admin metadata・dialog・未送信previewを非表示にして再確認状態へ移す |
-| **データ設計** | trusted auth/session adapterがactive tenant stateごとにopaqueな`tenantSessionVersion`を発行し切替時に必ず変更。versionはDocument・export・browser永続設定・URL・監査本文へ保存しない | versionは認可根拠ではなくexpected-context guard。実tenant・membership・capabilityはserver正本から解決。監査には`tenant_session_changed`結果だけを残し生versionを記録しない |
-| **機能設計** | `GET /session/context`はversionを返し、`POST /session/active-tenant`は`expectedTenantSessionVersion`を必須入力として一致時だけ切替保存。全tenant-scoped APIはresource lookup前にversion一致を検証し、欠損・不一致は`409`へfail-closed | stale requestを新contextで自動再送しない。PUT・import・share・export・Admin更新は利用者が新scopeを確認後にだけ再実行可。旧contextのresponse・worker結果・object URLはcommitしない |
+| **業務設計** | 1つの認証セッションにactive tenantは1つだけ。切り替えは全タブへ波及し、異なるtenantの同時操作は、別のセッション、または将来のタブ単位の契約で対応する | 切り替えの確認UIは、「このブラウザの他のタブも切り替わります」を常に表示する。contextの変更を検知したときに、本文、Adminのmetadata、dialog、未送信のプレビューを非表示にして、再確認の状態へ移す |
+| **データ設計** | trusted auth/session adapterが、active tenantの状態ごとに不透明な`tenantSessionVersion`を発行し、切り替え時に必ず変更する。versionは、Document、export、browserの永続設定、URL、監査の本文へ保存しない | versionは認可の根拠ではなく、expected-contextのガードである。実際のtenant、membership、capabilityは、サーバーの正本から解決する。監査には`tenant_session_changed`という結果だけを残し、versionの生の値は記録しない |
+| **機能設計** | `GET /session/context`はversionを返し、`POST /session/active-tenant`は`expectedTenantSessionVersion`を必須の入力として、一致したときだけ切り替えを保存する。全tenant単位のAPIは、resourceを参照する前にversionの一致を検証し、欠損や不一致は`409`で安全側に拒否する | 古いrequestを、新しいcontextで自動的に再送しない。PUT、import、share、export、Adminの更新は、利用者が新しいscopeを確認した後にだけ、再実行できる。古いcontextのresponse、workerの結果、object URLはコミットしない |
 
 ## Non-goals
 
-- per-tab tenant session、複数tenant同時編集、support impersonationを導入しない。
-- `tenantSessionVersion`を認証token、tenant selector、権限移送値として使用しない。
-- single-tenant profileのoffline/local-first動作へversion guardを強制しない。
+- タブ単位のtenant session、複数のtenantの同時編集、サポートによるなりすましを導入しない。
+- `tenantSessionVersion`を、認証token、tenantの選択子、権限の移送値として使用しない。
+- single-tenantプロファイルのオフラインとlocal-firstの動作へ、versionのガードを強制しない。
 
 ## Traceability
 

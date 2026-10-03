@@ -7,167 +7,167 @@
 
 ## Context
 
-`OPS-LLM-COST-01` 段階2で、provider別の呼出回数とprovider-reported input/output token usageは観測できるようになった。しかし現状はcurrent process内の観測値であり、複数workerが同時に外部providerへ到達したときに共有上限を守る機構はない。
+`OPS-LLM-COST-01` の段階2で、プロバイダ別の呼び出し回数と、プロバイダが報告するinput/outputのトークン使用量を、観測できるようになった。しかし現状は、現在のプロセス内の観測値にすぎない。複数のworkerが同時に外部プロバイダへ到達したときに、共有の上限を守る仕組みはない。
 
-未決のまま実装へ進めない論点は次の4点である。
+未決のまま実装へ進めない論点は、次の4点である。
 
-1. 月次budgetの境界をどの時刻・scopeで切るか。
-2. provider call前には実token usageが分からない状態で、何をreserveするか。
-3. provider usageがpartial/missingの場合に何をsettleするか。
-4. budget超過または共有store障害時に、外部送信をfail-openせずどう降格するか。
+1. 月次のbudgetの境界を、どの時刻とscopeで切るか。
+2. プロバイダを呼ぶ前は、実際のトークン使用量が分からない。その状態で、何をreserveするか。
+3. プロバイダの使用量が一部だけ、または全く報告されない場合に、何をsettleするか。
+4. budgetを超過した場合や、共有ストアに障害があった場合に、外部送信を許可してしまわずに、どう降格するか。
 
-現行transportには重要な差がある。
+現行のトランスポートには、重要な差がある。
 
-- `large-scale` の `/generate` transportはresponse本文しか返さず、token usageを報告しない。
-- DeepSeek系OpenAI-compatible transportは `usage.prompt_tokens` / `usage.completion_tokens` を返す場合がある。
-- backendにはprovider固有tokenizer依存がなく、登録providerにもcontext window / input-token上限のmetadataはない。
+- `large-scale` の `/generate` トランスポートは、応答の本文しか返さず、トークン使用量を報告しない。
+- DeepSeek系のOpenAI互換トランスポートは、`usage.prompt_tokens` と `usage.completion_tokens` を返す場合がある。
+- backendには、プロバイダ固有のトークナイザへの依存がない。登録済みのプロバイダにも、コンテキストウィンドウや入力トークン上限のmetadataはない。
 
-したがって、入力payloadのbyte数をproviderの課金token数そのものと見なすことも、usage欠損を0とみなすこともできない。一方、call後だけ実測usageを加算する方式では、並行workerが上限を読み抜けした後に外部callを開始できるためhard gateにならない。
+したがって、入力payloadのバイト数を、プロバイダの課金トークン数そのものと見なすことはできない。使用量の欠損を0とみなすこともできない。一方、呼び出しの後で実測の使用量だけを加算する方式では、並行するworkerが上限を読み抜けた後に、外部の呼び出しを開始できる。そのため、これはhard gateにならない。
 
-これは並行worker間の競合、外部送信の可否、費用上限という新しい非機能境界を固定するため、`ADR-0047` R-3に該当する。
+これは、並行するworker間の競合、外部送信の可否、費用の上限という、新しい非機能の境界を固定するものである。そのため、`ADR-0047` のR-3に該当する。
 
-比較した主要案は以下である。
+比較した主な案は、以下のとおりである。
 
-- process-local counterのみ: worker数に比例して上限を超過し得るため不採用。
-- provider応答後だけusageを加算: 並行callを開始済みにするため不採用。
-- provider固有tokenizerをruntime必須依存にする: 現行2 transportと将来registry providerごとのtokenizer整合を保証できず、依存増加に対して境界が不安定なため現段階では不採用。
-- 外部rate-limit serviceを必須化: solo/pre-releaseに新規インフラを増やし過ぎるため不採用。
-- 共有DBでcall前reserve、応答後settle: 現行DBのrow lock/CASを再利用でき、追加サービスなしで複数workerのhard gateを作れるため採用候補とする。
+- プロセスローカルのカウンタだけを使う: worker数に比例して上限を超過し得るため、不採用。
+- プロバイダの応答の後だけ使用量を加算する: 並行する呼び出しを、すでに開始させてしまうため、不採用。
+- プロバイダ固有のトークナイザを、実行時の必須の依存にする: 現行の2つのトランスポートと、将来レジストリに加わるプロバイダごとに、トークナイザの整合を保証できない。依存が増える割に境界が不安定なため、現段階では不採用。
+- 外部のレート制限サービスを必須にする: 個人開発でリリース前の段階に、新規のインフラを増やしすぎるため、不採用。
+- 共有DBで、呼び出しの前にreserveし、応答の後にsettleする: 現行DBの行ロックとCASを再利用できる。追加のサービスなしに、複数のworkerに対するhard gateを作れるため、採用の候補とする。
 
 ## Decision
 
-**外部LLM費用上限は、共有DB上の月次ledgerに対する `reserve -> external call -> settle` で強制する。hard guaranteeは「外部call回数」と「conservative token-reservation units」に対して与え、provider-reported token実測値とは明示的に分離する。budget判定またはledger利用不能時は外部providerへ到達させない。**
+**外部LLMの費用の上限は、共有DB上の月次ledgerに対する `reserve -> external call -> settle` で強制する。hard guaranteeは、「外部の呼び出し回数」と「保守的なトークン予約の単位」に対して与える。プロバイダが報告するトークンの実測値とは、明示的に分離する。budgetの判定ができないとき、またはledgerを利用できないときは、外部プロバイダへ到達させない。**
 
-### D1. 対象providerとscope
+### D1. 対象のプロバイダとscope
 
-- budget対象は外部送信を伴うprovider kindとする。現行では `large-scale` と `deepseek`、およびregistry経由でこれらへcanonicalizeされるproviderを対象とする。
-- `none`、`local`、`fixture` は外部budgetを消費しない。
-- budgetはtenant別ではなく、**1 deployment environment全体**で共有する。tenantごとに分けるとtenant数の増加で環境全体上限を迂回できるためである。
-- environment識別子は公開設定 `SUI_LLM_BUDGET_SCOPE` とし、空白を含まないbounded canonical identifierに正規化する。
-- 月次periodはUTC暦月、各月1日 `00:00:00Z` から次月1日直前までとする。workerのローカルtimezoneには依存しない。
+- budgetの対象は、外部送信を伴うプロバイダのkindとする。現行では、`large-scale` と `deepseek`、およびレジストリ経由でこれらへ正規化されるプロバイダを対象とする。
+- `none`、`local`、`fixture` は、外部budgetを消費しない。
+- budgetはtenant別ではなく、**1つのデプロイ環境全体**で共有する。tenantごとに分けると、tenantの数が増えるにつれて、環境全体の上限を迂回できてしまうためである。
+- 環境の識別子は公開設定 `SUI_LLM_BUDGET_SCOPE` とし、空白を含まない、長さに上限のある正規の識別子に正規化する。
+- 月次のperiodは、UTCの暦月とする。各月1日の `00:00:00Z` から、次の月の1日の直前までである。workerのローカルのタイムゾーンには依存しない。
 
-### D2. hard limit設定
+### D2. hard limitの設定
 
-公開設定として以下を追加する。
+公開設定として、以下を追加する。
 
-- `SUI_LLM_EXTERNAL_MONTHLY_CALL_LIMIT`: 月次外部callのhard上限。正整数。
-- `SUI_LLM_EXTERNAL_MONTHLY_TOKEN_RESERVATION_LIMIT`: 月次のconservative token-reservation units上限。正整数。
-- `SUI_LLM_BUDGET_SCOPE`: deployment environment識別子。
+- `SUI_LLM_EXTERNAL_MONTHLY_CALL_LIMIT`: 月次の外部呼び出しのhard上限。正の整数。
+- `SUI_LLM_EXTERNAL_MONTHLY_TOKEN_RESERVATION_LIMIT`: 月次の、保守的なトークン予約の単位の上限。正の整数。
+- `SUI_LLM_BUDGET_SCOPE`: デプロイ環境の識別子。
 
-`large-scale` / `deepseek` がprimaryまたは登録model経由で到達可能な構成では3設定を完全セットとして要求する。部分設定はstartup validationで拒否する。
+`large-scale` と `deepseek` に、primary、または登録済みのモデル経由で到達できる構成では、3つの設定を完全なセットとして要求する。一部だけの設定は、起動時の検証で拒否する。
 
-`SUI_LLM_PROVIDER=none` 既定は変更しない。budget設定によって外部providerが自動的に有効化されることもない。
+`SUI_LLM_PROVIDER=none` という既定は変更しない。budgetの設定によって、外部プロバイダが自動的に有効になることもない。
 
-SafeMode、proposal-only、human review、不正なmodel/providerを拒否する既存gateはbudgetより前に維持し、budget機構を外部送信の新しい許可根拠にはしない。
+SafeMode、proposal-only、human review、不正なモデルやプロバイダを拒否する既存のゲートは、budgetより前に維持する。budgetの仕組みを、外部送信の新しい許可の根拠にはしない。
 
-### D3. 共有ledgerとatomic reserve
+### D3. 共有ledgerとatomicなreserve
 
 共有DBに、少なくとも次の意味を持つledgerを置く。
 
 - key: `(budget_scope, period_start_utc)`
-- aggregate: `reserved_calls`, `reserved_token_units`
-- reservation: 一意な `reservation_id`、call数、input reservation units、output reservation units、settle状態
+- 集計: `reserved_calls`, `reserved_token_units`
+- reservation: 一意な `reservation_id`、呼び出しの数、入力の予約単位、出力の予約単位、settleの状態
 
-外部call直前に1 transactionで対象period rowをlockし、以下を同時に検査・更新する。
+外部の呼び出しの直前に、1つのトランザクションで、対象のperiodの行をロックし、以下を同時に検査して更新する。
 
 1. `reserved_calls + 1 <= call_limit`
 2. `reserved_token_units + requested_token_reservation <= token_reservation_limit`
-3. 両方を満たす場合だけaggregate増分とreservation rowをcommitする。
+3. 両方を満たす場合だけ、集計の増分とreservationの行をコミットする。
 
-複数workerは同じperiod row lockを通るため、同時に上限を読み抜けして外部callを開始できない。
+複数のworkerは、同じperiodの行ロックを通る。そのため、同時に上限を読み抜けて、外部の呼び出しを開始することはできない。
 
-reservationのcommitはnetwork callより前に完了させる。外部provider障害やworker crashでsettleできなくても、未確定費用をbudgetから消してfail-openしないためである。
+reservationのコミットは、ネットワークの呼び出しより前に完了させる。外部プロバイダの障害やworkerのクラッシュでsettleできなくても、未確定の費用をbudgetから消して、外部送信を許可してしまわないためである。
 
-### D4. pre-call reservationは「token実測値」ではない
+### D4. 呼び出し前のreservationは「トークンの実測値」ではない
 
-provider-reported usageは応答後にしか得られず、現行backendはprovider固有tokenizerを持たない。このためcall前はprovider token数を偽って推定せず、**送信可能量から作るconservative reservation units**を使う。
+プロバイダが報告する使用量は、応答の後にしか得られない。現行のbackendは、プロバイダ固有のトークナイザを持たない。このため、呼び出しの前には、プロバイダのトークン数を偽って推定せず、**送信できる量から作る、保守的な予約の単位**を使う。
 
-- input reservation units: 実際に送信するserialized UTF-8 request payloadのbyte数。
-- output reservation units: `LLMRequest.max_tokens`。
-- requested token reservation: 上記2値の合計。
-- payloadが既存 `MAX_LLM_PROVIDER_REQUEST_BYTES` を超える場合はprovider validationで先に拒否し、budgetを消費しない。
-- `LLMRequest.max_tokens` は既存 `MAX_LLM_OUTPUT_TOKENS` の範囲内でなければならない。
+- 入力の予約単位: 実際に送信する、シリアライズ済みのUTF-8のrequest payloadのバイト数。
+- 出力の予約単位: `LLMRequest.max_tokens`。
+- 要求するトークンの予約: 上の2つの値の合計。
+- payloadが既存の `MAX_LLM_PROVIDER_REQUEST_BYTES` を超える場合は、プロバイダの検証で先に拒否し、budgetを消費しない。
+- `LLMRequest.max_tokens` は、既存の `MAX_LLM_OUTPUT_TOKENS` の範囲内でなければならない。
 
-重要な意味境界は次のとおりです。
+重要な意味の境界は、次のとおりである。
 
-- input reservation unitsを「provider-reported input tokens」「local tokenizer推定token」と呼ばない。
-- hard guaranteeはDB上の**reservation units上限を超えて外部callを開始しないこと**であり、異種provider間の課金tokenを1 tokenizerで正確に再現するという保証ではない。
-- 運用API/文書では `tokenReservationUnits` と既存 `tokenUsage` / `tokenUsageCoverage` を別フィールドにする。
-- 将来、provider adapterが信頼できるpre-call token upper boundを提供できる場合は、そのadapterだけinput reservation strategyを精密化できる。ただしprovider-reported実測値とのprovenance分離は維持する。
+- 入力の予約単位を、「プロバイダが報告する入力トークン」や、「ローカルのトークナイザによる推定トークン」とは呼ばない。
+- hard guaranteeは、DB上の**予約単位の上限を超えて、外部の呼び出しを開始しないこと**である。異種のプロバイダ間の課金トークンを、1つのトークナイザで正確に再現するという保証ではない。
+- 運用APIと文書では、`tokenReservationUnits` と、既存の `tokenUsage` と `tokenUsageCoverage` を、別のフィールドにする。
+- 将来、プロバイダのadapterが、信頼できる呼び出し前のトークン上限を提供できる場合は、そのadapterだけ、入力の予約方式を精密にできる。ただし、プロバイダが報告する実測値との、由来の分離は維持する。
 
-これにより、tokenizerのない `large-scale /generate` でも「usage不明なので0消費」というfail-openを避け、送信payloadに比例した保守的予約を保持できる。
+これにより、トークナイザのない `large-scale /generate` でも、「使用量が不明なので0消費」として外部送信を許可してしまうことを避けられる。送信するpayloadに比例した、保守的な予約を保持できる。
 
-### D5. settleとmissing usage
+### D5. settleと、使用量の欠損
 
-外部callが成功しusageが返った場合、reservationは新しいtransactionでidempotentにsettleする。
+外部の呼び出しが成功し、使用量が返った場合、reservationは、新しいトランザクションで冪等にsettleする。
 
-- input/outputの両方がprovider-reported: 各実測値が対応する予約値以下なら実測値までunused reservationを返却する。
-- 片側だけreported: reported側だけ、実測値が予約値以下の場合に限り返却する。missing側は予約を維持する。
-- 両側missing: 予約を全量維持する。
-- provider error、timeout、worker crash: provider側で費用発生の有無を証明できないため予約を全量維持する。
-- provider-reported usageが対応する予約値を超える場合: accounting invariant違反として、そのreservationを縮小しない。budget状態をunsafeとして後続外部callを止め、運用者の確認なしに上限を再解放しない。
+- 入力と出力の両方をプロバイダが報告した: それぞれの実測値が、対応する予約値以下なら、実測値まで、使われなかった予約を返却する。
+- 片側だけ報告した: 報告された側だけ、実測値が予約値以下の場合に限り、返却する。報告のない側は、予約を維持する。
+- 両側とも報告がない: 予約を全量維持する。
+- プロバイダのエラー、タイムアウト、workerのクラッシュ: プロバイダ側で、費用が発生したかどうかを証明できない。そのため、予約を全量維持する。
+- プロバイダが報告した使用量が、対応する予約値を超えた: 会計上の不変条件の違反として、そのreservationを縮小しない。budgetの状態をunsafeとして、後続の外部呼び出しを止める。運用者が確認するまで、上限を再び開放しない。
 
-従って「missing usage = 0」とは扱わない。これは `OPS-LLM-COST-01` AC-4のprovenance契約を維持する。
+したがって、「使用量の欠損を0とする」扱いはしない。これは、`OPS-LLM-COST-01` のAC-4の、由来の契約を維持するものである。
 
-### D6. budget deny / store outageの降格
+### D6. budgetの拒否と、ストアの障害時の降格
 
-次の場合、外部providerを呼ばない。
+次の場合は、外部プロバイダを呼ばない。
 
-- call limit超過
-- token reservation limit超過
-- ledger lock/read/write/commit失敗
-- ledger schema/preflight不成立
-- accounting invariant違反によりbudget状態を安全に判定できない
+- 呼び出しの上限を超過した
+- トークン予約の上限を超過した
+- ledgerのロック、読み取り、書き込み、コミットのいずれかが失敗した
+- ledgerのスキーマまたはpreflightが成立しない
+- 会計上の不変条件の違反により、budgetの状態を安全に判定できない
 
-降格順は次のとおりとする。
+降格の順は、次のとおりとする。
 
-1. 同じtaskをlocal providerで実行可能ならlocal-onlyで再試行する。
-2. local providerが利用不能なら`none`相当のfail-closed結果へ閉じる。
-3. final-judgement routeで外部proposalとの明示linkがある場合、既存system-hold規則へ接続し、proposalを自動accept/rejectしない。
+1. 同じタスクをローカルのプロバイダで実行できるなら、ローカルのみで再試行する。
+2. ローカルのプロバイダも利用できないなら、`none` に相当する、安全側で拒否する結果へ閉じる。
+3. final-judgementのrouteで、外部の提案との明示的なリンクがある場合は、既存のsystem-holdの規則へ接続する。提案を自動でacceptやrejectしない。
 
-budget deny/store outageから別の外部providerへfallbackしてはならない。`SUI_LLM_FALLBACK_TO_NONE=false` でも、budget機構をfail-openして外部送信することは許さない。
+budgetの拒否やストアの障害から、別の外部プロバイダへフォールバックしてはならない。`SUI_LLM_FALLBACK_TO_NONE=false` であっても、budgetの仕組みを破って外部送信することは許さない。
 
 ### D7. 観測と非目標
 
-最低限、content-freeな以下を運用観測できるようにする。
+最低限、本文を含まない以下の項目を、運用で観測できるようにする。
 
-- period / budget scope
-- call limit / reserved calls
-- token reservation limit / reserved token units
-- deny reason（calls / token units / store unavailable / invariant violation）
-- settle coverage（complete / partial / missing）
+- periodとbudget scope
+- 呼び出しの上限と、予約済みの呼び出し数
+- トークン予約の上限と、予約済みのトークン単位
+- 拒否の理由（calls / token units / store unavailable / invariant violation）
+- settleのカバレッジ（complete / partial / missing）
 
-保存・表示しないもの。
+保存も表示もしないものは、次のとおり。
 
-- prompt本文、response本文、raw token列
-- card/document本文
-- user email等のPII
+- プロンプトの本文、応答の本文、生のトークン列
+- カードや文書の本文
+- 利用者のメールアドレスなどのPII
 
-本ADRでは次を扱わない。
+本ADRでは、次を扱わない。
 
-- tenant別課金・請求書生成
-- provider価格表からの円/ドル換算
-- SEC-RATE-LIMIT-01のHTTP rate limit
-- 外部providerを自動選択する新しいrouting policy
-- 異種providerを単一local tokenizerで課金tokenへ換算すること
+- tenant別の課金と請求書の生成
+- プロバイダの価格表からの、円やドルへの換算
+- SEC-RATE-LIMIT-01のHTTPレート制限
+- 外部プロバイダを自動で選択する、新しいルーティングのポリシー
+- 異種のプロバイダを、単一のローカルのトークナイザで、課金トークンへ換算すること
 
 ## Three-Element Verification（ADR-0067。全ADRで必須）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 運用者がdeployment environment全体の外部LLM費用gateを月次で固定し、複数workerでもcall/reservation上限を越えて外部callを開始させない | 機能: call前atomic reserveを必須化。データ: tenant別でなくenvironment共有ledgerとする |
-| **データ設計** | UTC暦月×budget scopeの共有ledgerとidempotent reservationを保存し、partial/missing usageでは未知側の予約を返却しない。prompt/response/PIIは保存しない | 業務: usage欠損を0扱いしない。機能: DB不能時は外部送信をfail-closedする |
-| **機能設計** | 外部provider直前でreserveし、成功後settleする。budget deny/store outageはlocal-onlyへ降格し、local不能ならnone/heldへ閉じる | 業務: SafeMode/proposal-only/human reviewを迂回しない。データ: provider-reported token実測値とconservative reservation unitsを別指標として扱う |
+| **業務設計** | 運用者が、デプロイ環境全体の外部LLMの費用ゲートを月次で固定する。複数のworkerでも、呼び出しと予約の上限を越えて、外部の呼び出しを開始させない | 機能: 呼び出し前のatomicなreserveを必須にする。データ: tenant別ではなく、環境で共有するledgerとする |
+| **データ設計** | UTCの暦月とbudget scopeごとの共有ledgerと、冪等なreservationを保存する。一部または全く報告されない使用量では、未知の側の予約を返却しない。プロンプト、応答、PIIは保存しない | 業務: 使用量の欠損を0として扱わない。機能: DBが使えないときは、外部送信を安全側で拒否する |
+| **機能設計** | 外部プロバイダを呼ぶ直前にreserveし、成功の後でsettleする。budgetの拒否とストアの障害は、ローカルのみへ降格し、ローカルが使えなければnoneまたはheldへ閉じる | 業務: SafeMode、proposal-only、human reviewを迂回しない。データ: プロバイダが報告するトークンの実測値と、保守的な予約の単位を、別の指標として扱う |
 
 ## Consequences
 
-- 複数workerでも外部call開始前に共有call/reservation hard gateを強制できる。
-- provider usage欠損・timeout・worker crashを「使用量0」とみなさないため、費用面では保守的に閉じる。
-- `large-scale /generate` のようにusageを報告しないproviderはreservationを返却できず、同じ設定値では報告するproviderより早くbudgetに到達する。これは未知費用を安全側へ倒す意図的な挙動である。
-- provider-reported tokenとconservative reservation unitsは意味が異なるため、運用表示と文書で明確に分離する必要がある。
-- 外部providerを使うdeploymentはbudget設定3点を追加しない限りstartup/readinessでfail-closedする移行が必要になる。
-- DBへのreserve/settle transactionが外部callごとに追加される。実装後にlatencyを計測する。
-- 「providerの課金token数そのものに対する完全なpre-call hard cap」は本ADRでは主張しない。将来それを必要とする場合はprovider固有tokenizer/上限APIを別決定として追加する。
+- 複数のworkerでも、外部の呼び出しを開始する前に、共有の呼び出しと予約のhard gateを強制できる。
+- プロバイダの使用量の欠損、タイムアウト、workerのクラッシュを、「使用量0」とみなさない。そのため、費用の面では保守的に閉じる。
+- `large-scale /generate` のように、使用量を報告しないプロバイダは、reservationを返却できない。同じ設定値では、報告するプロバイダより早くbudgetに到達する。これは、未知の費用を安全側へ寄せる、意図した挙動である。
+- プロバイダが報告するトークンと、保守的な予約の単位は、意味が異なる。運用の表示と文書で、明確に分離する必要がある。
+- 外部プロバイダを使うデプロイは、budgetの3つの設定を追加しない限り、起動時とreadinessで安全側に拒否される。そのための移行が必要になる。
+- DBへのreserveとsettleのトランザクションが、外部の呼び出しごとに加わる。実装の後で、レイテンシを計測する。
+- 「プロバイダの課金トークン数そのものに対する、呼び出し前の完全なhard cap」は、本ADRでは主張しない。将来それが必要になった場合は、プロバイダ固有のトークナイザや上限APIを、別の決定として追加する。
 
 ## Traceability
 
@@ -176,6 +176,6 @@ budget deny/store outageから別の外部providerへfallbackしてはならな�
 - Related: `01_Plans/adr/ADR-0009-local-llm-integration.md`
 - Related: `01_Plans/adr/ADR-0047-design-decision-adr-saturation-and-execution-first.md`（R-3）
 - Related: `01_Plans/adr/ADR-0050-llm-provider-observability-and-contract-fidelity.md`
-- Related: `03_Implement/backend/src/sui_sensemaking_api/generation_repository.py`（共有DB row lock/CASの既存実装例）
+- Related: `03_Implement/backend/src/sui_sensemaking_api/generation_repository.py`（共有DBの行ロックとCASの既存の実装例）
 
 ---

@@ -1,126 +1,126 @@
 # Sensemaking Artifact Portable Schema / Constraint Matrix
 
-- Status: **Design candidate / SENSEMAKING-PERSIST-01**
-- Date: 2026-09-18
-- Parent: `ADR-0088`, `sensemaking_artifact_persistence_candidate.md`
-- Migration: **Not started**
-- Goal: Verified DB familyへ落とせるlogical schemaと、DB / applicationのconstraint責務を分離する
+- 状態: **設計候補 / SENSEMAKING-PERSIST-01**
+- 日付: 2026-09-18
+- 親: `ADR-0088`, `sensemaking_artifact_persistence_candidate.md`
+- マイグレーション: **未着手**
+- 目標: 検証済みのDBファミリへ落とせる論理スキーマと、DBとアプリケーションの制約の責務を分離する
 
 ## 1. 方針
 
-physical migrationの前に、各invariantを次の3種へ分類する。
+物理マイグレーションの前に、各不変条件を次の3種へ分類します。
 
-1. **DB-enforced**
-   - PK / unique / FK / check等、Verified DB familyでportableに守れるもの
-2. **Transaction-enforced**
-   - current state CAS、複数recordの整合等、application transactionで守るもの
-3. **Validation-enforced**
-   - cycle、namespace semantics、bundle closure等、書込み前validatorで守るもの
+1. **DBで強制する**
+   - 主キー、ユニーク、外部キー、check制約など、検証済みのDBファミリでポータブルに守れるもの
+2. **トランザクションで強制する**
+   - 現在状態のCAS、複数レコードの整合など、アプリケーションのトランザクションで守るもの
+3. **検証で強制する**
+   - 循環、名前空間の意味、バンドルのクロージャなど、書き込み前の検証処理で守るもの
 
-DBで表現できない意味を、DB-specific triggerへ隠さない。
+DBで表現できない意味を、DB固有のトリガーに隠しません。
 
 ---
 
-## 2. Canonical record candidate
+## 2. 基準レコードの候補
 
 ### 2.1 `semantic_artifacts`
 
-| Column | Shape | Role |
+| カラム | 形 | 役割 |
 |---|---|---|
-| tenant_id | existing tenant identifier | tenant boundary |
-| artifact_id | internal opaque ID | logical identity |
-| semantic_kind | closed-set bounded text | immutable kind |
-| created_at | canonical timestamp | creation |
-| created_by_actor_kind | closed-set | human / ai / system / import / unknown |
-| created_by_actor_ref | optional opaque ref | creator reference |
+| tenant_id | 既存のテナント識別子 | テナントの境界 |
+| artifact_id | 内部の不透明ID | 論理ID |
+| semantic_kind | 閉じた集合で長さ制限付きのテキスト | 不変のkind |
+| created_at | 正規形のタイムスタンプ | 作成日時 |
+| created_by_actor_kind | 閉じた集合 | human / ai / system / import / unknown |
+| created_by_actor_ref | 任意の不透明な参照 | 作成者の参照 |
 
-Constraints:
+制約は次のとおりです。
 
-- PK / UNIQUE: `(tenant_id, artifact_id)`
-- semantic kind closed-set check
-- artifact kind update APIは提供しない
+- 主キーとユニーク: `(tenant_id, artifact_id)`
+- semantic kindは、閉じた集合のcheck制約で守る。
+- 成果物のkindを更新するAPIは提供しない。
 
 ### 2.2 `semantic_artifact_revisions`
 
-| Column | Shape | Role |
+| カラム | 形 | 役割 |
 |---|---|---|
-| tenant_id | tenant identifier | tenant boundary |
-| revision_id | internal opaque ID | exact revision identity |
-| artifact_id | opaque ID | logical artifact |
-| payload_schema | bounded schema ref | payload contract |
-| payload_content_ref | internal content ref | Content Store |
-| payload_digest | sha256 bounded text | integrity cross-check |
-| lifecycle | closed-set | active / held / rejected / superseded / archived |
-| actor_kind | closed-set | provenance |
-| actor_ref | optional opaque ref | provenance |
-| method_kind | closed-set | provenance |
-| method_ref | optional opaque ref | provenance |
-| run_ref | optional opaque ref | AI/system execution |
-| input_scope_ref | optional opaque ref | bounded input scope |
-| created_at | canonical timestamp | immutable creation |
+| tenant_id | テナント識別子 | テナントの境界 |
+| revision_id | 内部の不透明ID | 厳密なリビジョンID |
+| artifact_id | 不透明ID | 論理的な成果物 |
+| payload_schema | 長さ制限付きのスキーマ参照 | ペイロード契約 |
+| payload_content_ref | 内部のコンテンツ参照 | Content Store |
+| payload_digest | 長さ制限付きのsha256テキスト | 完全性の照合 |
+| lifecycle | 閉じた集合 | active / held / rejected / superseded / archived |
+| actor_kind | 閉じた集合 | 来歴 |
+| actor_ref | 任意の不透明な参照 | 来歴 |
+| method_kind | 閉じた集合 | 来歴 |
+| method_ref | 任意の不透明な参照 | 来歴 |
+| run_ref | 任意の不透明な参照 | AIやシステムによる実行 |
+| input_scope_ref | 任意の不透明な参照 | 長さ制限付きの入力スコープ |
+| created_at | 正規形のタイムスタンプ | 不変の作成日時 |
 
-Constraints:
+制約は次のとおりです。
 
-- UNIQUE: `(tenant_id, revision_id)`
-- UNIQUE candidate: `(tenant_id, artifact_id, revision_id)` for composite FK target
-- FK: `(tenant_id, artifact_id) -> semantic_artifacts`
-- lifecycle closed-set check
-- payload digest syntax checkはportable bounded validation + application strict validation
-- UPDATE本文は禁止。lifecycle変更も新revisionにするかappend eventへ分離する実装方針をmigration前に再確認する
+- ユニーク: `(tenant_id, revision_id)`
+- ユニークの候補: 複合外部キーの参照先として `(tenant_id, artifact_id, revision_id)`
+- 外部キー: `(tenant_id, artifact_id) -> semantic_artifacts`
+- lifecycleは、閉じた集合のcheck制約で守る。
+- ペイロードのダイジェストの構文は、ポータブルな長さ制限付きの検証と、アプリケーションの厳密な検証で確認する。
+- 本文のUPDATEは禁止する。lifecycleの変更を新しいリビジョンにするか、追記専用のイベントへ分離するかは、マイグレーションの前に実装方針を再確認する。
 
-> Note: ADR-0086ではlifecycleをrevision envelopeに置いた。physical implementationではrevision immutableを厳格に取るため、lifecycleをrevision rowへ固定値として置くか、別append-only lifecycle eventへ分けるかをbenchmark前に最終決定する。in-place lifecycle updateを前提にはしない。
+> 注: ADR-0086では、lifecycleをリビジョンのエンベロープに置いた。物理実装ではリビジョンの不変性を厳格に保つため、lifecycleをリビジョン行の固定値として置くか、別の追記専用のlifecycleイベントへ分けるかを、ベンチマークの前に最終決定する。その場でlifecycleを更新することは前提にしない。
 
 ### 2.3 `semantic_artifact_revision_parents`
 
-| Column | Role |
+| カラム | 役割 |
 |---|---|
-| tenant_id | tenant |
-| artifact_id | same-artifact guard |
-| child_revision_id | child |
-| parent_revision_id | parent |
+| tenant_id | テナント |
+| artifact_id | 同じ成果物であることのガード |
+| child_revision_id | 子 |
+| parent_revision_id | 親 |
 
-Constraints:
+制約は次のとおりです。
 
-- UNIQUE: `(tenant_id, child_revision_id, parent_revision_id)`
-- composite FK child: `(tenant_id, artifact_id, child_revision_id)`
-- composite FK parent: `(tenant_id, artifact_id, parent_revision_id)`
-- self-parent禁止check
-- cycleはvalidation-enforced
+- ユニーク: `(tenant_id, child_revision_id, parent_revision_id)`
+- 子の複合外部キー: `(tenant_id, artifact_id, child_revision_id)`
+- 親の複合外部キー: `(tenant_id, artifact_id, parent_revision_id)`
+- 自分自身を親にすることを禁止するcheck制約
+- 循環は、検証で強制する。
 
-この形でparentが別artifactを指すことをDB FKで防ぐ。
+この形にすると、親が別の成果物を指すことを、DBの外部キーで防げます。
 
 ### 2.4 `semantic_artifact_input_refs`
 
-artifact provenanceとして別artifact revisionを入力に使ったことを保持。
+成果物の来歴として、別の成果物リビジョンを入力に使ったことを保持します。
 
-| Column | Role |
+| カラム | 役割 |
 |---|---|
-| tenant_id | tenant |
-| revision_id | output revision |
-| ordinal | deterministic order if needed |
-| input_artifact_id | input logical ID |
-| input_revision_id | exact input |
+| tenant_id | テナント |
+| revision_id | 出力側のリビジョン |
+| ordinal | 必要な場合の決定的な順序 |
+| input_artifact_id | 入力の論理ID |
+| input_revision_id | 厳密な入力 |
 
-Constraints:
+制約は次のとおりです。
 
-- output exact revision FK
-- input exact revision composite FK
-- duplicate policyはrole / ordinal設計時に確定
+- 出力側の厳密なリビジョンへの外部キー
+- 入力側の厳密なリビジョンへの複合外部キー
+- 重複の扱いは、roleとordinalを設計するときに確定する。
 
 ### 2.5 `semantic_artifact_source_refs`
 
-source registry / external sourceへのopaque ref。
+出典レジストリや外部の出典への、不透明な参照です。
 
 - tenant_id
 - revision_id
 - source_ref
 - ordinal
 
-sourceがSUI内部registryにある場合だけFK化する。外部refを偽FKにしない。
+出典がSUI内部のレジストリにある場合に限り、外部キーにします。外部の参照を、偽の外部キーにはしません。
 
 ### 2.6 `semantic_artifact_transformation_refs`
 
-redaction / normalization / conversion lineage。
+墨消し、正規化、変換の系譜です。
 
 - tenant_id
 - revision_id
@@ -133,32 +133,32 @@ redaction / normalization / conversion lineage。
 
 ### 3.1 `semantic_reviews`
 
-| Column | Role |
+| カラム | 役割 |
 |---|---|
-| tenant_id | tenant |
-| review_id | immutable review ID |
-| target_artifact_id | target |
-| target_revision_id | exact target |
+| tenant_id | テナント |
+| review_id | 不変のReview ID |
+| target_artifact_id | 対象 |
+| target_revision_id | 厳密な対象 |
 | reviewer_kind | human / ai / system |
-| reviewer_ref | opaque actor |
-| purpose | closed set |
-| disposition | closed set |
-| supersedes_review_id | optional correction lineage |
-| created_at | append time |
+| reviewer_ref | 不透明なactor |
+| purpose | 閉じた集合 |
+| disposition | 閉じた集合 |
+| supersedes_review_id | 任意。訂正の系譜 |
+| created_at | 追記日時 |
 
-Constraints:
+制約は次のとおりです。
 
-- UNIQUE `(tenant_id, review_id)`
-- exact target revision composite FK
-- supersedes ref same tenant
-- `accepted` / `consensus`をdisposition enumへ入れない
-- reviewer kindと`human_reviewed`の連携はapplication policyで扱う
+- ユニーク: `(tenant_id, review_id)`
+- 厳密な対象リビジョンへの複合外部キー
+- supersedesの参照は、同じテナントにする。
+- `accepted` と `consensus` は、disposition列挙へ入れない。
+- reviewer kindと `human_reviewed` の連携は、アプリケーションのポリシーで扱う。
 
-### 3.2 Review findings
+### 3.2 Reviewのfinding
 
-短いclosed codeはbounded rows、長文findingはContent Storeへ分離する候補。
+短い閉じたコードは長さ制限付きの行にし、長文のfindingはContent Storeへ分離する案を候補とします。
 
-Review row自体へ自由長本文を大量に詰め込まない。
+Reviewの行そのものに、自由な長さの本文を大量に詰め込みません。
 
 ---
 
@@ -166,49 +166,49 @@ Review row自体へ自由長本文を大量に詰め込まない。
 
 ### 4.1 `authority_scopes`
 
-| Column | Role |
+| カラム | 役割 |
 |---|---|
-| tenant_id | tenant |
-| scope_ref | immutable scope identity |
+| tenant_id | テナント |
+| scope_ref | 不変のスコープID |
 | scope_kind | workspace / inquiry / network / decision_context / external_context |
-| container_ref | context |
-| purpose_ref | optional |
-| parent_scope_ref | optional |
-| created_at | creation |
+| container_ref | 文脈 |
+| purpose_ref | 任意 |
+| parent_scope_ref | 任意 |
+| created_at | 作成日時 |
 
-Constraints:
+制約は次のとおりです。
 
-- UNIQUE `(tenant_id, scope_ref)`
-- parent same tenant FK
-- self-parent禁止
-- cycleはvalidation-enforced
-- parent authority inheritanceを実装しない
+- ユニーク: `(tenant_id, scope_ref)`
+- 親は、同じテナントの外部キーにする。
+- 自分自身を親にすることを禁止する。
+- 循環は、検証で強制する。
+- 親からのAuthorityの継承は実装しない。
 
 ### 4.2 `authority_transitions`
 
-| Column | Role |
+| カラム | 役割 |
 |---|---|
-| tenant_id | tenant |
-| event_id | append-only event |
-| target_artifact_id | target |
-| target_revision_id | exact revision |
-| scope_ref | authority context |
-| expected_from | CAS precondition |
-| to_state | target state |
+| tenant_id | テナント |
+| event_id | 追記専用のイベント |
+| target_artifact_id | 対象 |
+| target_revision_id | 厳密なリビジョン |
+| scope_ref | Authorityの文脈 |
+| expected_from | CASの事前条件 |
+| to_state | 遷移先の状態 |
 | authorized_by_kind | human / policy |
-| authorized_by_ref | authority principal |
-| policy_ref | optional |
-| participant_set_ref | optional |
-| created_at | append time |
+| authorized_by_ref | Authorityの主体 |
+| policy_ref | 任意 |
+| participant_set_ref | 任意 |
+| created_at | 追記日時 |
 
-Constraints:
+制約は次のとおりです。
 
-- UNIQUE `(tenant_id, event_id)`
-- exact target revision FK
-- scope FK
-- state closed-set checks
-- participant set same tenant FK when provided
-- current state correctnessはtransaction-enforced
+- ユニーク: `(tenant_id, event_id)`
+- 厳密な対象リビジョンへの外部キー
+- スコープへの外部キー
+- 状態は、閉じた集合のcheck制約で守る。
+- 参加者集合を指定するときは、同じテナントの外部キーにする。
+- 現在状態の正しさは、トランザクションで強制する。
 
 ### 4.3 `authority_transition_review_basis`
 
@@ -216,7 +216,7 @@ Constraints:
 - event_id
 - review_id
 
-両方same tenant FK。
+どちらも、同じテナントの外部キーにします。
 
 ### 4.4 `authority_transition_decision_basis`
 
@@ -225,24 +225,24 @@ Constraints:
 - decision_artifact_id
 - decision_revision_id
 
-Decision semantic kindであることはtransaction / validationで確認する。
+Decisionのsemantic kindであることは、トランザクションと検証で確認します。
 
-### 4.5 `authority_current_state`（derived cache）
+### 4.5 `authority_current_state`（導出キャッシュ）
 
-| Column | Role |
+| カラム | 役割 |
 |---|---|
-| tenant_id | tenant |
-| artifact_id | target |
-| revision_id | exact revision |
-| scope_ref | authority context |
-| current_state | cache |
-| last_event_id | reconstruction anchor |
-| updated_at | cache time |
+| tenant_id | テナント |
+| artifact_id | 対象 |
+| revision_id | 厳密なリビジョン |
+| scope_ref | Authorityの文脈 |
+| current_state | キャッシュ |
+| last_event_id | 再構築の起点 |
+| updated_at | キャッシュの更新日時 |
 
-UNIQUE:
+ユニーク制約は次のとおりです。
 `(tenant_id, artifact_id, revision_id, scope_ref)`
 
-このtableはAuthority event列から再構築可能でなければならない。
+このテーブルは、Authorityイベント列から再構築できなければなりません。
 
 ---
 
@@ -256,7 +256,7 @@ UNIQUE:
 - membership_source_ref?
 - created_at
 
-immutable。
+不変にします。
 
 ### 5.2 `consensus_participants`
 
@@ -266,16 +266,16 @@ immutable。
 - actor_kind
 - eligibility_role_ref?
 
-UNIQUE:
+ユニーク制約は次のとおりです。
 `(tenant_id, participant_set_ref, actor_ref)`
 
-participant updateは禁止。訂正時は新participant setを作る。
+参加者の更新は禁止します。訂正するときは、新しい参加者集合を作ります。
 
-Consensus Policy本体は別policy registry / content contractの候補とし、本Issueで投票数式を固定しない。
+Consensus Policy本体は、別のポリシーレジストリまたはコンテンツ契約の候補とします。このIssueでは、投票の数式を固定しません。
 
 ---
 
-## 6. Exchange
+## 6. 交換
 
 ### 6.1 `artifact_import_sessions`
 
@@ -289,10 +289,10 @@ Consensus Policy本体は別policy registry / content contractの候補とし、
 - created_at
 - completed_at?
 
-state:
+stateの値は次のとおりです。
 `staging | validated | committed | failed`
 
-部分authority適用を防ぐため、staging / validationとcanonical commitを区別する。
+一部のAuthorityだけが適用される事態を防ぐため、ステージングと検証の段階を、基準データへのコミットと区別します。
 
 ### 6.2 `artifact_import_mappings`
 
@@ -304,37 +304,35 @@ state:
 - local_artifact_id
 - local_revision_id
 
-source identity collisionの追跡用。
+出典側のIDの衝突を追跡するためのものです。
 
-### 6.3 Source assertions
+### 6.3 出典のアサーション
 
-source Review / Authorityはlocal canonical eventと別record classにする。
+出典側のReviewやAuthorityは、ローカルの基準イベントとは別のレコード分類にします。
 
 ```text
 source_review_assertions
 source_authority_assertions
 ```
 
-少なくとも、
+少なくとも、次の項目を保持できるようにします。
 
-- source network
-- source record identity
-- source scope
-- safe imported representation / content ref
-- import session
+- 出典のネットワーク
+- 出典のレコードID
+- 出典のスコープ
+- 安全なimport後の表現、またはコンテンツ参照
+- importセッション
 - created_at
 
-を保持できる。
-
-local authority reducerはこれらを入力にしない。
+ローカルのAuthority reducerは、これらを入力にしません。
 
 ---
 
-## 7. Relation projection index
+## 7. Relationの投影インデックス
 
-Relation artifactそのものはcanonical artifact。
+Relationの成果物そのものは、基準となる成果物です。
 
-高速query用indexはderived。
+高速なクエリ用のインデックスは、導出されたものです。
 
 候補は次のとおりです。
 
@@ -350,77 +348,77 @@ semantic_relation_index
   target_ref
 ```
 
-- unknown extension predicate保持
-- index消失時にRelation payloadからrebuild
-- index rowからRelation payloadを逆生成しない
+- 未知の拡張predicateを保持する。
+- インデックスが失われたときは、Relationのペイロードから再構築する。
+- インデックスの行から、Relationのペイロードを逆生成しない。
 
 ---
 
-## 8. Constraint responsibility matrix
+## 8. 制約の責務マトリクス
 
-| Invariant | DB | Transaction | Validator |
+| 不変条件 | DB | トランザクション | 検証 |
 |---|---:|---:|---:|
-| tenant越境FK禁止 | ○ |  |  |
-| exact revision存在 | ○ |  |  |
-| parent same artifact | ○ composite FK |  |  |
-| parent cycle禁止 |  |  | ○ |
-| semantic kind immutable | schema + no update path | ○ | ○ |
-| payload kind/schema一致 |  |  | ○ |
-| payload digest一致 |  | ○ load/write | ○ |
-| Review target exact revision | ○ |  |  |
-| AI Review != human Review | enum + policy | ○ | ○ |
-| Authority expectedFrom一致 |  | ○ CAS |  |
-| Authority Scope存在 | ○ |  |  |
-| parent scope authority非継承 |  | ○ | ○ |
-| participant snapshot immutable | no update path | ○ |  |
-| Consensus != Review count |  | ○ | ○ |
-| imported authority非昇格 | separate tables | ○ | ○ |
-| bundle closure |  |  | ○ |
-| import ID collision |  | ○ | ○ |
-| unknown extension relation保全 |  |  | ○ |
-| extension relation side effect禁止 |  | ○ | ○ |
-| retention root保護 |  | ○ GC | ○ |
+| テナントをまたぐ外部キーの禁止 | ○ |  |  |
+| 厳密なリビジョンの存在 | ○ |  |  |
+| 親が同じ成果物であること | ○ 複合外部キー |  |  |
+| 親の循環の禁止 |  |  | ○ |
+| semantic kindの不変 | スキーマ + 更新経路なし | ○ | ○ |
+| ペイロードのkindとスキーマの一致 |  |  | ○ |
+| ペイロードのダイジェストの一致 |  | ○ 読み込み時と書き込み時 | ○ |
+| Reviewの対象が厳密なリビジョン | ○ |  |  |
+| AI Review != human Review | 列挙 + ポリシー | ○ | ○ |
+| Authorityの expectedFrom の一致 |  | ○ CAS |  |
+| Authority Scopeの存在 | ○ |  |  |
+| 親スコープのAuthorityを継承しない |  | ○ | ○ |
+| 参加者スナップショットの不変 | 更新経路なし | ○ |  |
+| Consensus != Reviewの件数 |  | ○ | ○ |
+| importしたAuthorityを昇格しない | 別テーブル | ○ | ○ |
+| バンドルのクロージャ |  |  | ○ |
+| importでのIDの衝突 |  | ○ | ○ |
+| 未知の拡張Relationの保全 |  |  | ○ |
+| 拡張Relationの副作用の禁止 |  | ○ | ○ |
+| 保持ルートの保護 |  | ○ GC | ○ |
 
 ---
 
-## 9. Portable DB notes
+## 9. DB移植性の注記
 
 ### SQLite
 
-- composite FK / unique / checkは利用可能
-- concurrencyは単一writer特性を考慮
-- shared-schema SaaS対象外
-- Authority CAS fixtureはSQLite固有lock挙動と意味contractを分けて検証
+- 複合外部キー、ユニーク、check制約は利用できる。
+- 並行性は、単一ライターという特性を考慮する。
+- 共有スキーマのSaaSは対象外とする。
+- Authority CASのフィクスチャでは、SQLite固有のロック挙動と、意味の契約を分けて検証する。
 
 ### PostgreSQL
 
-- shared-schema SaaS対象
-- RLSは既存tenant policyに従う
-- JSONBやrecursive CTEはoptimizationでのみ利用
+- 共有スキーマのSaaSが対象となる。
+- RLSは、既存のテナントポリシーに従う。
+- JSONBと再帰CTEは、最適化にだけ利用する。
 
 ### MySQL / MariaDB
 
-- bounded identifier / index byte limitsに既存catalogを利用
-- JSON field依存をCore constraintにしない
+- 長さ制限付きの識別子とインデックスのバイト数上限には、既存のカタログを利用する。
+- JSONフィールドへの依存を、Coreの制約にしない。
 
 ### SQL Server
 
-- named constraint / bounded ID / LOB既存方針へ従う
-- recursive / graph固有機能を必須にしない
+- 名前付き制約、長さ制限付きID、LOBについての既存方針に従う。
+- 再帰機能やグラフ固有の機能を必須にしない。
 
 ### CockroachDB
 
-- transaction semanticsを実DB fixtureで検証
-- distributed DBであることからshared-schema SaaS対応を推論しない
+- トランザクションの意味を、実DBのフィクスチャで検証する。
+- 分散DBであることから、共有スキーマのSaaSに対応していると推論しない。
 
 ### Oracle
 
-- CLOB / named constraint等既存portable DDL境界へ従う
-- JSON-specific featureをCore correctnessへ使わない
+- CLOBや名前付き制約など、既存のポータブルなDDLの境界に従う。
+- JSON固有の機能を、Coreの正しさに使わない。
 
 ---
 
-## 10. Authority CAS pseudo-flow
+## 10. Authority CASの疑似フロー
 
 ```text
 BEGIN
@@ -442,13 +440,13 @@ append audit / outbox
 COMMIT
 ```
 
-具体的なlock primitiveはDB family adapterへ閉じ込める。
+具体的なロックの仕組みは、DBファミリのアダプタへ閉じ込めます。
 
-CASの意味は全DB共通にする。
+CASの意味は、すべてのDBで共通にします。
 
 ---
 
-## 11. Review target drift pseudo-flow
+## 11. Reviewの対象のずれに関する疑似フロー
 
 ```text
 Review starts on H/r3
@@ -461,11 +459,11 @@ Review submits target H/r3
 => r4 remains unreviewed
 ```
 
-「最新revisionへ自動読み替え」は禁止。
+「最新リビジョンへの自動的な読み替え」は禁止します。
 
 ---
 
-## 12. Import staging pseudo-flow
+## 12. importのステージングに関する疑似フロー
 
 ```text
 parse bundle
@@ -491,26 +489,26 @@ outbox
 materialized network
 ```
 
-failure時:
+失敗したときは、次のとおりにします。
 
-- local Accepted / Consensusを残さない
-- local human Reviewを残さない
-- readyになっていないpayloadをcanonical revisionから参照しない
-- external blob orphanは既存Content Store回収規則へ送る
+- ローカルのAcceptedやConsensusを残さない。
+- ローカルのhuman Reviewを残さない。
+- readyになっていないペイロードを、基準リビジョンから参照しない。
+- 外部BLOBの孤児は、既存のContent Storeの回収規則へ送る。
 
 ---
 
-## 13. Migration前に未決のもの
+## 13. マイグレーションの前に未決のもの
 
-- exact physical names
-- ID generation algorithm
-- lifecycleをrevision envelopeに固定するかappend-only eventへ分離するか
-- Review findingのbounded row / content object境界
-- Consensus Policy persistence
-- import source assertion payload shape
-- materializer outbox既存table再利用可否
-- current-state cache recovery operation
-- Relation index更新の粒度
-- GC reachability algorithmのDB-portable実装
+- 物理名の確定
+- IDの生成アルゴリズム
+- lifecycleを、リビジョンのエンベロープに固定するか、追記専用イベントへ分離するか
+- Reviewのfindingを、長さ制限付きの行にするか、コンテンツオブジェクトにするかの境界
+- Consensus Policyの永続化
+- importした出典のアサーションのペイロード形状
+- マテリアライザのoutboxで、既存テーブルを再利用できるか
+- 現在状態キャッシュの復旧操作
+- Relationインデックスの更新の粒度
+- GCの到達可能性アルゴリズムを、DBに依存せず実装する方法
 
-これらをfixture / benchmarkなしにmigrationへ固定しない。
+これらは、フィクスチャやベンチマークなしにマイグレーションへ固定しません。

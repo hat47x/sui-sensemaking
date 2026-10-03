@@ -10,35 +10,35 @@
 
 ## Context
 
-semantic artifact contractは、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Decisionと、そのrevision、Review、Authority、Scope、Consensus participant、exchange historyを扱う。
+semantic artifact契約は、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Decision、およびそのリビジョン、Review、Authority、Scope、Consensusの参加者、交換履歴を扱う。
 
-physical persistenceには複数候補がある。
+物理的な永続化には複数の候補がある。
 
-- RDBへすべて正規化
-- JSON aggregate
-- graph database
-- object / content store中心
-- RDB metadata + content-addressed payload + materialized graph
+- すべてをRDBへ正規化する
+- JSON集約にする
+- グラフデータベースにする
+- オブジェクトストアまたはコンテンツストアを中心にする
+- RDBのメタデータ + 内容アドレス指定のpayload + materializedグラフにする
 
 SUIにはすでに次の設計資産がある。
 
-- Verified RDB familyとportable migration方針（ADR-0066）
+- 検証済みRDBファミリとポータブルなマイグレーション方針（ADR-0066）
 - content objectをContent Storeの背後へ置く方針
-- canvas revisionをopaque revision identity + content digest + blobへ分離する方針（ADR-0070）
-- Document DB / derived projectionをcanonical sourceにしない方針（ADR-0071）
-- SUI Information Network / QualitativeNetworkSnapshotをquery read modelとして扱う方針
+- canvas revisionを、不透明なリビジョンID、コンテンツダイジェスト、blobへ分ける方針（ADR-0070）
+- Document DBと派生プロジェクションを正本にしない方針（ADR-0071）
+- SUI Information NetworkとQualitativeNetworkSnapshotを、問い合わせ用の読み取りモデルとして扱う方針
 
-semantic artifactだけをgraph DBのcanonical sourceにすると、tenant authorization、transaction、Review / Authority CAS、retention、import collision、portable DB supportを二重実装する。
+semantic artifactだけグラフDBを正本にすると、テナント認可、トランザクション、ReviewとAuthorityのCAS、保持期間、インポート時の衝突、ポータブルなDB対応を二重に実装することになる。
 
-一方、kind-specific payloadをRDB列へ完全分解すると、新しいsemantic kindやAI-native payload追加のたびにmigration負担が増える。
+一方、種別ごとのpayloadをRDBの列へ完全に分解すると、新しいsemantic kindやAIネイティブなpayloadを足すたびにマイグレーションの負担が増える。
 
 ## Decision
 
 ### D1. 第一候補を「RDB metadata/event + Content Store payload」とする
 
-canonical metadata / eventはVerified RDBへ置く。
+正本となるmetadataとeventは、検証済みRDBへ置く。
 
-kind-specific semantic payloadはcanonical JSON content objectとしてContent Store契約の背後へ置く。
+種別ごとのsemantic payloadは、正規化したJSONのcontent objectとして、Content Store契約の背後へ置く。
 
 ```text
 RDB canonical metadata/events
@@ -59,11 +59,11 @@ RDB canonical metadata/events
    semantic payload JSON
 ```
 
-Content Storeの既定backendは既存方針どおりdatabase inlineを利用できる。NAS / S3等をsemantic artifact専用に必須化しない。
+Content Storeの既定のバックエンドは、既存方針どおりデータベースへのインライン保存を使える。NASやS3などを、semantic artifact専用に必須とはしない。
 
-### D2. artifact identityとrevisionをRDBのbounded metadataとして保持する
+### D2. artifact identityとrevisionは、RDBの上限付きmetadataとして保持する
 
-logical record classを次のように分ける。
+論理的なレコードクラスを次のように分ける。
 
 - SemanticArtifact
 - SemanticArtifactRevision
@@ -76,11 +76,11 @@ logical record classを次のように分ける。
 - ExchangeImportMapping
 - RetentionPin
 
-具体table名はimplementation issueで決めるが、責務を一つの巨大JSON aggregateへ統合しない。
+具体的なテーブル名は実装issueで決める。ただし、責務を一つの巨大なJSON集約へまとめない。
 
-### D3. semantic payload本文をrevision rowへ巨大JSONとして直接依存させない
+### D3. semantic payloadの本文を、revision行の巨大なJSONに直接依存させない
 
-Revisionはpayload content ref / digest / schema refを持つ方向とする。
+Revisionは、payloadのcontent ref、ダイジェスト、スキーマ参照を持つ方向とする。
 
 ```text
 revisionId
@@ -93,64 +93,56 @@ provenance refs
 lifecycle
 ```
 
-これにより、
+これにより、次の点をrevision identityから切り離せる。
 
 - payload本文の大きさ
-- DB familyごとのLOB
-- 将来external Content Store
-- dedup / codec
-- SafeMode派生payload
+- DBファミリごとのLOB
+- 将来の外部Content Store
+- 重複排除とコーデック
+- SafeModeの派生payload
 
-をrevision identityから分離できる。
+ただし、Content Store上のblobを重複排除しても、artifactの論理identityを統合してはならない。
 
-ただしContent Store上のblob dedupによってartifact logical identityを統合してはならない。
+### D4. 既存の `content_blobs` とContent Storeの再利用を優先して検討する
 
-### D4. existing `content_blobs` / Content Storeの再利用を優先検討する
+semantic artifact専用の第二のContent Storeは作らない。
 
-semantic artifact専用の第二Content Storeを作らない。
+既存のContent Storeが次を満たせるなら、同じportとblob契約を再利用する。
 
-既存Content Storeが、
-
-- tenant scoped metadata
-- UTF-8 bytes
-- byte size
+- テナント単位のmetadata
+- UTF-8バイト列
+- バイトサイズ
 - SHA-256
-- schema version
-- backend abstraction
+- スキーマバージョン
+- バックエンドの抽象化
 
-を満たせる場合、同じport / blob contractを再利用する。
+ただし、canvas revisionのpayloadとsemantic payloadを、同じ論理revisionテーブルへ統合しない。
 
-ただしcanvas revision payloadとsemantic payloadを同じlogical revision tableへ統合しない。
+### D5. Relationもsemantic artifactとして正本にする
 
-### D5. Relationもsemantic artifactとして正本化する
+Relation専用のエッジテーブルを正本にはしない。
 
-Relation専用edge tableをcanonical sourceにしない。
+Relation artifactのpayloadはContent Storeへ置き、revisionのmetadataをRDBで管理する。
 
-Relation artifactのpayloadはContent Storeへ置き、revision metadataをRDBで管理する。
-
-query performance用に、
+問い合わせの性能のために、次の項目はmaterializedなインデックスやプロジェクションへ展開してよい。
 
 - predicate
-- participant refs
-- from/to相当
-- network adjacency
+- 参加者への参照
+- from/toに相当する項目
+- ネットワークの隣接関係
 
-をmaterialized index / projectionへ展開してよい。
+プロジェクションからRelation artifactを逆に生成することはしない。
 
-projectionからRelation artifactを逆生成しない。
+### D6. Information Networkとグラフストアは、materializedな読み取りモデルとする
 
-### D6. Information Network / graph storeはmaterialized read modelとする
+グラフDBを正本にはしない。
 
-graph DBをcanonical sourceにはしない。
+必要なら、次のいずれかへInformation Networkをmaterializeできる。
 
-必要なら、
-
-- RDB projection tables
-- in-memory graph
-- graph DB
-- search index
-
-のいずれかへInformation Networkをmaterializeできる。
+- RDBのプロジェクションテーブル
+- インメモリのグラフ
+- グラフDB
+- 検索インデックス
 
 ```text
 canonical RDB + payload
@@ -163,88 +155,78 @@ materializer
        └─ search / vector / sparse index
 ```
 
-projectionが消えてもcanonical recordsから再構築可能でなければならない。
+プロジェクションが失われても、正本のレコードから再構築できなければならない。
 
-### D7. Authority current stateはcache可能だがevent列を正本とする
+### D7. Authorityの現在状態はキャッシュしてよいが、event列を正本とする
 
-authority transitionはappend-onlyでRDBへ保存する。
+authority transitionは、追記専用でRDBへ保存する。
 
-performance用に、
+性能のために、次の対応を持つmaterializedなキャッシュを置ける。
 
 ```text
 artifact revision + scope -> current authority state
 ```
 
-のmaterialized cacheを持てる。
+transitionのトランザクションでは、次の手順を同じトランザクションで扱う方向とする。
 
-transition transactionでは、
+1. 現在状態をロックし、CASで確認する
+2. `expectedFrom` を検証する
+3. eventを追記する
+4. 現在状態のキャッシュを更新する
 
-1. current stateをlock / CAS確認
-2. `expectedFrom`検証
-3. event append
-4. current-state cache更新
+キャッシュが壊れた場合は、event列から再構築できる。
 
-を同じtransactionで扱う方向とする。
+### D8. Reviewは追記専用とし、authorityのトランザクションとは分ける
 
-cache破損時はevent列から再構築できる。
+Reviewの追記とAuthorityの昇格を、同じレコードにしない。
 
-### D8. Reviewはappend-onlyでauthority transactionと分離する
+UI上で「Reviewして採用」を一つの操作に見せる場合も、アプリケーションサービスは次の二つを、意味上は別の操作として実行する。
 
-Review appendとAuthority promotionを同じrecordにしない。
-
-UI上で「Reviewして採用」を一操作に見せる場合でも、application serviceは、
-
-1. Review append
+1. Reviewの追記
 2. Authority transition
 
-を意味上別操作として実行する。
+必要なら同じDBトランザクションへ含めてよい。ただし、一方から他方を推論しない。
 
-必要なら同じDB transactionへ含められるが、一方を他方から推論しない。
+### D9. provenance relationは、厳密なrevisionへの外部キー相当で検証する
 
-### D9. provenance relationはexact revision FK相当で検証する
+artifact間のinputとlineageの参照は、次をアプリケーション制約またはDB制約で検証できなければならない。
 
-artifact-to-artifact input / lineage refは、
+- 同じテナントであること
+- 厳密なartifact revisionが存在すること
+- semantic kindの制約
+- 循環の制約（必要なroleのみ）
 
-- same tenant
-- exact artifact revision存在
-- semantic kind制約
-- cycle制約（必要なrole）
+外部のsource refには、同じ外部キーを求めない。ただし、source registryへ解決できる場合は、テナントと権限の境界を確認する。
 
-をapplication / DB constraintで検証できる必要がある。
+### D10. RDBのポータビリティを保ち、JSON演算にコアの正しさを依存させない
 
-external source refは同じFKを要求しないが、source registryへ解決可能な場合はtenant / permission境界を確認する。
-
-### D10. RDB portabilityを維持し、JSON演算へCore correctnessを依存させない
-
-Verified DBすべてで成立することを前提に、
+検証済みのDBすべてで成立することを前提に、次の項目はポータブルな上限付きの列で表す。
 
 - identity
-- FK
-- unique
-- lifecycle / authority state
+- 外部キー
+- 一意制約
+- lifecycleとauthorityの状態
 - createdAt
-- schema ref
-- digest
+- スキーマ参照
+- ダイジェスト
 
-等のCore correctnessはportable bounded columnsで表現する。
+こうしたコアの正しさは、列で表現する。種別ごとのpayloadの内容検索やJSON path演算を、ReviewとAuthorityの正しさの必須条件にはしない。
 
-kind-specific payloadの内容検索やJSON path演算を、Review / Authority correctnessの必須条件にしない。
+PostgreSQL固有のJSONBや再帰クエリなどは、最適化としてのみ使う。
 
-PostgreSQL固有JSONB / recursive query等はoptimizationとしてのみ利用する。
+### D11. テナントとSaaSの境界は、既存のDB方針を引き継ぐ
 
-### D11. tenant / SaaS境界は既存DB policyを継承する
+shared-schemaのSaaSでは、semantic artifactのmetadata、Review、Authority event、content metadataのすべてにテナントガードを適用する。
 
-shared-schema SaaSでは、semantic artifact metadata / Review / Authority event / content metadataすべてにtenant guardを適用する。
+PostgreSQL以外でshared-schemaのSaaSに対応できるとは、新たに推論しない。
 
-PostgreSQL以外でshared-schema SaaS対応を新たに推論しない。
+actor ref、source ref、import mappingを通じたテナント越境は許可しない。
 
-actor ref / source ref / import mappingからtenant越境を許可しない。
+### D12. exchange importは、ステージング、検証、正本へのコミットの順とする
 
-### D12. exchange importはstaging + validation + canonical commitとする
+artifact exchange bundleのimportは、正本のテーブルへ直接、逐次書き込まない。
 
-artifact exchange bundle importは、直接canonical tableへ逐次writeしない。
-
-概念上、
+概念上は、次の順で扱う。
 
 ```text
 parse
@@ -256,94 +238,90 @@ parse
   -> canonical commit
 ```
 
-の順で扱う。
+大規模なbundleで単一のトランザクションが不適切な場合でも、「一部だけがローカルのauthorityへ入った」状態を作らないステージング契約を設ける。
 
-大規模bundleで単一transactionが不適切な場合でも、「一部だけlocal authorityへ入った」状態を作らないstaging contractを設ける。
+### D13. backupとrestoreに、exchange importの経路を流用しない
 
-### D13. backup/restoreはexchange import経路を流用しない
+backupと災害復旧は、同じauthorityドメインを正しく復元するための運用契約である。source authorityの特権を外すexchangeとは、意味が異なる。
 
-backup / disaster recoveryは、同じauthority domainを真正に復元する運用契約であり、source authorityをde-privilegeするexchangeとは意味が異なる。
+同じAPIやモードフラグで、両者を曖昧に切り替えない。
 
-同じAPI / mode flagで曖昧に切り替えない。
+### D14. 保持とGCは、正本への参照をrootとする
 
-### D14. retention / GCはcanonical referencesをrootとする
+semantic artifactのGCは、少なくとも次をroot、または保護の入力として扱う。
 
-semantic artifact GCは、少なくとも次をroot / protection inputとして扱う。
+- 現在および過去のAuthority event
+- Reviewの対象
+- Decisionの根拠
+- 保持されるRelationの対象
+- participantとsource assertionからの参照
+- 明示的なpin
+- 統制されたチェックポイント
+- exchange import mappingの保持方針
 
-- current / historical Authority event
-- Review target
-- Decision basis
-- retained Relation target
-- participant / source assertion参照
-- explicit pin
-- governed checkpoint
-- exchange import mappingの保持policy
+payload blobは、revisionからの参照がなくなっても、Content Storeの既存方針に従い、保留期間と参照の再確認を経てから削除する。
 
-payload blobはrevision参照がなくなっても、Content Store既存policyに従い保留期間・参照再確認後に削除する。
+プロジェクションとReview Capsuleのキャッシュは、保持のrootにしない。
 
-projection / Review Capsule cacheはretention rootにしない。
+### D15. 物理スキーマの実装は、別のissueへ分ける
 
-### D15. physical schema実装は別Issueへ分離する
+本ADRは永続化方式の第一候補を選ぶだけで、マイグレーションは始めない。
 
-本ADRはpersistence方式の第一候補を選ぶが、migrationを開始しない。
+実装の前に、次を検証する専用の実装issueを起票する。
 
-実装前に、
-
-- portable schema draft
-- representative fixture
-- RDB family compile / constraint review
-- payload roundtrip
-- import staging
-- authority CAS
+- ポータブルなスキーマの草案
+- 代表的なフィクスチャ
+- RDBファミリごとのコンパイルと制約のレビュー
+- payloadの往復
+- importのステージング
+- authorityのCAS
 - GC
-- projection rebuild
-
-を検証する専用implementation issueを起票する。
+- プロジェクションの再構築
 
 ## Alternatives
 
 | Candidate | 長所 | 主な問題 | 判断 |
 |---|---|---|---|
-| giant JSON aggregate | 初期実装が容易 | exact revision FK / concurrent authority / partial query / GCが弱い | 不採用 |
-| fully normalized payload columns | 強いconstraint | semantic kind追加ごとにmigration、自由度低下 | payload正本として不採用 |
-| graph DB canonical | Relation queryに強い | tenant / transaction / portability / authority eventを二重化 | 不採用 |
-| object store canonical | contentに強い | Review / Authority CAS / FK / query metadataに弱い | 不採用 |
-| **RDB metadata/event + Content Store payload** | 既存portability、transaction、柔軟payloadを両立 | materializer / blob lifecycleが必要 | **第一候補** |
+| giant JSON aggregate | 初期実装が容易 | 厳密なrevisionの外部キー、同時実行のauthority、部分的な問い合わせ、GCが弱い | 不採用 |
+| fully normalized payload columns | 制約が強い | semantic kindを足すたびにマイグレーションが要り、自由度が下がる | payloadの正本としては不採用 |
+| graph DB canonical | Relationの問い合わせに強い | テナント、トランザクション、ポータビリティ、authority eventが二重になる | 不採用 |
+| object store canonical | contentに強い | ReviewとAuthorityのCAS、外部キー、問い合わせ用metadataに弱い | 不採用 |
+| **RDB metadata/event + Content Store payload** | 既存のポータビリティとトランザクションを保ちつつ、payloadを柔軟にできる | materializerとblobのlifecycleが必要 | **第一候補** |
 
 ## Three-Element Verification（ADR-0067）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |---|---|---|
-| **業務設計** | exact revision Review、scope authority、exchange de-privilegeをtransactionalに守る | データ: Review / Authority / import mappingを独立record化。機能: partial importやstale promotionをfail closed |
-| **データ設計** | RDB metadata/event + Content Store payloadを正本としgraph/networkはprojectionにする | 業務: payload自由度を保ちつつauthority correctnessはRDB column/constraintで守る。機能: projection rebuild可能 |
-| **機能設計** | import staging、authority CAS、materializer、GCをcanonical references中心に実装する | 業務: backupとexchangeを混同しない。データ: cache / graph storeを正本にしない |
+| **業務設計** | 厳密なrevisionへのReview、scopeごとのauthority、exchangeでの特権剥奪を、トランザクションで守る | データ: Review、Authority、import mappingを独立したレコードにする。機能: 部分的なimportや古い昇格は、安全側で拒否する |
+| **データ設計** | RDB metadata/event + Content Store payloadを正本とし、グラフとネットワークはプロジェクションにする | 業務: payloadの自由度を保ちつつ、authorityの正しさはRDBの列と制約で守る。機能: プロジェクションを再構築できる |
+| **機能設計** | importのステージング、authorityのCAS、materializer、GCを、正本への参照を中心に実装する | 業務: backupとexchangeを混同しない。データ: キャッシュとグラフストアを正本にしない |
 
 ## Consequences
 
 ### Positive
 
-- 既存DB portabilityとContent Store投資を再利用できる。
-- semantic kind追加でDB migrationを最小化できる。
-- Authority / Reviewはportable transactionで守れる。
-- graph / sparse / vector等のquery技術を正本から切り離せる。
-- 将来EKI等でmaterializationを分散実行してもcanonical semanticsは変わらない。
+- 既存のDBポータビリティとContent Storeへの投資を再利用できる。
+- semantic kindを足してもDBマイグレーションを最小にできる。
+- AuthorityとReviewを、ポータブルなトランザクションで守れる。
+- グラフ、スパース、ベクトルなどの問い合わせ技術を、正本から切り離せる。
+- 将来EKIなどでmaterializationを分散実行しても、正本の意味は変わらない。
 
 ### Costs / Open questions
 
-- concrete table / index shapeは未確定。
-- payload Content Storeのcodec共有にbenchmarkが必要。
-- Relation projectionの更新方式（sync / outbox）は未決。
-- large bundle staging方式は未決。
-- portable recursive reachability / GC実装方式は検証が必要。
+- 具体的なテーブルとインデックスの形は未確定である。
+- payloadのContent Storeでコーデックを共有できるかは、ベンチマークが必要である。
+- Relationプロジェクションの更新方式（同期かoutboxか）は未決である。
+- 大規模bundleのステージング方式は未決である。
+- ポータブルな再帰的到達可能性とGCの実装方式は、検証が必要である。
 
 ## Non-goals
 
-- 本ADRだけでmigrationを追加しない。
-- graph DBを禁止しない。canonical sourceとして採らないだけである。
-- Content Store external backendを必須化しない。
-- PostgreSQL固有機能を全DBへ強制しない。
-- current state cacheを正本化しない。
-- exchangeとbackupを同じmode flagにしない。
+- 本ADRだけでは、マイグレーションを追加しない。
+- グラフDBは禁止しない。正本としては採らないだけである。
+- Content Storeの外部バックエンドを必須にしない。
+- PostgreSQL固有の機能を、全DBへ強制しない。
+- 現在状態のキャッシュを正本にしない。
+- exchangeとbackupを、同じモードフラグにしない。
 
 ## Traceability
 

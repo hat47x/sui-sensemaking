@@ -68,7 +68,7 @@
         <tr><td>2</td><td>提案のみ</td><td>エージェント出力は常にAI由来・未レビューの提案。自動確定なし。適用は人間操作・全て可逆・監査記録</td></tr>
         <tr><td>3</td><td>反スコアリング</td><td>応答契約に数値スコア・順位・確度を含めない（存在すれば取り込み時に破棄）</td></tr>
         <tr><td>4</td><td>境界の再利用</td><td>出力は共有・書き出し境界（SafeMode/preflight/export-audit）、入力はimport信頼境界（検証・サニタイズ）を通る。新しい抜け道を作らない</td></tr>
-        <tr><td>5</td><td>ベンダー非依存</td><td>契約は汎用。Copilot Studioは代表プロファイル（§7）</td></tr>
+        <tr><td>5</td><td>ベンダー非依存</td><td>契約は汎用である。Copilot Studioは代表的なプロファイル（§7）</td></tr>
       </tbody>
     </table>
   </section>
@@ -85,7 +85,7 @@
         <tr><td>sui-sensemaking（自己ホスト）</td><td style="color:#15803d;">信頼</td><td>パッケージ生成・応答検証・提案化・レビュー・適用・監査</td></tr>
         <tr><td>利用者（人間）</td><td style="color:#15803d;">信頼（操作主体）</td><td>書き出し確認・エージェントへの投函・応答の持ち帰り・提案の採否</td></tr>
         <tr><td>外部エージェント</td><td style="color:#b91c1c; font-weight:700;">非信頼</td><td>思考の委任先。出力はデータとして扱い、指示として扱わない</td></tr>
-        <tr><td>エージェント基盤（M365等）</td><td>組織契約に依存</td><td>データ境界は組織のライセンス/テナント設定に従う（本仕様の管轄外・§7注意）</td></tr>
+        <tr><td>エージェント基盤（M365等）</td><td>組織の契約に依存</td><td>データ境界は組織のライセンス/テナント設定に従う（本仕様の対象外。§7に注意あり）</td></tr>
       </tbody>
     </table>
 
@@ -116,7 +116,7 @@ flowchart LR
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">03</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">AgentTaskPackage v1（依頼パッケージ）</h2>
     </div>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;"><strong>形態:</strong> 正=単一Markdown「タスクシート」（チャットへ貼り付け/添付可能・人間可読）。随伴（任意）=<code>task.json</code>＋<code>context_bundle.json</code>（Tier 1のフォルダ授受ではこちらを正とする）。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;"><strong>形態:</strong> 正は単一のMarkdown「タスクシート」（チャットへ貼り付けまたは添付でき、人間が読める）。随伴（任意）は<code>task.json</code>＋<code>context_bundle.json</code>（Tier 1のフォルダでの受け渡しでは、こちらを正とする）。</p>
 
     <pre class="block">{
   "schemaVersion": "agent-task.v1",
@@ -180,8 +180,8 @@ flowchart LR
       </tbody>
     </table>
 
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>非同期整合（staleness）:</strong> 取り込み時に<code>baseDocSignature</code>を照合。不一致時、patchはCE3 conflict/rediff経路で再突合、非patchは<code>targetRef</code>解決を試み、解決不能な提案は<strong>破棄せず「孤立提案」として保持表示</strong>（一匹狼と同じ保全思想）。同一<code>taskId</code>＋同一応答ハッシュの再取込は冪等。</p>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;"><strong>判断監査:</strong> 正規化済み提案のSHA-256指紋だけを<code>/ai/external-proposals/register</code>へ登録する。採用・破棄は<code>/ai/external-proposals/audit</code>の成功後にだけ画面状態または文書へ反映する。由来は真正性を主張しない<code>user_presented_unsigned</code>として保持し、内部生成提案用endpointとは交差させない。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>非同期での整合（staleness）:</strong> 取り込み時に<code>baseDocSignature</code>を照合。不一致時、patchはCE3 conflict/rediff経路で再突合、非patchは<code>targetRef</code>解決を試み、解決不能な提案は<strong>破棄せず「孤立提案」として保持表示</strong>（一匹狼と同じ保全思想）。同一<code>taskId</code>＋同一応答ハッシュの再取込は冪等。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;"><strong>判断監査:</strong> 正規化済み提案のSHA-256指紋だけを<code>/ai/external-proposals/register</code>へ登録する。採用・破棄は<code>/ai/external-proposals/audit</code>の成功後にだけ画面状態または文書へ反映する。由来は真正性を主張しない<code>user_presented_unsigned</code>として保持し、内部で生成した提案用のエンドポイントとは交差させない。</p>
   </section>
 
   <!-- 5. 状態機械(核心図) -->
@@ -224,7 +224,7 @@ stateDiagram-v2
     <table class="grid">
       <thead><tr><th style="width:26%;">レベル</th><th>対象</th></tr></thead>
       <tbody>
-        <tr><td>unit/integration</td><td>契約: golden fixture（task package生成のスナップショット・response取込のラウンドトリップ）</td></tr>
+        <tr><td>unit/integration</td><td>契約: golden fixture（task packageの生成のスナップショットと、responseの取り込みのラウンドトリップ）</td></tr>
         <tr><td>integration</td><td>不変条件:「自動確定なし」「スコア破棄」「サニタイズ」「stale時の非破壊」</td></tr>
         <tr><td>e2e</td><td>利用フロー: 依頼書き出し→（模擬応答貼付け）→提案出現（未レビュー）→1件採用→⌘Zで復帰</td></tr>
       </tbody>
@@ -265,11 +265,11 @@ flowchart LR
     <table class="grid">
       <thead><tr><th style="width:22%;">要素</th><th style="width:38%;">実装先</th><th>再利用</th></tr></thead>
       <tbody>
-        <tr><td>依頼書き出し</td><td>frontend（SharePanel系or専用パネル）＋ <code>export/</code></td><td>ContextQueryPreviewPanel・SafeModePolicy・bundle_export・export-audit</td></tr>
-        <tr><td>応答取り込み</td><td>frontend <code>import/agent_response_import.ts</code>（新規）</td><td>zip_importの制限値・markdown_sanitize・import検証パターン</td></tr>
+        <tr><td>依頼書き出し</td><td>フロントエンド（SharePanel系または専用パネル）と <code>export/</code></td><td>ContextQueryPreviewPanel・SafeModePolicy・bundle_export・export-audit</td></tr>
+        <tr><td>応答取り込み</td><td>フロントエンドの <code>import/agent_response_import.ts</code>（新規）</td><td>zip_importの制限値・markdown_sanitize・import検証パターン</td></tr>
         <tr><td>提案化</td><td>既存面へ変換（§4.3）</td><td>MergeSuggestions・Narratives・PatchWorkspace・critique候補</td></tr>
         <tr><td>監査</td><td>既存ルート</td><td>/export-audit・/context-audit・merge-decision-logs</td></tr>
-        <tr><td>バックエンド</td><td><strong>新規エンドポイント不要</strong>（Tier 0）</td><td>—</td></tr>
+        <tr><td>バックエンド</td><td><strong>新規エンドポイント不要</strong>（Tier 0）</td><td>なし</td></tr>
       </tbody>
     </table>
   </section>

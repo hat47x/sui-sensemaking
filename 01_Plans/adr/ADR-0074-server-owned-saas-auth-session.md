@@ -9,124 +9,132 @@
 
 ## Context
 
-`ADR-0061`はactive tenantと`tenantSessionVersion`を認証session単位で原子的に解決・更新すると決めた。しかし現行実装は`principal_id`を共有DBの主キーとし、versionだけを保存する。選択tenantは保存されず、同じprincipalの別sessionも分離できない。version cookieもDB lookupやanti-forgery検証に使われない。
+`ADR-0061` は、active tenantと `tenantSessionVersion` を、認証session単位で原子的に解決して更新すると決めた。しかし現行の実装は、`principal_id` を共有DBの主キーとし、versionだけを保存する。選択したtenantは保存されず、同じprincipalの別sessionも分離できない。versionのcookieも、DBの参照やanti-forgeryの検証には使われない。
 
-単なる列追加では解決しない。requestから「同じブラウザ認証session」をserver-trustedに識別する入力が必要である。access tokenの`jti`はtoken識別子であり、通常の連続requestやrefresh後も続くlogin sessionの識別子ではないため流用しない。
+単に列を追加するだけでは解決しない。requestから「同じブラウザの認証session」を、サーバーが信頼できる形で識別する入力が必要である。access tokenの `jti` はtokenの識別子である。通常の連続したrequestやrefresh後も続くlogin sessionの識別子ではないため、流用しない。
 
-比較対象は次の3案である。
+比較した案は次の3つである。
 
-1. BrokerのOIDC `sid`相当claimをBearer access tokenへ含め、`issuer + sid`をsession keyにする。OP sessionを表すopaque IDという意味は適合するが、標準の`sid`提供先は主にID Token／Logout Tokenであり、access token搭載はBroker固有契約になる。token更新時の継続性、session fixation、logout通知もBrokerごとに検証が必要である。
-2. BFFがOAuth clientとtokenを保持し、browserにはHttpOnly・Secure cookieでserver-owned session IDだけを渡す。API request、active tenant、version、logoutを同じserver sessionへ束縛できるが、現行の「SPAがBearer tokenをメモリ保持しAPIへ直接送る」方針を変更する。
-3. tenant切替ごとにBrokerからtenant別tokenを再発行する。DB session正本は減るが、切替UIが認証redirectへ依存し、複数Brokerのclaim更新と失敗時状態が複雑になる。
+1. BrokerのOIDC `sid` 相当のclaimをBearer access tokenへ含め、`issuer + sid` をsession keyにする。OP sessionを表す不透明なIDという意味は適合する。ただし、標準の `sid` の提供先は主にID TokenとLogout Tokenであり、access tokenへの搭載はBroker固有の契約になる。token更新時の継続性、session fixation、logout通知も、Brokerごとに検証が必要である。
+2. BFFがOAuth clientとtokenを保持し、browserにはHttpOnlyでSecureなcookieで、server-ownedなsession IDだけを渡す。API request、active tenant、version、logoutを、同じserver sessionへ束縛できる。ただし、現行の「SPAがBearer tokenをメモリに保持してAPIへ直接送る」方針を変更する。
+3. tenantを切り替えるたびに、Brokerからtenant別のtokenを再発行する。DBのsessionを正本とする部分は減る。しかし、切り替えのUIが認証のリダイレクトに依存し、複数Brokerのclaim更新と失敗時の状態が複雑になる。
 
-参考仕様: OpenID Connect Back-Channel Logout 1.0は`sid`をissuer内で一意なUser Agent/deviceのopaque session IDとして定義する。OAuth 2.0 for Browser-Based Applicationsの現行IETF draftはBFFを、browserからtokenを隠し全API requestをbackend経由にする最も強い構成として整理している。
+参考にした仕様は次の2つである。OpenID Connect Back-Channel Logout 1.0は、`sid` を、issuer内で一意なUser Agentまたはdeviceの不透明なsession IDとして定義する。OAuth 2.0 for Browser-Based Applicationsの現行のIETF draftは、BFFを、browserからtokenを隠し、全API requestをbackend経由にする最も強い構成として整理している。
 
 ## 採択記録（2026-08-13）
 
-保守者の明示承認によりProposed → Accepted。**案2のserver-owned BFF sessionを採用**する。下記Decisionの7項目がそのまま実装要件になる。
+保守者の明示承認により、ProposedからAcceptedへ変更した。**案2のserver-owned BFF sessionを採用**する。下記のDecisionの7項目が、そのまま実装の要件になる。
 
 ### 実装の解禁
 
-本ADR採択により、**1つの判断で3本のOpen P1が同時に着手可能**になる。
+本ADRを採択したことで、**1つの判断で3本のOpen P1が同時に着手できる**ようになる。
 
 | issue | 本ADRが与える前提 |
 |---|---|
-| `OPS-SAAS-SCALE-01`（Open P1） | AC-4〜8 が未達で本ADR待ちだった。session 失効の正本が DB 側の `session_key_hash` 行に定まることで、水平スケール時の失効伝播が設計可能になる |
-| `SAAS-TENANT-SESSION-BINDING-01` | 詳細なデータ/API修正の正本。本ADRの Decision 3（session row のキー設計）が前提 |
-| `AUTH-ONE-TIME-JWT-01` | Decision 7（access token `jti` を session 主キーへ流用しない）が方針を確定させる |
+| `OPS-SAAS-SCALE-01`（Open P1） | AC-4〜8 が未達で、本ADRを待っていた。sessionを失効させる際の正本が、DB側の `session_key_hash` の行に定まることで、水平スケール時の失効の伝播を設計できるようになる |
+| `SAAS-TENANT-SESSION-BINDING-01` | 詳細なデータとAPIの修正の正本。本ADRの Decision 3（session rowのキー設計）が前提になる |
+| `AUTH-ONE-TIME-JWT-01` | Decision 7（access tokenの `jti` をsessionの主キーへ流用しない）が、方針を確定させる |
 
 ### 採択時に確認した現行実装との差分
 
-現行の `saas_tenant_sessions`（`models.py`）は `principal_id` をキーとしversionのみを保持する。本ADR採択は次の3点を**破壊的変更として認める**ことを含む。
+現行の `saas_tenant_sessions`（`models.py`）は、`principal_id` をキーとし、versionだけを保持する。本ADRの採択は、次の3点を**破壊的変更として認める**ことを含む。
 
-1. `principal_id` 主キー → `session_key_hash` 主キー（別device非干渉のため。Decision 3）
-2. SPAのBearer直接送信を廃止し、HttpOnly cookie ＋ anti-CSRFへ移行（Decision 2/5）
-3. logoutは提示sessionのみ失効。全session logoutは明示的な別操作（Decision 6）
+1. `principal_id` 主キーから `session_key_hash` 主キーへ変える（別deviceが干渉しないようにするため。Decision 3）
+2. SPAからのBearerの直接送信を廃止し、HttpOnly cookieとanti-CSRFへ移行する（Decision 2/5）
+3. logoutは、提示されたsessionだけを失効させる。全sessionのlogoutは、明示的な別の操作とする（Decision 6）
 
-`research/direction-review-2026-08-13.md` が「session model is principal-scoped, not session-scoped」として記録した問題群（別browser/deviceで切替とlogoutが干渉する、次のrequestでJWTのclaim tenantへ戻り得る、cookieがDB行と照合されない、行が失効しない）はすべて1の帰結であり、本採択がその根本対策にあたる。
+`research/direction-review-2026-08-13.md` は、「session model is principal-scoped, not session-scoped」として、次の問題群を記録した。
+
+- 別のbrowserやdeviceで、切り替えとlogoutが干渉する
+- 次のrequestで、JWTのclaimのtenantへ戻り得る
+- cookieがDBの行と照合されない
+- 行が失効しない
+
+これらはすべて1の帰結であり、本採択がその根本的な対策にあたる。
 
 ## Decision（採択済み）
 
 **案2のserver-owned BFF sessionを採用する。**
 
-1. sui-sensemakingまたは同一trust boundaryのgatewayをconfidential OAuth clientとし、access/refresh tokenをbrowserへ渡さない。
-2. browserには128-bit以上のentropyを持つopaque session IDをHttpOnly、Secure、SameSite=LaxまたはStrict cookieで発行する。DBには生cookie値ではなくkeyed hashを保存し、key rotation手順を持つ。
-3. session rowは`session_key_hash`を主キーとし、`principal_id`、`issuer`、`subject`、`active_tenant_id`、`tenant_session_version`、作成・最終利用・絶対失効時刻、失効状態を保持する。tenant membership/capabilityはrequestごとに正本を再確認し、session snapshotだけで許可しない。
-4. active tenant変更はsession rowの現在tenant/versionを条件に、membership再確認後にCAS更新する。同じsessionの全タブだけが新versionへ進み、同じprincipalの別sessionへ波及しない。
-5. state-changing requestはOrigin/Host検証に加えてsessionへ束縛したanti-CSRF tokenを要求する。SameSite cookieだけを唯一のanti-forgery境界にしない。
-6. logoutは提示sessionだけを失効させる。全session logout、管理者失効、OIDC back-channel logoutは明示的な別操作として`issuer + subject`または検証済み`issuer + sid`の索引から対象sessionを失効させる。
-7. access token `jti`、tenant claim、principal ID、client入力のsession IDをsession主キーへ流用しない。
+1. sui-sensemakingまたは同一のtrust boundaryにあるgatewayをconfidentialなOAuth clientとし、access tokenとrefresh tokenをbrowserへ渡さない。
+2. browserには、128ビット以上のエントロピーを持つ不透明なsession IDを、HttpOnly、Secure、SameSite=LaxまたはStrictのcookieで発行する。DBには、生のcookie値ではなく、鍵付きのハッシュを保存し、鍵のローテーション手順を持つ。
+3. session rowは、`session_key_hash` を主キーとし、次の項目を保持する。`principal_id`、`issuer`、`subject`、`active_tenant_id`、`tenant_session_version`、作成時刻、最終利用時刻、絶対的な失効時刻、失効の状態。tenantのmembershipとcapabilityは、requestごとに正本を再確認し、sessionのスナップショットだけで許可しない。
+4. active tenantの変更は、session rowの現在のtenantとversionを条件に、membershipを再確認した後でCAS更新する。同じsessionの全タブだけが新しいversionへ進み、同じprincipalの別sessionへは波及しない。
+5. 状態を変更するrequestには、OriginとHostの検証に加えて、sessionへ束縛したanti-CSRF tokenを要求する。SameSite cookieだけを、唯一のanti-forgeryの境界にしない。
+6. logoutは、提示されたsessionだけを失効させる。全sessionのlogout、管理者による失効、OIDC back-channel logoutは、明示的な別の操作とする。これらは、`issuer + subject`、または検証済みの `issuer + sid` の索引から、対象のsessionを失効させる。
+7. access tokenの `jti`、tenantのclaim、principal ID、clientが入力したsession IDを、sessionの主キーへ流用しない。
 
 ## Three-Element Verification（ADR-0067）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 利用者は1つのlogin session内でactive tenantを切り替え、同じsessionのタブだけが連動する。別browser/deviceの作業は維持される | logout UIは「このsession」と「全device」を区別する。切替時は同sessionの他タブへ影響する説明を維持する |
-| **データ設計** | active tenantとversionをserver-owned session rowへ原子的に保存し、principal、token、tenant claimとは別キーにする | cookie生値・token・versionを監査本文へ保存しない。membership停止・失効・期限切れではrowが残っても利用を拒否する |
-| **機能設計** | BFFがOAuth tokenを保持し、browser requestをsession cookie＋anti-CSRFで受ける。切替はCAS、全tenant APIはresource lookup前にversion照合する | SPAのBearer直接送信を廃止する。session bootstrap、refresh、logout、back-channel logout、複数workerを同じ失効正本へ接続する |
+| **業務設計** | 利用者は、1つのlogin sessionの中でactive tenantを切り替える。連動するのは同じsessionのタブだけである。別のbrowserやdeviceでの作業は維持される | logoutのUIは、「このsession」と「全device」を区別する。切り替えの際は、同じsessionの他タブへ影響することの説明を維持する |
+| **データ設計** | active tenantとversionを、server-ownedなsession rowへ原子的に保存し、principal、token、tenantのclaimとは別のキーにする | cookieの生値、token、versionを、監査の本文へ保存しない。membershipの停止、失効、期限切れの場合は、rowが残っていても利用を拒否する |
+| **機能設計** | BFFがOAuth tokenを保持し、browserのrequestを、session cookieとanti-CSRFで受ける。切り替えはCASで行い、全tenant APIは、resourceを参照する前にversionを照合する | SPAからのBearerの直接送信を廃止する。session bootstrap、refresh、logout、back-channel logout、複数のworkerを、同じ失効の正本へ接続する |
 
 ### 三要素間の牽制結果
 
-- 業務上必要な「別device非干渉」はprincipal主キーを禁止し、データ設計へsession固有キーを要求する。
-- データ上のactive tenant正本は、機能設計へtoken claimより先にsession rowを解決し、その後membershipを再確認する順序を要求する。
-- cookie認証化はCSRFを新たに生むため、機能設計のOrigin/Host＋anti-CSRF検証がなければ業務上の安全な切替を満たさない。
+- 業務上必要な「別deviceが干渉しない」ことは、principalを主キーにすることを禁じ、データ設計へsession固有のキーを要求する。
+- データ上のactive tenantの正本は、機能設計へ、tokenのclaimより先にsession rowを解決し、その後でmembershipを再確認する順序を要求する。
+- cookie認証にするとCSRFが新たに生じる。機能設計のOriginとHostの検証、およびanti-CSRFの検証がなければ、業務上の安全な切り替えを満たせない。
 
 ## Consequences
 
-- XSS時のtoken窃取範囲を縮小し、active tenant、version、logoutを同じserver sessionへ束縛できる。
-- OAuth callback、token refresh、BFF proxy、CSRF、session expiry、key rotation、logout連携の実装・運用が増える。
-- `ADR-0064`の「SPAがJWTをメモリ保持し、HttpOnly cookieとの二重管理は採用しない」という選択を、本ADRがAcceptedになった時点でsupersedeする。Proposed中は現行方針を変更しない。
-- 現行`saas_tenant_sessions`はin-placeで意味を変えず、新tableへのexpand/backfill不可（既存行からsession ownershipを復元できない）・cutover・旧table削除の段階移行とする。cutover時は既存SaaS loginを再認証させる。
+- XSSの際にtokenを盗まれる範囲を縮小でき、active tenant、version、logoutを、同じserver sessionへ束縛できる。
+- OAuth callback、tokenのrefresh、BFFのプロキシ、CSRF、sessionの有効期限、鍵のローテーション、logoutの連携について、実装と運用が増える。
+- `ADR-0064` の「SPAがJWTをメモリに保持し、HttpOnly cookieとの二重管理は採用しない」という選択を、本ADRがAcceptedになった時点でsupersedeする。Proposedの間は、現行の方針を変更しない。
+- 現行の `saas_tenant_sessions` は、in-placeで意味を変えない。新しいテーブルへexpandとバックフィルを行うことはできない（既存の行から、sessionの所有関係を復元できないため）。そのため、cutover、旧テーブルの削除という段階的な移行とする。cutoverの際は、既存のSaaSのloginを再認証させる。
 
 ## Acceptance Gate
 
 本ADRをAcceptedへ変更する前に、次をMaintainerが確認する。
 
-- BFFをsui-sensemaking backendへ内蔵するか、同一trust boundaryのgateway責務にするか。
-- cookie domain/path、SameSite、CSRF方式、絶対／idle timeout、refresh token保管・暗号鍵管理。
-- Brokerごとのlogout連携範囲と、back-channel logout非対応時の全session失効手順。
-- SPA Bearer直接送信を前提とする既存E2E、CORS、運用手順の移行範囲。
+- BFFをsui-sensemakingのbackendへ内蔵するか、同一のtrust boundaryにあるgatewayの責務にするか。
+- cookieのdomainとpath、SameSite、CSRFの方式、絶対的なタイムアウトとidleタイムアウト、refresh tokenの保管と暗号鍵の管理。
+- Brokerごとのlogout連携の範囲と、back-channel logout非対応の場合の、全sessionの失効手順。
+- SPAからのBearerの直接送信を前提とする、既存のE2E、CORS、運用手順の移行範囲。
 
 ## Rejected for this proposal
 
-- **Broker `sid`を直ちに採用**: 現行APIが受けるaccess tokenに標準必須ではなく、Broker固有claim契約を共通安全境界にするため見送る。BFF内部で検証済みlogout相関値として使う余地は残す。
-- **principal単位のままactive tenant列だけ追加**: 別session非干渉を満たさない。
-- **version cookieをsession IDへ昇格**: 現在はserver ownership検証なしに発行され、active tenant正本とも結び付かない。移行時に新規sessionとして再発行する。
+- **Brokerの `sid` をすぐに採用する**: 現行のAPIが受けるaccess tokenには、標準で必須ではない。Broker固有のclaim契約を、共通の安全境界にすることになるため、見送る。BFFの内部で、検証済みのlogout相関値として使う余地は残す。
+- **principal単位のまま、active tenantの列だけを追加する**: 別sessionが干渉しないという条件を満たさない。
+- **version cookieをsession IDへ昇格する**: 現在は、サーバーによる所有の検証なしに発行されており、active tenantの正本とも結び付かない。移行時に、新規のsessionとして再発行する。
 
 ## Acceptance Gate 回答（2026-08-13、Maintainer承認済み）
 
-Maintainerの要請により以下4項目への回答案を作成し、個別確認なしで承認された（上記Deciders参照）。本節が「Acceptance Gate」の正式な充足内容である。
+Maintainerの要請により、以下の4項目への回答案を作成し、個別確認なしで承認された（上記のDecidersを参照）。本節が、「Acceptance Gate」を満たした正式な内容である。
 
-### 回答案1: BFFの配置 — sui-sensemaking backend自身に内蔵する（別gatewayは新設しない）
+### 回答案1: BFFの配置はsui-sensemaking backend自身に内蔵し、別gatewayは新設しない
 
-根拠は次のとおりです。
-- `main.py`に`CORSMiddleware`が存在しない。これは現状が同一origin／reverse proxy前提の構成であることを示す。BFFを内蔵すれば、OAuth callback・cookie発行・API呼び出しがすべて同一originのまま維持され、**新規CORS設定が不要**になる。
-- `ADR-0072`でも同種の論点（D1=C「ネットワーク分離gateway」）を「単一プロセス前提の現行構成から乖離する」という理由で見送り、アプリ内認可（D1=A+B）を選んだばかりである。同じ理由がBFFにも当てはまる。
-- 別gatewayを新設すると、デプロイ構成・TLS終端・health check・監視対象が増え、個人OSS・プレリリース段階（`ADR-0039`）が求める複雑性予算に見合わない。
+根拠は次のとおり。
 
-### 回答案2: cookie/CSRF/timeout/鍵管理 — 既存cookie属性を継承し、寿命は提案値として明示する
+- `main.py` に `CORSMiddleware` が存在しない。これは、現状が同一originまたはリバースプロキシを前提とした構成であることを示す。BFFを内蔵すれば、OAuth callback、cookieの発行、APIの呼び出しがすべて同一originのまま維持され、**新規のCORS設定が不要**になる。
+- `ADR-0072` でも、同種の論点（D1=C「ネットワーク分離gateway」）を、「単一プロセスを前提とする現行構成から乖離する」という理由で見送り、アプリ内認可（D1=A+B）を選んだばかりである。同じ理由が、BFFにも当てはまる。
+- 別のgatewayを新設すると、デプロイ構成、TLS終端、ヘルスチェック、監視の対象が増える。個人OSSでプレリリース段階（`ADR-0039`）が求める、複雑さの予算に見合わない。
 
-既存の`tenantSessionVersion` cookie（`active_tenant_session.py:259-265, 336-342`）は既に`httponly=True`、`secure=<local-dev以外でTrue>`、`samesite="strict"`、`max_age=3600`を採用している。新設する認証session cookieもこの属性をそのまま継承することを提案する。
+### 回答案2: cookie、CSRF、タイムアウト、鍵管理は、既存のcookie属性を継承し、寿命は提案値として明示する
 
-- **domain/path**: `Path=/`。`Domain`属性は付与しない（発行元originに限定し、subdomain間共有は行わない）。
-- **SameSite**: `Strict`（既存踏襲）。BFFが受けるOAuth callbackはBrokerからのGETリダイレクト応答であり、そこでの`Set-Cookie`はSameSite属性の影響を受けない（SameSiteが制限するのは「そのcookieを添えて送るか」であり「受け取れるか」ではない）。したがってStrictのままcallbackを処理できる。
-- **CSRF方式**: session cookieへ束縛したsynchronizer token（非HttpOnlyの別cookieまたはresponse bodyで払い出し、state変更requestではheader経由で送らせて一致検証）を提案する。SameSite=Strictを主防御、token検証を第二防御とする多層防御とする。
-- **絶対/idleタイムアウト（提案値・要確認）**: 絶対session寿命 **12時間**、idle失効 **60分**。既存`tenantSessionVersion`の`max_age=3600`（1時間）とidle 60分は整合する。絶対12時間は「1営業日単位で必ず再認証させる」運用を意図した値であり、コンプライアンス要件次第で調整可能な提案値である。
-- **refresh token保管・暗号鍵管理**: refresh tokenはBFFプロセスの外（browser）へは一切渡さない（本ADR決定1に整合）。DB保存時は対称鍵暗号（AES-GCM等）で暗号化し、鍵はプロセス起動時に既存の`SUI_*`環境変数規約に沿って注入する。鍵ローテーション手順は別途運用issueで定義する（本ADRのスコープ外とする）。
+既存の `tenantSessionVersion` cookie（`active_tenant_session.py:259-265, 336-342`）は、すでに `httponly=True`、`secure=<local-dev以外でTrue>`、`samesite="strict"`、`max_age=3600` を採用している。新設する認証session cookieも、この属性をそのまま継承することを提案する。
 
-### 回答案3: Brokerごとのlogout連携範囲 — Keycloakのback-channel logoutを優先し、非対応Brokerには既存決定6のフォールバックを適用する
+- **domainとpath**: `Path=/` とする。`Domain` 属性は付与しない（発行元のoriginに限定し、サブドメイン間では共有しない）。
+- **SameSite**: `Strict`（既存を踏襲）。BFFが受けるOAuth callbackは、Brokerからの、GETによるリダイレクトの応答である。そこでの `Set-Cookie` は、SameSite属性の影響を受けない（SameSiteが制限するのは「そのcookieを添えて送るか」であり、「受け取れるか」ではない）。したがって、Strictのままcallbackを処理できる。
+- **CSRFの方式**: sessionのcookieへ束縛したsynchronizer tokenを提案する。tokenは、HttpOnlyでない別のcookieまたはresponse bodyで払い出す。状態を変更するrequestでは、headerで送らせて一致を検証する。SameSite=Strictを主な防御、tokenの検証を第二の防御とする、多層防御にする。
+- **絶対的なタイムアウトとidleタイムアウト（提案値、要確認）**: sessionの絶対的な寿命は **12時間**、idleによる失効は **60分** とする。既存の `tenantSessionVersion` の `max_age=3600`（1時間）と、idleの60分は整合する。絶対的な12時間は、「1営業日ごとに必ず再認証させる」運用を意図した値である。コンプライアンスの要件によって、調整できる提案値である。
+- **refresh tokenの保管と暗号鍵の管理**: refresh tokenは、BFFのプロセスの外（browser）へは一切渡さない（本ADRの決定1に整合）。DBへ保存するときは、対称鍵暗号（AES-GCMなど）で暗号化する。鍵は、プロセスの起動時に、既存の `SUI_*` 環境変数の規約に沿って注入する。鍵のローテーションの手順は、別の運用issueで定義する（本ADRのスコープ外とする）。
 
-- `ADR-0064` Phase 2が推奨するBroker（Keycloak）はOIDC Back-Channel Logout 1.0に対応しているため、`sid`相当のsession識別子を受け取れる場合はback-channel logout通知経路を実装する。
-- back-channel logout非対応のBrokerでは、本ADR決定6が既に規定する「`issuer + subject`索引からの全session失効」を汎用フォールバックとする（新規提案ではなく、本文の既存決定をそのまま適用する）。
-- Phase 2（実Broker連携）着手までは、mock IdP/SPハーネス（`tests/level2/mock_idp.py`）へback-channel logoutのmock要素を追加し、フロントエンド実装なしに契約だけを先に固定する。
+### 回答案3: Brokerごとのlogout連携の範囲は、Keycloakのback-channel logoutを優先し、非対応のBrokerには既存の決定6のフォールバックを適用する
 
-### 回答案4: 既存E2E/CORS/運用手順の移行範囲
+- `ADR-0064` のPhase 2が推奨するBroker（Keycloak）は、OIDC Back-Channel Logout 1.0に対応している。そのため、`sid` 相当のsession識別子を受け取れる場合は、back-channel logoutの通知経路を実装する。
+- back-channel logoutに非対応のBrokerでは、本ADRの決定6がすでに規定する「`issuer + subject` の索引からの全sessionの失効」を、汎用のフォールバックとする（新規の提案ではなく、本文の既存の決定を、そのまま適用する）。
+- Phase 2（実Brokerとの連携）に着手するまでは、mock IdPとSPのハーネス（`tests/level2/mock_idp.py`）へ、back-channel logoutのmock要素を追加する。フロントエンドを実装せずに、契約だけを先に固定する。
 
-回答案1（BFF内蔵）を採る場合、**CORS設定の新規追加は不要**。影響を受ける既存資産は次の3点:
+### 回答案4: 既存のE2E、CORS、運用手順の移行範囲
 
-- **SaaS向けE2E**（`playwright.saas.config.ts`、`tenant_session_multitab.spec.ts`等）: 現状は`Sui-Sensemaking-Tenant-Session-Version`ヘッダーとmock session objectを直接注入している。BFF移行後はOAuth callbackを経由したcookie発行を模擬する経路へ書き換えが必要。
-- **Level 1/2テストハーネス**（`tests/federation/mock_sp.py`、`tests/level2/mock_idp.py`）: 現状はJWTを`X-Sui-Sensemaking-Authorization`ヘッダーで直接転送する構成（`ADR-0064` D4-4）。BFF移行後は「BFFがtoken交換を代行し、browserにはcookieだけを返す」経路への拡張が必要。
-- **frontend `api/client.ts`**: 現状のBearerヘッダー送信から、cookie送信（`credentials`指定）への切替が必要。tenant session precondition headerの扱い（`Sui-Sensemaking-Tenant-Session-Version`）自体は維持可能。
+回答案1（BFFを内蔵する）を採る場合、**CORS設定の新規追加は不要**である。影響を受ける既存の資産は次の3点である。
+
+- **SaaS向けのE2E**（`playwright.saas.config.ts`、`tenant_session_multitab.spec.ts` など）: 現状は、`Sui-Sensemaking-Tenant-Session-Version` ヘッダーとmockのsession objectを、直接注入している。BFFへ移行した後は、OAuth callbackを経由してcookieを発行する経路を模擬するように、書き換える必要がある。
+- **Level 1/2のテストハーネス**（`tests/federation/mock_sp.py`、`tests/level2/mock_idp.py`）: 現状は、JWTを `X-Sui-Sensemaking-Authorization` ヘッダーで直接転送する構成である（`ADR-0064` D4-4）。BFFへ移行した後は、「BFFがtokenの交換を代行し、browserにはcookieだけを返す」経路へ拡張する必要がある。
+- **frontendの `api/client.ts`**: 現状のBearerヘッダーの送信から、cookieの送信（`credentials` の指定）へ切り替える必要がある。tenant sessionの前提条件ヘッダー（`Sui-Sensemaking-Tenant-Session-Version`）自体の扱いは、維持できる。
 
 ## Traceability
 
@@ -134,4 +142,3 @@ Maintainerの要請により以下4項目への回答案を作成し、個別確
 - Related: `01_Plans/adr/ADR-0064-saml-oidc-broker-jwt-coordinated-auth-flow.md`
 - Implementation issue: `01_Plans/issues/done/issue-SAAS-TENANT-SESSION-BINDING-01-principal-keyed-session-state.md`
 - Standards: OpenID Connect Back-Channel Logout 1.0, OAuth 2.0 for Browser-Based Applications (IETF draft)
-

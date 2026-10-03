@@ -1,8 +1,9 @@
-# sui-sensemaking backend (Phase 1 MVP)
+# sui-sensemakingバックエンド（フェーズ1 MVP）
 
 
-> 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-現行実装では `DocumentV1` のスナップショット保存/読込を提供します。
+> 環境変数と実行パラメータの定義元は `02_Architecture/runtime_parameter_registry.md` です。本書には必要最小限だけを書きます。追加や改名のときは、先にその文書を更新してください。
+
+現在の実装は、`DocumentV1` のスナップショットの保存と読み込みを提供します。
 
 ## API
 
@@ -10,29 +11,29 @@
 - `GET /docs/{doc_id}`
 - `PUT /docs/{doc_id}`
 
-## Persistence
+## 永続化
 
 - テーブル: `documents(id TEXT PK, version INT, updated_at TEXT, payload_json TEXT)`
-- `payload_json` に `DocumentV1` 全体(JSON文字列)を保存
-- スキーマ管理はAlembic migrationを利用
+- `payload_json` に `DocumentV1` の全体（JSON文字列）を保存
+- スキーマはAlembicのマイグレーションで管理
 
-## Environment variables
+## 環境変数
 
 - `SUI_DATABASE_URL`
   - 既定値: `sqlite:///./sui_sensemaking.db`
-  - driverを省略したURL（例: `mysql://...`）と対応済みasync URLは、能力レジストリに記録した検証済み同期driverへ正規化して利用
-  - 明示driverは検証済みの組合せだけを受理する。例としてMySQLは`mysql+pymysql`、SQL Serverは`mssql+pymssql`、Oracleは`oracle+oracledb`を使用し、未導入・未検証driverはengine生成前に拒否する
+  - ドライバを省略したURL（例: `mysql://...`）と、対応済みの非同期URLは、能力レジストリに記録した検証済みの同期ドライバへ正規化して使う
+  - ドライバを明示する場合は、検証済みの組み合わせだけを受け付ける。例として、MySQLは`mysql+pymysql`、SQL Serverは`mssql+pymssql`、Oracleは`oracle+oracledb`を使う。未導入または未検証のドライバは、エンジンを作る前に拒否する
   - 正式対応はSQLite、PostgreSQL 16、MySQL 8.4、MariaDB 11.4、SQL Server 2022、CockroachDB 26.2.3、Oracle AI Database Free 23.26.2
-  - 対応状況と昇格条件: `02_Architecture/database_portability.md`
+  - 対応状況と、正式対応へ上げる条件: `02_Architecture/database_portability.md`
 - `SUI_LLM_PROVIDER`
-  - 既定値: `none`は次のとおりです。
-  - 値: `none | local | large-scale | deepseek`（後方互換エイリアス: `local_http`, `external`）
-  - `deepseek`では`SUI_DEEPSEEK_API_KEY`が必須。base URLと既定modelは環境変数正本を参照
+  - 既定値: `none`
+  - 値: `none | local | large-scale | deepseek`（後方互換の別名: `local_http`, `external`）
+  - `deepseek`では`SUI_DEEPSEEK_API_KEY`が必須。ベースURLと既定のモデルは、環境変数の定義元を参照
 - `SUI_LLM_FALLBACK_TO_NONE`
-  - 既定値: `true`は次のとおりです。
-  - `true` の場合、`local`/`large-scale` 呼び出し失敗時は `none` 退避としてfail-closed（HTTP 501）
+  - 既定値: `true`
+  - `true` の場合、`local` / `large-scale` の呼び出しに失敗したときは `none` に退避し、安全側で拒否する（HTTP 501）
 
-## Run
+## 実行
 
 ```bash
 cd 03_Implement/backend
@@ -46,9 +47,9 @@ alembic upgrade head
 uvicorn sui_sensemaking_api.main:app --reload
 ```
 
-PostgreSQLを使う場合は `SUI_DATABASE_URL` をPostgreSQLのURLに変更してください。
+PostgreSQLを使う場合は、`SUI_DATABASE_URL` をPostgreSQLのURLに変更してください。
 
-MySQL/MariaDBはoptional driverを導入し、single-tenant構成で使用します。
+MySQLとMariaDBは、オプションのドライバを導入し、シングルテナント構成で使います。
 
 ```bash
 pip install -e ".[mysql]"
@@ -57,7 +58,7 @@ export SUI_DATABASE_URL="mysql+pymysql://user:password@localhost:3306/sui_sensem
 alembic upgrade head
 ```
 
-SQL Server 2022もoptional driverを導入し、single-tenant構成で使用します。接続先databaseは事前に作成してください。
+SQL Server 2022も、オプションのドライバを導入し、シングルテナント構成で使います。接続先のデータベースは事前に作成してください。
 
 ```bash
 pip install -e ".[mssql]"
@@ -65,7 +66,7 @@ export SUI_DATABASE_URL="mssql+pymssql://user:password@localhost:1433/sui_sensem
 alembic upgrade head
 ```
 
-CockroachDB 26.2.3もoptional dialectを導入し、single-tenant構成で使用します。接続先databaseは事前に作成してください。
+CockroachDB 26.2.3も、オプションのdialectを導入し、シングルテナント構成で使います。接続先のデータベースは事前に作成してください。
 
 ```bash
 pip install -e ".[cockroachdb]"
@@ -73,9 +74,9 @@ export SUI_DATABASE_URL="cockroachdb+psycopg://user:password@localhost:26257/sui
 alembic upgrade head
 ```
 
-`--insecure`はローカル試験専用です。本番ではCockroachDBのTLS構成と適切な`sslmode`を使用してください。
+`--insecure`はローカルでの試験専用です。本番では、CockroachDBのTLS構成と適切な`sslmode`を使ってください。
 
-Oracle AI Database Free 23.26.2もThin modeのoptional driverを導入し、single-tenant構成で使用します。URLのpathはSIDとして解釈されるため、PDBへ接続するときは`service_name` query parameterを使用してください。
+Oracle AI Database Free 23.26.2も、Thinモードのオプションのドライバを導入し、シングルテナント構成で使います。URLのパスはSIDとして解釈されるため、PDBへ接続するときは、クエリパラメータの`service_name`を使ってください。
 
 ```bash
 pip install -e ".[oracle]"
@@ -83,16 +84,16 @@ export SUI_DATABASE_URL="oracle+oracledb://user:password@localhost:1521?service_
 alembic upgrade head
 ```
 
-Oracle Database FreeにはCPU、RAM、ユーザーデータ量、同一論理環境内のinstance数に製品上限があります。本番採用前にOracleの現行ライセンス条件と必要editionを確認してください。
+Oracle Database Freeには、CPU、RAM、ユーザーデータ量、同じ論理環境内のインスタンス数に、製品としての上限があります。本番で採用する前に、Oracleの現行のライセンス条件と必要なエディションを確認してください。
 
-## Minimal backup / restore
+## 最小限のバックアップと復元
 
-`documents.payload_json`には`DocumentV1`全体をJSON snapshotとして保存しています。バックアップは取得だけで完了とせず、本番とは別のdatabase／schema／pathへ復元してDocument、判断ログ、schema revision、大容量本文を照合してください。
+`documents.payload_json`には、`DocumentV1`の全体をJSONのスナップショットとして保存しています。バックアップは、取得しただけで完了とせず、本番とは別のデータベース、スキーマ、パスへ復元して、Document、判断ログ、スキーマのリビジョン、大容量の本文を照合してください。
 
-SQLite、PostgreSQL、MySQL、MariaDB、SQL Server、CockroachDB、Oracleの検証済み最小手順と中断条件は、公開運用正本の[`operations.md`「バックアップと隔離復元」](../../04_Documentation/operations.md#バックアップと隔離復元)を参照してください。製品別コマンドをこのREADMEへ重複記載しません。
+SQLite、PostgreSQL、MySQL、MariaDB、SQL Server、CockroachDB、Oracleの検証済みの最小手順と中断条件は、公開されている運用手順の[`operations.md`「バックアップと隔離復元」](../../04_Documentation/operations.md#バックアップと隔離復元)を参照してください。製品別のコマンドは、このREADMEには重複して書きません。
 
 
-## Tests
+## テスト
 
 ```bash
 cd 03_Implement/backend
@@ -100,25 +101,15 @@ export PYTHONPATH=src
 pytest
 ```
 
-### CE4 CLI authentication
+### CE4 CLIの認証
 
-`sui_sensemaking_api.cli` uses `SUI_API_KEY` for business-plane API
-authentication. Keep the secret in the environment; there is intentionally no
-command-line key option because process arguments and shell history are not a
-safe secret transport. An unset value preserves open `local-dev` behavior.
+`sui_sensemaking_api.cli` は、業務プレーンのAPI認証に `SUI_API_KEY` を使います。秘密は環境変数に置いてください。コマンドラインでキーを渡すオプションは、意図的に用意していません。プロセスの引数やシェルの履歴は、秘密を安全に渡す手段ではないためです。値が未設定なら、開放された `local-dev` の動作のままです。
 
-### Control-plane CLI
+### コントロールプレーンのCLI
 
-The same module provides an operator-facing control-plane CLI. It reads the
-bootstrap credential only from `SUI_ADMIN_API_KEY`; the business-plane
-`SUI_API_KEY` is deliberately ignored for every `admin` command. Write
-commands print a change preview and require interactive confirmation, or an
-explicit `--yes` in automation.
+同じモジュールは、運用者向けのコントロールプレーンのCLIも提供します。ブートストラップの資格情報は `SUI_ADMIN_API_KEY` からだけ読み取り、業務プレーンの `SUI_API_KEY` は、すべての `admin` コマンドで意図的に無視します。書き込みのコマンドは、変更のプレビューを表示し、対話的な確認を求めます。自動化では、明示的に `--yes` を付けます。
 
-Tenant model-allowlist updates also carry the revision returned by the preview
-read. If another administrator changes the same tenant before the write, the
-CLI exits non-zero with `model_allowlist_conflict` instead of overwriting the
-newer policy.
+テナントのモデル許可リストを更新するときは、プレビューの読み取りで返されたリビジョンも送ります。書き込みの前に別の管理者が同じテナントを変更していた場合、CLIは新しいポリシーを上書きせず、`model_allowlist_conflict` で非ゼロの終了コードを返して終了します。
 
 ```bash
 export SUI_ADMIN_API_KEY='...'
@@ -136,11 +127,9 @@ python -m sui_sensemaking_api.cli admin models set-lifecycle \
 python -m sui_sensemaking_api.cli admin audit list --limit 50
 ```
 
-Do not place the admin credential in the end-user SPA. The static credential is
-the ADR-0072 bootstrap path; a separately deployed administrator console and
-interactive Stage-B capability session remain separate follow-up work.
+管理者の資格情報を、エンドユーザー向けのSPAに置かないでください。固定の資格情報は、ADR-0072のブートストラップの経路です。別に配備する管理者コンソールと、対話的なステージBのcapabilityセッションは、別の後続作業として残っています。
 
-PostgreSQL roundtrip testを実行する場合。
+PostgreSQLの往復テストを実行する場合。
 
 ```bash
 export SUI_DATABASE_URL="postgresql+psycopg://sui_sensemaking:sui_sensemaking@localhost:5432/sui_sensemaking"
@@ -149,7 +138,7 @@ alembic upgrade head
 pytest -m postgres
 ```
 
-tenant RLSの実地matrixは、migration所有者とは別のruntime roleで実行します。runtime roleには対象schemaの通常DML権限を付与し、superuser属性と`BYPASSRLS`を付与しないでください。同じ資格情報やRLSを迂回できるroleではテストが失敗します。
+テナントRLSの実地のテスト行列は、マイグレーションの所有者とは別の、実行用のロールで実行します。実行用のロールには、対象スキーマの通常のDML権限を付与し、superuser属性と`BYPASSRLS`は付与しないでください。同じ資格情報や、RLSを迂回できるロールでは、テストが失敗します。
 
 ```bash
 export SUI_DATABASE_URL="postgresql+psycopg://migration_owner:...@localhost:5432/sui_sensemaking"
@@ -158,7 +147,7 @@ export SUI_RUN_PG_RLS_TESTS=1
 pytest -q tests/test_document_access_rls_postgres.py
 ```
 
-Auth federation Level2（Mock SP/IdP）を実行する場合。
+認証フェデレーションのLevel 2（モックのSP/IdP）を実行する場合。
 
 ```bash
 cd 03_Implement/backend
@@ -167,9 +156,9 @@ export SUI_LEVEL2_DIAG_DIR=.artifacts/auth-level2/legacy-federation
 ./scripts/run_auth_level2.sh
 ```
 
-- provider profile fixtures: `tests/level2/fixtures/provider_profile_*.json`, `tests/federation/profiles/*.json`
-- 差異再現観点: ヘッダー名 / claim名 / groups形式 / amr-acr有無
-- 診断JSONは `SUI_LEVEL2_DIAG_DIR` を明示したときだけ出力する。通常の `pytest` は作業ツリーへ診断ファイルを書き込まない。
+- プロバイダのプロファイルのフィクスチャ: `tests/level2/fixtures/provider_profile_*.json`, `tests/federation/profiles/*.json`
+- 差異を再現する観点: ヘッダー名、claim名、groupsの形式、amr/acrの有無
+- 診断のJSONは、`SUI_LEVEL2_DIAG_DIR` を明示したときだけ出力する。通常の `pytest` は、作業ツリーに診断ファイルを書き込まない。
 
 同じ統合ハーネスを直接実行する場合。
 
@@ -178,23 +167,19 @@ cd 03_Implement/backend
 tests/scripts/run_auth_level2.sh
 ```
 
-- provider profile fixture: `tests/federation/profiles/*.json`
-- 失敗時ログ: `.artifacts/auth-level2/`
+- プロバイダのプロファイルのフィクスチャ: `tests/federation/profiles/*.json`
+- 失敗時のログ: `.artifacts/auth-level2/`
 
 
-## LLM provider audit metadata
+## LLMプロバイダの監査メタデータ
 
-`/ai/*` エンドポイントでは、監査可能性のために以下の項目を構造化ログへ記録します。
+`/ai/*` のエンドポイントでは、監査できるように、次の項目を構造化ログに記録します。
 
 - `provider` / `provider_kind`
 - `model_id`
-- `requested_at`（UTC ISO8601）
+- `requested_at`（UTCのISO 8601）
 - `transport`
 - `trace_id`
 - `fallback_to_none`
 
-これらは `extra={...}` で渡され、`SUI_LOG_JSON=true`（既定）のときJSONの1行として
-出力されます。OPS-OBSERV-01以前はログ設定が存在せず、`logging.Formatter` の既定書式が
-`extra` を描画しないため **上記の項目は実際には出力されていませんでした**。出力レベルは
-`SUI_LOG_LEVEL` で変更できます。全リクエストには `X-Request-Id` が付与され、ログ行の
-`requestId` フィールドと突き合わせられます。
+これらは `extra={...}` で渡され、`SUI_LOG_JSON=true`（既定）のときは、JSONの1行として出力されます。OPS-OBSERV-01より前はログの設定がなく、`logging.Formatter` の既定の書式は `extra` を出力しないため、**上記の項目は実際には出力されていませんでした**。出力レベルは `SUI_LOG_LEVEL` で変更できます。すべてのリクエストには `X-Request-Id` が付き、ログ行の `requestId` フィールドと突き合わせられます。

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>sui-sensemaking モジュールアーキテクチャ — 依存関係とデータフロー</title>
+<title>sui-sensemaking モジュールアーキテクチャ：依存関係とデータフロー</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 24px; color: #0f172a; background: #f8fafc; }
@@ -110,7 +110,7 @@ graph TB
     DAR --> TC
 </div>
 
-<h2>2. リクエスト処理シーケンス（SaaS JWT モード）</h2>
+<h2>2. リクエスト処理シーケンス（SaaS JWTモード）</h2>
 <div class="mermaid">
 sequenceDiagram
     participant Client
@@ -287,16 +287,16 @@ erDiagram
 <h2>6. モジュール責務一覧</h2>
 <table>
 <tr><th>モジュール</th><th>層</th><th>責務</th><th>依存元</th></tr>
-<tr><td><code>main.py</code></td><td>Entry</td><td>FastAPI app, lifespan, 全 route 登録, SaaS bundle 配線</td><td>全 routes, trusted_saas_runtime</td></tr>
-<tr><td><code>trusted_auth_edge.py</code></td><td>Auth</td><td>Bearer JWT 検証 (RS256/ES256), aud 配列, tenant claim 抽出, JWKS fetch</td><td>saas_request_context</td></tr>
-<tr><td><code>jwks_store.py</code></td><td>Auth</td><td>JWKS キャッシュ (600s TTL, 60s cooldown, 1800s stale)</td><td>trusted_auth_edge</td></tr>
-<tr><td><code>tenant_context.py</code></td><td>AuthZ</td><td>TenantContext 解決, claim→tenant マッピング, membership 検証</td><td>saas_request_context, routes/docs</td></tr>
-<tr><td><code>active_tenant_session.py</code></td><td>Session</td><td>セッション version 管理, cookie 発行, atomic compare-and-swap</td><td>saas_request_context, tenant_session_precondition</td></tr>
-<tr><td><code>saas_request_context.py</code></td><td>Session</td><td>完全な SaaS リクエストパイプライン (identity→tenant→session→capability)</td><td>routes/docs</td></tr>
-<tr><td><code>trusted_saas_runtime.py</code></td><td>Infra</td><td>起動前ポリシー検証, adapter bundle, preflight, init/release</td><td>main.py</td></tr>
-<tr><td><code>auth_context.py</code></td><td>Domain</td><td>ResolvedIdentity, header 認証 (single-tenant), TRUSTED_PROXIES</td><td>routes/docs</td></tr>
-<tr><td><code>settings.py</code></td><td>Infra</td><td>全設定キー (JWT, tenant, proxy, LLM, audit, PDP)</td><td>全モジュール</td></tr>
-<tr><td><code>routes/admin.py</code></td><td>Route</td><td>User provisioning, IdP 登録, A2A3 gate</td><td>main.py</td></tr>
+<tr><td><code>main.py</code></td><td>Entry</td><td>FastAPIアプリ、lifespan、全ルートの登録、SaaS bundleの配線</td><td>全ルート、 trusted_saas_runtime</td></tr>
+<tr><td><code>trusted_auth_edge.py</code></td><td>Auth</td><td>ベアラーJWTの検証（RS256/ES256）、aud配列、テナントclaimの抽出、JWKSの取得</td><td>saas_request_context</td></tr>
+<tr><td><code>jwks_store.py</code></td><td>Auth</td><td>JWKSのキャッシュ（600秒のTTL、60秒のクールダウン、1800秒のstale）</td><td>trusted_auth_edge</td></tr>
+<tr><td><code>tenant_context.py</code></td><td>AuthZ</td><td>TenantContextの解決、claimからテナントへの対応付け、メンバーシップの検証</td><td>saas_request_context、routes/docs</td></tr>
+<tr><td><code>active_tenant_session.py</code></td><td>Session</td><td>セッションのバージョン管理、cookieの発行、アトミックなcompare-and-swap</td><td>saas_request_context、tenant_session_precondition</td></tr>
+<tr><td><code>saas_request_context.py</code></td><td>Session</td><td>SaaSのリクエスト処理の全体（identity→tenant→session→capability）</td><td>routes/docs</td></tr>
+<tr><td><code>trusted_saas_runtime.py</code></td><td>Infra</td><td>起動前のポリシー検証、アダプタのbundle、プリフライト、init/release</td><td>main.py</td></tr>
+<tr><td><code>auth_context.py</code></td><td>Domain</td><td>ResolvedIdentity、ヘッダー認証（シングルテナント）、TRUSTED_PROXIES</td><td>routes/docs</td></tr>
+<tr><td><code>settings.py</code></td><td>Infra</td><td>全設定キー（JWT、tenant、proxy、LLM、audit、PDP）</td><td>全モジュール</td></tr>
+<tr><td><code>routes/admin.py</code></td><td>Route</td><td>ユーザーのプロビジョニング、IdPの登録、A2A3ゲート</td><td>main.py</td></tr>
 </table>
 
 <script>mermaid.initialize({startOnLoad:true, theme:'default'});</script>

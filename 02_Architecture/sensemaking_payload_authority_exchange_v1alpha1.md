@@ -1,27 +1,25 @@
 # Sensemaking Payload / Authority / Exchange Contract v1alpha1
 
-- Status: **Normative design contract / L0 Planned**
-- Date: 2026-09-18
-- Parent: `ADR-0085`, `ADR-0086`, `ADR-0087`, `ADR-0088`
-- Persistence candidate: `02_Architecture/sensemaking_artifact_persistence_candidate.md`
-- Runtime implementation: **Not yet**
-- Persistence implementation: **Not yet**
-- Current `DocumentV1`: **Unchanged**
+- 状態: **規範的な設計契約 / L0 計画中**
+- 日付: 2026-09-18
+- 親: `ADR-0085`, `ADR-0086`, `ADR-0087`, `ADR-0088`
+- 永続化の候補: `02_Architecture/sensemaking_artifact_persistence_candidate.md`
+- ランタイム実装: **未実装**
+- 永続化実装: **未実装**
+- 現行の `DocumentV1`: **変更なし**
 
 ## 1. 目的
 
-この契約は、`sensemaking_artifact_contract_v1alpha1.md` が定義したartifact identity / revision / provenance / Review / Authority eventに対して、
+この契約は、`sensemaking_artifact_contract_v1alpha1.md` が定義した成果物の識別、リビジョン、来歴、Review、Authorityイベントに対して、次の項目を追加で定義します。
 
-- kind-specific semantic payload
-- core / extension Relation
+- kindごとの意味ペイロード
+- 中核（core）Relationと拡張（extension）Relation
 - Authority Scope
-- Consensus participant snapshot
-- artifact exchange bundle
-- SUI Information Networkへのmaterialization
+- Consensusの参加者スナップショット
+- 成果物の交換バンドル
+- SUI Information Networkへのマテリアライズ
 
-を追加で定義する。
-
-この契約はphysical DB schemaではない。
+この契約は、物理DBスキーマではありません。
 
 ---
 
@@ -29,7 +27,7 @@
 
 ### 2.1 SemanticTargetRef
 
-意味成果物はartifactだけでなく、元sourceや既存network entityを対象にできる。
+意味成果物の対象には、成果物だけでなく、元の出典や既存のネットワークエンティティも指定できます。
 
 ```ts
 export type SemanticTargetRefV1Alpha1 =
@@ -49,18 +47,18 @@ export type SemanticTargetRefV1Alpha1 =
 
 ### 不変条件
 
-- `artifact_revision`はexact revisionを指す。
-- `source` / `network_entity` refはopaque。
-- unknown ref kindを勝手にartifactへ推測変換しない。
-- permission / visibility確認前にref先本文を展開しない。
+- `artifact_revision` は、厳密なリビジョンを指す。
+- `source` と `network_entity` の参照は、不透明にする。
+- 未知の参照kindを、勝手に成果物へ推測して変換しない。
+- 許可や可視性を確認する前に、参照先の本文を展開しない。
 
 ---
 
-## 3. kind-specific payload
+## 3. kindごとのペイロード
 
 ### 3.1 Evidence
 
-Evidenceは、sensemakingの根拠として参照する内容またはsource segmentを表す。
+Evidenceは、sensemakingの根拠として参照する内容、または出典の区間（source segment）を表します。
 
 ```ts
 export type EvidenceRepresentationV1Alpha1 =
@@ -93,12 +91,12 @@ export type EvidencePayloadV1Alpha1 = {
 };
 ```
 
-#### Invariants
+#### 不変条件
 
-- `source_segment`はsource本文を複製することを要求しない。
-- locatorが取得できない場合にAIが推測して補わない。
-- `sourceVersionDigest`はsource version整合確認用でありTruth証明ではない。
-- Evidence本文の要約を元Evidenceとして上書きしない。要約はObservation / Synthesis等の別artifactにする。
+- `source_segment` は、出典の本文を複製することを要求しない。
+- ロケータを取得できないとき、AIが推測して補わない。
+- `sourceVersionDigest` は出典のバージョンの整合を確認するための値であり、Truthの証明ではない。
+- Evidenceの本文の要約で、元のEvidenceを上書きしない。要約は、ObservationやSynthesisなどの別の成果物にする。
 
 ---
 
@@ -112,12 +110,12 @@ export type ObservationPayloadV1Alpha1 = {
 };
 ```
 
-#### Invariants
+#### 不変条件
 
-- Observationの認識主体・MethodはpayloadでなくProvenance Envelopeに置く。
-- confidence / importance / rankを必須fieldにしない。
-- 同じEvidenceに複数Observationが存在してよい。
-- statementが同じでもactor / method / inputが異なれば同じartifactだと自動判定しない。
+- Observationの認識主体とMethodは、ペイロードではなく来歴エンベロープに置く。
+- confidence、importance、rankを必須フィールドにしない。
+- 同じEvidenceに、複数のObservationが存在してよい。
+- statementが同じでも、actor、method、入力が異なれば、同じ成果物とは自動的に判定しない。
 
 ---
 
@@ -143,7 +141,7 @@ export type RelationPredicateV1Alpha1 =
   | `${string}:${string}/${string}`;
 ```
 
-extension predicateの例:
+拡張predicateの例は次のとおりです。
 
 ```text
 domain:requirements/depends_on
@@ -151,7 +149,7 @@ method:kj/close_affinity
 experiment:csw/symbolic_resonance
 ```
 
-#### Participant
+#### 参加者
 
 ```ts
 export type RelationParticipantV1Alpha1 = {
@@ -166,34 +164,32 @@ export type RelationPayloadV1Alpha1 = {
 };
 ```
 
-#### Core role validation
+#### 中核predicateのロール検証
 
-| Predicate | 必須role | 備考 |
+| Predicate | 必須ロール | 備考 |
 |---|---|---|
-| `derived_from` | `derived`, `source` | derivedはartifact revisionを推奨 |
-| `grounded_by` | `claim`, `ground` | groundはEvidence等 |
-| `supports` | `supporter`, `target` | supportはTruth確定ではない |
-| `contradicts` | `contradictor`, `target` | contradiction自体もReview可能 |
-| `alternative_to` | `alternative` 2件以上 | 対称関係として扱える |
-| `synthesizes` | `synthesis`, `component` 1件以上 | Synthesisへ構成要素を接続 |
-| `basis_for` | `basis`, `target` | Decision等のbasis |
+| `derived_from` | `derived`, `source` | derivedは成果物リビジョンを推奨 |
+| `grounded_by` | `claim`, `ground` | groundはEvidenceなど |
+| `supports` | `supporter`, `target` | supportはTruthの確定ではない |
+| `contradicts` | `contradictor`, `target` | 矛盾そのものもReviewできる |
+| `alternative_to` | `alternative` 2件以上 | 対称な関係として扱える |
+| `synthesizes` | `synthesis`, `component` 1件以上 | Synthesisへ構成要素を接続する |
+| `basis_for` | `basis`, `target` | Decisionなどの根拠 |
 | `supersedes` | `newer`, `older` | 削除を意味しない |
-| `contains` | `container`, `member` 1件以上 | membership |
+| `contains` | `container`, `member` 1件以上 | 所属関係 |
 | `precedes` | `earlier`, `later` | 因果を意味しない |
 
-#### Extension predicate invariant
+#### 拡張predicateの不変条件
 
-登録済みpolicyが無いextension relationは、
+登録済みのポリシーがない拡張Relationは、次の用途に使いません。
 
-- authority promotion
-- permission
+- Authorityの昇格
+- 許可
 - Consensus
-- retention root
-- Truth / importance inference
+- 保持ルート
+- TruthやImportanceの推論
 
-へ利用しない。
-
-未知extension predicateはopaque relationとして保持できる。
+未知の拡張predicateは、不透明なRelationとして保持できます。
 
 ---
 
@@ -208,12 +204,12 @@ export type HypothesisPayloadV1Alpha1 = {
 };
 ```
 
-#### Invariants
+#### 不変条件
 
-- Evidence / ObservationからHypothesisへin-place変換しない。
-- `applicabilityRefs`はAuthority Scopeではない。
-- supports / contradicts / grounded_byはRelation artifactで表す。
-- provider自己申告confidenceをHypothesisのTruth scoreにしない。
+- EvidenceやObservationから、Hypothesisへその場で変換しない。
+- `applicabilityRefs` は、Authority Scopeではない。
+- supports、contradicts、grounded_byは、Relationの成果物で表す。
+- プロバイダが自己申告したconfidenceを、HypothesisのTruthスコアにしない。
 
 ---
 
@@ -237,12 +233,12 @@ export type StructurePayloadV1Alpha1 = {
 };
 ```
 
-#### Invariants
+#### 不変条件
 
-- `causal_candidate`は因果が確定したことを意味しない。
-- member / relationの順序に意味がある場合はkind-specific validationで保持する。
-- Island / Cluster / spatial canvasはStructureのProjectionになり得るが自動変換しない。
-- 同じmember集合から複数Structureを保持できる。
+- `causal_candidate` は、因果が確定したことを意味しない。
+- memberやrelationの順序に意味があるときは、kindごとの検証で保持する。
+- Island、Cluster、空間的なCanvasは、Structureの投影になり得る。ただし自動変換はしない。
+- 同じmember集合から、複数のStructureを保持できる。
 
 ---
 
@@ -257,12 +253,12 @@ export type SynthesisPayloadV1Alpha1 = {
 };
 ```
 
-#### Invariants
+#### 不変条件
 
-- Synthesisは最終結論を意味しない。
-- 主要反証・代替案はRelation / component refsから辿れる必要がある。
-- `unresolvedRefs`を空にするために未解決を削除しない。
-- 複数の競合Synthesisを保持できる。
+- Synthesisは、最終結論を意味しない。
+- 主要な反証や代替案を、Relationやcomponent refsから辿れる必要がある。
+- `unresolvedRefs` を空にするために、未解決の項目を削除しない。
+- 競合する複数のSynthesisを保持できる。
 
 ---
 
@@ -288,16 +284,16 @@ export type DecisionPayloadV1Alpha1 = {
 };
 ```
 
-#### Invariants
+#### 不変条件
 
-- DecisionはAuthority transitionやExecutionではない。
-- `decisionContextRef`はDecisionが成立した文脈であり、Authority Scope refと同じ値である必要はない。
-- external Actionへ進む場合は別authorization / execution contractが必要。
-- AIがDecision payloadを生成しても、人間Decision Authorityを持ったことにはならない。
+- Decisionは、Authority遷移でもExecutionでもない。
+- `decisionContextRef` はDecisionが成立した文脈であり、Authority Scopeの参照と同じ値である必要はない。
+- 外部のActionへ進むときは、別の認可と実行の契約が必要になる。
+- AIがDecisionのペイロードを生成しても、人間のDecision Authorityを持ったことにはならない。
 
 ---
 
-## 4. semantic payload dispatch
+## 4. 意味ペイロードのディスパッチ
 
 ```ts
 export type SemanticPayloadV1Alpha1 =
@@ -310,7 +306,7 @@ export type SemanticPayloadV1Alpha1 =
   | DecisionPayloadV1Alpha1;
 ```
 
-Revision Envelopeの`semanticKind`とpayload schemaは一致必須。
+リビジョンエンベロープの `semanticKind` とペイロードのスキーマは、必ず一致させます。
 
 例は次のとおりです。
 
@@ -319,7 +315,7 @@ semanticKind = "hypothesis"
 payload.schema = "sui.semantic-payload/hypothesis/v1alpha1"
 ```
 
-不一致はfail closed。
+一致しないときは、安全側で拒否します。
 
 ---
 
@@ -346,15 +342,15 @@ export type AuthorityScopeV1Alpha1 = {
 };
 ```
 
-### 5.2 Invariants
+### 5.2 不変条件
 
-- Authority Scopeはimmutable。
-- `scopeRef`はopaque。
-- `parentScopeRef`はauthority継承を意味しない。
-- cycleは禁止。
-- scopeが異なれば、同じrevisionでも別のAuthority stateを持ち得る。
-- scopeはpermission / ACL / visibilityではない。
-- `external_context`は外部制度・顧客・会議等を参照するためのplaceholderであり、外部systemのauthorityをSUIが保証することを意味しない。
+- Authority Scopeは不変にする。
+- `scopeRef` は不透明にする。
+- `parentScopeRef` は、Authorityの継承を意味しない。
+- 循環は禁止する。
+- スコープが異なれば、同じリビジョンでも別のAuthority状態を持ち得る。
+- スコープは、許可、ACL、可視性ではない。
+- `external_context` は、外部の制度、顧客、会議などを参照するための場所取りである。外部システムのAuthorityをSUIが保証することは意味しない。
 
 ### 5.3 例
 
@@ -371,11 +367,11 @@ Scope C = external_context: "公開記事"
   -> Working / not promoted
 ```
 
-一つのAccepted状態を全scopeへ伝播しない。
+一つのAccepted状態を、すべてのスコープへ伝播させません。
 
 ---
 
-## 6. Consensus Participant Snapshot
+## 6. Consensusの参加者スナップショット
 
 ### 6.1 型
 
@@ -396,28 +392,28 @@ export type ConsensusParticipantSetV1Alpha1 = {
 };
 ```
 
-### 6.2 Invariants
+### 6.2 不変条件
 
-- snapshotはimmutable。
-- actorRefはopaque。
-- display name / mail address等のPIIを必須にしない。
-- actorRef重複は禁止。
-- snapshot生成後に組織membershipが変わっても過去snapshotを変更しない。
-- `membershipSourceRef`が無ければ、存在しないmembership sourceを推測しない。
-- 現行runtimeではAI / systemだけのparticipant setをConsensus Authorityのbasisにしない。
+- スナップショットは不変にする。
+- actorRefは不透明にする。
+- 表示名やメールアドレスなどの個人情報を、必須にしない。
+- actorRefの重複は禁止する。
+- スナップショットの生成後に組織のメンバーシップが変わっても、過去のスナップショットは変更しない。
+- `membershipSourceRef` がないときは、存在しないメンバーシップの出典を推測しない。
+- 現行のランタイムでは、AIやsystemだけの参加者集合を、Consensus Authorityの根拠にしない。
 
 ---
 
-## 7. Consensus Policy Boundary
+## 7. Consensus Policyの境界
 
-v1alpha1では具体的投票計算を固定しない。
+v1alpha1では、具体的な投票の計算を固定しません。
 
-Authority transitionの`policyRef`は、次のいずれかの手続きへ解決可能でなければならない方向とする。
+Authority遷移の `policyRef` は、次のいずれかの手続きへ解決できなければならない、という方向にします。
 
-- explicit unanimous
-- explicit quorum
-- formally delegated procedure
-- domain-specific explicit procedure
+- 明示された全会一致
+- 明示された定足数
+- 正式に委任された手続き
+- ドメイン固有の明示された手続き
 
 ただし、
 
@@ -428,27 +424,27 @@ ConsensusPolicy
   != model confidence
 ```
 
-である。
+です。
 
-### 7.1 禁止
+### 7.1 禁止事項
 
-- `no_objection` ReviewがN件あるだけでConsensusへ昇格
-- AIのconfidence閾値をConsensus判定に利用
-- participant set外のactor Reviewを黙って集計
-- 現在membershipを使って過去participant setを再計算
-- majority / quorumを非序列化原則とは無関係に自動導入
+- `no_objection` のReviewがN件あるだけで、Consensusへ昇格する
+- AIのconfidenceの閾値を、Consensusの判定に利用する
+- 参加者集合の外にいるactorのReviewを、黙って集計する
+- 現在のメンバーシップを使って、過去の参加者集合を再計算する
+- 非序列化の原則と無関係に、多数決や定足数を自動的に導入する
 
-具体policyはmulti-user機能を設計するときに別ADRで採択する。
+具体的なポリシーは、複数ユーザー機能を設計するときに、別のADRで採択します。
 
 ---
 
-## 8. Artifact Exchange Bundle
+## 8. 成果物の交換バンドル
 
-### 8.1 ExchangeとBackupを分離する
+### 8.1 交換とバックアップを分離する
 
-artifact exchange bundleは、別workspace / network / systemへ意味成果物を移送・共有する契約である。
+成果物の交換バンドルは、別のworkspace、ネットワーク、システムへ意味成果物を移送し、共有するための契約です。
 
-運用上のbackup / disaster recoveryは別契約とする。
+運用上のバックアップや災害復旧は、別の契約とします。
 
 ```text
 Exchange
@@ -459,9 +455,9 @@ Backup / Restore
   = 別の運用・真正性契約
 ```
 
-この二つを一つのimport処理へ統合しない。
+この二つを、一つのimport処理へ統合しません。
 
-### 8.2 Manifest
+### 8.2 マニフェスト
 
 ```ts
 export type ArtifactExchangeExternalDependencyV1Alpha1 = {
@@ -482,7 +478,7 @@ export type ArtifactExchangeManifestV1Alpha1 = {
 };
 ```
 
-### 8.3 Bundle
+### 8.3 バンドル
 
 ```ts
 export type SourceAuthorityAssertionV1Alpha1 = {
@@ -507,31 +503,29 @@ export type ArtifactExchangeBundleV1Alpha1 = {
 };
 ```
 
-実装時はrevisionとpayloadの対応keyを明示的に定義する。v1alpha1では配列配置順へ意味を持たせない。
+実装するときは、リビジョンとペイロードを対応づけるキーを明示的に定義します。v1alpha1では、配列の並び順に意味を持たせません。
 
-### 8.4 Closure rule
+### 8.4 クロージャの規則
 
-rootから必要なrefを辿り、各refは、
+ルートから必要な参照を辿ったとき、各参照は次のどちらかでなければなりません。
 
-- bundle内に存在する
-- `externalDependencies`に明示される
+- バンドルの中に存在する
+- `externalDependencies` に明示されている
 
-のどちらかでなければならない。
-
-silent dangling refは禁止。
+黙って宙に浮いた参照は禁止します。
 
 ### 8.5 SafeMode
 
-外部共有用exchange bundleでは`safeModeApplied=true`を必須とする。
+外部共有用の交換バンドルでは、`safeModeApplied=true` を必須とします。
 
-- 元artifact / networkを変更しない
-- 派生bundle側でredact / omit / rebuildを行う
-- redaction後payloadのdigestを再計算する
-- source Review / Authority stateをredactionで人間承認済みへ昇格させない
-- permissionで読めないrefをbundleへ含めない
-- permission除外によってclosureを満たせない場合、external dependencyとして露出してよいかをpolicyで判断し、不可ならexportをfail closedする
+- 元の成果物とネットワークは変更しない。
+- 派生したバンドルの側で、墨消し、除外、再構築を行う。
+- 墨消しの後に、ペイロードのダイジェストを再計算する。
+- 出典側のReviewやAuthorityの状態を、墨消しによって人間承認済みへ昇格させない。
+- 許可がなくて読めない参照は、バンドルへ含めない。
+- 許可による除外でクロージャを満たせないときは、外部依存として露出してよいかをポリシーで判断する。不可なら、エクスポートを安全側で拒否する。
 
-### 8.6 Imported authority
+### 8.6 importしたAuthority
 
 import先では、
 
@@ -540,15 +534,15 @@ SourceAuthorityAssertion
   != Local AuthorityTransitionEvent
 ```
 
-である。
+です。
 
-importされたartifact revisionのlocal authority既定値は`working`とする方向を採る。
+importした成果物リビジョンのローカルのAuthority既定値は、`working` とする方向を採ります。
 
-利用者が明示的にReview対象として提示する場合に`candidate`へlocal transitionできる。
+利用者が明示的にReviewの対象として提示するときは、ローカルの遷移で `candidate` へ進められます。
 
-source側Accepted / Consensusをlocal Accepted / Consensusへ直接復元するのはexchangeではなくbackup/restore領域である。
+出典側のAcceptedやConsensusを、ローカルのAcceptedやConsensusへ直接復元するのは、交換ではなくバックアップとリストアの領域です。
 
-### 8.7 Imported Review
+### 8.7 importしたReview
 
 ```text
 SourceReviewAssertion(human)
@@ -556,24 +550,22 @@ SourceReviewAssertion(human)
   != local human_reviewed
 ```
 
-source human Reviewはprovenanceとして表示できるが、local reviewerによる新Reviewを要求する。
+出典側のhuman Reviewは、来歴として表示できます。ただし、ローカルのレビュー担当者による新しいReviewを要求します。
 
-### 8.8 Identity collision
+### 8.8 IDの衝突
 
-import時に同じ`artifactId / revisionId`が存在する場合。
+import時に、同じ `artifactId / revisionId` が既に存在する場合は、次の4項目を検証します。
 
 1. semantic kind
-2. content digest
-3. parent revision refs
-4. provenance identity
+2. コンテンツのダイジェスト
+3. 親リビジョンの参照
+4. 来歴の同一性
 
-を検証する。
+完全に整合する場合に限り、既存のリビジョンへ解決できます。
 
-完全整合する場合だけ既存revisionへresolve可能。
+一致しない場合は、安全側で拒否します。
 
-不一致ならfail closedする。
-
-local ID再発行方式を採る場合は、
+ローカルIDを再発行する方式を採るときは、
 
 ```text
 origin network
@@ -583,17 +575,17 @@ local artifact ID
 local revision ID
 ```
 
-のmappingを失わない。
+の対応を失わないようにします。
 
 ---
 
-## 9. Information Network materialization
+## 9. Information Networkへのマテリアライズ
 
 ### 9.1 責務
 
-semantic artifact persistenceは意味成果物の正本を保持する。
+意味成果物の永続化は、意味成果物の基準データを保持します。
 
-SUI Information Networkは、その情報をquery可能な長期ネットワークへmaterializeするtarget architectureである。
+SUI Information Networkは、その情報を、クエリできる長期ネットワークへマテリアライズする目標アーキテクチャです。
 
 ```text
 Semantic artifacts / events
@@ -612,34 +604,32 @@ D0..D5 Query
 Context Projection
 ```
 
-### 9.2 Materialization原則
+### 9.2 マテリアライズの原則
 
-- artifact revisionはnetwork nodeになり得る。
-- Relation artifactはnetwork edge / hyperedge projectionになり得る。
-- Authority Scopeごとのstateはnode propertyの単一`status`へ潰さない。
-- Review recordはevent / provenance projectionになり得る。
-- Working / Consensus planeはauthority / actor-aware projectionでありsemantic kindではない。
-- permission / SafeModeをmaterialization時に適用する。
-- Query結果やContext Projectionをcanonical artifactへ逆書込みしない。
+- 成果物リビジョンは、ネットワークのノードになり得る。
+- Relationの成果物は、ネットワークのエッジやハイパーエッジの投影になり得る。
+- Authority Scopeごとの状態を、ノードプロパティの単一の `status` にまとめない。
+- Review記録は、イベントや来歴の投影になり得る。
+- WorkingとConsensusのプレーンは、Authorityとactorを考慮した投影であり、semantic kindではない。
+- 許可とSafeModeは、マテリアライズ時に適用する。
+- クエリ結果やContext Projectionを、基準となる成果物へ逆書き込みしない。
 
 ### 9.3 QualitativeNetworkSnapshotとの関係
 
-既存`QualitativeNetworkSnapshot`はquery用read modelとして維持する。
+既存の `QualitativeNetworkSnapshot` は、クエリ用の読み取りモデルとして維持します。
 
-将来semantic artifactをsourceにする場合でも、
+将来、意味成果物を入力元にする場合でも、次の点を優先します。
 
-- snapshot fieldをartifact DB schemaへ合わせて膨張させない
-- Queryが必要とする形へ投影する
-- exact artifact revisionへ戻れるstable refを持つ
-- unknown relation / provenance欠落を破棄しない
-
-ことを優先する。
+- スナップショットのフィールドを、成果物DBのスキーマに合わせて膨らませない。
+- クエリが必要とする形へ投影する。
+- 厳密な成果物リビジョンへ戻れる、安定した参照を持つ。
+- 未知のRelationや、欠けた来歴を破棄しない。
 
 ---
 
-## 10. Physical persistence logical requirements
+## 10. 物理永続化の論理要件
 
-physical DB設計は別ADRとするが、少なくとも次のlogical record classを独立に永続化できる必要がある。
+物理DBの設計は別のADRで扱います。ただし少なくとも、次の論理レコードの分類を、それぞれ独立に永続化できる必要があります。
 
 ```text
 Artifact identity
@@ -655,93 +645,89 @@ Exchange import mapping
 Pin / retention root
 ```
 
-### 10.1 Current-state cache
+### 10.1 現在状態のキャッシュ
 
-performanceのため、
+性能のために、次のものをキャッシュしてよいものとします。
 
-- latest revision
-- current authority state per scope
-- materialized network node
+- 最新のリビジョン
+- スコープごとの現在のAuthority状態
+- マテリアライズしたネットワークのノード
 
-等をcacheしてよい。
+ただし、キャッシュだけを基準データにはしません。
 
-ただし、cacheだけを正本にしない。
+Authorityの現在状態は、遷移イベント列から再構築できなければなりません。
 
-Authority current stateはtransition event列から再構築可能でなければならない。
+### 10.2 ストレージエンジンは未決定
 
-### 10.2 Storage engine non-decision
+この契約は、次のどれを最終的に採用するかを決めません。
 
-本契約は、
+- PostgreSQLなどのRDB
+- JSON集約
+- グラフDB
+- オブジェクトストア
+- 既存のContent Store
 
-- PostgreSQL等のRDB
-- JSON aggregate
-- graph DB
-- object store
-- existing Content Store
-
-のどれを最終採用するか決めない。
-
-次のADRで、代表fixtureとQuery / GC / import-export workloadをもとに比較する。
+次のADRで、代表的なフィクスチャと、クエリ、GC、import/exportのワークロードをもとに比較します。
 
 ---
 
-## 11. Validation Matrix
+## 11. 検証マトリクス
 
-| Case | Expected |
+| ケース | 期待結果 |
 |---|---|
-| ObservationとHypothesisのstatementが同文 | 別kind・別artifactとして保持可能 |
-| Evidence source pointerだけ | valid。source本文複製不要 |
-| unknown extension Relation | 保持可能。authority / retention side effectなし |
-| core `contradicts` role欠落 | reject |
-| inquiry scope Accepted / network scope Working | valid |
-| parent scope Accepted | child scopeへ自動継承しない |
-| participant membership変更 | 過去snapshot不変 |
-| 5 human Reviews + participant set | Consensusを自動生成しない |
-| source Accepted artifactをexchange import | local Working、source assertion保持 |
-| source human Reviewをimport | local human_reviewedを付与しない |
-| bundle内ref欠落・external dependency未記載 | reject |
-| ID同一・digest不一致 | collision / fail closed |
-| SafeModeで必要refが読めない | policyによりexternal dependency化またはexport拒否 |
-| Context Projection生成 | canonical artifact不変 |
-| current authority cache消失 | transition eventから再構築可能 |
+| ObservationとHypothesisのstatementが同文 | 別のkind、別の成果物として保持できる |
+| Evidenceが出典へのポインタだけ | 有効。出典の本文は複製不要 |
+| 未知の拡張Relation | 保持できる。Authorityや保持への副作用はない |
+| 中核の `contradicts` でロールが欠落 | 拒否する |
+| inquiryスコープでAccepted、networkスコープでWorking | 有効 |
+| 親スコープがAccepted | 子スコープへ自動的に継承しない |
+| 参加者のメンバーシップが変更 | 過去のスナップショットは変わらない |
+| human Review 5件と参加者集合 | Consensusを自動生成しない |
+| 出典側でAcceptedの成果物を交換importする | ローカルではWorking。出典のアサーションを保持する |
+| 出典側のhuman Reviewをimportする | ローカルのhuman_reviewedを付与しない |
+| バンドル内の参照が欠落し、外部依存にも未記載 | 拒否する |
+| IDが同一で、ダイジェストが不一致 | 衝突として、安全側で拒否する |
+| SafeModeで必要な参照が読めない | ポリシーに従い、外部依存にするか、エクスポートを拒否する |
+| Context Projectionを生成 | 基準となる成果物は変わらない |
+| 現在のAuthorityキャッシュが消失 | 遷移イベントから再構築できる |
 
 ---
 
-## 12. Promotion Gates
+## 12. 昇格条件
 
-runtime / persistenceへ昇格する前に、次を検証する。
+ランタイムや永続化へ昇格する前に、次を検証します。
 
-1. 各kind payloadのcanonical JSON / digest往復。
-2. core Relation role validation。
-3. extension Relation unknown roundtrip。
-4. 同一revisionに複数scopeのauthority stateを持つfixture。
-5. participant snapshotのmembership変更耐性。
-6. source Accepted / Consensus importがlocal authorityへ漏れないこと。
-7. source human Review importが`human_reviewed`へ漏れないこと。
-8. self-contained / external dependency bundle validation。
-9. SafeMode後のclosure validation。
-10. 100 / 1000 / 10000 artifactでInformation Network materializationとReview Capsule再構築を計測。
-11. current-state cacheを削除してevent列からauthorityを復元。
-12. retention GCがsource assertion / Review / Authority basisを破壊しない。
-13. physical persistence candidateをRDB / aggregate / graph観点で比較。
-14. artifact exchangeとbackup/restoreを別入口として実装できることを確認。
+1. 各kindのペイロードについて、正規JSONとダイジェストの往復。
+2. 中核Relationのロール検証。
+3. 拡張Relationの、未知のものの往復。
+4. 同じリビジョンが、複数スコープのAuthority状態を持つフィクスチャ。
+5. 参加者スナップショットが、メンバーシップの変更に耐えること。
+6. 出典側のAcceptedやConsensusのimportが、ローカルのAuthorityへ漏れないこと。
+7. 出典側のhuman Reviewのimportが、`human_reviewed` へ漏れないこと。
+8. 自己完結したバンドルと、外部依存つきバンドルの検証。
+9. SafeModeの適用後に、クロージャを検証すること。
+10. 成果物が100件、1000件、10000件のときの、Information NetworkのマテリアライズとReview Capsuleの再構築の計測。
+11. 現在状態のキャッシュを削除して、イベント列からAuthorityを復元すること。
+12. 保持のGCが、出典のアサーション、Review、Authorityの根拠を壊さないこと。
+13. 物理永続化の候補を、RDB、集約、グラフの観点で比較すること。
+14. 成果物の交換と、バックアップとリストアを、別の入口として実装できることの確認。
 
 ---
 
 ## 13. 未決事項
 
-ADR-0088でphysical persistenceの第一候補をRDB metadata/event + Content Store payload + materialized networkとした。具体的なportable schema / index / fixture / benchmarkは`SENSEMAKING-PERSIST-01`で検証する。
+ADR-0088で、物理永続化の第一候補を、RDBのメタデータとイベント、Content Storeのペイロード、マテリアライズしたネットワークとしました。具体的なポータブルスキーマ、インデックス、フィクスチャ、ベンチマークは、`SENSEMAKING-PERSIST-01` で検証します。
 
-引き続き未決なのは次である。
+引き続き未決なのは、次の項目です。
 
-- exact ID generation format
-- Evidence source locator共通contract
-- kind payloadのUI編集surface
-- extension Relation registry format
-- Authority Scope parent利用方針
-- Consensus Policy具体schema
-- artifact bundle署名 / authenticity
-- physical table / index / partitionの最終形
-- object/blob dedup benchmark結果
-- artifact exchange import UI
-- Review Capsule UI
+- IDの具体的な生成形式
+- Evidenceの出典ロケータの共通契約
+- kindごとのペイロードのUI編集画面
+- 拡張Relationのレジストリ形式
+- Authority Scopeの親の利用方針
+- Consensus Policyの具体的なスキーマ
+- 成果物バンドルの署名と真正性
+- 物理テーブル、インデックス、パーティションの最終形
+- オブジェクトとBLOBの重複排除のベンチマーク結果
+- 成果物交換のimport UI
+- Review CapsuleのUI

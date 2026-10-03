@@ -7,7 +7,7 @@
 
 ## Context
 
-`sui-sensemaking` はCanvas/UI（Frontend）・API（Backend）・永続化（DB）の連動で価値を提供する。
+`sui-sensemaking` はCanvas/UI（フロントエンド）、API（バックエンド）、永続化（DB）の連動で価値を提供する。
 このためunit/integrationが通過していても、結合境界で不整合が残ると人間レビュー時に
 「実装不具合の切り分け」に時間を使い、仕様評価に集中できない。
 
@@ -43,10 +43,10 @@
 
 #### 3.1 共通（必須）
 
-- ヘルス確認は次のとおりです。
+- ヘルス確認
   - Compose: `curl -fsS http://localhost:8080/api/healthz`
   - SQLite代替: `curl -fsS http://localhost:8000/healthz` と `curl -fsS http://localhost:4173/api/healthz`
-- ドキュメント往復保存確認は次のとおりです。
+- ドキュメント往復保存確認
   - `PUT /docs/{doc_id}` → `GET /docs/{doc_id}` が成功し、保存内容が保持される。
 
 #### 3.2 UI変更時（必須）
@@ -62,7 +62,7 @@
 2. 安全境界優先
    - SafeMode既定ON、漏えい防止、悪性入力拒否など安全性に関わる経路を優先する。
 3. 決定論優先
-   - flakeを避けるため、非決定的待機を減らし、入力と期待結果を固定する。
+   - 不安定なテストを避けるため、非決定的待機を減らし、入力と期待結果を固定する。
 4. 最小維持コスト
    - すべてをE2Eで覆わず、unit/integrationとの責務分担を維持する。
 
@@ -72,7 +72,7 @@
 2. Frontend/Backendのローカル起動手順が分散すると、確認漏れが発生しやすい。
 3. UI改修の増加に伴い、Playwrightシナリオを「価値境界ベース」で整理しないと肥大化する。
 
-対処方針は次のとおりです。
+対処方針を次に示す。
 - `03_Implement/frontend/docs/e2e_testing.md` をE2E実務手順の正本とし、
   シナリオ追加時はSmoke / Core / Safetyのどこを守るかを明示する。
 
@@ -89,7 +89,7 @@
 ### 7. 利用者向けドキュメントとの完全整合ルール
 
 1. E2E手順の正本
-   - `03_Implement/frontend/docs/e2e_testing.md` をE2E実施手順の正本（single source of truth）とする。
+   - `03_Implement/frontend/docs/e2e_testing.md` をE2E実施手順の唯一の正本とする。
    - `04_Documentation/acceptance_check.md` は一般利用者向けの手動確認だけを扱い、Playwright実行手順を正本化しない。
 2. 完全整合の対象
    - `acceptance_check.md` / `installation.md` / `operations.md` / `CONTRIBUTING.md` / `02_Architecture/coding_standards.md` に記載する

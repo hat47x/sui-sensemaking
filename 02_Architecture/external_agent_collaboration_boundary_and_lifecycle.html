@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>外部エージェント協調: 信頼境界とライフサイクル — sui-sensemaking</title>
+<title>外部エージェント協調: 信頼境界とライフサイクル：sui-sensemaking</title>
 <style>
   :root {
     --bg: #ffffff;
@@ -88,7 +88,7 @@ sequenceDiagram
 </pre>
 </div>
 
-<p>境界の性質はエージェント基盤ごとに異なる。M365等の組織契約に依存する経路は、本仕様の管轄外（§7 で個別注意）。</p>
+<p>境界の性質はエージェント基盤ごとに異なる。M365などの組織契約に依存する経路は、本仕様の対象外である（§7 に個別の注意がある）。</p>
 
 <h2>2. AgentResponse のライフサイクル（§5）</h2>
 
@@ -132,8 +132,8 @@ stateDiagram-v2
   <tbody>
     <tr><td>未レビュー本文</td><td>既定除外（<code>includeUnreviewedDrafts</code> 明示時のみ含む）</td></tr>
     <tr><td>出典参照（<code>Card.meta.seq/source</code>）</td><td>既定OFF</td></tr>
-    <tr><td>主体メタ（起票者・作成者・最終更新者）</td><td>別ゲートで同梱判断が固定されるまで含めない</td></tr>
-    <tr><td>SafeMode</td><td>状態表示付きで適用（redaction注記付き）</td></tr>
+    <tr><td>主体メタ（起票者・作成者・最終更新者）</td><td>別のゲートで同梱の可否が決まるまで含めない</td></tr>
+    <tr><td>SafeMode</td><td>状態表示付きで適用（墨消しの注記付き）</td></tr>
   </tbody>
 </table>
 

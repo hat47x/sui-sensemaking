@@ -27,7 +27,7 @@ Evidence
 という状態遷移として実装すると、重大な混同が起きる。
 
 - ObservationがHypothesisへ「昇格」したとき、元の観察が失われる。
-- AIが生成したHypothesisをAcceptedへ変更すると、生成主体と承認主体が一つの状態へ潰れる。
+- AIが生成したHypothesisをAcceptedへ変更すると、生成主体と承認主体が一つの状態にまとめられてしまう。
 - Review済みであることと、内容がAcceptedであることが混ざる。
 - 公開されていることと、権威を持つことが混ざる。
 - SynthesisからDecisionへ進んだ結果、採らなかった主要代替案や反証が失われる。
@@ -83,7 +83,7 @@ Observationには、少なくとも概念上、
 - 認識主体
 - 対象または入力範囲
 - 参照したEvidence
-- 利用したMethod / Provider
+- 利用したMethod / プロバイダ
 - 生成時点
 - 不確実性・保留
 
@@ -95,7 +95,7 @@ Observationは元Evidenceを上書きしない。また、Observationである�
 
 - **Relation**: 複数の意味成果物の間に置かれた関係の主張・記述。関係の存在自体も取消し・反証可能である。
 - **Hypothesis**: Evidence / Observation / Relation等をもとに形成された解釈。反証、保留、棄却、再採用が可能であり、Factへ暗黙昇格しない。
-- **Structure**: 複数成果物を、membership、relation、空間配置、因果、階層等で組み合わせた構造。Island、Graph、Cluster等はStructureの具体的Projectionになり得る。
+- **Structure**: 複数成果物を、所属、関係、空間配置、因果、階層等で組み合わせた構造。Island、Graph、Cluster等はStructureの具体的Projectionになり得る。
 - **Synthesis**: 複数のHypothesis / Structure / Relation等を統合して表した理解。未解決点・主要反証・代替案を伴ってよい。
 
 Synthesisは「最終結論」を意味しない。AcceptedでないSynthesisも、複数の競合Synthesisも保持できる。
@@ -124,17 +124,17 @@ reviewed
 概念上、少なくとも次を区別する。
 
 - **Working**: 作業空間内の成果物。共有・承認上の権威を持たない。
-- **Candidate**: Review / adoptionの対象として提示された成果物。
-- **Accepted**: 定義されたscopeとauthorityのもとで明示的に採用された成果物。
+- **Candidate**: Reviewや採用（adoption）の対象として提示された成果物。
+- **Accepted**: 定義された範囲と権限のもとで明示的に採用された成果物。
 - **Consensus**: 定義された参加主体・手続きのもとで共有の採用状態となった成果物。
 
-Accepted / ConsensusはTruthの同義語ではない。scope、actor / policy、時点を伴う。
+Accepted / ConsensusはTruthの同義語ではない。範囲、主体（actor）やポリシー、時点を伴う。
 
-また、visibility / access controlはauthorityとは別である。公開されたCandidateも、非公開のAccepted artifactも存在し得る。
+また、可視性やアクセス制御はauthorityとは別である。公開されたCandidateも、非公開のAccepted artifactも存在し得る。
 
 ### D7. Lifecycle状態も別軸とする
 
-保留、棄却、置換、archive等は意味種別とは別に扱う。
+保留、棄却、置換、アーカイブ等は意味種別とは別に扱う。
 
 概念上、
 
@@ -168,14 +168,14 @@ AIが大きな探索区間を担うと、人間が全中間成果を時系列に
 
 そのため将来のReview Surfaceでは、次を一つのReview Capsuleとして提示できるようにする。
 
-- review対象
+- レビュー対象
 - 主要Evidence / Observation
 - 採用したHypothesis / Structure / Synthesis
 - 強い反証
 - 採らなかった主要代替案
 - 未解決点 / Hold
-- 生成主体・Method / Provider・入力範囲
-- 何のauthority actionを要求しているか
+- 生成主体・Method / プロバイダ・入力範囲
+- どの権限操作（authority action）を要求しているか
 
 Review Capsuleは元成果物への参照から再構築できるProjectionとし、元成果物やReview記録の代替正本にしない。
 
@@ -183,12 +183,12 @@ Review Capsuleは元成果物への参照から再構築できるProjectionと�
 
 SUIが保持するのは、後から検証・再開・異議申立てに必要な**外在化された意味成果物と来歴**である。
 
-AI内部のtoken単位の推論、hidden state、private chain-of-thoughtを保存要件にしない。
+AI内部のトークン単位の推論、隠れ状態（hidden state）、非公開のchain-of-thoughtを保存要件にしない。
 
 必要なのは、
 
 - どの入力を使ったか
-- どのProvider / Methodを使ったか
+- どのプロバイダ / Methodを使ったか
 - どの成果物を生成したか
 - 主要な根拠・反証・代替案は何か
 - どの成果物から派生したか
@@ -209,25 +209,25 @@ AI内部のtoken単位の推論、hidden state、private chain-of-thoughtを保�
 | `ReviewAttribution` | 現行の文書単位Review metadata。汎用Review artifactとはみなさない |
 | `WorkingGraph` / `ConsensusGraph` | authority / work surfaceであり、意味種別ではない |
 
-本ADRでは`DocumentV1`のfield追加・意味変更・version変更を行わない。
+本ADRでは`DocumentV1`のフィールド追加・意味変更・バージョン変更を行わない。
 
-将来、これらを永続型へ落とす場合は、新しいschema / migration / CRUD / support levelを別issue・ADRで設計する。
+将来、これらを永続型へ落とす場合は、新しいスキーマ、マイグレーション、CRUD、サポートレベルを別issue・ADRで設計する。
 
 ## Three-Element Verification（ADR-0067）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |---|---|---|
 | **業務設計** | 人間・AIが形成した意味を、元資料、解釈、統合、レビュー、採用、判断へ分解して後から読み直せる | データ: 型変換で元意味を失わない。機能: Review Surfaceは主要根拠・反証・代替案へ戻れる |
-| **データ設計** | semantic kind / provenance / review / authority / lifecycleを直交軸として扱い、派生は新artifact + relationで表現する | 業務: AI生成物を人間承認済みに見せない。機能: promotion / reviewはtarget revisionを明示する |
+| **データ設計** | semantic kind / provenance / review / authority / lifecycleを直交軸として扱い、派生は新しいartifactとrelationで表現する | 業務: AI生成物を人間承認済みに見せない。機能: 昇格やレビューは対象のrevisionを明示する |
 | **機能設計** | AI Workspace内の探索とReview Capsuleによる人間理解を両立する | 業務: 全AI内部推論を読むことを要求しない。データ: Review Capsuleは再構築可能Projectionであり正本化しない |
 
 ## Consequences
 
 ### Positive
 
-- ObservationからHypothesisへの「epistemic laundering」を防げる。
+- ObservationからHypothesisへの「認識の洗浄（epistemic laundering）」を防げる。
 - AIが多数の中間仮説を扱っても、人間承認済み状態と混ざらない。
-- 異種認知Providerの不一致を一つのscoreへ潰さず保持できる。
+- 異種認知プロバイダの不一致を一つのスコアにまとめず保持できる。
 - Review済み、Accepted、Consensus、Public等の異なる概念を分離できる。
 - 人間はAIの全内部探索ではなく、検証に必要な外在化成果へ集中できる。
 - 現行`DocumentV1`の互換性を保ったまま将来モデルを設計できる。
@@ -235,12 +235,12 @@ AI内部のtoken単位の推論、hidden state、private chain-of-thoughtを保�
 ### Costs / Open questions
 
 - logical artifact IDとrevision identityの具体形式は未決。
-- Relation vocabularyをclosed-worldにする範囲は未決。
-- Authority transition eventの永続schemaは未決。
+- Relation語彙を閉世界（closed-world）にする範囲は未決。
+- Authority transition eventの永続スキーマは未決。
 - Review Capsuleの最小必須項目と生成SLOは未決。
-- どの中間代替案を「主要」として永続保持するかの選定policyは未決。
+- どの中間代替案を「主要」として永続保持するかの選定ポリシーは未決。
 - 一般Review modelと現行`human_reviewed` / `ReviewAttribution`の移行は別途設計が必要。
-- DocumentV2等へ進む場合はmigration / import / export / SafeMode / retentionを改めて設計する。
+- DocumentV2等へ進む場合はマイグレーション、import、export、SafeMode、保持期間（retention）を改めて設計する。
 
 ## Traceability
 

@@ -14,7 +14,7 @@
 2. 反スコアリング: score/rank/confidence/priority等の数値評価語彙を出力しない
 3. SafeMode: 未レビュー（textReviewed=false）のカード本文はAIへ送信しない。送信内容を構築する前にフィルタする
 4. 名詞止め禁止: カード化・表札作成では必ず述語を伴う文で出力する
-5. provider=none: 全操作をスキップ。エラーではなく無効化表示
+5. プロバイダが `none`: 全操作をスキップ。エラーではなく無効化表示
 
 **失敗時の共通停止条件:**
 
@@ -28,7 +28,7 @@
 
 - **推論深度:** 低
 - **推奨モデル:** DeepSeek
-- **task名:** `refine_card_text`（既存endpoint。将来的にバッチ化も検討）
+- **task名:** `refine_card_text`（既存のエンドポイント。将来的にバッチ化も検討）
 
 ### 入力
 - `cardText`: 元のテキスト（1件）
@@ -118,7 +118,7 @@
 
 ### 判断基準
 - 因果（causal）と関連（related）を安易に混同していないか
-- 対立（negate）を溶かしてrelatedに丸めていないか
+- 対立（negate）を、relatedに丸めて消していないか
 - 相互（mutual）と等価（equivalence）を区別できているか
 
 ### 停止条件
@@ -130,7 +130,7 @@
 
 - **推論深度:** 中〜高
 - **推奨モデル:** Sonnet（DeepSeekでは精度不足の可能性）
-- **task名:** 新設要（現行endpointなし。`detect_contradiction` を拡張して対応）
+- **task名:** 新設要（現行のエンドポイントなし。`detect_contradiction` を拡張して対応）
 
 ### 入力
 - カード本文（1件）

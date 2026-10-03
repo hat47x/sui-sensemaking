@@ -1,13 +1,13 @@
-# 03_Implement run guide
+# 03_Implement 実行ガイド
 
 
-> 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
+> 環境変数と実行パラメータの定義元は `02_Architecture/runtime_parameter_registry.md` です。本書には必要最小限だけを書きます。追加や改名のときは、先にその文書を更新してください。
 
-## Nix 開発環境（プロジェクト標準）
+## Nix開発環境（プロジェクト標準）
 
-ローカルのツールチェーン（Node 20 / Python 3.12 / Ruff）は、`03_Implement/flake.nix` で一元管理します。バージョンは `03_Implement/flake.lock` で固定され、全員が同一環境になります。frontend/backendのDockerfile（`node:20-alpine` / `python:3.12-slim`）と揃えています。
+ローカルのツールチェーン（Node 20、Python 3.12、Ruff）は、`03_Implement/flake.nix` でまとめて管理します。バージョンは `03_Implement/flake.lock` で固定されるので、全員が同じ環境になります。フロントエンドとバックエンドのDockerfile（`node:20-alpine`、`python:3.12-slim`）とも揃えています。
 
-1. Nixを導入します（WSL2 / systemd環境で確認済み。flakesが既定で有効になるDeterminate Systems版を推奨。`sudo` のパスワード入力を求められます）。
+1. Nixを導入します（WSL2とsystemdの環境で確認済みです。flakesが既定で有効になるDeterminate Systems版を勧めます。`sudo` のパスワード入力を求められます）。
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
@@ -20,22 +20,22 @@ sh <(curl -L https://nixos.org/nix/install) --daemon
 mkdir -p ~/.config/nix && printf 'experimental-features = nix-command flakes\n' >> ~/.config/nix/nix.conf
 ```
 
-導入後はシェルを開き直して `nix --version` が通ることを確認します。
+導入後はシェルを開き直し、`nix --version` が通ることを確認します。
 
-2. リポジトリ直下から開発シェルに入ります（カレントはリポジトリ直下のまま。以降の表のコマンドが `cd 03_Implement/...` 前提のため）。`npm` / `python` / `ruff` はこのシェル内で実行します。
+2. リポジトリ直下から開発シェルに入ります（カレントはリポジトリ直下のままにします。以降の表のコマンドが `cd 03_Implement/...` を前提にしているためです）。`npm`、`python`、`ruff` はこのシェルの中で実行します。
 
 ```bash
 cd /path/to/sui-sensemaking
 nix develop ./03_Implement
 ```
 
-flakesを未有効化のまま一時的に使う場合は次の形でも実行できます。
+flakesを有効にしないまま一時的に使う場合は、次の形でも実行できます。
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' develop ./03_Implement
 ```
 
-3. （任意）direnvを使うと `03_Implement` 以下に入ったとき自動的にこのシェルへ切り替わります。`.envrc` は追跡しないため、テンプレートをコピーして有効化します。
+3. （任意）direnvを使うと、`03_Implement` 以下に入ったときに自動でこのシェルへ切り替わります。`.envrc` はGitで追跡しないため、テンプレートをコピーして有効にします。
 
 ```bash
 cp 03_Implement/.envrc.example 03_Implement/.envrc
@@ -44,53 +44,53 @@ cd 03_Implement && direnv allow
 
 補足は次のとおりです。
 
-- Dockerはホスト側（Docker Desktop / WSL統合）で用意します。`flake.nix` には含めません。統合起動（`docker compose up --build`）はローカルのNode/Python不要で、Dockerだけで動きます。
-- WSL2からWindowsファイルシステム上（`/mnt/c/...`）の本リポジトリで `npm ci` を実行すると、9p経由の展開でファイルが壊れて失敗することがあります（esbuildのinstall.jsが `SyntaxError` になる等）。その場合はリポジトリをWSLネイティブFS（例 `~/`）に置いてNode系コマンドを実行するか、統合確認はDocker（`docker compose up --build`）を使ってください。`python` / `ruff` や `nix develop` 自体は `/mnt/c` 上でも動作します。
-- WSL2側のgitから `/mnt/c/...` 上のリポジトリを参照すると、改行コード（`core.autocrlf`）やファイルモード（`core.filemode`）の差により、実体のない「変更あり」が多数表示されることがあります（実際の変更ではありません）。コミット対象の正本はWindows側git（`git status` がcleanを示す）です。差分の有無を判断する際はWindows gitを優先し、WSL gitの表示のみで `git add -A` 等を行わないでください。WSL側で常用する場合は `git config core.autocrlf false` と `git config core.filemode false` を設定すると誤検出を抑えられます。
-- Playwright（`npx playwright test`）はブラウザバイナリの追加取得が必要で、Nixシェル単体では動かないことがあります。E2EはDockerか別途のブラウザ導入で実行してください。
+- Dockerはホスト側（Docker DesktopとWSL統合）で用意します。`flake.nix` には含めません。統合起動（`docker compose up --build`）は、ローカルのNodeやPythonがなくても、Dockerだけで動きます。
+- WSL2から、Windowsのファイルシステム上（`/mnt/c/...`）にある本リポジトリで `npm ci` を実行すると、9p経由の展開でファイルが壊れて失敗することがあります（esbuildのinstall.jsが `SyntaxError` になるなど）。その場合は、リポジトリをWSLのネイティブなファイルシステム（例 `~/`）に置いてNode系のコマンドを実行するか、統合確認にDocker（`docker compose up --build`）を使ってください。`python`、`ruff`、`nix develop` そのものは `/mnt/c` 上でも動きます。
+- WSL2側のgitから `/mnt/c/...` 上のリポジトリを参照すると、改行コード（`core.autocrlf`）やファイルモード（`core.filemode`）の違いから、実際には変更がないのに「変更あり」と多数表示されることがあります。コミットの対象を決めるのは、Windows側のgit（`git status` がcleanを示すもの）です。差分の有無はWindows側のgitで判断し、WSL側のgitの表示だけを見て `git add -A` などを実行しないでください。WSL側で常用する場合は、`git config core.autocrlf false` と `git config core.filemode false` を設定すると、誤った検出を減らせます。
+- Playwright（`npx playwright test`）はブラウザの実行ファイルを別途取得する必要があり、Nixシェルだけでは動かないことがあります。E2Eは、Dockerを使うか、ブラウザを別に導入して実行してください。
 
-## 主要コマンド（本リポジトリ準拠）
+## 主要コマンド（本リポジトリの標準）
 
-| アクション | コマンド | 用途 |
+| 操作 | コマンド | 用途 |
 |---|---|---|
-| Frontend 開発サーバ | `cd 03_Implement/frontend && npm run dev` | UIのローカル確認 |
-| Frontend 検証 | `cd 03_Implement/frontend && npm run typecheck && npm run test` | 型・単体テスト確認 |
-| Backend 検証 | `cd 03_Implement/backend && ruff check src tests && pytest` | Lint・単体テスト確認 |
-| E2E（UI変更時） | `cd 03_Implement/frontend && npx playwright test` | UIを含む結合確認 |
-| 統合起動（推奨） | `cd 03_Implement/deploy && docker compose up --build` | web+api+db の統合動作確認 |
+| フロントエンドの開発サーバー | `cd 03_Implement/frontend && npm run dev` | UIのローカル確認 |
+| フロントエンドの検証 | `cd 03_Implement/frontend && npm run typecheck && npm run test` | 型と単体テストの確認 |
+| バックエンドの検証 | `cd 03_Implement/backend && ruff check src tests && pytest` | Lintと単体テストの確認 |
+| E2E（UI変更時） | `cd 03_Implement/frontend && npx playwright test` | UIを含む結合の確認 |
+| 統合起動（推奨） | `cd 03_Implement/deploy && docker compose up --build` | web、api、dbを合わせた動作の確認 |
 
-> 注: `pnpm` / `supabase` / `.kiro` 系コマンドは本リポジトリの標準手順ではありません。
+> 注: `pnpm`、`supabase`、`.kiro` 系のコマンドは、本リポジトリの標準の手順ではありません。
 
-## Build frontend and run full stack with Docker Compose
+## フロントエンドをビルドし、Docker Composeで全体を起動する
 
 ```bash
 cd 03_Implement/deploy
 docker compose up --build
 ```
 
-This starts:
+次のものが起動します。
 
-- `db` (PostgreSQL)
-- `api` (FastAPI + Alembic migration on startup)
-- `web` (Nginx serving frontend `dist` and proxying `/api` to `api`)
+- `db`（PostgreSQL）
+- `api`（FastAPI。起動時にAlembicのマイグレーションを実行）
+- `web`（Nginx。フロントエンドの `dist` を配信し、`/api` を `api` へ中継）
 
-Open `http://localhost:8080`.
+`http://localhost:8080` を開きます。
 
-## Environment variables
+## 環境変数
 
-Set values in shell env vars or `.env` in `03_Implement/deploy`.
+値は、シェルの環境変数か、`03_Implement/deploy` の `.env` に設定します。
 
-- `SUI_WEB_PORT` (default: `8080`)
-- `SUI_DATABASE_URL` (default: `postgresql+asyncpg://sui_sensemaking:sui_sensemaking@db:5432/sui_sensemaking`)
-- `SUI_LLM_PROVIDER` (default: `none`)
-- `SUI_POSTGRES_DB` (default: `sui_sensemaking`)
-- `SUI_POSTGRES_USER` (default: `sui_sensemaking`)
-- `SUI_POSTGRES_PASSWORD` (default: `sui_sensemaking`)
-- `SUI_FRONTEND_API_BASE` (default: `/api`)
+- `SUI_WEB_PORT`（既定値: `8080`）
+- `SUI_DATABASE_URL`（既定値: `postgresql+asyncpg://sui_sensemaking:sui_sensemaking@db:5432/sui_sensemaking`）
+- `SUI_LLM_PROVIDER`（既定値: `none`）
+- `SUI_POSTGRES_DB`（既定値: `sui_sensemaking`）
+- `SUI_POSTGRES_USER`（既定値: `sui_sensemaking`）
+- `SUI_POSTGRES_PASSWORD`（既定値: `sui_sensemaking`）
+- `SUI_FRONTEND_API_BASE`（既定値: `/api`）
 
-All public sui-sensemaking environment variables use the `SUI_` prefix. Docker Compose maps these values to any internal container-specific names that are needed.
+sui-sensemakingが公開する環境変数は、すべて `SUI_` の接頭辞を使います。コンテナごとに別の内部名が必要な場合は、Docker Composeがこれらの値を対応付けます。
 
-## Manual frontend build (optional)
+## フロントエンドを手動でビルドする（任意）
 
 ```bash
 cd 03_Implement/frontend
@@ -98,7 +98,7 @@ npm ci
 npm run build
 ```
 
-## MCP read-only server
+## MCPの読み取り専用サーバー
 
 ```bash
 cd 03_Implement/mcp
@@ -107,9 +107,9 @@ npm run typecheck
 npm test
 ```
 
-The MCP server provides read-only tools (`get_document`, `get_agent_constraints`) for AI agent collaboration. CI gate: `mcp` job (`npm ci` → typecheck → test) runs on `03_Implement/mcp/**` changes. Local setup and CI details: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+MCPサーバーは、AIエージェントとの協働のために、読み取り専用のツール（`get_document`、`get_agent_constraints`）を提供します。CIのゲートとして、`03_Implement/mcp/**` に変更があると `mcp` ジョブ（`npm ci`、型検査、テストの順）が実行されます。ローカルの準備とCIの詳細は [`CONTRIBUTING.md`](../CONTRIBUTING.md) を参照してください。
 
-## Static publish artifact (index/assets/packs)
+## 静的な公開成果物（index、assets、packs）
 
 ```bash
 cd 03_Implement/frontend
@@ -120,13 +120,13 @@ npm run publish:static -- \
   --pack-id public-main
 ```
 
-Output:
+出力は次のとおりです。
 
 - `03_Implement/deploy/public/index.html`
 - `03_Implement/deploy/public/assets/*`
 - `03_Implement/deploy/public/packs/*`
 
-Serve with a static file server:
+静的ファイルサーバーで配信します。
 
 ```bash
 cd 03_Implement/deploy/public

@@ -5,7 +5,7 @@
 - Accepted-Date: 2026-05-31
 - Deciders: Maintainer（委譲された意思決定権限）
 - Scope: `01_Plans/`, `02_Architecture/`, `03_Implement/frontend/`, `04_Documentation/`
-- Activation: コア価値ループV0–V4はactive。二軸スコアカード等の観測機構（Stream H / VR4）は `ADR-0039` によりactivation延期。Accepted化の根拠とPRODUCT-VALUE-02の循環デッドロック解消は `ADR-0040` を参照。
+- Activation: コア価値ループV0–V4はactive。二軸スコアカード等の観測機構（Stream H / VR4）は `ADR-0039` によりactivation延期。Accepted化の根拠とPRODUCT-VALUE-02の循環依存の解消は `ADR-0040` を参照。
 
 ## Context
 
@@ -74,15 +74,15 @@ KPIは次の3条件を満たすもののみ採用する。
 
 ## Consequences
 
-- 期待される効果は次のとおりです。
+- 期待される効果
   - 製品化作業が「画面を整える」だけでなく、プロダクト価値の実現単位で優先順位づけできる。
-  - 既存の認知外在化要件、SafeMode、review attribution、ナラティブ、共有導線が一つの利用者価値へ接続される。
+  - 既存の認知外在化要件、SafeMode、review attribution、ナラティブ、共有導線が、一つの利用者価値へつながる。
   - 価値実現に足りない作業を内部issueとして管理しやすくなる。
-- 想定される副作用/制約は次のとおりです。
+- 想定される副作用と制約
   - UI、データ、文書、E2Eを横断するため、単一PRで完了しにくい。
   - 価値ループを過剰に測定しようとすると、利用者行動の監視や不要なログ収集に寄りやすい。
   - 指標は診断・受入確認の補助に留め、個人行動追跡やスコアリングへ転用しない。
-- 移行時に必要な対応は次のとおりです。
+- 移行時に必要な対応
   - `02_Architecture/value_traceability.md` に価値ループと設計境界を追加する。
   - `PRODUCT-VALUE-01` で初回価値実感の受入シナリオを定義する。
   - `PRODUCT-VALUE-02` で保留・違和感・根拠不足を日常操作へ落とす。
@@ -103,27 +103,27 @@ KPIは次の3条件を満たすもののみ採用する。
 ## Stream H Finalization Pack (2026-05-20)
 
 ### Context
-- Scope is constrained to `MVP-EXIT-01` and `PRODUCT-VALUE-01..03` in plan/ADR layer only.
-- Implementation code changes are explicitly out of scope.
-- Existing value-loop (V0..V4) is kept, and only contract-level readiness is finalized.
+- 対象は計画とADRの層に限り、`MVP-EXIT-01` と `PRODUCT-VALUE-01..03` だけとする。
+- 実装コードの変更は明確に対象外とする。
+- 既存の価値ループ（V0..V4）は維持し、契約の水準での準備だけを確定する。
 
 ### Decision
-1. ADR-0032 remains **Proposed** until all three value issues are Open-ready with fixed AC/DoD and measurable KPI definitions.
-2. The KPI and audit contract is fixed as a two-axis scorecard:
-   - **Value KPI axis**: activation, ambiguity-handling, reviewable-package completeness.
-   - **Governance axis**: safeMode boundary integrity, review attribution integrity, evidence reproducibility.
-3. Program gate linkage for `MVP-EXIT-01` is fixed to:
-   - Input: `PRODUCT-VALUE-01..03` issue evidence summaries.
-   - Output: `Go / Conditional Go / No-Go` with owner/due/re-decision metadata.
-4. Non-dependency rule: This ADR finalization does not depend on other stream implementation completion; it only depends on issue-level contract completeness.
+1. ADR-0032 は、3つの価値issueすべてについて、AC/DoDが固定され、測定できるKPI定義がそろってOpenにできる状態になるまで **Proposed** のままとする。
+2. KPIと監査の取り決めは、次の二軸スコアカードに固定する。
+   - **Value KPI axis**: 初回の活性化、曖昧さの扱い、レビュー可能な成果物の完全性。
+   - **Governance axis**: safeModeの境界の保全、review attributionの保全、証拠の再現性。
+3. `MVP-EXIT-01` のプログラムゲートとの連結は、次に固定する。
+   - 入力: `PRODUCT-VALUE-01..03` のissueごとの証拠の要約。
+   - 出力: 担当者・期限・再判断の情報を伴う `Go / Conditional Go / No-Go`。
+4. 非依存の規則: このADRの確定は、他のストリームの実装完了に依存しない。依存するのは、issue水準の契約が完成していることだけである。
 
 ### Consequences
-- Positive:
-  - Product-value validation can be judged before feature completion by contract quality.
-  - Auditability increases because KPI and gate evidence are explicitly bound.
-- Trade-offs:
-  - Additional documentation discipline is required before Open transition.
-  - Proposed status must be retained until issue contract checks are all green.
+- Positive
+  - 機能の完成を待たず、契約の品質によって製品価値の検証を判定できる。
+  - KPIとゲートの証拠を明示的に結び付けるので、監査しやすくなる。
+- Trade-offs
+  - Openへ移す前に、追加の文書の規律が必要になる。
+  - issueの契約検査がすべて通るまで、Proposedの状態を保つ必要がある。
 
 ### KPI / Audit Scorecard Binding
 | Backlog | KPI ID | KPI name | Target | Evidence | Audit check |
@@ -134,24 +134,24 @@ KPIは次の3条件を満たすもののみ採用する。
 | MVP-EXIT-01 | EXIT-K1 | productization_gate_traceability | = 1.00 | Go/No-Go decision log | candidate/date/reviewer/decision complete |
 
 ### AC / DoD lock
-- AC-L1: Each value issue has `Hypothesis -> Action -> Evidence -> Decision` chain with explicit Go/No-Go rule.
-- AC-L2: Each KPI has definition, formula, data source, and re-measurement procedure.
-- AC-L3: Each issue includes audit fields (`reviewer`, `date`, `artifact id`, `re-decision condition`).
-- DoD-L1: Cross-stream implementation progress is not referenced as blocking condition.
-- DoD-L2: Plan/ADR documents are internally consistent for terminology and gate logic.
+- AC-L1: 各価値issueは、明示的なGo/No-Goの規則を持つ `Hypothesis -> Action -> Evidence -> Decision` の連鎖を備える。
+- AC-L2: 各KPIは、定義、算出式、データの出どころ、再測定の手順を備える。
+- AC-L3: 各issueは、監査の項目（`reviewer`、`date`、`artifact id`、`re-decision condition`）を含む。
+- DoD-L1: 他ストリームの実装の進み具合を、ブロックする条件として参照しない。
+- DoD-L2: 計画とADRの文書は、用語とゲートの論理について内部で矛盾がない。
 
 ### Verification of non-dependency
-- Verified by scope inspection: no implementation file paths are newly introduced in this finalization block.
-- Verified by gate logic inspection: all decisions are contract-evidence based and can run docs-only.
+- 範囲の点検で確認した。この確定のブロックでは、実装ファイルのパスを新たに導入していない。
+- ゲートの論理の点検で確認した。判断はすべて契約と証拠に基づき、文書だけで実行できる。
 
 ### Self-correction log (<=3)
-1. Corrected KPI naming to align with existing issue KPI sections (`reviewable_package_completeness`).
-2. Corrected gate linkage wording to use `Go / Conditional Go / No-Go` consistently.
-3. Corrected DoD wording to avoid implicit dependency on other stream code delivery.
+1. KPIの名前を、既存のissueのKPI節に合わせて直した（`reviewable_package_completeness`）。
+2. ゲート連結の表現を、`Go / Conditional Go / No-Go` に統一した。
+3. DoDの文言を、他ストリームのコード納品への暗黙の依存を避けるよう直した。
 
 ### Approval-wait package
-- Package includes:
-  1. This ADR finalization block.
-  2. Updated issue-level AC/DoD/KPI scorecards for `MVP-EXIT-01` and `PRODUCT-VALUE-01..03`.
-  3. Non-dependency verification notes.
-- Approval decision requested: **Accept ADR-0032 proposed finalization for Stream H scope**.
+- パッケージの内容は次のとおり。
+  1. このADRの確定のブロック。
+  2. `MVP-EXIT-01` と `PRODUCT-VALUE-01..03` について更新した、issueごとのAC/DoD/KPIスコアカード。
+  3. 非依存の確認メモ。
+- 求める承認の判断: **Stream Hの範囲について、ADR-0032の確定案をAcceptする**。

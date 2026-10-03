@@ -7,37 +7,37 @@
 
 ## Context
 
-ADR-0021 accepts `SUI_*` as the only supported namespace for sui-sensemaking runtime environment variables.
+ADR-0021 は、sui-sensemaking の実行時環境変数に使える名前空間を `SUI_*` だけとして受け入れた。
 
-The Compose deployment still uses third-party components, especially the official PostgreSQL container image. That image has its own container environment contract. The project therefore needs an explicit decision boundary for the difference between:
+Compose による配備は、いまも第三者のコンポーネントを使っている。代表例は公式のPostgreSQLコンテナイメージで、このイメージには独自の環境変数の取り決めがある。そこで、次の2つを区別する決定の境界が必要になった。
 
-- public variables that users and operators configure for sui-sensemaking; and
-- private adapter variables required by third-party images or build tools.
+- 利用者と運用者が sui-sensemaking のために設定する公開変数
+- 第三者のイメージやビルドツールが必要とする非公開のアダプタ変数
 
-Without this boundary, the statement "all environment variables must start with `SUI_`" can be interpreted in two incompatible ways:
+この境界がないと、「すべての環境変数は `SUI_` で始める」という文が、両立しない2通りに読める。
 
-1. all public sui-sensemaking settings must use `SUI_*`; or
-2. no process in the deployment may ever receive any other environment-variable name, including vendor-defined names.
+1. sui-sensemaking の公開設定はすべて `SUI_*` を使う。
+2. 配備内のどのプロセスも、ベンダー定義の名前を含め、`SUI_*` 以外の環境変数名を受け取らない。
 
-The current implementation satisfies the first interpretation. It does not satisfy the second because the PostgreSQL image consumes vendor-defined names inside the `db` service boundary.
+現在の実装は1つ目の解釈を満たす。2つ目は満たさない。PostgreSQLイメージが、`db` サービスの内側でベンダー定義の名前を使うためである。
 
 ## Decision
 
-All project-owned and user-facing runtime environment variables MUST start with `SUI_`.
+プロジェクトが所有し、利用者に見せる実行時環境変数は、必ず `SUI_` で始める。
 
-Non-`SUI_*` variables MUST NOT be documented, accepted, or required as public sui-sensemaking settings.
+`SUI_*` 以外の変数を、sui-sensemaking の公開設定として文書化したり、受け付けたり、必須にしたりしてはならない。
 
-If a third-party image or build tool requires a vendor-defined environment name, sui-sensemaking may map from `SUI_*` inputs to that private name at the service or build boundary. This mapping is an adapter boundary, not a public configuration exception.
+第三者のイメージやビルドツールがベンダー定義の環境変数名を要求する場合、sui-sensemaking はサービスまたはビルドの境界で、`SUI_*` の入力からその非公開の名前へ写してよい。この写像はアダプタの境界であり、公開設定の例外ではない。
 
-Direct user configuration of vendor-defined names is not supported. Public documentation and runbooks must instruct users to set only `SUI_*` variables.
+ベンダー定義の名前を利用者が直接設定する使い方は対象外とする。公開文書と運用手順書は、`SUI_*` の変数だけを設定するよう案内しなければならない。
 
-If maintainers require the stricter interpretation that no process environment in any bundled deployment may contain a non-`SUI_*` name, treat that as a separate architecture change. In that case, the PostgreSQL service must be replaced with a project-owned initialization/runtime path or with a managed-database-only deployment before the issue can be marked Done.
+配備に含まれるどのプロセスの環境にも `SUI_*` 以外の名前を入れない、というより厳しい解釈をメンテナーが求める場合は、別のアーキテクチャ変更として扱う。その場合、issueを完了にする前に、PostgreSQLサービスをプロジェクト所有の初期化・実行の経路へ置き換えるか、マネージドデータベースだけを使う配備へ変える必要がある。
 
-Non-goals:
+Non-goals
 
-- Redesign the database topology in this ADR.
-- Add compatibility support for legacy unprefixed project variables.
-- Change SafeMode, access-control, or export behavior.
+- このADRでデータベースの構成を設計し直すこと
+- 接頭辞のない旧プロジェクト変数への互換対応を加えること
+- SafeMode、アクセス制御、エクスポートの挙動を変えること
 
 
 ## Boundary contract matrix
@@ -51,42 +51,42 @@ Non-goals:
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | Composeデプロイは公式PostgreSQL等のthird-partyイメージを使い、そのイメージは独自のコンテナ環境契約を持つ。「全環境変数が`SUI_*`」を「公開設定は`SUI_*`」と「デプロイ内の全プロセスが非`SUI_*`名を受け取らない」の2解釈に分けて明確な境界を定める | 機能: 非`SUI_*`変数は公開設定として文書化・受付・要求しない。データ: 利用者向け公開文書とrunbookは`SUI_*`のみを設定させる |
-| **データ設計** | 第三者イメージやビルドツールがvendor-defined名を要求する場合、`SUI_*`入力からprivate名へサービス/ビルド境界で写像するadapter境界とする。直接の利用者設定は非対応 | 業務: 公開設定契約を単純かつ監査可能に保ち、third-partyイメージの環境APIを利用者へ露出しない。機能: vendor-defined名の直接設定は非対応 |
-| **機能設計** | より厳格な解釈（バンドルデプロイ内のプロセス環境に非`SUI_*`名を含めない）が必要なら別のアーキテクチャ変更として扱い、PostgreSQLをプロジェクト所有の初期化/runtime経路かmanaged-database限定に置換するまでDoneにしない | 業務: DBトポロジ再設計・レガシー非接頭辞変数の互換・SafeMode/access-control/export変更は非目標。データ: adapter境界は公開設定の例外ではなく写像として扱う |
+| **業務設計** | Composeによる配備は公式PostgreSQLなど第三者のイメージを使い、そのイメージは独自のコンテナ環境の取り決めを持つ。「全環境変数が`SUI_*`」を、「公開設定は`SUI_*`」と「配備内の全プロセスが非`SUI_*`名を受け取らない」の2解釈に分けて、境界を明確に定める | 機能: 非`SUI_*`変数は公開設定として文書化も受付も要求もしない。データ: 利用者向けの公開文書と運用手順書は`SUI_*`だけを設定させる |
+| **データ設計** | 第三者のイメージやビルドツールがベンダー定義名を要求する場合は、サービスまたはビルドの境界で`SUI_*`の入力から非公開名へ写すアダプタ境界とする。利用者による直接設定は対象外 | 業務: 公開設定の取り決めを単純で監査しやすく保ち、第三者イメージの環境変数を利用者に見せない。機能: ベンダー定義名の直接設定は対象外 |
+| **機能設計** | より厳しい解釈（同梱の配備内のプロセス環境に非`SUI_*`名を含めない）が必要なら、別のアーキテクチャ変更として扱う。PostgreSQLをプロジェクト所有の初期化・実行の経路かマネージドデータベース限定へ置き換えるまで、Doneにしない | 業務: データベース構成の再設計、接頭辞のない旧変数の互換対応、SafeMode・アクセス制御・エクスポートの変更は対象外。データ: アダプタ境界は公開設定の例外ではなく写像として扱う |
 
 ## Consequences
 
-Expected benefits:
+期待される効果
 
-- Keeps the public configuration contract simple and auditable.
-- Lets sui-sensemaking continue to use standard third-party images without exposing their environment APIs to users.
-- Gives documentation a precise rule: users set only `SUI_*`; implementation adapters may translate internally.
+- 公開設定の取り決めを、単純で監査しやすいまま保てる。
+- 標準の第三者イメージを使い続けながら、その環境変数を利用者に見せずに済む。
+- 文書に「利用者は `SUI_*` だけを設定する。実装側のアダプタが内部で変換してよい」という明確な規則を与えられる。
 
-Constraints and risks:
+制約とリスク
 
-- Source files may still contain vendor-defined names where a third-party adapter requires them.
-- Automated checks must distinguish public configuration keys from private adapter keys.
-- A future "no non-prefixed process environment anywhere" requirement is a deployment redesign, not a documentation cleanup.
+- 第三者のアダプタが必要とする箇所では、ソースファイルにベンダー定義の名前が残る場合がある。
+- 自動検査は、公開設定のキーと非公開のアダプタのキーを区別する必要がある。
+- 将来「接頭辞のない環境変数をどこにも置かない」という要件が出た場合、それは文書の整理ではなく配備の再設計である。
 
 
 ## C/D/C log (for ENV-CONFIG-DRIFT-01)
 
 ### Confirmed
 
-- Public runtime contract uses `SUI_*` keys only.
-- Vendor/build-tool specific names are allowed only inside adapter boundaries (Compose service internals, build-time bridge variables).
-- Public docs and runtime registry must never ask operators to set vendor-defined names directly.
+- 公開する実行時の取り決めは、`SUI_*` のキーだけを使う。
+- ベンダーやビルドツール固有の名前は、アダプタの境界の内側（Composeのサービス内部、ビルド時の橋渡し変数）にだけ置ける。
+- 公開文書と実行時レジストリは、ベンダー定義の名前を運用者に直接設定させてはならない。
 
 ### Decided
 
-- Keep adapter-boundary interpretation as the accepted operating model for Compose + third-party images in this phase.
-- Treat vendor-defined process env names inside third-party containers as implementation details, not public contract exceptions.
+- このフェーズでは、Composeと第三者イメージについて、アダプタ境界の解釈を採用した運用モデルとして維持する。
+- 第三者コンテナの内側にあるベンダー定義のプロセス環境変数名は実装の詳細として扱い、公開する取り決めの例外とは見なさない。
 
 ### Clarified pending
 
-- If project policy later upgrades to "no non-`SUI_*` process env names anywhere", that requires deployment redesign (replace PostgreSQL image path or enforce managed DB-only architecture).
-- `external_http` adapter behavior when endpoint is absent remains a separate governance decision and is not changed by this ADR.
+- 将来、プロジェクトの方針を「`SUI_*` 以外のプロセス環境変数名をどこにも置かない」へ引き上げる場合は、配備の再設計が必要になる（PostgreSQLイメージの経路を置き換えるか、マネージドデータベースだけの構成を強制する）。
+- エンドポイントがないときの `external_http` アダプタの挙動は別のガバナンス判断として残り、このADRでは変えない。
 
 ## Traceability
 
@@ -99,6 +99,6 @@ Constraints and risks:
 
 ## Public key set (frozen for ENV-CONFIG-DRIFT-01)
 
-The public runtime key set is frozen to keys listed in `02_Architecture/runtime_parameter_registry.md` and all of them MUST use `SUI_*`.
+公開する実行時キーの集合は、`02_Architecture/runtime_parameter_registry.md` に載っているキーに固定する。そのすべてが `SUI_*` を使わなければならない。
 
-Any future requirement to ban all vendor-defined process environment names (including third-party container internals) is **not** an interpretation tweak of this ADR; it is a separate design-change track that requires a replacement deployment architecture.
+第三者コンテナの内部を含め、ベンダー定義のプロセス環境変数名をすべて禁止したいという将来の要件は、このADRの解釈の調整ではない。置き換え後の配備アーキテクチャを必要とする、別の設計変更の系統である。
