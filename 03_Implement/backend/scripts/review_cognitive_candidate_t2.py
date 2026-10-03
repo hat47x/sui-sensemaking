@@ -5,10 +5,11 @@ The tool never writes a result ledger. It reads a local DocumentV1 JSON and
 prints either the current human-authored structure (baseline phase) or eligible
 deterministic regrouping candidates (candidates phase).
 
-Run the baseline phase first, note your current interpretation without machine
-candidates, then run the candidates phase. Candidate output includes card text
-because a human must judge whether attention actually moved, but the text stays
-in local stdout unless the caller redirects it.
+Run the baseline phase first, record the current interpretation without machine
+candidates in a local note, then pass both the printed baseline receipt and that
+note to the candidates phase. Candidate output includes card text because a
+human must judge whether attention actually moved, but neither the source note
+nor its contents are reprinted; only its digest and byte count are shown.
 
 This tool does not turn a run into ADR-0089 T2 evidence by itself. T2 requires
 the Maintainer's own non-SUI practical use and qualitative observation.
@@ -37,6 +38,10 @@ class IncompleteAttentionProjectionError(ValueError):
     """T2 cannot interpret an attention projection that lost source material."""
 
 
+class BaselineGateError(ValueError):
+    """Candidate reveal requires a bound baseline snapshot and human note."""
+
+
 def _require_complete_attention_projection(ir: dict) -> None:
     truncation = ir.get("truncation", {})
     if not truncation.get("truncated"):
@@ -50,6 +55,33 @@ def _require_complete_attention_projection(ir: dict) -> None:
 
 def _sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def _baseline_receipt(source_sha256: str, product_digest: str) -> str:
+    payload = (
+        "sui-cognitive-t2-baseline-v1\0"
+        + source_sha256
+        + "\0"
+        + product_digest
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _require_baseline_gate(
+    *,
+    expected_receipt: str,
+    provided_receipt: str | None,
+    observation_raw: bytes | None,
+) -> tuple[str, int]:
+    if provided_receipt != expected_receipt:
+        raise BaselineGateError(
+            "candidate phase requires the Baseline receipt from the same snapshot"
+        )
+    if observation_raw is None or not observation_raw.strip():
+        raise BaselineGateError(
+            "candidate phase requires a non-empty baseline observation file"
+        )
+    return _sha256(observation_raw), len(observation_raw)
 
 
 def _card_text_by_id(document: DocumentV1) -> dict[str, str]:
@@ -79,6 +111,10 @@ def render_baseline(
     ]
     if source_sha256 is not None:
         lines.append(f"Source SHA-256: {source_sha256}")
+        lines.append(
+            "Baseline receipt: "
+            + _baseline_receipt(source_sha256, product_digest)
+        )
     lines.append(f"Attention sourceDigest: {product_digest}")
     lines.extend(
         [
@@ -116,6 +152,8 @@ def render_baseline(
             "- いま注意している材料は何か",
             "- いまの島分けを見直したい箇所はあるか",
             "- 保留・異論として残したいものは何か",
+            "",
+            "この3点をローカルのメモへ記録してから候補フェーズへ進む。",
         ]
     )
     return "\n".join(lines)
@@ -125,10 +163,18 @@ def render_candidates(
     document: DocumentV1,
     *,
     source_sha256: str,
+    baseline_receipt: str | None,
+    baseline_observation: bytes | None,
 ) -> str:
     ir = build_attention_ir(document)
     _require_complete_attention_projection(ir)
     product_digest = attention_source_digest(ir)
+    expected_receipt = _baseline_receipt(source_sha256, product_digest)
+    observation_sha256, observation_bytes = _require_baseline_gate(
+        expected_receipt=expected_receipt,
+        provided_receipt=baseline_receipt,
+        observation_raw=baseline_observation,
+    )
     candidates = attention_candidates_from_ir(ir)
     by_id = _card_text_by_id(document)
 
@@ -139,6 +185,9 @@ def render_candidates(
         "held/pending/shelved を含む候補は表示しない。",
         f"Source SHA-256: {source_sha256}",
         f"Attention sourceDigest: {product_digest}",
+        f"Baseline receipt: {expected_receipt}",
+        f"Baseline observation SHA-256: {observation_sha256}",
+        f"Baseline observation bytes: {observation_bytes}",
         "Excluded hold card IDs: "
         + (", ".join(held_card_ids(ir)) if held_card_ids(ir) else "none"),
         "",
@@ -183,13 +232,20 @@ def render_review(
     *,
     phase: Phase,
     source_sha256: str,
+    baseline_receipt: str | None = None,
+    baseline_observation: bytes | None = None,
 ) -> str:
     if phase == "baseline":
         return render_baseline(
             document,
             source_sha256=source_sha256,
         )
-    return render_candidates(document, source_sha256=source_sha256)
+    return render_candidates(
+        document,
+        source_sha256=source_sha256,
+        baseline_receipt=baseline_receipt,
+        baseline_observation=baseline_observation,
+    )
 
 
 def main() -> int:
@@ -208,6 +264,15 @@ def main() -> int:
         required=True,
         help="Run baseline first, then candidates after recording the baseline.",
     )
+    parser.add_argument(
+        "--baseline-receipt",
+        help="Receipt printed by the baseline phase for the same snapshot.",
+    )
+    parser.add_argument(
+        "--baseline-observation",
+        type=Path,
+        help="Local non-empty note recorded before revealing candidates.",
+    )
     args = parser.parse_args()
 
     try:
@@ -217,16 +282,26 @@ def main() -> int:
         print(f"FAIL: {exc}")
         return 1
 
+    observation_raw: bytes | None = None
+    if args.phase == "candidates" and args.baseline_observation is not None:
+        try:
+            observation_raw = args.baseline_observation.read_bytes()
+        except OSError as exc:
+            print(f"FAIL: {exc}")
+            return 1
+
     try:
         rendered = render_review(
             document,
             phase=args.phase,
             source_sha256=_sha256(raw),
+            baseline_receipt=args.baseline_receipt,
+            baseline_observation=observation_raw,
         )
     except IRGenerationError as exc:
         print(f"FAIL: {exc.to_contract()}")
         return 1
-    except IncompleteAttentionProjectionError as exc:
+    except (IncompleteAttentionProjectionError, BaselineGateError) as exc:
         print(f"FAIL: {exc}")
         return 1
 
