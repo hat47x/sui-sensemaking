@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from sui_sensemaking_api.attention_candidates import MAX_ATTENTION_FOCUS_PAIRS
 from sui_sensemaking_api.main import app
 from sui_sensemaking_api.routes import ai
 from sui_sensemaking_api.settings import settings
@@ -159,7 +160,7 @@ def test_focus_pair_budget_keeps_small_actionable_candidate_visible() -> None:
     assert response.status_code == 200, response.text
     candidates = response.json()["candidates"]
     assert len(candidates) == 1
-    assert len(candidates[0]["focusPairs"]) <= ai.MAX_ATTENTION_FOCUS_PAIRS
+    assert len(candidates[0]["focusPairs"]) <= MAX_ATTENTION_FOCUS_PAIRS
 
 
 def test_source_digest_tracks_candidate_relevant_projection() -> None:
@@ -213,3 +214,43 @@ def test_source_digest_tracks_candidate_relevant_projection() -> None:
     assert first.json()["sourceDigest"] == text_edit.json()["sourceDigest"]
     assert first.json()["sourceDigest"] != held_edit.json()["sourceDigest"]
     assert spatial_before.json()["sourceDigest"] != spatial_after.json()["sourceDigest"]
+
+
+def test_truncated_projection_never_exposes_partial_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    truncated_ir = {
+        "ir_version": "1.2",
+        "cards": [
+            {"id": "c1", "text": "一", "text_norm": "一", "char_len": 1},
+            {"id": "c2", "text": "二", "text_norm": "二", "char_len": 1},
+            {"id": "c3", "text": "三", "text_norm": "三", "char_len": 1},
+        ],
+        "relations": [
+            {"id": "related:c1:c2", "from": "c1", "to": "c2", "type": "related"},
+            {"id": "related:c2:c3", "from": "c2", "to": "c3", "type": "related"},
+        ],
+        "islands": [
+            {"id": "i12", "card_ids": ["c1", "c2"]},
+            {"id": "i3", "card_ids": ["c3"]},
+        ],
+        "cluster_candidates": [
+            {
+                "cluster_id": "cc-partial",
+                "card_ids": ["c1", "c2", "c3"],
+                "basis": "relation",
+                "score": 1.0,
+            }
+        ],
+        "meta": {"doc_id": "attention-doc", "doc_version": 1},
+        "truncation": {"truncated": True, "reason_codes": ["MAX_CARDS"]},
+    }
+    monkeypatch.setattr(ai, "build_attention_ir", lambda *_args, **_kwargs: truncated_ir)
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": _doc()})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["truncated"] is True
+    assert body["candidates"] == []

@@ -471,7 +471,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
     - `basis: "relation" | "spatial"`
     - `cue: "cross_island" | "indirect_relation" | "unassigned"`
   - `excludedCardIds: string[]`: held / pending / shelvedにより候補から除外したカード
-  - `truncated: boolean`: IR切り詰めの有無
+  - `truncated: boolean`: IR切り詰めの有無。`true` の場合は部分的な構造から注意候補を作らず、`candidates` は必ず空配列にする。これは「候補が存在しない」という意味ではなく、完全な構造を評価できなかったことを表す。
 - プロバイダを呼び出さない決定論的な候補APIであり、`SUI_LLM_PROVIDER=none` でも利用できる。出力は注意の向け先を示すだけで、島への採用、重要度、確信度、順位を決定しない。
 - 関係候補は、既存島への同居や既存の直接関係をそのまま再提示せず、まだ直接表現されていない跨島の組だけを `focusPairs` として返す。空間候補は `includeSpatial=true` の場合だけ有効になる。
 - 1候補の `focusPairs` が8組を超える場合は、根拠のない順位付けや任意切り捨てをせず、その候補を返さない。
