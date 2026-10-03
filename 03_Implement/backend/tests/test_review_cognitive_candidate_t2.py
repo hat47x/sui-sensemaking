@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.review_cognitive_candidate_t2 import (
+    IncompleteAttentionProjectionError,
     render_baseline,
     render_candidates,
     render_review,
@@ -136,3 +139,24 @@ def test_candidate_phase_matches_product_candidate_contract() -> None:
         assert candidate.cue in rendered
         for left, right in candidate.focusPairs:
             assert f"{left}↔{right}" in rendered
+
+
+def test_t2_rejects_truncated_attention_projection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document = _document()
+    truncated_ir = build_attention_ir(document)
+    truncated_ir["truncation"] = {
+        "truncated": True,
+        "reason_codes": ["MAX_CARDS"],
+    }
+    monkeypatch.setattr(
+        "scripts.review_cognitive_candidate_t2.build_attention_ir",
+        lambda _document: truncated_ir,
+    )
+
+    with pytest.raises(IncompleteAttentionProjectionError, match="MAX_CARDS"):
+        render_baseline(document, source_sha256="truncated")
+
+    with pytest.raises(IncompleteAttentionProjectionError, match="MAX_CARDS"):
+        render_candidates(document, source_sha256="truncated")

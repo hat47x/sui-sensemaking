@@ -79,7 +79,10 @@ def attention_source_digest(ir: dict) -> str:
 
 
 def attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
-    """Expose only structurally novel, proposal-only cues from deterministic IR."""
+    """Expose only complete, structurally novel proposal-only attention cues."""
+    if ir.get("truncation", {}).get("truncated"):
+        return []
+
     held = set(held_card_ids(ir))
     islands = [set(island["card_ids"]) for island in ir.get("islands", [])]
     assigned = set().union(*islands) if islands else set()

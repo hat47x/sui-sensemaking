@@ -22,7 +22,7 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 2. **価値の検証**: T3のパイロット（2026-10-02）では、H1は絞り込み（narrow）、H3は修正（modify）、H4は絞り込み（narrow）になった（`ADR-0089` の5節、`provisional`）。次は、T2（自分の実務での利用）で確かめる。
 3. **初回の体験**: 「未決」のカードに、専用の理由欄が要るかを判断する。用語「未決」を「保留」にするかも、見直す。
 4. **認知支援のT2での確認**: `ADR-0090` に従い、まず、プロバイダを使わない決定論的な候補を、Maintainer自身の、SUI以外の実務の資料で確認する。候補を見せる前と後で、「新たに注意した材料」「構造の見直し」「保留と異論の維持」「ノイズや誘導」を分けて観察する。T2で認知の増分が再現しなければ、製品の候補に昇格させない。下位の方式では埋まらない欠落が残るときにだけ、軽量な統計の方式と疎な方式を、次に検討する。
-   - 実行の補助: backendのルートで、`python scripts/review_cognitive_candidate_t2.py --document <DocumentV1.json> --phase baseline` を先に実行して、人間側の見立てを記録する。そのあと、文書を変更せずに `--phase candidates` を実行する。候補フェーズは製品APIと同じ決定論ロジック、`focusPairs`、hold除外、複雑性上限を使う。両方の出力で `Source SHA-256` と `Attention sourceDigest` が一致することを確認し、評価対象が同じファイル・同じ構造断面であることを確かめる。
+   - 実行の補助: backendのルートで、`python scripts/review_cognitive_candidate_t2.py --document <DocumentV1.json> --phase baseline` を先に実行して、人間側の見立てを記録する。そのあと、文書を変更せずに `--phase candidates` を実行する。候補フェーズは製品APIと同じ決定論ロジック、`focusPairs`、hold除外、複雑性上限を使う。両方の出力で `Source SHA-256` と `Attention sourceDigest` が一致することを確認し、評価対象が同じファイル・同じ構造断面であることを確かめる。IRが切り詰められた場合は候補の有無を評価せず、そのT2実行自体を無効として扱う。
 
 機能の追加より、価値と認知の増分の確認を優先します。実際に使って、同じ摩擦が再現したものから、実装に昇格させます。
 
