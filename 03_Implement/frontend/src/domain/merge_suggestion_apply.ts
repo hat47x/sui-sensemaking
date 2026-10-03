@@ -92,7 +92,7 @@ function resolveAppliedSourceIds(
  * 適用直前に現在のDocumentを再検査し、判断後に追加されたhold・矛盾・別mergeを
  * 古い提案より優先する。
  *
- * partial は、判断時に人間が明示した selectedCardIds が2枚以上かつ候補全体未満の
+ * partial は、判断時に人間が明示したselectedCardIdsが2枚以上かつ候補全体未満の
  * 真部分集合である場合に限り適用する。legacy decisionの曖昧な値はfail-closedにする。
  */
 export function applyRecordedMergeSuggestionDecision(

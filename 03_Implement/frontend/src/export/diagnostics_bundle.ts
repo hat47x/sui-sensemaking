@@ -107,7 +107,7 @@ function normalizeAppRevision(value: string | undefined): string {
 function normalizeBrowserFamily(userAgent: string | undefined): { family: DiagBrowserFamily; major?: number } {
   const ua = userAgent ?? "";
 
-  // Edge/Chrome の UA はどちらも "Chrome" を含むため、"Edg/" を先に見る。
+  // Edge/ChromeのUAはどちらも "Chrome" を含むため、"Edg/" を先に見る。
   let match = /Edg\/(\d+)/.exec(ua);
   if (match) return { family: "edge", major: Number(match[1]) };
 
@@ -203,7 +203,7 @@ function hasOnlyKeys(value: unknown, allowed: Set<string>): value is Record<stri
 
 /**
  * unit: strict schema/unknown-key拒否（ADR-0053 実装着手ゲート）。
- * 未知キーが1つでもあれば false を返す。値の型までは見ず、キー集合の厳格一致に限定する。
+ * 未知キーが1つでもあればfalseを返す。値の型までは見ず、キー集合の厳格一致に限定する。
  */
 export function isDiagBundleShapeValid(value: unknown): value is DiagBundleV1 {
   if (!hasOnlyKeys(value, TOP_LEVEL_KEYS)) return false;

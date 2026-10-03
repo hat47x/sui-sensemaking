@@ -270,7 +270,7 @@ class AuditDispatchResult:
 class AuditDispatcher:
     """Fail-open dispatcher.
 
-    方針:
+    方針は次のとおり。
     - 無効化時: 完全no-op（副作用ゼロ）
     - 送信失敗時: 本体処理は継続（fail-open）
     - 失敗イベントはメモリ内キューへ退避し、次回送信時にbest-effortでflush
