@@ -216,7 +216,6 @@ def test_source_digest_tracks_candidate_relevant_projection() -> None:
     assert spatial_before.json()["sourceDigest"] != spatial_after.json()["sourceDigest"]
 
 
-
 def test_truncated_projection_never_exposes_partial_candidates(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
