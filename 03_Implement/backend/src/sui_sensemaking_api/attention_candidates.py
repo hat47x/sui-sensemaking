@@ -15,6 +15,9 @@ from sui_sensemaking_api.models import DocumentV1
 from sui_sensemaking_api.models_ai import AttentionCandidate
 
 
+# Bump this identifier whenever the externally observable candidate treatment
+# changes (selection, suppression, cue semantics, or focus-pair semantics).
+ATTENTION_METHOD_ID = "deterministic-structural-attention-v1"
 MAX_ATTENTION_FOCUS_PAIRS = 8
 
 

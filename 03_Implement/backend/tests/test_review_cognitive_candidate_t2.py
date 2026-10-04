@@ -15,6 +15,7 @@ from scripts.review_cognitive_candidate_t2 import (
     render_review,
 )
 from sui_sensemaking_api.attention_candidates import (
+    ATTENTION_METHOD_ID,
     attention_candidates_from_ir,
     attention_source_digest,
     build_attention_ir,
@@ -72,6 +73,8 @@ def test_two_phases_expose_the_same_source_digest() -> None:
     assert "Source SHA-256: same-source" in baseline
     assert "Source SHA-256: same-source" in candidates
     digest = attention_source_digest(build_attention_ir(document))
+    assert f"Attention methodId: {ATTENTION_METHOD_ID}" in baseline
+    assert f"Attention methodId: {ATTENTION_METHOD_ID}" in candidates
     assert f"Attention sourceDigest: {digest}" in baseline
     assert f"Attention sourceDigest: {digest}" in candidates
 
@@ -237,3 +240,39 @@ def test_candidate_phase_hashes_baseline_note_without_reprinting_it() -> None:
     assert f"Baseline observation SHA-256: {_sha256_for_test(observation)}" in rendered
     assert f"Baseline observation bytes: {len(observation)}" in rendered
     assert "まだMK-CとMK-Dは保留したい" not in rendered
+
+
+def test_baseline_receipt_binds_candidate_method_version() -> None:
+    source_sha256 = "same-source"
+    product_digest = "a" * 64
+
+    current = _baseline_receipt(
+        source_sha256,
+        product_digest,
+        method_id="deterministic-structural-attention-v1",
+    )
+    changed = _baseline_receipt(
+        source_sha256,
+        product_digest,
+        method_id="deterministic-structural-attention-v2",
+    )
+
+    assert current != changed
+
+
+def test_candidate_phase_rejects_receipt_from_different_method_version() -> None:
+    document = _document()
+    digest = attention_source_digest(build_attention_ir(document))
+    wrong_method_receipt = _baseline_receipt(
+        "method-mismatch",
+        digest,
+        method_id="deterministic-structural-attention-v2",
+    )
+
+    with pytest.raises(BaselineGateError, match="Baseline receipt"):
+        render_candidates(
+            document,
+            source_sha256="method-mismatch",
+            baseline_receipt=wrong_method_receipt,
+            baseline_observation="事前判断".encode("utf-8"),
+        )
