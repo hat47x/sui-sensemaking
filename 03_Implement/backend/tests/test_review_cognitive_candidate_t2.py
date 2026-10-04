@@ -242,7 +242,6 @@ def test_candidate_phase_hashes_baseline_note_without_reprinting_it() -> None:
     assert "まだMK-CとMK-Dは保留したい" not in rendered
 
 
-
 def test_baseline_receipt_binds_candidate_method_version() -> None:
     source_sha256 = "same-source"
     product_digest = "a" * 64
@@ -259,3 +258,22 @@ def test_baseline_receipt_binds_candidate_method_version() -> None:
     )
 
     assert current != changed
+
+
+
+def test_candidate_phase_rejects_receipt_from_different_method_version() -> None:
+    document = _document()
+    digest = attention_source_digest(build_attention_ir(document))
+    wrong_method_receipt = _baseline_receipt(
+        "method-mismatch",
+        digest,
+        method_id="deterministic-structural-attention-v2",
+    )
+
+    with pytest.raises(BaselineGateError, match="Baseline receipt"):
+        render_candidates(
+            document,
+            source_sha256="method-mismatch",
+            baseline_receipt=wrong_method_receipt,
+            baseline_observation="事前判断".encode("utf-8"),
+        )
