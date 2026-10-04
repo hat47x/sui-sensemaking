@@ -260,7 +260,6 @@ def test_baseline_receipt_binds_candidate_method_version() -> None:
     assert current != changed
 
 
-
 def test_candidate_phase_rejects_receipt_from_different_method_version() -> None:
     document = _document()
     digest = attention_source_digest(build_attention_ir(document))
