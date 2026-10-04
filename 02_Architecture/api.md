@@ -463,6 +463,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
   - `includeSpatial?: boolean`: 空間配置を候補生成へ使うか。既定は `false`
   - `allowUnreviewedText?: boolean`: 未レビュー本文の扱いはSafeMode境界に従う
 - レスポンス: `SuggestAttentionCandidatesResponse`
+  - `methodId: string`: 候補生成方式の意味上の版。現在は `deterministic-structural-attention-v1`
   - `sourceDigest: string`: 候補生成に使った構造断面のSHA-256
   - `candidates: AttentionCandidate[]`: 文書を書き換えない注意候補
     - `candidateId: string`
@@ -476,6 +477,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 - 関係候補は、既存島への同居や既存の直接関係をそのまま再提示せず、まだ直接表現されていない跨島の組だけを `focusPairs` として返す。空間候補は `includeSpatial=true` の場合だけ有効になる。
 - 1候補の `focusPairs` が8組を超える場合は、根拠のない順位付けや任意切り捨てをせず、その候補を返さない。
 - `sourceDigest` はIRバージョン、文書識別、カードIDと保留状態、候補生成に使う関係、島、および空間候補を使う場合の正規化座標から決定論的に算出する。カード本文そのものはハッシュ対象にしないため、投影対象が変わらない本文編集では値を維持する。本文長の変化などでIRの投影対象が変わった場合は値も変わる。通常モードではカードの画面移動だけでは変化しない。これは候補方式のバージョンではなく、古い候補を構造更新後まで保持しないためのsource断面識別子である。
+- `methodId` は `sourceDigest` と別の軸であり、候補選択、抑制条件、`cue` の意味、`focusPairs` の意味など、利用者が受け取る候補処置が変わる場合に更新する。同じ `sourceDigest` でも `methodId` が違えば同じ候補処置とはみなさない。
 
 **POST** `/ai/suggest-layout`
 
