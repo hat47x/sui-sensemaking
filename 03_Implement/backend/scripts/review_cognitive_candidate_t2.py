@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Literal
 
 from sui_sensemaking_api.attention_candidates import (
+    ATTENTION_METHOD_ID,
     attention_candidates_from_ir,
     attention_source_digest,
     build_attention_ir,
@@ -57,12 +58,19 @@ def _sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def _baseline_receipt(source_sha256: str, product_digest: str) -> str:
+def _baseline_receipt(
+    source_sha256: str,
+    product_digest: str,
+    *,
+    method_id: str = ATTENTION_METHOD_ID,
+) -> str:
     payload = (
-        "sui-cognitive-t2-baseline-v1\0"
+        "sui-cognitive-t2-baseline-v2\0"
         + source_sha256
         + "\0"
         + product_digest
+        + "\0"
+        + method_id
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
@@ -115,6 +123,7 @@ def render_baseline(
             "Baseline receipt: "
             + _baseline_receipt(source_sha256, product_digest)
         )
+    lines.append(f"Attention methodId: {ATTENTION_METHOD_ID}")
     lines.append(f"Attention sourceDigest: {product_digest}")
     lines.extend(
         [
@@ -184,6 +193,7 @@ def render_candidates(
         "候補は製品APIと同じ決定論ロジックから得た提案であり、採用・順位・確信度を表さない。",
         "held/pending/shelved を含む候補は表示しない。",
         f"Source SHA-256: {source_sha256}",
+        f"Attention methodId: {ATTENTION_METHOD_ID}",
         f"Attention sourceDigest: {product_digest}",
         f"Baseline receipt: {expected_receipt}",
         f"Baseline observation SHA-256: {observation_sha256}",
