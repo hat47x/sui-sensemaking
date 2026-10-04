@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from sui_sensemaking_api.attention_candidates import MAX_ATTENTION_FOCUS_PAIRS
+from sui_sensemaking_api.attention_candidates import (
+    ATTENTION_METHOD_ID,
+    MAX_ATTENTION_FOCUS_PAIRS,
+)
 from sui_sensemaking_api.main import app
 from sui_sensemaking_api.routes import ai
 from sui_sensemaking_api.settings import settings
@@ -54,6 +57,7 @@ def test_transitive_relation_exposes_attention_without_score_or_provider() -> No
 
     assert response.status_code == 200, response.text
     body = response.json()
+    assert body.pop("methodId") == ATTENTION_METHOD_ID
     source_digest = body.pop("sourceDigest")
     assert len(source_digest) == 64
     assert set(source_digest) <= set("0123456789abcdef")
