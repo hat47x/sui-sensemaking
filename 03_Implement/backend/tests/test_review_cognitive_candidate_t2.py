@@ -313,7 +313,6 @@ def test_candidate_phase_rejects_receipt_from_different_method_version() -> None
         )
 
 
-
 def test_candidate_receipt_binds_exact_candidate_payload() -> None:
     document = _document()
     source_sha256 = "candidate-payload"
