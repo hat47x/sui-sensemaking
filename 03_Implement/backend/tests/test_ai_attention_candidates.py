@@ -260,3 +260,72 @@ def test_truncated_projection_never_exposes_partial_candidates(
     body = response.json()
     assert body["truncated"] is True
     assert body["candidates"] == []
+
+
+
+def test_more_than_product_candidate_budget_suppresses_entire_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cards = []
+    relations = []
+    islands = []
+    clusters = []
+    for index in range(1, MAX_ATTENTION_CANDIDATES + 2):
+        a = f"g{index}-a"
+        b = f"g{index}-b"
+        c = f"g{index}-c"
+        cards.extend(
+            [
+                {"id": a, "text": a, "text_norm": a, "char_len": len(a)},
+                {"id": b, "text": b, "text_norm": b, "char_len": len(b)},
+                {"id": c, "text": c, "text_norm": c, "char_len": len(c)},
+            ]
+        )
+        relations.extend(
+            [
+                {"id": f"r{index}-ab", "from": a, "to": b, "type": "related"},
+                {"id": f"r{index}-bc", "from": b, "to": c, "type": "related"},
+            ]
+        )
+        islands.extend(
+            [
+                {"id": f"i{index}-ab", "card_ids": [a, b]},
+                {"id": f"i{index}-c", "card_ids": [c]},
+            ]
+        )
+        clusters.append(
+            {
+                "cluster_id": f"cc-{index:04d}",
+                "card_ids": [a, b, c],
+                "basis": "relation",
+                "score": 1.0,
+            }
+        )
+
+    over_budget_ir = {
+        "ir_version": "1.2",
+        "cards": cards,
+        "relations": relations,
+        "islands": islands,
+        "cluster_candidates": clusters,
+        "meta": {"doc_id": "over-budget", "doc_version": 1},
+        "truncation": {"truncated": False, "reason_codes": []},
+    }
+    monkeypatch.setattr(
+        ai,
+        "build_attention_ir",
+        lambda *_args, **_kwargs: over_budget_ir,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": _doc()},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["methodId"] == ATTENTION_METHOD_ID
+    assert body["candidates"] == []
+    assert body["complexitySuppressed"] is True
+    assert body["truncated"] is False
