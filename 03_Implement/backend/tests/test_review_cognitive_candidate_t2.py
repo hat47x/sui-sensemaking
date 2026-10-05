@@ -21,7 +21,6 @@ from scripts.review_cognitive_candidate_t2 import (
 )
 from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
-    attention_candidate_result_from_ir,
     attention_candidates_from_ir,
     attention_source_digest,
     build_attention_ir,
