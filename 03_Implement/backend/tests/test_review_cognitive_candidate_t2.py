@@ -479,7 +479,6 @@ def test_candidate_receipt_binds_baseline_observation_content() -> None:
     assert original != changed
 
 
-
 def test_outcome_rejects_changed_baseline_observation() -> None:
     document = _document()
     source_sha256 = "changed-baseline-note"
