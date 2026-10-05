@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Render a two-phase local review for ADR-0090 cognitive-assistance T2 work.
+"""Render a three-phase local review for ADR-0090 cognitive-assistance T2 work.
 
 The tool never writes a result ledger. It reads a local DocumentV1 JSON and
-prints either the current human-authored structure (baseline phase) or eligible
-deterministic regrouping candidates (candidates phase).
+supports a human-authored baseline, deterministic candidate reveal, and a
+structured post-candidate outcome review.
 
 Run the baseline phase first, record the current interpretation without machine
 candidates in a local note, then pass both the printed baseline receipt and that
@@ -196,7 +196,7 @@ def _parse_post_observation(raw: bytes | None) -> dict[str, dict[str, str]]:
             )
         assessment = item["assessment"]
         note = item["note"]
-        if assessment not in allowed:
+        if not isinstance(assessment, str) or assessment not in allowed:
             expected = ", ".join(sorted(allowed))
             raise PostObservationError(
                 f"{axis}.assessment must be one of: {expected}"
@@ -467,7 +467,7 @@ def render_review(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Render a local two-phase cognitive-assistance T2 review."
+        description="Render a local three-phase cognitive-assistance T2 review."
     )
     parser.add_argument(
         "--document",
