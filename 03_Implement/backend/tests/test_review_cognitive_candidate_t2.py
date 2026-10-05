@@ -302,7 +302,7 @@ def test_candidate_phase_rejects_receipt_from_different_method_version() -> None
     wrong_method_receipt = _baseline_receipt(
         "method-mismatch",
         digest,
-        method_id="deterministic-structural-attention-v3",
+        method_id="deterministic-structural-attention-v4",
     )
 
     with pytest.raises(BaselineGateError, match="Baseline receipt"):
@@ -569,3 +569,22 @@ def test_t2_rejects_candidate_set_over_product_complexity_budget(
             baseline_receipt=receipt,
             baseline_observation="事前判断".encode("utf-8"),
         )
+
+
+
+def test_t2_baseline_rejects_overlapping_visual_island_membership() -> None:
+    value = json.loads(DEFAULT_FIXTURE.read_text(encoding="utf-8"))
+    value["islands"].append(
+        {
+            "id": "i-overlap",
+            "cardIds": ["c04"],
+            "title": "重複所属",
+            "titleReviewed": True,
+        }
+    )
+    document = DocumentV1.model_validate(value)
+
+    with pytest.raises(IRGenerationError) as exc:
+        render_baseline(document, source_sha256="overlap")
+
+    assert exc.value.code == "ambiguous_island_membership"
