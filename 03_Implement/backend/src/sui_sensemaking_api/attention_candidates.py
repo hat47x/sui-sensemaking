@@ -159,8 +159,3 @@ def attention_candidate_result_from_ir(ir: dict) -> AttentionCandidateResult:
             complexity_suppressed=True,
         )
     return AttentionCandidateResult(candidates=result)
-
-
-def attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
-    """Compatibility helper for callers that only need the visible candidates."""
-    return attention_candidate_result_from_ir(ir).candidates
