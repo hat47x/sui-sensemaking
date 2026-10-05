@@ -21,7 +21,7 @@ from scripts.review_cognitive_candidate_t2 import (
 )
 from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
-    attention_candidates_from_ir,
+    attention_candidate_result_from_ir,
     attention_source_digest,
     build_attention_ir,
 )
@@ -187,7 +187,7 @@ def test_baseline_marks_unassigned_hold_without_promoting_it() -> None:
 def test_candidate_phase_matches_product_candidate_contract() -> None:
     document = _document()
     ir = build_attention_ir(document)
-    expected = attention_candidates_from_ir(ir)
+    expected = attention_candidate_result_from_ir(ir).candidates
 
     receipt, observation = _gate(document, "product-contract")
     rendered = render_candidates(
@@ -320,7 +320,7 @@ def test_candidate_receipt_binds_exact_candidate_payload() -> None:
     ir = build_attention_ir(document)
     digest = attention_source_digest(ir)
     baseline_receipt, _ = _gate(document, source_sha256)
-    candidates = attention_candidates_from_ir(ir)
+    candidates = attention_candidate_result_from_ir(ir).candidates
 
     actual = _candidate_receipt(
         source_sha256=source_sha256,
@@ -391,7 +391,7 @@ def test_outcome_requires_all_six_independent_axes() -> None:
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
         baseline_observation_sha256=_sha256_for_test(baseline_observation),
-        candidates=attention_candidates_from_ir(ir),
+        candidates=attention_candidate_result_from_ir(ir).candidates,
     )
 
     incomplete = json.loads(_post_observation())
@@ -429,7 +429,7 @@ def test_outcome_keeps_axes_separate_without_reprinting_notes() -> None:
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
         baseline_observation_sha256=_sha256_for_test(baseline_observation),
-        candidates=attention_candidates_from_ir(ir),
+        candidates=attention_candidate_result_from_ir(ir).candidates,
     )
     post = _post_observation()
 
@@ -460,7 +460,7 @@ def test_candidate_receipt_binds_baseline_observation_content() -> None:
     ir = build_attention_ir(document)
     digest = attention_source_digest(ir)
     baseline_receipt, baseline_observation = _gate(document, source_sha256)
-    candidates = attention_candidates_from_ir(ir)
+    candidates = attention_candidate_result_from_ir(ir).candidates
 
     original = _candidate_receipt(
         source_sha256=source_sha256,
@@ -490,7 +490,7 @@ def test_outcome_rejects_changed_baseline_observation() -> None:
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
         baseline_observation_sha256=_sha256_for_test(baseline_observation),
-        candidates=attention_candidates_from_ir(ir),
+        candidates=attention_candidate_result_from_ir(ir).candidates,
     )
 
     with pytest.raises(CandidateGateError, match="Candidate receipt"):
