@@ -326,12 +326,14 @@ def test_candidate_receipt_binds_exact_candidate_payload() -> None:
         source_sha256=source_sha256,
         product_digest=digest,
         baseline_receipt=baseline_receipt,
+        baseline_observation_sha256=_sha256_for_test("事前判断を記録した".encode("utf-8")),
         candidates=candidates,
     )
     empty = _candidate_receipt(
         source_sha256=source_sha256,
         product_digest=digest,
         baseline_receipt=baseline_receipt,
+        baseline_observation_sha256=_sha256_for_test("事前判断を記録した".encode("utf-8")),
         candidates=[],
     )
 
@@ -388,6 +390,7 @@ def test_outcome_requires_all_six_independent_axes() -> None:
         source_sha256=source_sha256,
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
+        baseline_observation_sha256=_sha256_for_test(baseline_observation),
         candidates=attention_candidates_from_ir(ir),
     )
 
@@ -425,6 +428,7 @@ def test_outcome_keeps_axes_separate_without_reprinting_notes() -> None:
         source_sha256=source_sha256,
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
+        baseline_observation_sha256=_sha256_for_test(baseline_observation),
         candidates=attention_candidates_from_ir(ir),
     )
     post = _post_observation()
@@ -448,3 +452,30 @@ def test_outcome_keeps_axes_separate_without_reprinting_notes() -> None:
     assert "総合scoreや自動昇格判定を生成しない" in rendered
     assert "候補なしでは見ていなかった材料へ注意が移った" not in rendered
     assert "表示量と確認負荷は許容範囲だった" not in rendered
+
+
+
+def test_candidate_receipt_binds_baseline_observation_content() -> None:
+    document = _document()
+    source_sha256 = "baseline-note-binding"
+    ir = build_attention_ir(document)
+    digest = attention_source_digest(ir)
+    baseline_receipt, baseline_observation = _gate(document, source_sha256)
+    candidates = attention_candidates_from_ir(ir)
+
+    original = _candidate_receipt(
+        source_sha256=source_sha256,
+        product_digest=digest,
+        baseline_receipt=baseline_receipt,
+        baseline_observation_sha256=_sha256_for_test(baseline_observation),
+        candidates=candidates,
+    )
+    changed = _candidate_receipt(
+        source_sha256=source_sha256,
+        product_digest=digest,
+        baseline_receipt=baseline_receipt,
+        baseline_observation_sha256=_sha256_for_test("別の事前判断".encode("utf-8")),
+        candidates=candidates,
+    )
+
+    assert original != changed
