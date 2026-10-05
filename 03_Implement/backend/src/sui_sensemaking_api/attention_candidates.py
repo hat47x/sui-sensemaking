@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from itertools import combinations
 
 from sui_sensemaking_api.llm_input_ir import (
@@ -17,8 +18,15 @@ from sui_sensemaking_api.models_ai import AttentionCandidate
 
 # Bump this identifier whenever the externally observable candidate treatment
 # changes (selection, suppression, cue semantics, or focus-pair semantics).
-ATTENTION_METHOD_ID = "deterministic-structural-attention-v1"
+ATTENTION_METHOD_ID = "deterministic-structural-attention-v2"
 MAX_ATTENTION_FOCUS_PAIRS = 8
+MAX_ATTENTION_CANDIDATES = 4
+
+
+@dataclass(frozen=True)
+class AttentionCandidateResult:
+    candidates: list[AttentionCandidate]
+    complexity_suppressed: bool = False
 
 
 def build_attention_ir(
@@ -81,10 +89,10 @@ def attention_source_digest(ir: dict) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
-def attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
-    """Expose only complete, structurally novel proposal-only attention cues."""
+def attention_candidate_result_from_ir(ir: dict) -> AttentionCandidateResult:
+    """Return the complete actionable set or suppress it without ranking."""
     if ir.get("truncation", {}).get("truncated"):
-        return []
+        return AttentionCandidateResult(candidates=[])
 
     held = set(held_card_ids(ir))
     islands = [set(island["card_ids"]) for island in ir.get("islands", [])]
@@ -144,4 +152,15 @@ def attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
                 cue=cue,
             )
         )
-    return result
+
+    if len(result) > MAX_ATTENTION_CANDIDATES:
+        return AttentionCandidateResult(
+            candidates=[],
+            complexity_suppressed=True,
+        )
+    return AttentionCandidateResult(candidates=result)
+
+
+def attention_candidates_from_ir(ir: dict) -> list[AttentionCandidate]:
+    """Compatibility helper for callers that only need the visible candidates."""
+    return attention_candidate_result_from_ir(ir).candidates
