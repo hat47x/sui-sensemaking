@@ -49,12 +49,12 @@
       <span style="width:8px; height:8px; border-radius:2px; background:#be123c; display:inline-block;"></span>
       sui-sensemaking ・ Architecture ・ 分析（2026-08-06）
     </div>
-    <h1 style="font-size:29px; line-height:1.36; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">関数従属性から見た<br>DocumentV1 の構造的整合性</h1>
+    <h1 style="font-size:29px; line-height:1.36; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">関数従属性から見た<br>DocumentV1の構造的整合性</h1>
     <p style="font-size:15px; line-height:1.75; color:#52606d; margin:14px 0 0; max-width:38em; text-wrap:pretty;">
       <code>DocumentV1</code> を「関数従属性（どの項目がどの項目を一意に決めるか）」の観点で読み直した記録。
       <strong>同一のドメイン関係が複数のフィールドに分散し、読み取り側が推測で解決している箇所</strong>を特定し、
       その機構と是正案を示す。カード本文・空間配置・見立て（<code>claimType</code> / <code>holdState</code>）は
-      対象外とする ── これらは正規化になじまない KJ法固有の表現であり、本分析の適用範囲ではない。
+      対象外とする。これらは正規化になじまないKJ法固有の表現であり、本分析の適用範囲ではない。
     </p>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:22px;">
       <span class="badge" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">F-3 統合関係の4重表現（検証済み）</span>
@@ -63,11 +63,11 @@
     </div>
     <div style="margin:20px 0 0; padding:11px 14px; background:#f8fafc; border-left:3px solid #cbd5e1; border-radius:0 4px 4px 0;">
       <p style="font-size:12.5px; line-height:1.75; color:#52606d; margin:0;">
-        本書が正本（<code>AGENTS.md</code> §3）。データ構造の運用境界は
+        本書が正本である（<code>AGENTS.md</code> §3）。データ構造の運用境界は
         <a href="data_model_operations_overview.html">data_model_operations_overview.html</a>、
         型定義は <a href="schemas.md">schemas.md</a>、責務境界は
         <a href="architecture.html">architecture.html</a> を正本とする。<br>
-        本書は<strong>分析であり決定ではない</strong>。実装着手には ADR-0047 のゲート判定と issue 起票を要する。
+        本書は<strong>分析であり決定ではない</strong>。実装に着手するには、ADR-0047のゲート判定とissueの起票が必要である。
       </p>
     </div>
   </header>
@@ -79,15 +79,15 @@
       <h2 style="font-size:20px; font-weight:700; margin:0;">分析の枠組みと適用範囲</h2>
     </div>
     <p style="font-size:13.5px; line-height:1.8; color:#3e4c59; margin:12px 0 0;">
-      関数従属性 <code>x → y</code> とは「x の値に対して y の値が一意に対応する」関係を指す。
-      本分析の主張は単純である ── <strong>同一の関数従属性を複数箇所に保持すると、
+      関数従属性 <code>x → y</code> とは「xの値に対してyの値が一意に対応する」関係を指す。
+      本分析の主張は単純である。<strong>同一の関数従属性を複数箇所に保持すると、
       それらを一致させる仕組みが存在しない限り、読み取り側は推測せざるを得なくなる。</strong>
     </p>
     <p style="font-size:13.5px; line-height:1.8; color:#3e4c59; margin:10px 0 0;">
       <code>DocumentV1</code> は単一JSONスナップショットであり、物理DBの外部キー制約を持たない
       （<code>documents.payload_json</code> は不透明なTEXT）。したがって整合性を保つ手段は
       <strong>検証コード（<code>validate_doc.ts</code>）の不変条件</strong>だけである。
-      この前提は変えない ── ローカルファーストと単一ファイル可搬性はアーキテクチャ目標であり、
+      この前提は変えない。ローカルファーストと単一ファイル可搬性はアーキテクチャの目標であり、
       物理正規化はその目標と衝突する。
     </p>
 
@@ -102,8 +102,8 @@
       </tbody>
     </table>
     <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">
-      この線引きから得られた対比軸 ──<strong>「確定事実」と「現在の見立て」</strong>── は、本分析の範囲を超えて
-      SafeMode の redact 判定、export の既定ON/OFF、L0〜L3 の割当根拠にも適用余地がある。本書では指摘に留める。
+      この線引きから得られた対比軸である<strong>「確定事実」と「現在の見立て」</strong>は、本分析の範囲を超えて
+      SafeModeのredact判定、エクスポートの既定のONとOFF、L0〜L3の割当根拠にも適用できる余地がある。本書では指摘にとどめる。
     </p>
   </section>
 
@@ -115,7 +115,7 @@
       <span class="tag verified">検証済み</span>
     </div>
     <p style="font-size:13.5px; line-height:1.8; color:#3e4c59; margin:12px 0 0;">
-      「N枚のカードを1枚へ統合した」というドメイン関係は一つである。しかし現行実装では、
+      「N枚のカードを1枚へ統合した」というドメイン関係は一つである。しかし現行の実装では、
       <strong>2つの関数が、排他的なフィールド集合で、同じ関係を書いている</strong>。
     </p>
 
@@ -190,7 +190,7 @@ flowchart TB
       <p style="font-size:13px; line-height:1.8; color:#78350f; margin:0;">
         <strong>挙動差は保持すべき仕様である。</strong>
         <code>applyCanonicalization()</code> が元カードを島に残すのは、
-        「代表カードと出典カードを両方たどれる」という sui-sensemaking 固有の設計
+        「代表カードと出典カードを両方たどれる」というsui-sensemaking固有の設計
         （<code>isSourceCard()</code>、出典カードの開示UI）に基づく。
         したがって是正の方向は<strong>2つの挙動を1つに統合することではなく、
         関係の重複だけを解消して挙動差を明示的な属性にすること</strong>である。
@@ -206,9 +206,9 @@ flowchart TB
       <span class="tag latent">潜在（未露出）</span>
     </div>
     <p style="font-size:13.5px; line-height:1.8; color:#3e4c59; margin:12px 0 0;">
-      <code>resolveRepresentativeOriginTrace()</code> は統合元IDを3経路から収集する
-      ── <code>repOf</code>、<code>mergedIntoCardId</code> の逆引き走査、<code>sources</code> ──
-      にもかかわらず、返り値の <code>representativeResolvedBy</code> を
+      <code>resolveRepresentativeOriginTrace()</code> は統合元IDを次の3経路から収集する。
+      すなわち、<code>repOf</code>、<code>mergedIntoCardId</code> の逆引き走査、<code>sources</code> である。
+      ところが、返り値の <code>representativeResolvedBy</code> を
       <strong>経路によらず <code>"repOf"</code> に固定している</strong>。
     </p>
     <pre class="block"><code>// domain/merge_traceability.ts
@@ -234,7 +234,7 @@ flowchart TB
     </table>
     <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">
       単体テストは <code>toEqual</code> で固定値 <code>"repOf"</code> を期待しているため、この不整合を検出しない
-      （<code>merge_traceability.test.ts</code>）。F-3 を是正すれば本項は構造的に消滅する。
+      （<code>merge_traceability.test.ts</code>）。F-3を是正すれば本項は構造的に消滅する。
       是正しない場合は、返り値を実際の経路に合わせる単独修正が必要。
     </p>
   </section>
@@ -248,10 +248,10 @@ flowchart TB
     </div>
     <p style="font-size:13.5px; line-height:1.8; color:#3e4c59; margin:12px 0 0;">
       <code>App.tsx</code> はカードから島を引くとき <code>islands.find(i =&gt; i.cardIds.includes(cardId))</code>
-      ── <strong>最初に一致した島を採用</strong> ── としている。これは
+      で、<strong>最初に一致した島を採用</strong>している。これは
       <code>cardId → islandId</code> を関数（一意）とみなす実装である。
       しかし <code>Island.cardIds[]</code> は逆方向の配列であり、
-      <strong>同一カードが複数の島に列挙されていても strict 検証は通過する</strong>。
+      <strong>同一カードが複数の島に列挙されていてもstrict検証は通過する</strong>。
       関係が「島 → カード群」の形で保持されているため、「カード → 島」の一意性を表現できていない。
     </p>
 
@@ -262,10 +262,10 @@ flowchart TB
     <table class="grid">
       <thead><tr><th style="width:32%;">関係</th><th style="width:34%;">一意性の扱い</th><th>実装箇所</th></tr></thead>
       <tbody>
-        <tr><td><code>evidenceLinks</code></td><td><strong>あり</strong> ── <code>(fromCardId, toCardId, type)</code> の重複を検出</td><td><code>validate_doc.ts</code> / <code>validate.ts</code></td></tr>
-        <tr><td><code>shelf</code></td><td><strong>あり</strong> ── <code>cardId</code> の重複を検出</td><td><code>validate_doc.ts</code></td></tr>
-        <tr><td>島所属 <code>(islandId, cardId)</code></td><td><strong>なし</strong> ── 島をまたぐ重複を検出しない</td><td>—</td></tr>
-        <tr><td>統合関係 <code>(統合先, 統合元)</code></td><td><strong>なし</strong> ── 4フィールド間の一致も検証しない</td><td>—</td></tr>
+        <tr><td><code>evidenceLinks</code></td><td><strong>あり</strong>。<code>(fromCardId, toCardId, type)</code> の重複を検出する</td><td><code>validate_doc.ts</code> / <code>validate.ts</code></td></tr>
+        <tr><td><code>shelf</code></td><td><strong>あり</strong>。<code>cardId</code> の重複を検出する</td><td><code>validate_doc.ts</code></td></tr>
+        <tr><td>島所属 <code>(islandId, cardId)</code></td><td><strong>なし</strong>。島をまたぐ重複を検出しない</td><td>なし</td></tr>
+        <tr><td>統合関係 <code>(統合先, 統合元)</code></td><td><strong>なし</strong>。4フィールド間の一致も検証しない</td><td>なし</td></tr>
       </tbody>
     </table>
     <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">
@@ -282,8 +282,8 @@ flowchart TB
       <span class="tag struct">構造</span>
     </div>
     <p style="font-size:13.5px; line-height:1.8; color:#3e4c59; margin:12px 0 0;">
-      sui-sensemaking には統合判断のイベント記録が既に存在する ──
-      <code>DocumentV1.mergeSuggestionDecisions[]</code> と物理テーブル <code>merge_decision_logs</code>。
+      sui-sensemakingには統合判断のイベント記録が既に存在する。
+      それは <code>DocumentV1.mergeSuggestionDecisions[]</code> と物理テーブル <code>merge_decision_logs</code> である。
       ところが <code>domain/merge_decision_audit.ts</code> は、監査イベントを作るために
       <code>resolveDecisionOriginTrace()</code> を呼び、<strong>カード側に散らばった状態から
       来歴を再構成している</strong>。依存が逆転している。
@@ -319,8 +319,8 @@ flowchart LR
       <figcaption style="font-size:12.5px; color:#6b7280; margin-top:10px; line-height:1.7;">
         追記のみの記録を正本とし、可変な状態をそこから導出する構成は、簿記のデータモデル
         （仕訳は追記のみ・訂正は赤黒で相殺、残高サマリは導出）と同型である。
-        sui-sensemaking の <code>merge_decision_logs</code> は既に追記型として設計されており、
-        <strong>正本化に必要な器はある</strong>。
+        sui-sensemakingの <code>merge_decision_logs</code> は既に追記型として設計されており、
+        <strong>正本化に必要な仕組みはある</strong>。
       </figcaption>
     </figure>
     <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">
@@ -339,8 +339,8 @@ flowchart LR
       <span class="tag struct">構造</span>
     </div>
     <p style="font-size:13.5px; line-height:1.8; color:#3e4c59; margin:12px 0 0;">
-      <code>DocumentV1</code> は21フィールドを持ち、うち12が optional である。
-      optional フィールドの多くは、機能issueが1件ずつ追加した経緯を持つ
+      <code>DocumentV1</code> は21フィールドを持ち、うち12が省略可能である。
+      省略可能なフィールドの多くは、機能issueが1件ずつ追加した経緯を持つ
       （<code>shelf</code> ← DOMAIN-EXPR-02、<code>contradictionSignalDecisions</code> ← DOMAIN-EXPR-04、
       <code>ka</code> ← DOMAIN-KA-01、<code>meta</code> ← DOMAIN-TRACE-01、
       <code>representativeCue</code> ← DOMAIN-VISUAL-CUE-01）。
@@ -349,16 +349,16 @@ flowchart LR
       これは設計の失敗ではなく、<strong>採用している手順の必然的な帰結</strong>である。
       機能から出発すると、その機能が必要とする最小のフィールドが追加される。
       関係から出発した場合と違い、既存の関係と統合されるかどうかは検討の対象にならない。
-      F-3 はまさにこの形で生じた ── 2つの機能issueが、同じ関係を、互いを知らずに実装した。
+      F-3はまさにこの形で生じた。2つの機能issueが、同じ関係を、互いを知らずに実装した。
     </p>
     <div style="margin:16px 0 0; padding:13px 16px; background:#f8fafc; border-left:3px solid #2563eb; border-radius:0 4px 4px 0;">
       <p style="font-size:13px; line-height:1.8; color:#3e4c59; margin:0;">
         <code>ADR-0058</code>（単一 <code>DocumentV1</code>・追加のみ）は
-        <strong>version 分裂という別の失敗を正しく防いでいる</strong>。
+        <strong>バージョンの分裂という別の失敗を正しく防いでいる</strong>。
         ただし「追加のみ」は構造の縮約経路を持たないため、
         <strong>関係の重複を検出する手順を伴わない限り、発散は単調に進む</strong>。
-        本書が提案するのは ADR-0058 の撤回ではなく、その手前に
-        <strong>「新しい optional を足す前に、既存の関係と重複しないかを確認する」</strong>
+        本書が提案するのはADR-0058の撤回ではなく、その手前に
+        <strong>「新しい省略可能フィールドを足す前に、既存の関係と重複しないかを確認する」</strong>
         という一段を挟むことである。
       </p>
     </div>
@@ -372,8 +372,8 @@ flowchart LR
     </div>
     <p style="font-size:13px; line-height:1.75; color:#3e4c59; margin:10px 0 0;">
       物理DBの正規化は<strong>行わない</strong>。ローカルファーストと単一JSON可搬性を壊すため、
-      適用範囲を「文書内の論理不変条件」に限定する。以下は初稿であり、§08 でより厳密に精査した
-      結果に更新されている。最終判断は §08 を参照すること。
+      適用範囲を「文書内の論理不変条件」に限定する。以下は初稿であり、§08でより厳密に精査した
+      結果に更新されている。最終判断は§08を参照すること。
     </p>
     <div class="scroll">
     <table class="grid">
@@ -387,12 +387,12 @@ flowchart LR
         </tr>
         <tr>
           <td><strong>R2</strong></td>
-          <td>関数従属性の不変条件を <code>validate_doc.ts</code> へ追加 ──
+          <td>関数従属性の不変条件を <code>validate_doc.ts</code> へ追加する。対象は
             島所属 <code>(islandId, cardId)</code> の島をまたぐ重複、
-            統合関係4フィールドの相互一致</td>
+            統合関係4フィールドの相互一致である</td>
           <td>F-5、F-3の検出</td>
           <td>なし（検証強化のみ）。ただし<strong>既存文書が新規則で不合格になり得る</strong>ため、
-            warn 段階を先行させる判断が要る</td>
+            警告の段階を先行させる判断が要る</td>
         </tr>
         <tr>
           <td><strong>R3</strong></td>
@@ -402,18 +402,18 @@ flowchart LR
             島・辺の張り替え有無をイベント属性として明示</td>
           <td>F-3、F-4、F-6</td>
           <td><strong>あり（追加は非破壊、格下げは破壊的）</strong>。
-            ADR-0058 の範囲内で「追加＋導出」に留めるか、version gate を要するかの判断が必要</td>
+            ADR-0058の範囲内で「追加と導出」にとどめるか、バージョンゲートを要するかの判断が必要</td>
         </tr>
         <tr>
           <td><strong>R4</strong></td>
-          <td>TS↔Python の契約ドリフト検出テストを追加（F-1 の再発防止）。
-            7表現のうち導出可能なものを機械生成へ移す</td>
+          <td>TSとPythonの契約ドリフトを検出するテストを追加する（F-1の再発防止）。
+            7つの表現のうち導出できるものは機械生成に移す</td>
           <td>F-1（既報）、F-7</td>
           <td>なし。テスト追加</td>
         </tr>
         <tr>
           <td><strong>R5</strong></td>
-          <td>設計手順として「新しい optional を追加する前に、表現しようとしている関係が
+          <td>設計手順として「新しい省略可能フィールドを追加する前に、表現しようとしている関係が
             既存の関係と重複しないかを確認する」を <code>AGENTS.md</code> へ追記</td>
           <td>F-7</td>
           <td>なし。手順の追記</td>
@@ -422,8 +422,8 @@ flowchart LR
     </table>
     </div>
     <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">
-      R1・R4・R5 は独立に実施できる。R2 は R3 の前提となり、R3 は最も大きい。
-      R3 を選ばない場合でも R1・R2 は F-4・F-5 を解消する。
+      R1・R4・R5は独立に実施できる。R2はR3の前提となり、R3は最も大きい。
+      R3を選ばない場合でもR1・R2はF-4・F-5を解消する。
     </p>
   </section>
 
@@ -432,23 +432,23 @@ flowchart LR
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">08</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">長期最適化ロードマップ</h2>
-      <span class="tag verified">4観点分析＋検証（2026-08-08）</span>
+      <span class="tag verified">4観点分析と検証（2026-08-08）</span>
     </div>
     <p style="font-size:13px; line-height:1.8; color:#3e4c59; margin:12px 0 0;">
       §07 は単独の分析による初稿である。データモデリング判断は<strong>開発が進むほど不可逆になる</strong>ため、
       「今すぐ全部直す」か「当面据え置く」かの二択ではなく、<strong>どの範囲を・いつ・どの強度で</strong>
       構造化するかという配分判断こそが本題である。この配分判断を、独立した4つの観点
-      ── データ整合性／ローカルファースト・JSON可搬性／可逆性・移行コスト／KJ法ドメイン適合 ──
+      （データ整合性、ローカルファーストとJSON可搬性、可逆性と移行コスト、KJ法ドメインへの適合）
       から並行して再評価し、統合し、統合結果を検証した
-      （§07 の対案を鵜呑みにせず、各所見の再現性をコードから再確認する形で行った）。
+      （§07の対案をそのまま受け入れず、各所見の再現性をコードから再確認する形で行った）。
     </p>
     <div style="margin:14px 0 0; padding:11px 14px; background:#f8fafc; border-left:3px solid #cbd5e1; border-radius:0 4px 4px 0;">
       <p style="font-size:12px; line-height:1.75; color:#52606d; margin:0;">
-        <strong>プロセス上の注記:</strong> 検証の自動実行はセッション利用上限で中断した。
+        <strong>プロセス上の注記</strong>　検証の自動実行はセッション利用上限で中断した。
         中断前に完了していた検証（3観点版の統合結果に対するもの）の指摘のうち、4観点版へも
-        引き続き妥当なものを踏襲し、加えて新規の主張（特に §08.3 の優先度根拠）は執筆者自身が
+        引き続き妥当なものを踏襲し、加えて新規の主張（特に§08.3の優先度根拠）は執筆者自身が
         コードとリポジトリの現状（<code>ADR-0007</code>・<code>ROADMAP.md</code>）を再確認する形で
-        裏取りした。以下は分析であり決定ではない。実装着手には各項目に記載のゲート
+        確認した。以下は分析であり決定ではない。実装着手には各項目に記載のゲート
         （issue起票・ADR-0047該当確認）を要する。
       </p>
     </div>
@@ -461,55 +461,55 @@ flowchart LR
         <tr>
           <td><strong>R1</strong><br/>解決経路の返り値修正</td>
           <td><span class="tag verified">今すぐ実施可</span></td>
-          <td>4観点とも異論なし。加えて<code>sources</code>フォールバックが「部分的に埋まっている」場合に早期終了する隣接バグを発見（データ整合性観点）。可逆性観点: R3-tier-1（下記）より<strong>先に</strong>着手しないと、誤った値が監査記録へ恒久的に焼き付く。</td>
-          <td><strong>不要</strong> ── 純粋なバグ修正（設計判断を伴わない）</td>
+          <td>4観点とも異論なし。加えて<code>sources</code>フォールバックが「部分的に埋まっている」場合に早期終了する隣接バグを発見（データ整合性観点）。可逆性の観点では、R3-tier-1（下記）より<strong>先に</strong>着手しないと、誤った値が監査記録に恒久的に残る。</td>
+          <td><strong>不要</strong>。純粋なバグ修正であり、設計判断を伴わない</td>
         </tr>
         <tr>
-          <td><strong>R2(a)-書込み側</strong><br/>drag&amp;dropで島所属を移動でなく追加してしまうバグ</td>
+          <td><strong>R2(a)-書込み側</strong><br/>ドラッグ&amp;ドロップで島所属を移動でなく追加してしまうバグ</td>
           <td><span class="tag verified">今すぐ実施可</span></td>
-          <td>データ整合性・ドメイン適合の双方が独立に同一のライブバグを特定（<code>App.tsx</code>のisland-join drag handlerが旧島からの除去を行わない）。通常のカード再配置操作で日常的に再現する。</td>
-          <td><strong>不要</strong> ── 1行のトレードオフなしバグ修正</td>
+          <td>データ整合性・ドメイン適合の双方が独立に同一の現行バグを特定した（<code>App.tsx</code>の島参加のドラッグ処理が、旧島からの除去を行わない）。通常のカード再配置操作で日常的に再現する。</td>
+          <td><strong>不要</strong>。1行で直せる、トレードオフのないバグ修正</td>
         </tr>
         <tr>
           <td><strong>R2(a)-検証</strong><br/>島またぎ重複のvalidate_doc.ts追加</td>
           <td><span class="tag latent">計測してから判断</span></td>
-          <td>4観点とも「fail-closedでの拒否」には反対 ── ローカルファーストでは復旧UIがなく、文書が開けなくなるリスクが実害と釣り合わない。warn-onlyの診断として追加し、既存文書の違反率を計測してから reject 化を判断する。</td>
-          <td>issue起票（診断追加のみなら軽微、reject化の判断は改めてADR-0047該当確認）</td>
+          <td>4観点とも「安全側で拒否する」方式には反対である。ローカルファーストでは復旧UIがなく、文書が開けなくなるリスクが実害と釣り合わない。警告のみの診断として追加し、既存文書の違反率を計測してから、拒否する方式にするかを判断する。</td>
+          <td>issue起票（診断追加のみなら軽微、拒否へ切り替える判断は改めてADR-0047への該当を確認する）</td>
         </tr>
         <tr>
           <td><strong>R2(b)</strong><br/>統合関係4フィールドの「相互一致」検証</td>
           <td><span class="tag warn" style="background:#fef3c7; color:#92400e;">初稿の枠組みを撤回</span></td>
-          <td>データ整合性・ドメイン適合が独立に反証: 連鎖統合（統合先が後に別の統合の統合元になる）では<code>sources</code>と<code>mergedIntoCardId</code>が正当に両方埋まる。「相互排他」を強制すると正当なデータを拒否する。<strong>参照整合性のみ（IDが実在カードを指すか）へ範囲を狭める</strong>。</td>
+          <td>データ整合性・ドメイン適合が独立に反証した。連鎖統合（統合先が後に別の統合の統合元になる）では<code>sources</code>と<code>mergedIntoCardId</code>が正当に両方埋まる。「相互排他」を強制すると正当なデータを拒否する。<strong>参照整合性のみ（IDが実在カードを指すか）へ範囲を狭める</strong>。</td>
           <td>狭めた版はissue起票のみで着手可（設計判断を伴わない）</td>
         </tr>
         <tr>
-          <td><strong>R3-tier-1</strong><br/><code>MergeSuggestionDecisionEntry</code>へ解決結果をwrite時にスナップショット</td>
+          <td><strong>R3-tier-1</strong><br/><code>MergeSuggestionDecisionEntry</code>へ解決結果を書き込み時にスナップショットとして保存する</td>
           <td><span class="tag verified">今すぐ実施可</span></td>
-          <td>新規所見 F-9（データ整合性観点で発見）: 監査ログの表示が、決定時点ではなく<strong>閲覧時点</strong>の文書状態から再計算されるため、後続の統合で表示内容が静かに変わる。「監査記録は決定時点で固定される」という既存の暗黙契約への回帰であり、新しい設計決定ではない。R1と同時またはR1の後に実施する必要がある（上記参照）。</td>
-          <td><strong>不要</strong> ── 監査ログという既存機能の正しさの修正</td>
+          <td>新規所見F-9（データ整合性の観点で発見）。監査ログの表示が、決定時点ではなく<strong>閲覧時点</strong>の文書状態から再計算されるため、後続の統合によって表示内容が気づかれないまま変わる。「監査記録は決定時点で固定される」という既存の暗黙契約への回帰であり、新しい設計決定ではない。R1と同時またはR1の後に実施する必要がある（上記参照）。</td>
+          <td><strong>不要</strong>。監査ログという既存機能の正しさの修正</td>
         </tr>
         <tr>
           <td><strong>R3-tier-2</strong><br/>追記のみの<code>mergeEvents[]</code>配列を正本として追加</td>
           <td><span class="tag latent">issue化してゲート確認してから着手</span></td>
-          <td>可逆性観点の主張（検証済み）: <code>ROADMAP.md</code> §A「類似カード統合」に「統合ログ保持（監査対象）」が中期計画として明記されている（本書で実在確認済み）。放置するほど遡及不能な情報が失われる、本分析で唯一「先延ばしのコストが真に不可逆」な候補。<br/><strong>ただし</strong>これは<em>計画済みだが未着手の中期機能への先行実装</em>であり、ADR-0047 R-1（実使用摩擦の顕在化）を字義通りには満たさない。「今すぐ実施可」と単純化せず、<strong>ROADMAP §Aへの参照を明記したissueを起票し、ADR-0047該当性（R-1相当と扱えるか）を保守者自身が判断する</strong>ゲートを経ることを推奨する。</td>
+          <td>可逆性の観点からの主張（検証済み）。<code>ROADMAP.md</code> §A「類似カード統合」に「統合ログ保持（監査対象）」が中期計画として明記されている（本書で実在確認済み）。放置するほど遡及不能な情報が失われる、本分析で唯一「先延ばしのコストが真に不可逆」な候補。<br/><strong>ただし</strong>これは<em>計画済みだが未着手の中期機能への先行実装</em>であり、ADR-0047 R-1（実使用摩擦の顕在化）を字義通りには満たさない。「今すぐ実施可」と単純化せず、<strong>ROADMAP §Aへの参照を明記したissueを起票し、ADR-0047該当性（R-1相当と扱えるか）を保守者自身が判断する</strong>ゲートを経ることを推奨する。</td>
           <td><strong>issue起票必須</strong>（ROADMAP §A引用＋ADR-0047該当性の明示判断）</td>
         </tr>
         <tr>
           <td><strong>R3-tier-3</strong><br/>カード側4フィールドを導出専用へ格下げ</td>
           <td><span class="tag latent">計測してから判断</span></td>
-          <td>4観点中3つが「R3-tier-1/2とは別ゲートが要る、より大きな決定」と独立に指摘。version gate要否・後方互換方針（旧フィールドを永続的に併存書込みするか、段階的に廃止するか）が未決。</td>
-          <td>ADR-0047該当確認＋<code>summaryHistory</code>等の実データ増加量の計測が前提</td>
+          <td>4観点中3つが「R3-tier-1/2とは別ゲートが要る、より大きな決定」と独立に指摘した。バージョンゲートの要否と後方互換の方針（旧フィールドを永続的に併存して書き込み続けるか、段階的に廃止するか）が未決である。</td>
+          <td>ADR-0047への該当の確認と、<code>summaryHistory</code>などの実データの増加量の計測が前提</td>
         </tr>
         <tr>
           <td><strong>R4</strong><br/>TS↔Python契約ドリフト検出テスト</td>
           <td><span class="tag verified">今すぐ実施可</span></td>
-          <td>4観点とも異論なし。<strong>唯一、ADR-0047 R-1を字義通り満たす候補</strong> ── F-1（<code>Island.representativeCue</code>がPython側で静かに消える）は既に実害として報告済みの現在進行中のバグであり、予測ではない。</td>
-          <td><strong>不要</strong> ── 既報バグの再発防止テスト</td>
+          <td>4観点とも異論なし。<strong>唯一、ADR-0047 R-1を文字どおり満たす候補</strong>である。F-1（<code>Island.representativeCue</code>がPython側で気づかれないまま消える）は既に実害として報告済みの現在進行中のバグであり、予測ではない。</td>
+          <td><strong>不要</strong>。既報バグの再発防止テスト</td>
         </tr>
         <tr>
           <td><strong>R5</strong><br/><code>AGENTS.md</code>への設計手順追記</td>
           <td><span class="tag verified">今すぐ実施可</span></td>
-          <td>4観点とも賛成だが、全観点が独立に「文章だけでは定着しない」と指摘。チェックリスト形式へ具体化し、R4のドリフトテスト拡張（新規optionalフィールド追加を検知）と組み合わせることを推奨。</td>
+          <td>4観点とも賛成だが、全観点が独立に「文章だけでは定着しない」と指摘。チェックリスト形式へ具体化し、R4のドリフトテスト拡張（新規の省略可能フィールドの追加を検知）と組み合わせることを推奨。</td>
           <td>issue起票を推奨（コード変更を伴わない文書更新）</td>
         </tr>
       </tbody>
@@ -528,12 +528,12 @@ flowchart LR
         <tr>
           <td><code>MergeSuggestionDecisionEntry</code> の二重命名<br/>（<code>decision</code>/<code>action</code>、<code>id</code>/<code>decisionId</code> 等）</td>
           <td><span class="tag latent">据え置き（発火条件つき）</span></td>
-          <td>実在確認済み: 書込み関数（<code>domain/merge_suggestion_decisions.ts</code>）は両名を同一値で常に二重書込みするが、<code>merge_decision_audit.ts</code>は<code>.decision</code>を、別の読み取り関数は<code>.action</code>を参照しており、読み手が既に分岐している。現状は単一書込み元のため実害はないが、<strong>2つ目の書込み経路（import/patch-apply等）が追加された時点</strong>で優先度が上がる。warn-onlyの一致検証をR2(a)診断と合わせて追加するのが低コストな保険。</td>
+          <td>実在を確認した。書き込み関数（<code>domain/merge_suggestion_decisions.ts</code>）は両方の名前に同一の値を常に二重に書き込むが、<code>merge_decision_audit.ts</code>は<code>.decision</code>を、別の読み取り関数は<code>.action</code>を参照しており、読み手が既に分岐している。現状は単一書込み元のため実害はないが、<strong>2つ目の書き込み経路（importやpatch-applyなど）が追加された時点</strong>で優先度が上がる。警告のみの一致検証をR2(a)診断と合わせて追加するのが低コストな保険。</td>
         </tr>
         <tr>
           <td><code>Island.title</code> と <code>placardCardId</code> の<code>titleReviewed</code>陳腐化</td>
           <td><span class="tag verified">今すぐ実施可（修正）</span> / <span class="tag latent">計測（検出）</span></td>
-          <td><code>titleReviewed</code>は<code>title</code>直接編集時のみクリアされ、<code>placardCardId</code>変更（表札カードの差し替え）時にはクリアされない ── 表示テキストが変わってもレビュー済み扱いのまま残る。表札検証はKJ法において軽視できない工程のため修正の優先度は高い。<code>title</code>と<code>placardCardId</code>由来テキストの乖離自体は、二重執筆という正当なKJ法の作業形態であり統合しない。</td>
+          <td><code>titleReviewed</code>は<code>title</code>直接編集時のみクリアされ、<code>placardCardId</code>変更（表札カードの差し替え）時にはクリアされない。表示テキストが変わってもレビュー済み扱いのまま残る。表札検証はKJ法において軽視できない工程のため修正の優先度は高い。<code>title</code>と<code>placardCardId</code>由来テキストの乖離自体は、二重執筆という正当なKJ法の作業形態であり統合しない。</td>
         </tr>
       </tbody>
     </table>
@@ -547,13 +547,13 @@ flowchart LR
       島同士の親子関係<code>parentIslandId</code>であり、カード→島の一意性とは無関係）。
     </p>
     <ol class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:10px 0 0;">
-      <li><strong>R3-tier-2</strong> ── 本分析で唯一「先延ばしにより遡及不能な情報損失が生じる」候補。ログ導入前の統合は永久にbackfillできない。</li>
-      <li><strong>R2(a)書込み側バグ</strong> ── 通常のドラッグ操作で今日も再現し続けている。放置期間分だけ違反を含む文書が蓄積する。</li>
-      <li><strong>R1</strong> ── 単体では平常時コストは低いが、R3-tier-1着手の直前に必ず先行させる必要がある（条件付きだが差し迫っている）。</li>
-      <li><strong>R4</strong> ── <code>types.ts</code>への変更頻度（実測約51コミット/5.5か月）に比例して複利的に価値が高まる。R3-tier-2が新フィールドを追加する前に導入すべき。</li>
-      <li><strong>R5</strong> ── 実施コストは一定だが、未実施の間もF-3型の重複が機能issueごとに蓄積し続ける。</li>
-      <li>R2(b)（狭めた版）／新規: <code>titleReviewed</code>陳腐化／F-8 ── 修正コスト自体は一定だが、正しさの欠落は未修正の期間分だけ蓄積する。</li>
-      <li>R3-tier-3／<code>MergeSuggestionDecisionEntry</code>二重命名 ── コストは時間で増加しない（前者は優先順位フラグ、後者は書込み元が単一の間は無害）。急ぐ理由がない。</li>
+      <li><strong>R3-tier-2</strong>は、本分析で唯一「先延ばしにより遡及不能な情報損失が生じる」候補である。ログ導入前の統合は、永久に後から補完できない。</li>
+      <li><strong>R2(a)書込み側バグ</strong>は、通常のドラッグ操作で今日も再現し続けている。放置期間分だけ違反を含む文書が蓄積する。</li>
+      <li><strong>R1</strong>は、単体では平常時コストは低いが、R3-tier-1着手の直前に必ず先行させる必要がある（条件付きだが差し迫っている）。</li>
+      <li><strong>R4</strong>は、<code>types.ts</code>への変更頻度（実測約51コミット/5.5か月）に比例して価値が複利的に高まる。R3-tier-2が新フィールドを追加する前に導入すべき。</li>
+      <li><strong>R5</strong>は、実施コストは一定だが、未実施の間もF-3型の重複が機能issueごとに蓄積し続ける。</li>
+      <li>R2(b)（狭めた版）、新規の<code>titleReviewed</code>陳腐化、F-8は、修正コスト自体は一定だが、正しさの欠落は未修正の期間分だけ蓄積する。</li>
+      <li>R3-tier-3と<code>MergeSuggestionDecisionEntry</code>の二重命名は、コストが時間で増加しない（前者は優先順位フラグ、後者は書込み元が単一の間は無害）。急ぐ理由がない。</li>
     </ol>
 
     <h3 style="font-size:15px; font-weight:700; margin:24px 0 0;">8.4 今すぐ／issue化してゲート確認／計測してから／対象外</h3>
@@ -562,9 +562,9 @@ flowchart LR
         <h4 style="font-size:12.5px; font-weight:700; margin:0 0 8px; color:#047857;">今すぐ（バグ修正・ゲート不要）</h4>
         <ul class="compact" style="font-size:12px; color:#065f46; padding-left:18px; margin:0;">
           <li>R1（拡張版：フォールバック欠陥・直接呼び出しテストを含む）</li>
-          <li>R2(a) 書込み側（drag handlerの移動化）</li>
+          <li>R2(a)書込み側（ドラッグ処理を移動にする）</li>
           <li>R3-tier-1（監査スナップショット。R1と同時かR1の後）</li>
-          <li>R4（生成的キー集合比較。golden snapshot方式は避ける）</li>
+          <li>R4（生成的なキー集合の比較。ゴールデンスナップショット方式は避ける）</li>
           <li>R5（AGENTS.mdチェックリスト化）</li>
           <li>F-8（開示UIガード条件の修正）</li>
           <li><code>titleReviewed</code>陳腐化修正</li>
@@ -573,16 +573,16 @@ flowchart LR
       <div style="padding:13px 15px; background:#fffbeb; border-radius:6px; border:1px solid #fde68a;">
         <h4 style="font-size:12.5px; font-weight:700; margin:0 0 8px; color:#b45309;">issue化してゲート確認</h4>
         <ul class="compact" style="font-size:12px; color:#78350f; padding-left:18px; margin:0;">
-          <li>R3-tier-2（ROADMAP §A引用＋ADR-0047該当性の明示判断を issue 内で行う）</li>
-          <li>R2(a) 検証・R2(b)（狭めた版）は診断追加まではissueのみで着手可。reject化の判断は別途ゲート</li>
+          <li>R3-tier-2（ROADMAP §Aを引用し、ADR-0047への該当性をissue内で明示的に判断する）</li>
+          <li>R2(a)検証・R2(b)（狭めた版）は診断追加まではissueのみで着手可。拒否へ切り替える判断は別のゲートを要する</li>
         </ul>
       </div>
       <div style="padding:13px 15px; background:#eff6ff; border-radius:6px; border:1px solid #bfdbfe;">
         <h4 style="font-size:12.5px; font-weight:700; margin:0 0 8px; color:#1e40af;">計測してから判断</h4>
         <ul class="compact" style="font-size:12px; color:#1e3a8a; padding-left:18px; margin:0;">
-          <li>R2(a) 検証のreject化（既存文書の違反率を計測後）</li>
-          <li>R3-tier-3（<code>summaryHistory</code>等の実データ増加量、back-compat方針の決定後）</li>
-          <li><code>Island.title</code>/<code>placardCardId</code>乖離の検出（warn-only、低優先）</li>
+          <li>R2(a)検証を拒否方式にすること（既存文書の違反率を計測後）</li>
+          <li>R3-tier-3（<code>summaryHistory</code>等の実データの増加量、後方互換の方針の決定後）</li>
+          <li><code>Island.title</code>/<code>placardCardId</code>乖離の検出（警告のみ、優先度は低い）</li>
         </ul>
       </div>
       <div style="padding:13px 15px; background:#fef2f2; border-radius:6px; border:1px solid #fecaca;">
@@ -590,7 +590,7 @@ flowchart LR
         <ul class="compact" style="font-size:12px; color:#7f1d1d; padding-left:18px; margin:0;">
           <li>初稿R2(b)の「相互排他」枠組み（連鎖統合を正しく拒否してしまうため撤回）</li>
           <li><code>applyCanonicalization()</code>と<code>createRepresentativeMerge()</code>の統合・単一関数化（生きたUI呼び出し元の有無を保守者に確認するまで凍結）</li>
-          <li><code>MergeSuggestionDecisionEntry</code>二重命名フィールドの統合（実害未観測。第2の書込み元出現が発火条件）</li>
+          <li><code>MergeSuggestionDecisionEntry</code>二重命名フィールドの統合（実害未観測。第2の書込み元の出現が着手の条件）</li>
           <li>辺の端点種別（<code>fromKind</code>/<code>toKind</code>）の見直し（4観点とも低優先。未解決の再到達可能性の疑問のみ残る）</li>
         </ul>
       </div>
@@ -608,32 +608,32 @@ flowchart LR
       <tbody>
         <tr><td><strong>F-3</strong></td><td><span class="tag verified">コードで確認</span></td><td><code>canonical_ops.ts</code> / <code>representative_merge.ts</code> / <code>merge_traceability.ts</code> の実読</td></tr>
         <tr><td><strong>F-4</strong></td><td><span class="tag latent">実装確認・未露出</span></td><td>固定値は実在。呼び出し側が当該値を未使用のため利用者影響は現時点でなし</td></tr>
-        <tr><td><strong>F-5</strong></td><td><span class="tag verified">コードで確認</span></td><td><code>App.tsx</code> の first-match 実装と、検証側に島またぎ重複チェックが無いことを確認</td></tr>
+        <tr><td><strong>F-5</strong></td><td><span class="tag verified">コードで確認</span></td><td><code>App.tsx</code> の最初の一致を採用する実装と、検証側に島またぎ重複チェックが無いことを確認</td></tr>
         <tr><td><strong>F-6</strong></td><td><span class="tag verified">コードで確認</span></td><td><code>merge_decision_audit.ts</code> が <code>resolveDecisionOriginTrace()</code> を呼ぶ依存の向き</td></tr>
-        <tr><td><strong>F-7</strong></td><td><span class="tag struct">計数と経緯</span></td><td>21フィールド／12 optional の計数と、各フィールドのissue由来コメント</td></tr>
+        <tr><td><strong>F-7</strong></td><td><span class="tag struct">計数と経緯</span></td><td>21フィールドのうち12が省略可能であるという計数と、各フィールドのissue由来コメント</td></tr>
         <tr><td><strong>F-8</strong></td><td><span class="tag verified">コードで確認</span></td><td><code>App.tsx</code> の出典開示UIガード（複数箇所）が <code>canonicalId</code> の真偽のみで判定していることを確認</td></tr>
-        <tr><td><strong>F-9</strong></td><td><span class="tag verified">コードで確認</span></td><td><code>merge_decision_audit.ts</code> が閲覧時点の文書状態から毎回再計算していることを確認。§08.1 R3-tier-1 の根拠</td></tr>
-        <tr><td>ROADMAP §A 統合ログの記載</td><td><span class="tag verified">実在確認</span></td><td><code>ROADMAP.md</code> に「統合ログ保持（監査対象）」の記載を直接確認。§08.1 R3-tier-2 の根拠</td></tr>
-        <tr><td>FB-RM-MID-04 依存関係の主張</td><td><span class="tag warn" style="background:#fef3c7; color:#92400e;">反証・削除</span></td><td><code>ADR-0007</code> で Done(2026-03-01) 済み・<code>parentIslandId</code>使用と確認。§08.3 で該当の優先度根拠を削除した</td></tr>
+        <tr><td><strong>F-9</strong></td><td><span class="tag verified">コードで確認</span></td><td><code>merge_decision_audit.ts</code> が閲覧時点の文書状態から毎回再計算していることを確認。§08.1 R3-tier-1の根拠</td></tr>
+        <tr><td>ROADMAP §A統合ログの記載</td><td><span class="tag verified">実在確認</span></td><td><code>ROADMAP.md</code> に「統合ログ保持（監査対象）」の記載を直接確認。§08.1 R3-tier-2の根拠</td></tr>
+        <tr><td>FB-RM-MID-04 依存関係の主張</td><td><span class="tag warn" style="background:#fef3c7; color:#92400e;">反証・削除</span></td><td><code>ADR-0007</code> でDone（2026-03-01）済みであり、<code>parentIslandId</code>を使うと確認した。§08.3で該当の優先度根拠を削除した</td></tr>
       </tbody>
     </table>
 
     <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">9.1 本分析が到達していない範囲</h3>
     <ul class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:10px 0 0;">
-      <li><strong>既存データへの影響を測っていない。</strong> F-3・F-5 の不整合が実際の保存済み文書に
-        どれだけ存在するかは未調査。§08.1 の warn/診断段階で計測してから reject 化や R3-tier-3 の要否を
+      <li><strong>既存データへの影響を測っていない。</strong> F-3・F-5の不整合が実際の保存済み文書に
+        どれだけ存在するかは未調査。§08.1の警告と診断の段階で計測してから、拒否方式への切り替えやR3-tier-3の要否を
         判断すべきである。</li>
-      <li><strong>辺の端点（<code>fromKind</code>/<code>toKind</code> が optional）は分析したが本書に含めていない。</strong>
+      <li><strong>辺の端点（<code>fromKind</code>/<code>toKind</code> が省略可能）は分析したが本書に含めていない。</strong>
         端点種別が省略可能なため同一IDが文脈で別実体に解決され得るが、
-        現行の運用規模で問題が顕在化した証跡を確認できなかった。ADR-0047 R-1 の基準を満たさないため保留
+        現行の運用規模で問題が顕在化した証跡を確認できなかった。ADR-0047 R-1の基準を満たさないため保留
         （4観点分析でも同じ結論に達した）。</li>
       <li><strong><code>summaryText</code> と <code>summaryHistory[]</code> の導出関係</strong>は、4観点分析で
         既存の単一書込み関数（<code>updateIslandSummaryWithHistory()</code>）により両フィールドが
-        原子的に同期していることを確認した。<strong>問題ではなく、R3-tier-2 が模倣すべき正しい実装例</strong>
+        原子的に同期していることを確認した。<strong>問題ではなく、R3-tier-2が模倣すべき正しい実装例</strong>
         と判定を更新する。</li>
-      <li><strong>本書は分析であり決定ではない。</strong> §08.1・§08.4 に記載のとおり、候補ごとに
+      <li><strong>本書は分析であり決定ではない。</strong> §08.1・§08.4に記載のとおり、候補ごとに
         ゲート要否（issue起票のみで足りるか、ADR-0047該当性の明示判断を要するか）が異なる。
-        一律に「R1〜R5の実施にはADR-0047のゲート判定を要する」とは扱わない ── 純粋なバグ修正
+        一律に「R1〜R5の実施にはADR-0047のゲート判定を要する」とは扱わない。純粋なバグ修正
         （R1、R2(a)書込み側、F-8、<code>titleReviewed</code>）は設計判断を伴わないため、
         issue起票すらせず着手してよい。</li>
     </ul>
@@ -642,15 +642,15 @@ flowchart LR
     <p style="font-size:12.5px; line-height:1.8; color:#6b7280; margin:10px 0 0;">
       関数従属性・定義域制約・複合キーの観点、および「追記のみの記録を正本とし可変な集計を導出する」構成は、
       渡辺幸三による業務システム設計の一連の論考（ブログ「設計者の発言」、
-      情報システム学会メールマガジン 2022.10.28 No.17-07「『データ・ファースト』な設計スタイルを身につけよう」、
+      情報システム学会メールマガジン2022.10.28 No.17-07「『データ・ファースト』な設計スタイルを身につけよう」、
       三要素分析法）を参照した。<br><br>
       ただし当該体系は<strong>業務システムの物理DB設計</strong>を前提とする。
-      sui-sensemaking はローカルファーストの単一JSON永続化を目標に持つため、
+      sui-sensemakingはローカルファーストの単一JSON永続化を目標に持つため、
       物理正規化・複合主キーの主張はそのまま適用せず、
-      <strong>論理不変条件の設計としてのみ採用</strong>した（§07 冒頭）。
+      <strong>論理不変条件の設計としてのみ採用</strong>した（§07冒頭）。
       またカード本文・空間配置・見立てへは適用しない（§1.1）。
       複合キーの適合範囲は原則としてRDBのマスタデータ層の議論であり、単一JSON可搬性を
-      犠牲にしてまで持ち込むものではない ── この判断は §08 の4観点分析でも一貫して維持された。
+      犠牲にしてまで持ち込むものではない。この判断は§08の4観点分析でも一貫して維持された。
     </p>
   </section>
 

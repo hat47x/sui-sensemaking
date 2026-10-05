@@ -3,11 +3,11 @@
 Revision ID: 20260815_0028
 Revises: 20260813_0027
 
-第2反復（作業の器）の起点。`documents` に主体と生涯を足す:
+第2反復（作業の器）の起点として、`documents` に作成者とライフサイクル状態を足す。
 - `created_by`（nullable、不変事実。既存文書は D3=A で NULL = 「不明」のまま）
 - `lifecycle_state`（既定 active、active/archived のみ。ADR-0033 の削除UI非標準と整合）
 
-作成者・ライフサイクルは payload から推測しない（server-owned 列）。
+作成者・ライフサイクルは payloadから推測しない（server-owned列）。
 """
 
 from collections.abc import Sequence

@@ -3150,14 +3150,17 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   }, [document]);
 
   const handleOpenRecent = useCallback(() => {
-    if (!selectedRecentDocumentId || selectedRecentDocumentId === activeDocumentId) {
+    // A public pack or built-in sample can share its id with a saved document
+    // (docEtag is null until the server copy is loaded), so only skip the reload
+    // when the active document already came from the server.
+    if (!selectedRecentDocumentId || (selectedRecentDocumentId === activeDocumentId && docEtag !== null)) {
       return;
     }
     // ADR-0073 D2=A: an archived canvas opens review-only. The canvas list is
     // the only surface that knows lifecycle_state, so it drives the flag.
     const selectedDoc = canvasDocuments?.find((doc) => doc.id === selectedRecentDocumentId);
     void loadDocument(selectedRecentDocumentId, { isArchived: selectedDoc?.lifecycle_state === "archived" });
-  }, [activeDocumentId, canvasDocuments, loadDocument, selectedRecentDocumentId]);
+  }, [activeDocumentId, canvasDocuments, docEtag, loadDocument, selectedRecentDocumentId]);
 
   const handleProposeOpposingViewpoint = useCallback(async (cardId: string) => {
     if (!document || isProposingOpposingViewpoint) return;
@@ -12594,6 +12597,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       {isStartPanelVisible ? (
         <StartPanel
           currentDocumentId={activeDocumentId}
+          canReopenCurrent={docEtag === null}
           isDirty={isDirty}
           isLoading={isLoading}
           isReadOnly={isReadOnly}
@@ -12947,6 +12951,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       onOpenRecent={handleOpenRecent}
       isLoading={isLoading}
       activeDocumentId={activeDocumentId}
+      canReopenCurrent={docEtag === null}
       documents={canvasDocuments}
       isCanvasListLoading={isCanvasListLoading}
       myDocumentsOnly={myDocumentsOnly}

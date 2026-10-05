@@ -18,7 +18,7 @@ SUIの一次利用仕事は、まとまりきらない定性資料を早すぎ�
 
 高度な方式ほど常に価値が高いわけではない。SUIでは、利用者が新しい材料や関係に気づけること、少数意見・矛盾・保留を吸収しないこと、利用者自身の判断が残ること、local/offlineや `SUI_LLM_PROVIDER=none` の主要価値を壊さないことを、モデルの高度さより優先する。
 
-2026-09には COGNITIVE-ASSOC 系の探索で、A/C/E等を比較する評価ハーネス、疎表現候補、固定semantic provider等を検討した。しかし2026-10-01の管理文書整理で、それらdogfood/研究成果物は正本から削除された。git履歴には残るが、現時点で固定semantic baseline Eの実モデル実行は完了しておらず、方式のwinner・製品採用判断は成立していない。
+2026-09にはCOGNITIVE-ASSOC系の探索で、A/C/E等を比較する評価ハーネス、疎表現候補、固定semantic provider等を検討した。しかし2026-10-01の管理文書整理で、それらdogfood/研究成果物は正本から削除された。git履歴には残るが、現時点で固定semantic baseline Eの実モデル実行は完了しておらず、方式のwinner・製品採用判断は成立していない。
 
 一方、現行正本には既に、`llm_input_ir_spec.md` の決定論的 `cluster_candidates`、`domain.md` の探索権限と昇格権限の分離、`ai_sensemaking_execution_procedures.md` のproposal-only / 反スコアリング / SafeMode、`ADR-0043` の複雑性予算、`ADR-0069` の意味保全IR、`ADR-0084` の多段探索許容がある。
 
@@ -32,7 +32,7 @@ SUIの一次利用仕事は、まとまりきらない定性資料を早すぎ�
 
 候補には、近いかもしれないカード集合、一緒に見ると意味が変わるカード、既存の島から漏れている残余、対立・矛盾・反証の可能性、別の切り口、既存構造を壊さず比較できる仮配置を含められる。
 
-候補は Accepted / Consensus / `human_reviewed` を成立させない。保留中のカードを権限なく新しいまとまりへ吸収しない。
+候補はAccepted / Consensus / `human_reviewed` を成立させない。保留中のカードを権限なく新しいまとまりへ吸収しない。
 
 ### 2. 方式は単純なものから段階的に昇格する
 

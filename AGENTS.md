@@ -1,6 +1,6 @@
 # AGENTS.md
 
-sui-sensemaking の生成AI向け入口。体制は **1人の開発者＋生成AI** で、管理文書は最小限にする。進捗の正本はGit履歴。
+sui-sensemakingの生成AI向け入口。体制は **1人の開発者＋生成AI** で、管理文書は最小限にする。進捗の正本はGit履歴。
 
 ## ルール
 
@@ -43,5 +43,5 @@ sui-sensemaking の生成AI向け入口。体制は **1人の開発者＋生成A
 
 ## 文書形式
 
-- 新規の `02_Architecture/` 設計文書は、必要な場合のみHTML + Mermaid（`file://` 直開き前提のため classic `<script>` のUMD版を使う）。Markdownと二重管理しない。
-- `02_Architecture/design/` は Claude Design の出力専用。
+- 新規の `02_Architecture/` 設計文書は、必要な場合のみHTML + Mermaid（`file://` 直開き前提のためclassic `<script>` のUMD版を使う）。Markdownと二重管理しない。
+- `02_Architecture/design/` はClaude Designの出力専用。

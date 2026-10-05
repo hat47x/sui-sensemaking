@@ -1,6 +1,6 @@
 # Unicode絵文字と固定画像セットの比較
 
-区分: Internal / Research（DOMAIN-VISUAL-CUE-01 T5 事前調査）
+区分: Internal / Research（DOMAIN-VISUAL-CUE-01 T5事前調査）
 
 Updated: 2026-07-20
 
@@ -14,8 +14,8 @@ Updated: 2026-07-20
 
 各OSのシステムemojiフォントがレンダリングするUnicode絵文字文字。アプリケーション側では単なる文字（`"📍"`）として扱い、OS/ブラウザがフォントでレンダリングする。
 
-**現行プロトタイプの使用セット**（`RepresentativeVisualCuePrototypePanel.tsx`）:
-`📍 🔎 ⏳ ✍️ 🪪 ↗️ 💻 ⚠️`
+現行プロトタイプの使用セット（`RepresentativeVisualCuePrototypePanel.tsx`）:
+`📍 🔎 ⏳ ✍ 🪪 ↗ 💻 △`
 
 ### 1.2 固定画像セット（PNG/SVGバンドル）
 
@@ -54,14 +54,14 @@ Updated: 2026-07-20
 | 🪪 | Identification Card | カード風、フラット | カード風、立体（比較的新しいemoji） | 欠缺の可能性あり（Noto未収録の場合） | **高**: Linuxで表示されない可能性 |
 | ↗️ | Up-Right Arrow | 右上矢印、青 | 右上矢印、灰〜黒 | 右上矢印（実装依存） | **低**: 方向は共通 |
 | 💻 | Laptop | ノートPC、グレー | ノートPC、シルバー・光沢 | ノートPC、グレー | **低**: 色調差のみ |
-| ⚠️ | Warning | 黄三角・！、フラット | 黄三角・！、フラット | 黄三角・！（実装依存） | **低**: 警告記号はOS間で比較的安定 |
+| △ | Warning | 黄三角・！、フラット | 黄三角・！、フラット | 黄三角・！（実装依存） | **低**: 警告記号はOS間で比較的安定 |
 
 ## 4. アクセシビリティ補足
 
 ### 4.1 Unicode絵文字のスクリーンリーダー挙動
 
 - **Windows（NVDA）**: Unicode名を読み上げる。`📍`→"round pushpin"。読み上げ速度・正確さはNVDAのバージョンとemojiデータベースに依存。
-- **macOS（VoiceOver）**: Unicode名を読み上げる。`📍`→"round pushpin"。Appleのemojiは高品質な読み上げ名を持つが、新しいemoji（🪪等）はOSバージョン依存。
+- **macOS（VoiceOver）**: Unicode名を読み上げる。`📍`→"round pushpin"。Appleのemojiは高品質な読み上げ名を持つが、新しいemoji（等）はOSバージョン依存。
 - **Linux（Orca）**: 読み上げはシステムのemojiデータに依存。欠缺時は無音または"unicode character"。
 
 ### 4.2 固定画像のアクセシビリティ
@@ -79,7 +79,7 @@ Updated: 2026-07-20
 
 ### 現時点での推奨: Unicode絵文字をPhase 1の既定とし、SVG/PNGを補完として段階的に追加
 
-**理由**:
+理由は次のとおりです。
 
 1. **配布容量ゼロ**: 初期実装に追加の配布負荷がない。8種類のPNG（約12KB）は小さいが、cueが増えるほど容量が線形に増加する。一方、emojiはOSフォントに依存するため、cueを100種に増やしても配布容量は増えない。
 
@@ -100,7 +100,7 @@ Updated: 2026-07-20
 
 ## 6. 次の一手（T6への入力）
 
-1. 現行8種のemojiをUnicode 13.0以前の普及emojiに絞り、🪪（Unicode 14.0、2021年）を差し替え候補としてリストする。
+1. 現行8種のemojiをUnicode 13.0以前の普及emojiに絞り、（Unicode 14.0、2021年）を差し替え候補としてリストする。
 2. 「位置・形状・方向で意味を伝える」原則に従い、全8種がOS間で同一方向・同一基本形状を持つことを実機スクリーンショットで確認する（AC-6の範囲）。
 3. SVGセットの並行準備は行わず、emoji欠缺が実機検証で確認されたcueだけをT7で個別にSVG化する。
 4. ライセンス問題（emojiフォントの再配布）は発生しないため、ライセンス面でのT6判断は「emoji方式に追加ライセンス不要」で確定とする。

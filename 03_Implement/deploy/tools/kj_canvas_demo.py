@@ -134,7 +134,7 @@ def phase3_contradiction():
     for a, b in pairs:
         data = call_llm("detect_contradiction",
                         f"Card A: {a}\nCard B: {b}")
-        status = "⚡矛盾あり" if data["hasContradiction"] else "✓ 矛盾なし"
+        status = "矛盾あり" if data["hasContradiction"] else "矛盾なし"
         print(f"  「{a[:30]}...」 vs 「{b[:30]}...」 → {status}")
 
 

@@ -27,31 +27,31 @@ CLIコマンド仕様を早期に固定しすぎると、MVP後のAPI確定前�
    - `2`: usage error
    - `3`: runtime error
    - `4`: auth error
-5. 互換性契約:
+5. 互換性契約
    - 既存引数の意味変更は禁止。
    - 廃止予定機能は最低1フェーズの非推奨期間を置く。
 6. CE4監査統合契約（API/CLI同値）:
    - 成功条件は `equivalenceKey AND bundleHash` の同時成立のみ。
    - `proposal-only` を固定し、`auto-apply` / `auto-confirm` / `auto-publish` を禁止する。
-   - 監査4イベント `query -> bundle -> proposal -> apply` が欠損/逆順の場合は fail-closed とする。
+   - 監査4イベント `query -> bundle -> proposal -> apply` が欠損/逆順の場合は安全側で停止する。
    - 失敗分類は `validation_failed` / `audit_violation` / `equivalence_violation` / `policy_violation` の4種を固定語彙とする。
 
 ### 2) 後で決める契約（保留）
 
 - 各サブコマンド配下の詳細オプション。
 - `--profile` / `--request-id` / `--dry-run` の既定値。
-- エラー本文フォーマット（human-readableの詳細）。
-- exit code の具体値割当（CE4失敗分類との数値マッピング）。
+- エラー本文フォーマット（人が読める形式の詳細）。
+- exit codeの具体値割当（CE4失敗分類との数値マッピング）。
 
 ## Command-level Acceptance（実装着手時の受入判定）
 
-> 本節は「実装後に必ず満たすべき受入基準」。現時点ではテスト設計の固定が目的。
+> 本節は「実装後に必ず満たすべき受け入れ基準」である。現時点では、テスト設計の固定が目的である。
 
 ### A. 契約テスト（必須）
 
 - `kj --help` にトップレベル名前空間が表示される。
 - `kj <namespace> --help` が0終了し、usageを返す。
-- 不正引数入力で exit code `2` を返す。
+- 不正引数入力でexit code `2` を返す。
 
 ### B. I/O契約テスト（必須）
 
@@ -60,7 +60,7 @@ CLIコマンド仕様を早期に固定しすぎると、MVP後のAPI確定前�
 
 ### B-2. CE4監査契約テスト（必須）
 
-- 同一入力に対し API/CLI で `equivalenceKey AND bundleHash` が同時一致する。
+- 同一入力に対しAPI/CLIで `equivalenceKey AND bundleHash` が同時一致する。
 - 監査4イベントの順序整合（`query -> bundle -> proposal -> apply`）が機械判定できる。
 - 欠損/逆順/矛盾値は `audit_violation` として失敗終了する。
 - `auto-*` 系操作痕跡検出時は `policy_violation` として失敗終了する。
@@ -79,7 +79,7 @@ CLIコマンド仕様を早期に固定しすぎると、MVP後のAPI確定前�
 3. `pytest 03_Implement/backend/tests/cli_contract/test_stdio_contract.py`
 4. `pytest 03_Implement/backend/tests/cli_contract/test_backward_compat.py`
 
-合格条件:
+合格条件を次に示す。
 - 上記4コマンドが全て終了コード0。
 - 失敗時は互換性破壊として扱い、修正またはADR改訂のどちらかを同一PRで実施する。
 
@@ -99,14 +99,14 @@ CLIコマンド仕様を早期に固定しすぎると、MVP後のAPI確定前�
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
 | **業務設計** | CLIコマンド仕様を早期に固定しすぎるとMVP後のAPI確定前提と衝突するが、実装者が迷わないために「何を契約として守るか」を先に決める必要がある。CLI名`kj`と予約名前空間（doc/view/policy/audit）を固定 | 機能: 共通I/F契約（--format/--input/--output/--quiet/--verbose/--debug）とexit code契約（0-4）を固定。データ: 業務コマンドの機能仕様とAPIレスポンススキーマの新規確定は非対象 |
-| **データ設計** | exit code（0成功/1 validation/2 usage/3 runtime/4 auth）を実装が維持する暫定契約として固定。CE4実装前にAPI/CLI/監査の契約判定軸を固定 | 業務: 実装者は「まず何のテストを作るか」を迷わない。機能: mock-firstで依存切断検証を先行できる |
+| **データ設計** | exit code（0成功/1 validation/2 usage/3 runtime/4 auth）を実装が維持する暫定契約として固定。CE4実装前にAPI/CLI/監査の契約判定軸を固定 | 業務: 実装者は「まず何のテストを作るか」を迷わない。機能: モックを先に作って依存切断検証を先行できる |
 | **機能設計** | CLI契約（名前空間・共通I/F・exit code・互換性）を実装が守る契約として定義し、破壊的変更を検知可能にする | 業務: 仕様未確定領域を残しつつ破壊的変更を検知する。データ: CLIとAPIの契約判定軸をCE4実装前に固定 |
 
 ## Consequences
 
 - 実装者は「まず何のテストを作るか」を迷わない。
 - 仕様未確定領域を残しつつ、破壊的変更を検知できる。
-- CE4実装着手前に API/CLI/監査の契約判定軸が固定され、mock-first で依存切断検証を先行できる。
+- CE4実装着手前にAPI/CLI/監査の契約判定軸が固定され、モックを先に作って依存切断検証を先行できる。
 
 ## Traceability
 
@@ -120,6 +120,6 @@ CLIコマンド仕様を早期に固定しすぎると、MVP後のAPI確定前�
 
 ## Stream C 注記（CE4接続契約の固定範囲）
 
-- 本ADRで固定するのは API/CLI 間の語彙と判定契約のみ（`decision/classification/equivalenceSatisfied`）。
+- 本ADRで固定するのはAPI/CLI間の語彙と判定契約のみ（`decision/classification/equivalenceSatisfied`）。
 - CLI終了コードの数値割当、HTTPステータスの詳細、監査配送方式は未固定（実装フェーズで確定）。
-- mock-first（`sourceBundleHash=mock:<64hex>`）を real と同一 fail-closed 規律で扱う。
+- モックを先に作る方式（`sourceBundleHash=mock:<64hex>`）でも、実物と同じ、安全側で停止する規律で扱う。

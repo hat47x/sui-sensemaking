@@ -70,7 +70,7 @@ sui-sensemakingの既存UIを前提に、**マスタ系設定データを安全�
 
 StartPanelとRecent documents dialogを、サーバー正本の文書一覧へ移行する提案を作ってください。
 
-必須要素:
+必須要素は次のとおりです。
 
 - タイトル、更新日時、補助的なID、主操作「開く」。本文抜粋、カード数、サムネイル、スコア、利用頻度順位は不要。
 - 更新日時の新しい順を既定にし、取得済みのタイトル/IDの絞り込みを提供。
@@ -155,7 +155,7 @@ Admin全体の将来IAは「アクセス登録」「外部接続」「システ�
 5. **既存→提案の置換表**: StartPanel local recent、Recent dialog、View controls、Patch workspaceの各要素がどう変わるか。初期表示に何が増減するか。
 6. **a11y/focus仕様**: role、accessible name、初期focus、Tab順、Escape、focus復帰、live region、390pxでの読み順。
 7. **レッドライン**: 色・余白・タイポ・行高・truncate/折返し・メニュー開閉・token表示/閉鎖の禁止事項。
-8. **自己照合**: 下記の採否を✓/△/✗と理由つきで回答。
+8. **自己照合**: 下記の採否を○/△/×と理由つきで回答。
 
 可能なら既存の`.dc.html`成果物と同じ方式で、R8-A〜Fを切り替えられる操作可能なプロトタイプを1点作ってください。実装コードやAPIを発明するのではなく、状態fixtureで画面遷移を再現してください。R8-E/Fには「future SaaS / ADR pending」を成果物注記として付け、製品UIのバッジにはしないでください。
 

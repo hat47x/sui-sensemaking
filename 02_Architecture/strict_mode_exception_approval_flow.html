@@ -41,19 +41,19 @@
       <span style="width:8px; height:8px; border-radius:2px; background:#7c3aed; display:inline-block;"></span>
       sui-sensemaking ・ Architecture Spec ・ AUTH-OPS-03
     </div>
-    <h1 style="font-size:30px; line-height:1.34; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">strict mode 例外緩和 承認フロー仕様</h1>
+    <h1 style="font-size:30px; line-height:1.34; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">strictモードの例外緩和と承認フローの仕様</h1>
     <p style="font-size:15px; line-height:1.7; color:#52606d; margin:14px 0 0; max-width:38em; text-wrap:pretty;">
       <code>SUI_ALLOW_JIT_PROVISIONING=false</code>（strict）を本番標準としつつ、例外的に <code>true</code> へ緩和する際の承認フローを設計レベルで固定する。人間が短時間で判断でき、AIエージェントが推測で承認フローを補完しないことを目的とする。
     </p>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:22px;">
-      <span class="badge" style="background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe;">Status: Accepted (2026-03-06, D1〜D4 fixed)</span>
-      <span class="badge" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">適用範囲=組織運用の一時緩和のみ</span>
+      <span class="badge" style="background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe;">状態：承認済み（2026-03-06、D1〜D4を固定）</span>
+      <span class="badge" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">適用範囲は組織運用の一時的な緩和のみ</span>
     </div>
     <p style="font-size:12.5px; line-height:1.7; color:#6b7280; margin:20px 0 0; padding:10px 13px; background:#f8fafc; border-left:3px solid #cbd5e1;">
-      本書が正本（新規設計文書はHTML単独。<code>AGENTS.md</code> §3）。適用範囲: 組織運用で <code>SUI_ALLOW_JIT_PROVISIONING=false</code> を一時的に緩和する場合だけ適用する。個人OSSの日常開発・通常復旧の承認フローではない。2者承認を用意できない場合は例外を有効化せず、strict設定を維持する。
+      本書が正本である（新規設計文書はHTML単独とする。<code>AGENTS.md</code> §3）。適用範囲は、組織運用で <code>SUI_ALLOW_JIT_PROVISIONING=false</code> を一時的に緩和する場合に限る。個人OSSの日常の開発や通常の復旧に使う承認フローではない。2者承認を用意できない場合は例外を有効化せず、strict設定を維持する。
     </p>
     <p style="font-size:12px; line-height:1.6; color:#94a3b8; margin:10px 0 0;">
-      Owner: Security Officer / System Owner / Platform Operator ・ Scope: <code>enterprise_architecture.html</code>, <code>04_Documentation/operations.md</code>, <code>security.md</code>, <code>security_operational_guidelines.md</code>, <code>acceptance_check.md</code>, <code>03_Implement/frontend/docs/e2e_testing.md</code> ・ Related issue: <code>issue-AUTH-OPS-03-strict-mode-exception-relaxation-runbook-plan.md</code>
+      責任者：Security Officer、System Owner、Platform Operator ・ 対象範囲：<code>enterprise_architecture.html</code>, <code>04_Documentation/operations.md</code>, <code>security.md</code>, <code>security_operational_guidelines.md</code>, <code>acceptance_check.md</code>, <code>03_Implement/frontend/docs/e2e_testing.md</code> ・ 関連issue：<code>issue-AUTH-OPS-03-strict-mode-exception-relaxation-runbook-plan.md</code>
     </p>
   </header>
 
@@ -63,7 +63,7 @@
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">00</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">この文書の読み方・登場人物</h2>
     </div>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;">認証の専門知識が深くなくても、次の順序で読むと判断しやすい: <strong>1章（目的）</strong>→<strong>4章（状態遷移）</strong>→<strong>6章（Q1〜Q10）</strong>→<strong>8章（停止/復旧）</strong>。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;">認証の専門知識が深くなくても、<strong>1章（目的）</strong>、<strong>4章（状態遷移）</strong>、<strong>6章（Q1〜Q10）</strong>、<strong>8章（停止と復旧）</strong>の順に読むと判断しやすい。</p>
     <table class="grid">
       <thead><tr><th style="width:26%;">役割</th><th>責務</th></tr></thead>
       <tbody>
@@ -80,17 +80,17 @@
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">01</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">目的・非目標・固定済み契約</h2>
     </div>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;"><strong>目的:</strong> strictを本番標準としつつ、例外的に緩和する際の承認フローを設計レベルで固定する。(1) 人間が「何を決めれば作業開始できるか」を短時間で判断できること、(2) AIエージェントが推測で承認フローを補完せず停止条件を守れること。</p>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:10px 0 0;"><strong>非目標:</strong> コードで承認バイパスを実装すること／監査スキーマへPIIを追加すること／既存のSafeMode・read-only優先順位を変更すること。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;"><strong>目的</strong>　strictを本番標準としつつ、例外的に緩和する際の承認フローを設計レベルで固定する。(1)人間が「何を決めれば作業開始できるか」を短時間で判断できること、(2) AIエージェントが推測で承認フローを補完せず停止条件を守れること。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:10px 0 0;"><strong>非目標</strong>　承認のバイパスをコードで実装すること、監査スキーマにPIIを追加すること、既存のSafeModeとread-onlyの優先順位を変更することは、いずれも目的としない。</p>
     <table class="grid">
       <thead><tr><th style="width:34%;">固定済み契約</th><th>内容</th></tr></thead>
       <tbody>
         <tr><td>strict標準</td><td><code>SUI_ALLOW_JIT_PROVISIONING=false</code>。例外緩和は通常「一時変更」として扱う</td></tr>
-        <tr><td>恒常運用の扱い</td><td>組織ポリシーで <code>true</code> を恒常採用する場合は「例外フロー」ではなく別途「公開運用プロファイル」を定義・審査・監査する</td></tr>
+        <tr><td>恒常運用の扱い</td><td>組織ポリシーで <code>true</code> を恒常的に採用する場合は、「例外フロー」ではなく、別途「公開運用プロファイル」を定義し、審査し、監査する</td></tr>
         <tr><td>2者承認責務</td><td>Security Officer + System Owner</td></tr>
         <tr><td>実行責務</td><td>Platform Operator（承認済み変更のみ実行）</td></tr>
-        <tr><td>監査最小項目</td><td>時刻 / 理由 / 承認者 / 対象環境 / 復旧条件</td></tr>
-        <tr><td>PII非保存</td><td>subject生値、roles/groups/policyRef生値、自由記述PIIを保存しない</td></tr>
+        <tr><td>監査最小項目</td><td>時刻、理由、承認者、対象環境、復旧条件</td></tr>
+        <tr><td>PII非保存</td><td>サブジェクトの生値、rolesとgroupsとpolicyRefの生値、自由記述のPIIを保存しない</td></tr>
       </tbody>
     </table>
   </section>
@@ -132,7 +132,7 @@ stateDiagram-v2
         Closed へ遷移してはならない
     end note
       </pre>
-      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">実線＝正常経路。<code>StoppedForClarification</code> / <code>Rejected</code> はどの申請段階からも到達しうる（強制ガード＝Fail Fast）。再申請は新しい <code>requestId</code> で行う。</figcaption>
+      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">実線は正常な経路を表す。<code>StoppedForClarification</code>と<code>Rejected</code>は、どの申請段階からも到達しうる（強制ガードによる早期失敗）。再申請は新しい <code>requestId</code> で行う。</figcaption>
     </figure>
 
     <table class="grid">
@@ -187,9 +187,9 @@ sequenceDiagram
         <tr><td>監査記録の整合確認</td><td>A</td><td>A</td><td>R</td></tr>
       </tbody>
     </table>
-    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">凡例: A=Accountable, R=Responsible, C=Consulted, I=Informed。承認（A/R）と実行（A/R）を分離し、単独判断で緩和が常態化しないようにする。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">凡例はA（Accountable、説明責任）、R（Responsible、実行責任）、C（Consulted、相談先）、I（Informed、報告先）である。承認（A/R）と実行（A/R）を分離し、単独の判断で緩和が常態化しないようにする。</p>
     <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:14px 0 0;">
-      <strong>HIL-RS Governance連携補強（A1 Contract Hardening）:</strong> Security Officer / System Owner は承認責務のみ、Platform Operator は実行責務のみを負う。<code>requester</code> と <code>approver</code> の兼務は禁止し、<code>approver_a != approver_b</code> を必須とする（dual-control）。<code>Approval Record=Pending</code> が1件でも残る場合、<code>Approved</code> / <code>ActiveException</code> への遷移は禁止する。<code>decisionQueueTransition</code> は <code>Pending → Approved</code> または <code>Pending → Rejected</code> のみ許可し、Pending bypassを禁止する。
+      <strong>HIL-RSガバナンス連携の補強（A1の契約強化）</strong>　Security Officer / System Ownerは承認責務のみ、Platform Operatorは実行責務のみを負う。<code>requester</code> と <code>approver</code> の兼務は禁止し、<code>approver_a != approver_b</code> を必須とする（二者統制）。<code>Approval Record=Pending</code> が1件でも残る場合、<code>Approved</code> / <code>ActiveException</code> への遷移は禁止する。<code>decisionQueueTransition</code> は <code>Pending → Approved</code> または <code>Pending → Rejected</code> のみ許可し、Pendingの迂回を禁止する。
     </p>
   </section>
 
@@ -197,19 +197,19 @@ sequenceDiagram
   <section style="padding:32px 0 0;">
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">04</span>
-      <h2 style="font-size:20px; font-weight:700; margin:0;">Q1〜Q10 決裁結果（D1〜D4 固定値）</h2>
+      <h2 style="font-size:20px; font-weight:700; margin:0;">Q1〜Q10決裁結果（D1〜D4固定値）</h2>
     </div>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;">本節の値と異なる運用を行う場合は、新しい <code>requestId</code> で再承認する。「未決のまま実行」は禁止。未決項目が1つでも実施判断に影響する場合は <code>StoppedForClarification</code>。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;">本節の値と異なる運用を行う場合は、新しい <code>requestId</code> で再承認する。「未決のまま実行」は禁止する。未決の項目が1つでも実施の判断に影響する場合は、<code>StoppedForClarification</code>とする。</p>
     <table class="grid">
       <thead><tr><th style="width:8%;">ID</th><th style="width:26%;">決定テーマ</th><th style="width:30%;">固定値</th><th>実務メモ</th></tr></thead>
       <tbody>
-        <tr><td>D1</td><td>承認順序 / 承認TTL</td><td>Security Officer先行、TTL=4h</td><td>4h以内に2者承認が揃わない申請は失効</td></tr>
-        <tr><td>D2</td><td>適用スコープ / 最大継続時間</td><td>tenant単位、最大2h</td><td>2h経過時は自動でstrict復帰へ遷移</td></tr>
-        <tr><td>D3</td><td>復旧判定者 / 代理承認</td><td>2者共同判定、代理承認なし</td><td>代理承認は常に不可（緊急時も再申請）</td></tr>
-        <tr><td>D4</td><td>保存先 / 事後レビュー / SLA</td><td>変更台帳+監査ID相互参照、48hレビュー、15m一次/60m二次</td><td>SLA違反はインシデント管理へ接続</td></tr>
+        <tr><td>D1</td><td>承認順序と承認TTL</td><td>Security Officerが先、TTLは4時間</td><td>4時間以内に2者承認が揃わない申請は失効</td></tr>
+        <tr><td>D2</td><td>適用スコープと最大継続時間</td><td>テナント単位、最大2時間</td><td>2時間が経過した時点で自動的にstrict復帰へ遷移</td></tr>
+        <tr><td>D3</td><td>復旧判定者と代理承認</td><td>2者共同判定、代理承認なし</td><td>代理承認は常に不可（緊急時も再申請）</td></tr>
+        <tr><td>D4</td><td>保存先、事後レビュー、SLA</td><td>変更台帳と監査IDの相互参照、48時間でレビュー、一次は15分、二次は60分</td><td>SLA違反はインシデント管理につなぐ</td></tr>
       </tbody>
     </table>
-    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">決裁記録（確定）: 2026-03-06 ・ Security Officer, System Owner, Platform Architecture Owner ・ Rationale: strict既定運用を維持しつつ、例外運用時間・承認期限・監査SLAを最小化して誤運用余地を縮小する ・ Review date: 2026-06-30。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;">決裁記録（確定）。決裁日は2026-03-06。決裁者はSecurity Officer、System Owner、Platform Architecture Owner。理由は、strict既定運用を維持しつつ、例外運用の時間、承認期限、監査SLAを最小化して、誤運用の余地を縮小することである。レビュー日は2026-06-30。</p>
 
     <pre class="block">[Approval Flow Decision Record]
 - Date (UTC):
@@ -251,19 +251,19 @@ sequenceDiagram
     <table class="grid">
       <thead><tr><th style="width:30%;">区分</th><th>条件</th></tr></thead>
       <tbody>
-        <tr><td rowspan="3">停止条件<br><span style="font-weight:400; color:#94a3b8;">→ <code>StoppedForClarification</code></span></td><td>Q1〜Q10の未確定項目が、発動/復旧判定に必要</td></tr>
+        <tr><td rowspan="3">停止条件<br><span style="font-weight:400; color:#94a3b8;">→ <code>StoppedForClarification</code></span></td><td>Q1〜Q10の未確定項目が、発動または復旧の判定に必要</td></tr>
         <tr><td>2者承認の片方が不在で代理承認条件が未定義</td></tr>
         <tr><td>監査保存先が不明で記録責務を満たせない</td></tr>
         <tr><td rowspan="4">復旧条件<br><span style="font-weight:400; color:#94a3b8;">→ strict復帰実行</span></td><td>承認TTL到達</td></tr>
         <tr><td>例外最大継続時間到達</td></tr>
-        <tr><td>Security Officer または System Owner が停止指示</td></tr>
+        <tr><td>Security OfficerまたはSystem Ownerが停止を指示した</td></tr>
         <tr><td>監査記録不整合が発見された</td></tr>
       </tbody>
     </table>
     <div style="margin:16px 0 0; padding:13px 15px; background:#fffbeb; border-left:3px solid #f59e0b; border-radius:0 4px 4px 0;">
-      <p style="font-size:13px; line-height:1.7; color:#78350f; margin:0;"><strong>非矛盾ルール（§8.4）:</strong> 停止条件は「例外を有効化してよいか」の判定にのみ使用する。復旧条件は「すでに有効な例外をstrictに戻す」判定にのみ使用する。<strong>両方が同時に成立した場合、優先順位は「復旧実行 &gt; 停止記録」</strong>とする（先にstrict復帰を完了させる）。</p>
+      <p style="font-size:13px; line-height:1.7; color:#78350f; margin:0;"><strong>非矛盾ルール（§8.4）</strong>　停止条件は「例外を有効化してよいか」の判定にのみ使用する。復旧条件は「すでに有効な例外をstrictに戻す」判定にのみ使用する。<strong>両方が同時に成立した場合は、復旧実行を停止記録より優先する</strong>（先にstrict復帰を完了させる）。</p>
     </div>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>復旧完了判定:</strong> <code>SUI_ALLOW_JIT_PROVISIONING=false</code> へ復帰済み／<code>endedAt</code>と復旧理由が記録済み／事後レビューの期限と担当が記録済み。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:14px 0 0;"><strong>復旧完了判定</strong>　<code>SUI_ALLOW_JIT_PROVISIONING=false</code> へ復帰済みで、<code>endedAt</code>と復旧理由が記録済みで、事後レビューの期限と担当も記録済みであること。</p>
   </section>
 
   <!-- 9. 文書反映トレース + 状態更新方針 -->
@@ -287,13 +287,13 @@ flowchart LR
     <table class="grid">
       <thead><tr><th style="width:16%;">状態</th><th style="width:34%;">移行条件</th><th>必須エビデンス</th></tr></thead>
       <tbody>
-        <tr><td>Draft</td><td>D1〜D4 のうち1つでも未確定</td><td>未確定項目の列挙</td></tr>
-        <tr><td>Open</td><td>D1〜D4確定、反映先未同期</td><td>本書 §04 の固定値</td></tr>
+        <tr><td>Draft</td><td>D1〜D4のうち1つでも未確定</td><td>未確定項目の列挙</td></tr>
+        <tr><td>Open</td><td>D1〜D4確定、反映先未同期</td><td>本書§04の固定値</td></tr>
         <tr><td>In Progress</td><td><code>enterprise_architecture.html</code> / <code>operations.md</code> / <code>security.md</code> へ同期開始</td><td>同期差分への参照</td></tr>
-        <tr><td>Done</td><td>3文書同期 + issue README/decision-pack が整合</td><td>docs-check結果と最終要約</td></tr>
+        <tr><td>Done</td><td>3文書が同期し、issueのREADMEとdecision-packが整合している</td><td>docs-check結果と最終要約</td></tr>
       </tbody>
     </table>
-    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">本方針により、AUTH-OPS-03 は「決定固定だけでDoneにしない」。運用文書同期と進捗管理同期の両方が完了した時点でDoneとする。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">本方針により、AUTH-OPS-03は「決定固定だけでDoneにしない」。運用文書同期と進捗管理同期の両方が完了した時点でDoneとする。</p>
   </section>
 
   <!-- CDC / 用語 -->
@@ -302,7 +302,7 @@ flowchart LR
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">08</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">CDC（Change Decision Contract）と用語</h2>
     </div>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;">AUTH系の設計変更は、実装/運用反映前に <strong>CDC</strong> を必ず確定する。<strong>C（Context）</strong>=変更対象・非目標・D1〜D4との整合。<strong>D（Decision）</strong>=採択/却下した選択肢・理由・適用開始日・失効条件。<strong>C（Consequence）</strong>=影響範囲・検証方法・ロールバック条件・停止条件。CDC未確定の変更要求は <code>DraftRequest</code> のままとし、<code>ApprovalPending</code> へ遷移しない。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0;">AUTH系の設計変更は、実装や運用へ反映する前に <strong>CDC</strong> を必ず確定する。<strong>C（Context）</strong>は変更対象、非目標、D1〜D4との整合を指す。<strong>D（Decision）</strong>は採択または却下した選択肢、理由、適用開始日、失効条件を指す。<strong>C（Consequence）</strong>は影響範囲、検証方法、ロールバック条件、停止条件を指す。CDCが未確定の変更要求は <code>DraftRequest</code> のままとし、<code>ApprovalPending</code> へ遷移させない。</p>
     <pre class="block">[CDC]
 - Context:
 - Decision:
@@ -320,7 +320,7 @@ flowchart LR
         <tr><td>Q1〜Q10</td><td>現在未確定の運用判断項目（順序、TTL、代理承認など）</td></tr>
       </tbody>
     </table>
-    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:14px 0 0;"><strong>運用プロファイルの選択:</strong> (1) strict標準プロファイル（推奨既定）— <code>false</code>を通常運用、<code>true</code>は承認付き一時運用。(2) 公開運用プロファイル（条件付き）— <code>true</code>を継続運用（SNS的な多ユーザ閲覧など事前登録制を維持しづらいケース）。この場合はアクセス境界・監視・フェイルセーフ・定期レビューの補完統制を <code>04_Documentation/security_operational_guidelines.md</code> で提示する。どちらのプロファイルでもSafeMode既定ON・PII最小化・監査最小化契約は維持する。</p>
+    <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:14px 0 0;"><strong>運用プロファイルの選択</strong>　(1) strict標準プロファイル（推奨の既定）では、<code>false</code>を通常運用とし、<code>true</code>は承認付きの一時運用とする。(2)公開運用プロファイル（条件付き）では、<code>true</code>を継続して運用する（SNSのような多数の利用者による閲覧など、事前登録制を維持しにくい場合）。この場合は、アクセス境界、監視、フェイルセーフ、定期レビューによる補完統制を <code>04_Documentation/security_operational_guidelines.md</code> に示す。どちらのプロファイルでも、SafeModeの既定ON、PIIの最小化、監査最小化の契約は維持する。</p>
   </section>
 
   <!-- 検証履歴(旧Stream各ログの集約) -->
@@ -329,14 +329,14 @@ flowchart LR
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">09</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">整合検証の履歴</h2>
     </div>
-    <p style="font-size:13px; line-height:1.7; color:#6b7280; margin:10px 0 0;">用語（Security Officer / System Owner / Platform Operator）・役割分離・D1〜D4固定値・下流文書（<code>enterprise_architecture.md</code> / <code>operations.md</code> / <code>security.md</code>）との整合を、複数回にわたり監査した記録。各回とも同一の4観点（用語・役割・導線・固定値）を再検証している。</p>
+    <p style="font-size:13px; line-height:1.7; color:#6b7280; margin:10px 0 0;">用語（Security Officer / System Owner / Platform Operator）・役割分離・D1〜D4の固定値・下流文書（<code>enterprise_architecture.md</code> / <code>operations.md</code> / <code>security.md</code>）との整合を、複数回にわたり監査した記録。各回とも同一の4観点（用語・役割・導線・固定値）を再検証している。</p>
     <table class="grid">
       <thead><tr><th style="width:14%;">日付</th><th style="width:20%;">パス</th><th style="width:16%;">判定</th><th>要点</th></tr></thead>
       <tbody>
-        <tr><td>2026-05-06</td><td>Stream D</td><td style="color:#15803d;">Go</td><td>AUTH-ARCH-01→SCHEMA→API→IMPL→E2Eの順序依存を再確認。Schema/API境界の固定状態を確認</td></tr>
+        <tr><td>2026-05-06</td><td>Stream D</td><td style="color:#15803d;">Go</td><td>AUTH-ARCH-01、SCHEMA、API、IMPL、E2Eの順序依存を再確認した。SchemaとAPIの境界が固定された状態を確認した</td></tr>
         <tr><td>2026-05-10</td><td>DOC-OPS-02 Stream F</td><td style="color:#15803d;">整合</td><td>同期順序を <code>02_Architecture → 04_Documentation → 01_Plans → AGENTS.md</code> に固定</td></tr>
-        <tr><td>2026-05-20</td><td>Stream G</td><td style="color:#15803d;">Pass（0/3 self-correction）</td><td>4観点（用語/役割/導線/固定値）すべて一致</td></tr>
-        <tr><td>2026-05-20</td><td>Stream A</td><td style="color:#b45309;">Hold/Needs-decision</td><td>SoD・停止条件を再確認。<code>pendingDecisionQueueCount&gt;0</code> のため保留判定（検証失敗・未定義競合は検出せず）</td></tr>
+        <tr><td>2026-05-20</td><td>Stream G</td><td style="color:#15803d;">合格（自己修正は3回中0回）</td><td>4観点（用語、役割、導線、固定値）すべて一致</td></tr>
+        <tr><td>2026-05-20</td><td>Stream A</td><td style="color:#b45309;">保留（要判断）</td><td>SoD（職務分掌）と停止条件を再確認した。<code>pendingDecisionQueueCount&gt;0</code> のため保留と判定した（検証の失敗も未定義の競合も検出していない）</td></tr>
       </tbody>
     </table>
   </section>
@@ -348,7 +348,7 @@ flowchart LR
       <h2 style="font-size:20px; font-weight:700; margin:0;">総括</h2>
     </div>
     <p style="font-size:13.5px; line-height:1.75; color:#3e4c59; margin:12px 0 0; text-wrap:pretty;">
-      本仕様の骨格は単純である ─ <strong>承認と実行を分離し（RACI）、停止条件を「有効化前」に、復旧条件を「有効化後」に限定し、両者が競合したら復旧を優先する。</strong>D1〜D4の固定値がこの骨格に具体的な数値（TTL=4h、最大継続=2h、代理承認なし、48hレビュー）を与え、AIエージェントを含む実行者が推測で承認フローを補完する余地をなくす。
+      本仕様の骨格は単純である。<strong>承認と実行を分離し（RACI）、停止条件を「有効化前」に、復旧条件を「有効化後」に限定し、両者が競合したら復旧を優先する。</strong>D1〜D4の固定値は、この骨格に具体的な数値（TTLは4時間、最大継続は2時間、代理承認なし、48時間でのレビュー）を与え、AIエージェントを含む実行者が推測で承認フローを補完する余地をなくす。
     </p>
   </section>
 

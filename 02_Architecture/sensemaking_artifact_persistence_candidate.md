@@ -1,16 +1,16 @@
 # Sensemaking Artifact Persistence Candidate
 
-- Status: **Design candidate / L0 Planned**
-- Date: 2026-09-18
-- Parent: `ADR-0088`
-- Portable schema matrix: `02_Architecture/sensemaking_artifact_portable_schema_matrix.md`
-- Runtime implementation: **None**
-- Migration: **None**
-- Purpose: portable schema / transaction / projection design before implementation issue
+- 状態: **設計候補 / L0 計画中**
+- 日付: 2026-09-18
+- 親: `ADR-0088`
+- ポータブルなスキーマ対応表: `02_Architecture/sensemaking_artifact_portable_schema_matrix.md`
+- ランタイム実装: **なし**
+- マイグレーション: **なし**
+- 目的: 実装issueを立てる前に、ポータブルなスキーマ、トランザクション、投影の設計を固める
 
 ## 1. 前提
 
-canonical sourceは次の三層へ分ける。
+基準となるデータ（canonical source）は、次の三層に分けます。
 
 ```text
 RDB metadata / events
@@ -34,15 +34,15 @@ RDB metadata / events
               current authority cache
 ```
 
-materialized read modelは削除して再構築できる。
+マテリアライズした読み取りモデルは、削除しても再構築できます。
 
-## 2. Canonical logical record classes
+## 2. 基準となる論理レコードの分類
 
-以下は**物理table名の確定ではない**。migration作成前の責務分割である。
+以下は**物理テーブル名の確定ではありません**。マイグレーションを作る前の、責務の分割です。
 
-### 2.1 Artifact identity
+### 2.1 成果物の識別
 
-候補field:
+フィールド候補は次のとおりです。
 
 ```text
 tenant_id
@@ -53,16 +53,16 @@ created_by_actor_kind
 created_by_actor_ref?
 ```
 
-不変条件:
+不変条件は次のとおりです。
 
-- `tenant_id + artifact_id` unique
-- semantic kind immutable
-- artifact row自体に本文を置かない
-- latest revisionはcacheとして持てても正本にしない
+- `tenant_id + artifact_id` は一意にする。
+- semantic kindは不変にする。
+- 成果物の行そのものには、本文を置かない。
+- 最新リビジョンはキャッシュとして持てるが、基準データにはしない。
 
-### 2.2 Artifact revision
+### 2.2 成果物のリビジョン
 
-候補field:
+フィールド候補は次のとおりです。
 
 ```text
 tenant_id
@@ -81,25 +81,25 @@ input_scope_ref?
 created_at
 ```
 
-別record:
+別のレコードとして持つものは次のとおりです。
 
-- revision parent edges
-- input artifact revision refs
-- source refs
-- transformation refs
+- リビジョンの親エッジ
+- 入力となる成果物リビジョンへの参照
+- 出典の参照
+- 変換の参照
 
-不変条件:
+不変条件は次のとおりです。
 
-- `tenant_id + revision_id` unique
-- `tenant_id + artifact_id + revision_id`整合
-- semantic kindはartifact rowから取得しrevisionごとに変更しない
-- payload digest / schema mismatchはfail closed
-- parentは同一artifactだけ
-- exact revision FK相当を保つ
+- `tenant_id + revision_id` は一意にする。
+- `tenant_id + artifact_id + revision_id` の整合を保つ。
+- semantic kindは成果物の行から取得し、リビジョンごとには変更しない。
+- ペイロードのダイジェストやスキーマが一致しないときは、安全側で拒否する。
+- 親は同じ成果物のリビジョンだけにする。
+- 厳密なリビジョンに対する外部キー相当の整合を保つ。
 
-### 2.3 Review record
+### 2.3 Review記録
 
-候補field:
+フィールド候補は次のとおりです。
 
 ```text
 tenant_id
@@ -114,18 +114,16 @@ supersedes_review_id?
 created_at
 ```
 
-findingは、
+findingは、次のどちらかへ分離できます。
 
-- bounded code / ref metadata
-- content object
+- 長さを制限したコードや参照のメタデータ
+- コンテンツオブジェクト
 
-のどちらかへ分離できる。
-
-Review rowへAccepted / Consensus stateを入れない。
+Reviewの行には、AcceptedやConsensusの状態を入れません。
 
 ### 2.4 Authority Scope
 
-候補field:
+フィールド候補は次のとおりです。
 
 ```text
 tenant_id
@@ -137,13 +135,13 @@ parent_scope_ref?
 created_at
 ```
 
-- immutable
-- parent cycle禁止
-- parentはauthority inheritanceを意味しない
+- 不変にする。
+- 親子の循環は禁止する。
+- 親の指定は、Authorityの継承を意味しない。
 
-### 2.5 Authority transition
+### 2.5 Authority遷移
 
-候補field:
+フィールド候補は次のとおりです。
 
 ```text
 tenant_id
@@ -160,14 +158,14 @@ participant_set_ref?
 created_at
 ```
 
-別join/ref:
+別の結合や参照として持つものは次のとおりです。
 
-- basis review refs
-- basis Decision revision refs
+- 根拠となるReviewへの参照
+- 根拠となるDecisionのリビジョンへの参照
 
-### 2.6 Consensus participant snapshot
+### 2.6 Consensusの参加者スナップショット
 
-header:
+ヘッダは次のとおりです。
 
 ```text
 tenant_id
@@ -177,7 +175,7 @@ membership_source_ref?
 created_at
 ```
 
-member:
+メンバーは次のとおりです。
 
 ```text
 tenant_id
@@ -187,13 +185,13 @@ actor_kind
 eligibility_role_ref?
 ```
 
-snapshot作成後にmember更新を許可しない。
+スナップショットの作成後は、メンバーの更新を許可しません。
 
-### 2.7 Imported source assertions
+### 2.7 importした出典のアサーション
 
-Exchange import時に、source Review / Authorityをlocal event storeへ直接入れない。
+交換データをimportするとき、出典側のReviewやAuthorityを、ローカルのイベントストアへ直接入れません。
 
-source assertionとして、
+出典のアサーションとして、次のような項目で保持する案を候補とします。
 
 ```text
 tenant_id
@@ -206,11 +204,9 @@ source_record_content_ref / bounded metadata
 created_at
 ```
 
-等で保持する候補とする。
+ローカルのAuthority reducerの入力にはしません。
 
-local Authority reducerの入力にはしない。
-
-### 2.8 Exchange import mapping
+### 2.8 交換importのマッピング
 
 ```text
 tenant_id
@@ -223,71 +219,69 @@ local_revision_id
 created_at
 ```
 
-IDを保存したままresolveする実装ではmapping rowを省略できるが、cross-networkでID再発行する場合は必須。
+IDを保存したまま解決する実装では、マッピングの行を省略できます。ネットワークをまたいでIDを再発行する場合は必須です。
 
-### 2.9 Retention pin / protection
+### 2.9 保持のピン留めと保護
 
-明示pinは独立recordとする。
+明示的なピン留めは、独立したレコードにします。
 
-Review / Authority / Decision / retained relation等からの参照はderived protection rootであり、pin tableへ複製しない。
+Review、Authority、Decision、保持されるRelationなどからの参照は、導出される保護ルートです。ピン留めのテーブルへは複製しません。
 
 ---
 
-## 3. Content Store payload
+## 3. Content Storeのペイロード
 
-### 3.1 Payload boundary
+### 3.1 ペイロードの境界
 
-Content Storeへ置くもの:
+Content Storeへ置くものは次のとおりです。
 
-- Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Decision payload
-- Review findingの長文が必要な場合の本文
-- source assertionの安全なopaque payloadが必要な場合
+- Evidence、Observation、Relation、Hypothesis、Structure、Synthesis、Decisionのペイロード
+- Reviewのfindingで、長文が必要な場合の本文
+- 出典のアサーションで、安全な不透明ペイロードが必要な場合
 
-RDB bounded columnへ置くもの:
+RDBの長さ制限付きカラムへ置くものは次のとおりです。
 
-- IDs
-- enum / state
-- digest
-- schema ref
-- actor/method opaque refs
-- timestamps
-- FK / joinに必要なrefs
+- ID
+- 列挙値と状態
+- ダイジェスト
+- スキーマ参照
+- actorとmethodの不透明な参照
+- タイムスタンプ
+- 外部キーや結合に必要な参照
 
-### 3.2 Canonical JSON
+### 3.2 正規JSON
 
-semantic payloadはkind-specific schemaに従うcanonical JSON bytesとしてdigest可能にする。
+意味ペイロードは、kindごとのスキーマに従う正規JSONのバイト列として、ダイジェストを取れるようにします。
 
-既存canvas revision codecと同じcanonicalization primitiveを再利用できるかbenchmarkする。
+既存のCanvasリビジョンのコーデックと同じ正規化の部品を再利用できるかは、ベンチマークで確かめます。
 
-再利用しても、
+再利用する場合でも、
 
 ```text
 CanvasRevision ID
   != SemanticArtifactRevision ID
 ```
 
-である。
+です。
 
-### 3.3 Blob dedup
+### 3.3 BLOBの重複排除
 
-同一tenant + digestのblob共有は可能。
+同じテナントで同じダイジェストなら、BLOBを共有できます。
 
-ただし、
+ただし、次の項目は重複排除しません。
 
-- artifact identity
-- provenance
-- authority
-- review
-
-はdedupしない。
+- 成果物の識別
+- 来歴
+- Authority
+- Review
 
 ---
 
-## 4. Portable indexes
+## 4. ポータブルなインデックス
 
-最低限の候補:
+最低限の候補は次のとおりです。
 
-### Canonical identity
+### 基準となる識別
 
 ```text
 UNIQUE (tenant_id, artifact_id)
@@ -313,14 +307,14 @@ INDEX  (tenant_id, target_artifact_id, target_revision_id, scope_ref, created_at
 INDEX  (tenant_id, scope_ref, created_at)
 ```
 
-### Consensus participant
+### Consensusの参加者
 
 ```text
 UNIQUE (tenant_id, participant_set_ref, actor_ref)
 INDEX  (tenant_id, scope_ref, created_at)
 ```
 
-### Import
+### import
 
 ```text
 INDEX (tenant_id, import_session_id)
@@ -333,15 +327,15 @@ UNIQUE (
 )
 ```
 
-DB familyごとのindex byte上限を考慮し、opaque internal IDは既存bounded identifier catalogの範囲へ収める。
+DBファミリごとのインデックスのバイト数上限を考慮し、内部の不透明IDは、既存の長さ制限付き識別子カタログの範囲に収めます。
 
 ---
 
-## 5. Derived / materialized records
+## 5. 導出レコードとマテリアライズレコード
 
-### 5.1 Current authority cache
+### 5.1 現在のAuthorityキャッシュ
 
-候補key:
+キーの候補は次のとおりです。
 
 ```text
 tenant_id
@@ -350,7 +344,7 @@ revision_id
 scope_ref
 ```
 
-value:
+値は次のとおりです。
 
 ```text
 current_state
@@ -358,15 +352,15 @@ last_event_id
 updated_at
 ```
 
-cacheはauthority event列から再構築可能。
+キャッシュは、Authorityイベント列から再構築できます。
 
-Authority transition transactionではCAS targetとして利用できる。
+Authority遷移のトランザクションでは、CASの対象として利用できます。
 
-### 5.2 Relation index
+### 5.2 Relationインデックス
 
-Relation artifact payloadをqueryごとにContent Storeから全件decodeしないため、derived indexを持てる。
+クエリのたびにContent StoreからRelationの成果物ペイロードを全件デコードしないよう、導出インデックスを持てます。
 
-候補:
+候補は次のとおりです。
 
 ```text
 tenant_id
@@ -378,80 +372,78 @@ target_kind
 target_ref
 ```
 
-unknown extension predicateも文字列のまま往復保持する。
+未知の拡張predicateも、文字列のまま往復して保持します。
 
-このindexはRelation artifact payloadの正本ではない。
+このインデックスは、Relationの成果物ペイロードの基準データではありません。
 
-### 5.3 Information Network projection
+### 5.3 Information Networkの投影
 
-Information Network materializerは、
+Information Networkのマテリアライザは、次の情報から `QualitativeNetworkSnapshot` を構築します。
 
-- artifact revision
-- relation index
-- provenance refs
-- Review summaries
-- authority state by requested scope
-- hold / contradiction
+- 成果物のリビジョン
+- Relationインデックス
+- 来歴の参照
+- Reviewの要約
+- 要求されたスコープごとのAuthority状態
+- 保留と矛盾
 
-等から`QualitativeNetworkSnapshot`を構築する。
-
-全Authority Scopeを一つのnode statusへ圧縮しない。
+すべてのAuthority Scopeを、一つのノード状態へ圧縮しません。
 
 ---
 
-## 6. Transaction boundaries
+## 6. トランザクションの境界
 
-### 6.1 Create artifact
+### 6.1 成果物の作成
 
-同一transaction候補:
+同一トランザクションの候補は次のとおりです。
 
-1. artifact identity insert
-2. payload Content Store metadata準備
-3. artifact revision insert
-4. parent / provenance ref insert
-5. payload metadata ready確定
-6. audit / outbox append
+1. 成果物の識別をinsertする
+2. ペイロードのContent Storeメタデータを準備する
+3. 成果物のリビジョンをinsertする
+4. 親と来歴の参照をinsertする
+5. ペイロードのメタデータをreadyに確定する
+6. 監査ログとoutboxへ追記する
 
-external Content Store利用時は既存coordinator / pending-ready state原則に従い、物理I/OとRDB transactionの不整合を補償する。
+外部のContent Storeを使うときは、既存のコーディネータとpending-ready状態の原則に従い、物理I/OとRDBトランザクションの不整合を補償します。
 
-### 6.2 Add revision
+### 6.2 リビジョンの追加
 
-1. artifact存在・kind確認
-2. parent revision存在・same artifact確認
-3. payload保存
-4. new immutable revision append
-5. provenance refs append
-6. materializer outbox append
+1. 成果物の存在とkindを確認する
+2. 親リビジョンの存在と、同じ成果物であることを確認する
+3. ペイロードを保存する
+4. 新しい不変のリビジョンを追記する
+5. 来歴の参照を追記する
+6. マテリアライザ用のoutboxへ追記する
 
-過去revisionをupdateしない。
+過去のリビジョンは更新しません。
 
 ### 6.3 Review
 
-1. exact target revision存在確認
-2. reviewer authority / permission確認
-3. Review append
-4. finding refs保存
-5. materializer outbox append
+1. 対象の厳密なリビジョンの存在を確認する
+2. レビューを行う主体の権限と許可を確認する
+3. Reviewを追記する
+4. findingの参照を保存する
+5. マテリアライザ用のoutboxへ追記する
 
-ReviewだけでAuthority cacheを変更しない。
+Reviewだけでは、Authorityキャッシュを変更しません。
 
-### 6.4 Authority transition
+### 6.4 Authority遷移
 
-1. exact target revision存在確認
-2. scope存在確認
-3. effective authorization確認
-4. current state lock / CAS
-5. `expectedFrom`確認
-6. policy / participant set / basis refs検証
-7. transition append
-8. current-state cache更新
-9. audit / outbox append
+1. 対象の厳密なリビジョンの存在を確認する
+2. スコープの存在を確認する
+3. 有効な認可を確認する
+4. 現在の状態をロックまたはCASする
+5. `expectedFrom` を確認する
+6. ポリシー、参加者集合、根拠の参照を検証する
+7. 遷移を追記する
+8. 現在の状態のキャッシュを更新する
+9. 監査ログとoutboxへ追記する
 
-stale stateは409相当でfail closed。
+状態が古いときは、409相当で安全側に拒否します。
 
-### 6.5 Exchange import
+### 6.5 交換importの処理
 
-概念phase:
+概念上の段階は次のとおりです。
 
 ```text
 staging parse
@@ -465,22 +457,22 @@ staging parse
   -> materialization
 ```
 
-途中失敗でlocal Accepted / human reviewedだけが残る状態を禁止する。
+途中で失敗して、ローカルのAcceptedやhuman reviewedだけが残る状態は禁止します。
 
 ---
 
-## 7. Materialization strategy candidate
+## 7. マテリアライズ方式の候補
 
-第一候補はtransactional outbox + idempotent materializer。
+第一候補は、トランザクショナルoutboxと冪等なマテリアライザです。
 
-理由:
+理由は次のとおりです。
 
-- canonical transactionとgraph/search更新を同期dual-writeしない
-- graph / vector / sparse index障害でcanonical writeを失敗させない
-- projectionを再構築できる
-- EKI等へheavy rebuildを将来委譲しやすい
+- 基準データのトランザクションとグラフや検索の更新を、同期した二重書き込みにしない。
+- グラフ、ベクトル、スパースインデックスの障害で、基準データの書き込みを失敗させない。
+- 投影を再構築できる。
+- EKIなどへ、重い再構築を将来委譲しやすい。
 
-ただし、Authority current-state cacheだけはCAS correctnessに使うためcanonical transaction内のRDB derived stateとして扱える。
+ただしAuthorityの現在状態キャッシュだけは、CASの正しさに使うため、基準データのトランザクション内にあるRDBの導出状態として扱えます。
 
 ```text
 canonical commit
@@ -498,63 +490,63 @@ canonical commit
 
 ---
 
-## 8. GC candidate
+## 8. GCの候補
 
-### 8.1 Mark roots
+### 8.1 マークのルート
 
-少なくとも:
+少なくとも次のとおりです。
 
-- artifact current heads / retained revision policy
-- Review targets
-- Authority transition targets / basis
-- Decision basis
-- retained Relation refs
-- participant/source assertion retention policy
-- explicit pins
-- governed checkpoints
+- 成果物の現在のヘッドと、保持するリビジョンのポリシー
+- Reviewの対象
+- Authority遷移の対象と根拠
+- Decisionの根拠
+- 保持されるRelationの参照
+- 参加者と出典アサーションの保持ポリシー
+- 明示的なピン留め
+- ガバナンス下のチェックポイント
 
-### 8.2 Sweep
+### 8.2 スイープ
 
-- rootから到達不能なWorking-only revisionsを候補化
-- candidate列挙後、transaction内で保護条件を再確認
-- revision metadata削除後もpayload blob参照数 / retention delayを確認
-- external content delete失敗時はexisting Content Store state machineに従いretry
+- ルートから到達できない、Workingだけのリビジョンを候補にする。
+- 候補を列挙した後、トランザクション内で保護条件を再確認する。
+- リビジョンのメタデータを削除した後も、ペイロードBLOBの参照数と保持の猶予期間を確認する。
+- 外部コンテンツの削除に失敗したときは、既存のContent Storeの状態機械に従って再試行する。
 
-### 8.3 Projection
+### 8.3 投影
 
-projection / cacheをGC rootにしない。
+投影やキャッシュを、GCのルートにはしません。
 
-projectionからcanonical recordが参照されていることを理由に保持期間を延ばさない。
-
----
-
-## 9. Database portability checklist
-
-migration実装前にVerified DB familyすべてについて次を確認する。
-
-- bounded identifier length
-- composite tenant FK
-- append-only event constraint
-- authority state check
-- lifecycle check
-- nullable opaque refs
-- timestamp canonical form
-- payload LOB / Content Store roundtrip
-- unique / index byte limits
-- import staging transaction
-- concurrent authority CAS
-- backup / restore
-- tenant guard / RLS（shared-schema対象のみ）
-
-PostgreSQL固有のJSONB、recursive CTE、advisory lockをCore correctnessの唯一実装にしない。
+投影から基準レコードが参照されていることを理由に、保持期間を延ばしません。
 
 ---
 
-## 10. Representative fixture
+## 9. DB移植性のチェックリスト
 
-implementation issueでは最低限次を作る。
+マイグレーションを実装する前に、検証済みのDBファミリすべてについて、次を確認します。
 
-### Fixture A: human-led
+- 識別子の長さ制限
+- テナントを含む複合外部キー
+- 追記専用イベントの制約
+- Authority状態のcheck制約
+- ライフサイクルのcheck制約
+- NULLを許す不透明な参照
+- タイムスタンプの正規形
+- ペイロードのLOBとContent Storeの往復
+- ユニーク制約とインデックスのバイト数上限
+- importのステージングトランザクション
+- 同時実行時のAuthority CAS
+- バックアップとリストア
+- テナントガードとRLS（共有スキーマが対象の場合のみ）
+
+PostgreSQL固有のJSONB、再帰CTE、アドバイザリロックを、Coreの正しさを支える唯一の実装にはしません。
+
+---
+
+## 10. 代表的なフィクスチャ
+
+実装issueでは、最低限、次のフィクスチャを作ります。
+
+### Fixture A: 人間が主導
 
 - Evidence 20
 - Observation 10
@@ -562,77 +554,77 @@ implementation issueでは最低限次を作る。
 - Structure 2
 - Synthesis 1
 - Human Review 4
-- Inquiry scope Accepted 1
+- InquiryスコープでAccepted 1
 
 ### Fixture B: AI Workspace
 
 - Evidence 50
 - Observation 100
 - Hypothesis 80
-- Working-only microtrial多数
+- Workingだけの小さな試行が多数
 - Candidate 10
-- Review target 6
+- Reviewの対象 6
 - Accepted 2
-- retained alternatives / contradictions
+- 保持される代替案と矛盾
 
-### Fixture C: multi-scope
+### Fixture C: 複数スコープ
 
-同じrevision:
+同じリビジョンについて、
 
 - workspace = Accepted
 - inquiry = Accepted
 - network = Candidate
 - external = Working
 
-### Fixture D: exchange
+とします。
 
-source:
+### Fixture D: 交換
+
+出典側は次のとおりです。
 
 - Accepted / Consensus
 - human Review
-- participant snapshot
+- 参加者スナップショット
 
-import先:
+import先は次のとおりです。
 
-- local Working
-- source assertions preserved
-- local human_reviewed = false
-- explicit promotion後だけlocal Candidate / Accepted
+- ローカルではWorking
+- 出典のアサーションを保持
+- ローカルのhuman_reviewed = false
+- 明示的に昇格した後に限り、ローカルでCandidateやAccepted
 
-### Fixture E: collision
+### Fixture E: 衝突
 
-同じsource ID:
+同じ出典IDについて、次を検証します。
 
-- same digest / same provenance
-- same ID / different digest
-- same ID / different semantic kind
-
-を検証する。
+- 同じダイジェストで、同じ来歴
+- 同じIDで、ダイジェストが異なる
+- 同じIDで、semantic kindが異なる
 
 ---
 
-## 11. Implementation stop lines
+## 11. 実装の停止ライン
 
-次が発生したらmigrationを進めずADRへ戻す。
+次のいずれかが起きたら、マイグレーションを進めず、ADRへ戻ります。
 
-- `DocumentV1`の意味変更が必要
-- ReviewとAuthorityを同じrowへ統合しないと実装できない
-- imported source authorityをlocal current stateへ入れる必要がある
-- graph DBをcanonical sourceにしないと成立しない
-- Provider内部scoreを永続Truth / Importanceとして要求する
-- private chain-of-thought保存が必須になる
-- Verified DB familyの複数でportable constraintを表現できない
+- `DocumentV1` の意味を変える必要が生じた
+- ReviewとAuthorityを同じ行へ統合しないと実装できない
+- importした出典のAuthorityを、ローカルの現在状態へ入れる必要がある
+- グラフDBを基準データにしないと成立しない
+- プロバイダ内部のスコアを、永続するTruthやImportanceとして要求される
+- 非公開のchain-of-thoughtの保存が必須になる
+- 検証済みのDBファミリの複数で、ポータブルな制約を表現できない
 
 ---
 
-## 12. 次の実装前成果物
+## 12. 実装前に必要な成果物
 
-1. portable table sketch + FK matrix
-2. Authority transition concurrency pseudo-test
-3. exchange import staging pseudo-test
-4. representative fixture JSON
-5. Content Store payload benchmark
-6. Information Network rebuild benchmark
-7. retention reachability test plan
+1. ポータブルなテーブルのスケッチと、外部キーの対応表
+2. Authority遷移の並行性に関する疑似テスト
+3. 交換importのステージングに関する疑似テスト
+4. 代表的なフィクスチャのJSON
+5. Content Storeのペイロードのベンチマーク
+6. Information Networkの再構築のベンチマーク
+7. 保持の到達可能性に関するテスト計画
 
-これらを確認後にだけmigration issueをReady for Implementationへ昇格する。
+これらを確認した後に限り、マイグレーションのissueを「実装可能（Ready for Implementation）」へ昇格します。

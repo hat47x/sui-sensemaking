@@ -231,7 +231,7 @@ class DatabaseDocumentContentStore:
         requesting_user_id: str | None = None,
         apply_visibility_filter: bool = False,
     ) -> tuple[list[DocumentListItem], bool]:
-        """List the tenant's document metadata (第2反復: キャンバス一覧の土台).
+        """List the tenant's document metadata (第2反復: キャンバス一覧の基礎).
 
         SafeMode-independent — only row metadata is exposed (id, title from the
         payload snapshot, creator, lifecycle state, updated_at). Never the card

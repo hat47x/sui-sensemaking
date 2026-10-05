@@ -4,6 +4,8 @@ import { t } from "../i18n/translate";
 
 type StartPanelProps = {
   currentDocumentId: string;
+  /** True when the active document is a pack/sample copy that has not been loaded from the server. */
+  canReopenCurrent?: boolean;
   isDirty: boolean;
   isLoading: boolean;
   isReadOnly: boolean;
@@ -53,6 +55,7 @@ const focusableSelector = [
 
 export function StartPanel({
   currentDocumentId,
+  canReopenCurrent = false,
   isDirty,
   isLoading,
   isReadOnly,
@@ -71,7 +74,7 @@ export function StartPanel({
   const panelRef = useRef<HTMLElement | null>(null);
   const isBusy = isLoading || isSaving;
   const canCreateNew = !isBusy && !isReadOnly;
-  const canOpenRecent = selectedRecentDocumentId.length > 0 && selectedRecentDocumentId !== currentDocumentId;
+  const canOpenRecent = selectedRecentDocumentId.length > 0 && (canReopenCurrent || selectedRecentDocumentId !== currentDocumentId);
 
   useEffect(() => {
     const firstFocusable = panelRef.current?.querySelector<HTMLElement>(focusableSelector);

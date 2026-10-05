@@ -19,7 +19,7 @@
 本ドキュメントは、Phase 1以降の未着手項目を優先度付きで管理する。
 `phase2_qualitative_integration.md` の要求ID（RQ）・受け入れ基準（AC）にトレース可能であることを必須とする。
 
-優先度定義:
+優先度定義は次のとおりです。
 - P0: 次フェーズで必須
 - P1: 次フェーズで高優先
 - P2: 中期導入
@@ -48,17 +48,17 @@
 
 ## フェーズゲート
 
-- Gate-2A: FB-P2A-01〜04 完了で 2A 終了。
-- Gate-2B: FB-P2B-01〜04 完了で 2B 終了。
-- Gate-2C: FB-P2C-01〜04 完了で 2C 終了（manual polygon edit 含む）。
+- Gate-2A: FB-P2A-01〜04完了で2A終了。
+- Gate-2B: FB-P2B-01〜04完了で2B終了。
+- Gate-2C: FB-P2C-01〜04完了で2C終了（manual polygon edit含む）。
 
 ---
 
 ## 依存メモ
 
-- 2B は 2A と並行可能だが、overview/detail 導線共通化のため 2A 先行を推奨。
-- 2C は `02_Architecture/island_shapes.md` の shape 制約を実装前提とする。
-- 全項目で review flags と反スコアリング原則を維持する。
+- 2Bは2Aと並行可能だが、overview/detail導線共通化のため2A先行を推奨。
+- 2Cは `02_Architecture/island_shapes.md` のshape制約を実装前提とする。
+- 全項目でreview flagsと反スコアリング原則を維持する。
 
 
 
@@ -69,7 +69,7 @@
 本セクションは、ルート `ROADMAP.md` の各項目を、既存バックログ体系（`phaseX_future_backlog.md`）へ統合したものである。  
 方針は `ROADMAP.md` を正とし、ここでは **実装アクション / DoD / 状態** を管理する。
 
-状態定義:
+状態定義は次のとおりです。
 - Planned: 未着手
 - In Progress: 着手中
 - Done: 完了
@@ -152,12 +152,12 @@
 
 #### FB-RM-UX-01 実装TODO（完了ログ）
 
-- [x] Explore / Review / Summary を `ViewMode` として型定義し、default preset との対応を固定。
-- [x] ヘッダーに view mode トグル（3分割）を追加。
-- [x] `⌘/Ctrl+1..3` で mode 切替ショートカットを実装。
-- [x] `sui-sensemaking/view-mode-by-doc` に document単位で mode を保存。
-- [x] document読込時に保存済み mode を復元。
-- [x] `view_mode.test.ts` / `storage/view_mode.test.ts` で mode変換・保存値検証を追加。
+- [x] Explore / Review / Summaryを `ViewMode` として型定義し、default presetとの対応を固定。
+- [x] ヘッダーにview modeトグル（3分割）を追加。
+- [x] `⌘/Ctrl+1..3` でmode切替ショートカットを実装。
+- [x] `sui-sensemaking/view-mode-by-doc` にdocument単位でmodeを保存。
+- [x] document読込時に保存済みmodeを復元。
+- [x] `view_mode.test.ts` / `storage/view_mode.test.ts` でmode変換・保存値検証を追加。
 
 
 
@@ -167,34 +167,34 @@
 - [x] `computeTraceAnalytics` で根拠リンク本数・孤立ノード・出典密度を決定論ソート（ID昇順）で算出するようにした。
 - [x] `buildTraceAnalyticsMd` に追加指標を出力し、孤立ノードがある場合のみ `## Isolated nodes` セクションを生成するようにした。
 - [x] `trace_analytics.test.ts` で追加指標・孤立ノード順序・決定論・markdown出力の回帰テストを先行追加して固定した。
-- [x] `worker_golden.test.ts` と fixture `trace_analytics_c1.md` を同期し、worker経路でも追加指標の出力を固定した。
-- [x] SidePanel の Trace Analytics 表示へ追加指標（Evidence links / Isolated nodes / Source density）を反映した。
+- [x] `worker_golden.test.ts` とfixture `trace_analytics_c1.md` を同期し、worker経路でも追加指標の出力を固定した。
+- [x] SidePanelのTrace Analytics表示へ追加指標（Evidence links / Isolated nodes / Source density）を反映した。
 
 #### FB-RM-RS-02 実装TODO（完了ログ）
 
 - [x] `StructureMetrics` に `connectedComponentCount` / `largestComponentRatio` / `degreeP95` / `bridgeEdgeCount` / `isolationRate` / `connectivityScore` / `degreeSkewRatio` を追加した。
 - [x] `computeStructureMetrics` で無向単純グラフの正規化（自己ループ除外・重複排除・ID昇順ソート）を導入し、丸め規則 `round(value * 10_000) / 10_000` を固定した。
-- [x] `diagnostics_compute.ts` と `SidePanel.tsx` を更新し、worker/export/UI のすべてで同一構造メトリクス値を表示するよう統一した。
+- [x] `diagnostics_compute.ts` と `SidePanel.tsx` を更新し、worker/export/UIのすべてで同一構造メトリクス値を表示するよう統一した。
 - [x] `structural_metrics.test.ts` / `worker_golden.test.ts` / fixture `tests/fixtures/worker/diagnostics.md` を更新し、追加指標と決定論を回帰固定した。
-- [x] Playwright E2E `e2e/diagnostics_structural_metrics.spec.ts` を追加し、Share Panel 経由 export の `diagnostics.md` に追加指標が含まれること、および同一入力2回で出力一致することを固定した。
+- [x] Playwright E2E `e2e/diagnostics_structural_metrics.spec.ts` を追加し、Share Panel経由exportの `diagnostics.md` に追加指標が含まれること、および同一入力2回で出力一致することを固定した。
 - [x] E2E未実装だった原因分析と再発防止を `03_Implement/frontend/docs/e2e_testing.md` に反映した（issueメモ依存を解消）。
 
 #### FB-RM-RS-03 実装TODO（完了ログ）
 
-- [x] Protocol: `diagnosticsData.schemaVersion` を current=1 として固定。
-- [x] Validation: unsupported/invalid schema version を検知し fallback。
-- [x] Validation: payload/result envelope の malformed/array を検知。
-- [x] Validation: progress / unknown type / diagnostics.error 不正を検知。
+- [x] Protocol: `diagnosticsData.schemaVersion` をcurrent=1として固定。
+- [x] Validation: unsupported/invalid schema versionを検知しfallback。
+- [x] Validation: payload/result envelopeのmalformed/arrayを検知。
+- [x] Validation: progress / unknown type / diagnostics.error不正を検知。
 - [x] Isolation: 他requestIdメッセージは無視。
 - [x] Required fields: `recommendations` / report objects / `diagnosticsMd` 欠落を検知。
-- [x] Docs: `04_Documentation/diagnostics.md` に schemaVersion/互換/fallback を明記。
+- [x] Docs: `04_Documentation/diagnostics.md` にschemaVersion/互換/fallbackを明記。
 - [x] Tests: `diagnostics_protocol.test.ts` / `diagnostics_client.test.ts` を更新して回帰固定。
 
 
 #### FB-RM-SEC-01 実装TODO（完了ログ）
 
-- [x] Path validation: `../` に加えて absolute path / Windows drive path / UNC path / NUL byte を拒否。
-- [x] Zip bomb guard: file count / per-file size / total uncompressed size / compression ratio の上限を導入。
+- [x] Path validation: `../` に加えてabsolute path / Windows drive path / UNC path / NUL byteを拒否。
+- [x] Zip bomb guard: file count / per-file size / total uncompressed size / compression ratioの上限を導入。
 - [x] Extension policy: `.json/.md/.png` 以外を取り込み対象から除外（警告件数に加算）。
 - [x] Tests: `src/import/zip_import.test.ts` に悪性ケース（絶対パス・圧縮率・サイズ上限）を追加。
 - [x] Integration: `src/diff/review_pack_workflow.integration.test.ts` の悪性ZIP拒否を維持。
@@ -205,120 +205,120 @@
 
 #### FB-RM-SEC-02 実装TODO（完了ログ）
 
-- [x] `bundle_zip_protocol.ts` を追加し request/progress/result/cancel/error のメッセージ契約を定義した。
-- [x] `bundle_zip.worker.ts` を追加し、zip圧縮を off-main-thread で実行する経路を実装した。
-- [x] `bundle_zip_client.ts` を追加し、worker unavailable 時は main-thread scheduler fallback へ退避するようにした。
-- [x] `buildBundleZipBlob` を worker client 経由へ置換し、abort signal/progress 連携を実装した。
-- [x] `App.tsx` の bundle export で zip progress を表示し、cancelled を失敗扱いしないようにした。
-- [x] `bundle_export.test.ts` に worker/fallback/cancel 回帰を追加し、`test:regression-guards` で通過確認した。
+- [x] `bundle_zip_protocol.ts` を追加しrequest/progress/result/cancel/errorのメッセージ契約を定義した。
+- [x] `bundle_zip.worker.ts` を追加し、zip圧縮をoff-main-threadで実行する経路を実装した。
+- [x] `bundle_zip_client.ts` を追加し、worker unavailable時はmain-thread scheduler fallbackへ退避するようにした。
+- [x] `buildBundleZipBlob` をworker client経由へ置換し、abort signal/progress連携を実装した。
+- [x] `App.tsx` のbundle exportでzip progressを表示し、cancelledを失敗扱いしないようにした。
+- [x] `bundle_export.test.ts` にworker/fallback/cancel回帰を追加し、`test:regression-guards` で通過確認した。
 
 #### FB-RM-SEC-03 実装TODO（完了ログ）
 
-- [x] Frontend向けに import/serialization/shape互換の回帰テスト対象を選定。
+- [x] Frontend向けにimport/serialization/shape互換の回帰テスト対象を選定。
 - [x] `03_Implement/frontend/package.json` に `test:regression-guards` スクリプトを追加。
 - [x] `.github/workflows/ci.yml` に専用ジョブ `Frontend regression guards (import/serialization/shape)` を追加。
-- [x] CIジョブ名を branch protection の required check に設定可能な安定名に固定。
-- [x] `04_Documentation/release.md` に required check 設定手順（GitHub UI）を追記。
+- [x] CIジョブ名をbranch protectionのrequired checkに設定可能な安定名に固定。
+- [x] `04_Documentation/release.md` にrequired check設定手順（GitHub UI）を追記。
 - [x] ローカルで `test:regression-guards` を実行し、通過を確認。
 
 
 #### FB-RM-UX-04 実装TODO（完了ログ）
 
-- [x] ヘッダーに SafeMode 状態バッジ（ON/OFF）を常設し、1クリックで Share パネルへ遷移できるようにした。
-- [x] Share & Reproduce 内の SafeMode 説明・export警告・解除不可モード表記を共通ヘルパーで統一した。
-- [x] SafeMode ON/OFF の文言分岐を `safe_mode_status.test.ts` で固定した。
-- [x] `SharePanel.test.tsx` で SafeMode 表示の回帰テストを追加した。
+- [x] ヘッダーにSafeMode状態バッジ（ON/OFF）を常設し、1クリックでShareパネルへ遷移できるようにした。
+- [x] Share & Reproduce内のSafeMode説明・export警告・解除不可モード表記を共通ヘルパーで統一した。
+- [x] SafeMode ON/OFFの文言分岐を `safe_mode_status.test.ts` で固定した。
+- [x] `SharePanel.test.tsx` でSafeMode表示の回帰テストを追加した。
 
 
 #### FB-RM-UX-02 実装TODO（完了ログ）
 
 - [x] collapse対象判定を `collapse_visibility.ts` の共通ヘルパーへ集約し、親collapse時のdescendant連鎖を固定した。
-- [x] `collapse_visibility.test.ts` を拡張し、階層Islandでの collapsed island ids / hidden card ids を回帰固定した。
-- [x] Island単位の collapse/expand 操作時に `island.collapsed` 永続値を更新するよう `App.tsx` を修正した。
-- [x] Collapse all / Expand all 操作で UI状態と永続状態が乖離しないよう同期した。
+- [x] `collapse_visibility.test.ts` を拡張し、階層Islandでのcollapsed island ids / hidden card idsを回帰固定した。
+- [x] Island単位のcollapse/expand操作時に `island.collapsed` 永続値を更新するよう `App.tsx` を修正した。
+- [x] Collapse all / Expand all操作でUI状態と永続状態が乖離しないよう同期した。
 - [x] `npm run test -- src/domain/view/collapse_visibility.test.ts` / `npm run typecheck` / `npm test` の通過を確認した。
 - [x] collapse永続更新ロジックを `collapse_state.ts` に分離し、単体/全体collapse更新の純粋関数テストを追加した。
 
 
 #### FB-RM-UX-03 実装TODO（完了ログ）
 
-- [x] `validateDocumentV2Strict` に polygon 自己交差検証を追加し、保存時バリデーションで拒否するようにした。
-- [x] `validateAndUpgradeImportedDocument` に自己交差polygon除外を追加し、互換読込時は card-bounds フォールバックで編集継続可能にした。
+- [x] `validateDocumentV2Strict` にpolygon自己交差検証を追加し、保存時バリデーションで拒否するようにした。
+- [x] `validateAndUpgradeImportedDocument` に自己交差polygon除外を追加し、互換読込時はcard-boundsフォールバックで編集継続可能にした。
 - [x] `polygon_self_intersection.ts` を追加して判定ロジックを共通化し、幾何判定を再利用可能にした。
 - [x] `validate_doc.test.ts` / `validate.test.ts` / `polygon_self_intersection.test.ts` を追加・更新し、自己交差ケースの回帰を固定した。
-- [x] E2E追加有無を確認し、本改修は Domain validation（非UI導線）中心で Playwright シナリオ追加対象外だったため、PRに未追加理由と代替検証（unit + regression-guards）を明記する運用へ修正した（ADR-0018連携）。
-- [x] Playwright E2E `e2e/polygon_import_validation.spec.ts` を追加し、自己交差polygonを含む document.json の取込→置換→bundle export で shape が除去されることを実動作で確認した。
+- [x] E2E追加有無を確認し、本改修はDomain validation（非UI導線）中心でPlaywrightシナリオ追加対象外だったため、PRに未追加理由と代替検証（unit + regression-guards）を明記する運用へ修正した（ADR-0018連携）。
+- [x] Playwright E2E `e2e/polygon_import_validation.spec.ts` を追加し、自己交差polygonを含むdocument.jsonの取込→置換→bundle exportでshapeが除去されることを実動作で確認した。
 
 
 #### FB-RM-MID-02 実装TODO（完了ログ）
 
-- [x] `MergeSuggestionsPanel` を accept/partial/reject/defer の4アクションに更新。
-- [x] `mergeSuggestionDecisions` を `DocumentV2` に追加し、decision append log を保存可能化。
-- [x] decision記録時に自動 canonical merge を実行しないフローへ変更。
-- [x] 候補再収集時に latest decision / edited text を復元するよう `App.tsx` を更新。
-- [x] Frontend strict validator (`validate_doc.ts`) に decision schema 検証を追加。
-- [x] Backend `DocumentV2` モデルと docs roundtrip test を更新し、PUT/GETで decision log 保持を確認。
+- [x] `MergeSuggestionsPanel` をaccept/partial/reject/deferの4アクションに更新。
+- [x] `mergeSuggestionDecisions` を `DocumentV2` に追加し、decision append logを保存可能化。
+- [x] decision記録時に自動canonical mergeを実行しないフローへ変更。
+- [x] 候補再収集時にlatest decision / edited textを復元するよう `App.tsx` を更新。
+- [x] Frontend strict validator (`validate_doc.ts`) にdecision schema検証を追加。
+- [x] Backend `DocumentV2` モデルとdocs roundtrip testを更新し、PUT/GETでdecision log保持を確認。
 
 
 #### FB-RM-I18N-01 実装TODO（完了ログ）
 
 - [x] `src/i18n/messages.ts` を追加し、UI文言キーと既定辞書（ja）を定義。
-- [x] `src/i18n/translate.ts` を追加し、placeholder補間と unknown-key fallback を実装。
+- [x] `src/i18n/translate.ts` を追加し、placeholder補間とunknown-key fallbackを実装。
 - [x] `ImportPanel.tsx` の表示文言を辞書キー参照へ置換。
 - [x] `safe_mode_status.ts` / `SharePanel.tsx`（Export〜Load document）を辞書キー参照へ置換。
-- [x] `translate.test.ts` / `ImportPanel.test.ts` / 既存 safe_mode_status・SharePanel テストで回帰を固定。
+- [x] `translate.test.ts` / `ImportPanel.test.ts` / 既存safe_mode_status・SharePanelテストで回帰を固定。
 
 
 #### FB-RM-MID-03 実装TODO（完了ログ）
 
-- [x] `src/domain/merge_decision_audit.ts` を追加し、merge decision から監査エントリ（decisionType/actorType/representative/source）を生成する決定論ロジックを実装。
-- [x] `src/export/bundle_export.ts` を更新し、bundle に `merge_decision_audit.json` を常時同梱。
-- [x] `src/domain/merge_decision_audit.test.ts` を追加し、代表カード解決と source 追跡・時系列安定ソートを回帰固定。
-- [x] `src/export/bundle_export.test.ts` を拡張し、bundle出力に監査JSONが含まれることと payload 内容を回帰固定。
-- [x] `04_Documentation/operations.md` に bundle監査ファイルの運用メモを追加。
+- [x] `src/domain/merge_decision_audit.ts` を追加し、merge decisionから監査エントリ（decisionType/actorType/representative/source）を生成する決定論ロジックを実装。
+- [x] `src/export/bundle_export.ts` を更新し、bundleに `merge_decision_audit.json` を常時同梱。
+- [x] `src/domain/merge_decision_audit.test.ts` を追加し、代表カード解決とsource追跡・時系列安定ソートを回帰固定。
+- [x] `src/export/bundle_export.test.ts` を拡張し、bundle出力に監査JSONが含まれることとpayload内容を回帰固定。
+- [x] `04_Documentation/operations.md` にbundle監査ファイルの運用メモを追加。
 
 
 #### FB-RM-I18N-02 実装TODO（完了ログ）
 
 - [x] locale JSONフォーマット（`src/i18n/locales/ja.json`, `en.json`）を追加。
 - [x] `t()` の解決順序を `requested locale -> default locale (ja) -> key` へ固定。
-- [x] `validateLocaleMessages` で JSON object + string value 契約を検証。
-- [x] `translate.test.ts` に locale fallback / unknown key / 契約検証テストを追加。
-- [x] Import/Share/SafeMode 文言の回帰テストを再実行し互換を確認。
+- [x] `validateLocaleMessages` でJSON object + string value契約を検証。
+- [x] `translate.test.ts` にlocale fallback / unknown key / 契約検証テストを追加。
+- [x] Import/Share/SafeMode文言の回帰テストを再実行し互換を確認。
 
 
 #### FB-RM-PUB-02 実装TODO（完了ログ）
 
-- [x] `src/domain/policy/read_only.ts` を追加し、queryパラメータから read-only 判定を行う共通ロジックを実装。
-- [x] `src/domain/policy/read_only.test.ts` を追加し、truthy/falsy と mode 指定の判定を回帰固定。
-- [x] `App.tsx` の `applyDocumentChange` に read-only ガードを追加し、編集更新を一括拒否するよう統合。
-- [x] `SuggestionPanel` / `MergeSuggestionsPanel` の編集導線を read-only 時に disabled 化。
-- [x] `SidePanel` とヘッダー subtitle に read-only 状態表示を追加。
+- [x] `src/domain/policy/read_only.ts` を追加し、queryパラメータからread-only判定を行う共通ロジックを実装。
+- [x] `src/domain/policy/read_only.test.ts` を追加し、truthy/falsyとmode指定の判定を回帰固定。
+- [x] `App.tsx` の `applyDocumentChange` にread-onlyガードを追加し、編集更新を一括拒否するよう統合。
+- [x] `SuggestionPanel` / `MergeSuggestionsPanel` の編集導線をread-only時にdisabled化。
+- [x] `SidePanel` とヘッダーsubtitleにread-only状態表示を追加。
 
 
 #### FB-RM-MID-05 実装TODO（完了ログ）
 
 - [x] `bundle_export.ts` に `exportGranularity`（overview/detail）を導入し、`bundle_manifest.json` 出力を追加。
-- [x] overview時は selected-card trace の生成を抑止し、detail時のみ trace を出力。
-- [x] SharePanel の bundle export セクションに granularity 選択UI（radio）を追加。
-- [x] `App.tsx` から bundle export context へ granularity を伝搬。
+- [x] overview時はselected-card traceの生成を抑止し、detail時のみtraceを出力。
+- [x] SharePanelのbundle exportセクションにgranularity選択UI（radio）を追加。
+- [x] `App.tsx` からbundle export contextへgranularityを伝搬。
 - [x] `bundle_export.test.ts` / `SharePanel.test.ts` を更新し、manifest/trace抑止/UI文言を回帰固定。
 - [x] `04_Documentation/operations.md` に運用メモを追記。
 
 
 #### FB-RM-MID-04 実装TODO（完了ログ）
 
-- [x] Island に `parentIslandId` / `placardCardId` を保持する互換実装（missing field fallback）を frontend import/validation で維持した。
-- [x] SidePanel から parent island / placard card を編集可能にし、保存後の再読込で復元される導線を実装した。
-- [x] 構造レベル切替（overview/mid/detail）を View Controls とショートカット（Alt+Shift+1/2/3）で提供し、表示粒度のみを切り替える挙動を実装した。
-- [x] overview で placard 以外カードを非表示化する可視性ヘルパーとテストを追加し、データ本体を破壊しないことを回帰固定した。
-- [x] collapse_visibility/hierarchy_visibility/hierarchy_level の既存回帰を維持し、backend docs roundtrip に parent/placard 永続化アサーションを追加した。
+- [x] Islandに `parentIslandId` / `placardCardId` を保持する互換実装（missing field fallback）をfrontend import/validationで維持した。
+- [x] SidePanelからparent island / placard cardを編集可能にし、保存後の再読込で復元される導線を実装した。
+- [x] 構造レベル切替（overview/mid/detail）をView Controlsとショートカット（Alt+Shift+1/2/3）で提供し、表示粒度のみを切り替える挙動を実装した。
+- [x] overviewでplacard以外カードを非表示化する可視性ヘルパーとテストを追加し、データ本体を破壊しないことを回帰固定した。
+- [x] collapse_visibility/hierarchy_visibility/hierarchy_levelの既存回帰を維持し、backend docs roundtripにparent/placard永続化アサーションを追加した。
 
 
 #### FB-RM-I18N-04 実装TODO（完了ログ）
 
-- [x] view locale 解決順序を `URL(locale/lang/uiLocale) -> view metadata -> localStorage(doc+view) -> default(ja)` に固定。
-- [x] read-only 時は locale 永続化を抑止し、URL 指定時は上書き保存しない責務を明確化。
-- [x] `viewState.locale` を view metadata schema/export/import に追加し、不正 locale を validation で拒否。
-- [x] App 初期化・view切替・pack/view import で同一 resolver を使用し、race condition を回避。
-- [x] `view_locale_resolution.test.ts` で view切替・再読込・欠損時fallback を回帰固定。
+- [x] view locale解決順序を `URL(locale/lang/uiLocale) -> view metadata -> localStorage(doc+view) -> default(ja)` に固定。
+- [x] read-only時はlocale永続化を抑止し、URL指定時は上書き保存しない責務を明確化。
+- [x] `viewState.locale` をview metadata schema/export/importに追加し、不正localeをvalidationで拒否。
+- [x] App初期化・view切替・pack/view importで同一resolverを使用し、race conditionを回避。
+- [x] `view_locale_resolution.test.ts` でview切替・再読込・欠損時fallbackを回帰固定。

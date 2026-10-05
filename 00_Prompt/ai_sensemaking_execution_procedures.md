@@ -4,17 +4,17 @@
 - Tracked-by: `AGENTS.md` §1.2（操作別モデルレベルの実行参照）
 - Updated: 2026-08-08
 - Scope: 生成AIが各KJ操作を自律実行する際の入力・出力・判断基準・停止条件
-- 位置づけ: `00_Prompt/sensemaking_technique.md`（技法の正本）の実行補完。技法の原理を変更しない。操作別モデルレベルは `AGENTS.md` §1.2 を正本とする。
+- 位置づけ: `00_Prompt/sensemaking_technique.md`（技法の正本）の実行補完。技法の原理を変更しない。操作別モデルレベルは `AGENTS.md` §1.2を正本とする。
 
 ## 共通規則
 
 **全操作に適用する:**
 
-1. **proposal-only:** 出力はすべて提案。人間のAdopt操作なしに文書へ反映しない
-2. **反スコアリング:** score/rank/confidence/priority等の数値評価語彙を出力しない
-3. **SafeMode:** 未レビュー（textReviewed=false）のカード本文はAIへ送信しない。送信内容を構築する前にフィルタする
-4. **名詞止め禁止:** カード化・表札作成では必ず述語を伴う文で出力する
-5. **provider=none:** 全操作をスキップ。エラーではなく無効化表示
+1. proposal-only: 出力はすべて提案。人間のAdopt操作なしに文書へ反映しない
+2. 反スコアリング: score/rank/confidence/priority等の数値評価語彙を出力しない
+3. SafeMode: 未レビュー（textReviewed=false）のカード本文はAIへ送信しない。送信内容を構築する前にフィルタする
+4. 名詞止め禁止: カード化・表札作成では必ず述語を伴う文で出力する
+5. プロバイダが `none`: 全操作をスキップ。エラーではなく無効化表示
 
 **失敗時の共通停止条件:**
 
@@ -28,7 +28,7 @@
 
 - **推論深度:** 低
 - **推奨モデル:** DeepSeek
-- **task名:** `refine_card_text`（既存endpoint。将来的にバッチ化も検討）
+- **task名:** `refine_card_text`（既存のエンドポイント。将来的にバッチ化も検討）
 
 ### 入力
 - `cardText`: 元のテキスト（1件）
@@ -118,7 +118,7 @@
 
 ### 判断基準
 - 因果（causal）と関連（related）を安易に混同していないか
-- 対立（negate）を溶かして related に丸めていないか
+- 対立（negate）を、relatedに丸めて消していないか
 - 相互（mutual）と等価（equivalence）を区別できているか
 
 ### 停止条件
@@ -130,7 +130,7 @@
 
 - **推論深度:** 中〜高
 - **推奨モデル:** Sonnet（DeepSeekでは精度不足の可能性）
-- **task名:** 新設要（現行endpointなし。`detect_contradiction` を拡張して対応）
+- **task名:** 新設要（現行のエンドポイントなし。`detect_contradiction` を拡張して対応）
 
 ### 入力
 - カード本文（1件）
@@ -138,15 +138,15 @@
 
 ### 出力
 - `critiqueType`: "too_close" | "too_far" | "not_the_same" | "feels_off" | "no_articulable_reason"
-- `body`: 違和感の説明（no_articulable_reason の場合は省略可）
+- `body`: 違和感の説明（no_articulable_reasonの場合は省略可）
 - `targetCardId`: 違和感の対象カードID
 
 ### 判断基準
-- 「なんとなく違う」を無理に言語化していないか（no_articulable_reason の適切な使用）
+- 「なんとなく違う」を無理に言語化していないか（no_articulable_reasonの適切な使用）
 - 違和感の理由が「分類が間違っている」になっていないか（分類ではなく感覚を扱う）
 
 ### 停止条件
-- no_articulable_reason 以外のtypeが3回連続で同じ出力 → 冗長。停止
+- no_articulable_reason以外のtypeが3回連続で同じ出力 → 冗長。停止
 - 周辺カード0件（SafeModeにより）→ 違和感検出不能。スキップ
 
 ---
@@ -167,7 +167,7 @@
 ### 判断基準
 - 近いものは近く、遠いものは遠くに置かれているか
 - 対立する島が対立として空間上に表現されているか
-- **空白が見つかっているか**（空白ゼロは探索不足）
+- 空白が見つかっているか（空白ゼロは探索不足）
 
 ### 停止条件
 - 3回連続で空白ゼロ → レイアウトが硬直化。指示文の変更を促す
@@ -262,7 +262,7 @@
 - 不整合がある場合、どの次元を補正すべきかの提案
 
 ### 判断基準
-- 全18項目の判定。1つでも✗があれば着工不可
+- 全18項目の判定。1つでも×があれば着工不可
 - 判断不能（△）の項目は情報不足として人間に報告
 
 ### 停止条件

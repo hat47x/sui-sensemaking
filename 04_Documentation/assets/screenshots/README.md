@@ -16,7 +16,7 @@
 
 ### 現行の検証済みセット
 
-共通条件: source revision `6757d855c3ef6c0f7b444020e18f5ecd62fa4ec9`、撮影日2026-08-02、locale `ja`、`SUI_LLM_PROVIDER=none`、秘密情報なし、Playwright 1.58.2、Playwright管理 Chromium 145.0.7632.6。
+共通条件: source revision `6757d855c3ef6c0f7b444020e18f5ecd62fa4ec9`、撮影日2026-08-02、locale `ja`、`SUI_LLM_PROVIDER=none`、秘密情報なし、Playwright 1.58.2、Playwright管理Chromium 145.0.7632.6。
 
 | Capture ID | 対象 | fixture | viewport | 生成スクリプト | 検証結果 |
 | --- | --- | --- | --- | --- | --- |
@@ -24,7 +24,7 @@
 | `product-value-ui-20260802` | `product-value-*.png` 6件 | first meaningful map、ambiguity、review packの決定論的fixture | 1440×900 | `capture_product_value_screenshots.mjs` | 6/6生成成功 |
 | `ui-catalog-20260802` | `ui-*.png` 12件 | `buildCatalogDocument()` / `doc_phase1_canvas` | 1440×900、768×900、960×900 | `capture_ui_catalog.mjs` | 12/12生成成功。島選択をキーボード操作し、選択状態の表示を待つようにして再実行 |
 
-標準コマンド:
+標準コマンドは次のとおりです。
 
 ```powershell
 cd 03_Implement/frontend
@@ -33,7 +33,7 @@ node .\scripts\capture_product_value_screenshots.mjs
 node .\scripts\capture_ui_catalog.mjs
 ```
 
-2026-08-02は `SUI_SCREENSHOT_BROWSER_PATH` を指定せず、Playwright管理 Chromium で撮影した。23件すべてを目視し、秘密情報・API key・顧客データがないこと、日本語ラベルと SafeMode / 未レビュー / readOnly の境界が意図どおりであること、390pxを含む対象viewportで主要操作が見切れないことを確認した。初回確認で `ui-selection-context-island.png` が島未選択の状態を撮っていたため、capture scriptへ状態確認を追加してから最終セットを再生成した。
+2026-08-02は `SUI_SCREENSHOT_BROWSER_PATH` を指定せず、Playwright管理Chromiumで撮影した。23件すべてを目視し、秘密情報・API key・顧客データがないこと、日本語ラベルとSafeMode / 未レビュー / readOnlyの境界が意図どおりであること、390pxを含む対象viewportで主要操作が見切れないことを確認した。初回確認で `ui-selection-context-island.png` が島未選択の状態を撮っていたため、capture scriptへ状態確認を追加してから最終セットを再生成した。
 
 ### stale判定と公開Go条件
 
@@ -62,16 +62,16 @@ Manual review:
 Stale triggers checked:
 ```
 
-撮影条件:
+撮影条件は次のとおりです。
 
-- サンプル文書: `doc_phase1_canvas`
+- サンプル文書: `doc_phase1_canvas`は次のとおりです。
 - UI locale: `ja`
 - API: `http://127.0.0.1:8000`
 - frontend: `http://127.0.0.1:4173/?locale=ja`
 - LLM provider: `SUI_LLM_PROVIDER=none`
 - 秘密情報、API key、組織固有の承認履歴、顧客データは含めない
 
-ファイル:
+ファイルは次のとおりです。
 
 | ファイル | 内容 |
 | --- | --- |
@@ -150,7 +150,7 @@ cd 03_Implement/frontend
 node .\scripts\capture_ui_catalog.mjs
 ```
 
-WSL/Nix 環境などローカルに Playwright のブラウザ依存が無い場合は、Playwright 公式 Docker イメージ（プロジェクトの `@playwright/test` と同一バージョン）内で実行できます。
+WSL/Nix環境などローカルにPlaywrightのブラウザ依存が無い場合は、Playwright公式Dockerイメージ（プロジェクトの `@playwright/test` と同一バージョン）内で実行できます。
 
 ```bash
 docker run --rm --ipc=host \

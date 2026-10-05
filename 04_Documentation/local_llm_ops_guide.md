@@ -1,32 +1,28 @@
-# Local LLM Operations Guide
+# ローカルLLMの運用
 
-対象読者: local LLM または組織内 LLM endpoint を sui-sensemaking に接続する運用担当者、開発者。
+対象読者: ローカルのLLM、または組織内のLLMエンドポイントをsui-sensemakingに接続する運用担当者、開発者。
 
-目的: local provider の設定、HTTP contract、確認方法、失敗時の切り分けを示します。
+目的: ローカルプロバイダの設定、HTTPの仕様、確認の方法、失敗したときの切り分けを示します。
 
-範囲外: 特定モデルの導入手順、外部 large-scale LLM の契約管理、秘密情報の配布。
-
-公開区分: 運用者向け公開候補。local LLM 連携の設定・戻し方を扱い、external provider や escalation は明示的 opt-in がない限り既定OFFとして扱います。
-
-読後にできること: 既定では LLM が無効であることを理解し、local LLM を有効にするときの設定、疎通確認、戻し方を判断できます。
+読後にできること: 既定ではLLMが無効であることを理解し、ローカルLLMを有効にするときの設定、疎通の確認、元に戻す方法を判断できます。
 
 ## 既定値
 
-sui-sensemaking は既定で LLM を使いません。
+sui-sensemakingは、既定ではLLMを使いません。
 
 ```bash
 export SUI_LLM_PROVIDER=none
 ```
 
-この状態では、AI 機能は disabled として扱われ、LLM 連携による外部サービスとの共有は行われません。最初の評価、受け入れ確認、保存動作の確認では、この既定値を推奨します。
+この状態では、AI機能は無効として扱われ、LLM連携によって外部サービスとデータを共有することもありません。最初の評価、受け入れ確認、保存の動作の確認では、この既定値を勧めます。
 
-## local LLM とは
+## ローカルLLMとは
 
-この文書での local LLM は、sui-sensemaking から見て管理できる範囲にある LLM endpoint を指します。同じ PC 上のサービスとは限りません。組織内サーバーを使う場合もあります。
+この文書でのローカルLLMは、sui-sensemakingから見て管理できる範囲にあるLLMのエンドポイントを指します。同じPC上のサービスとは限らず、組織内のサーバーを使う場合もあります。
 
-local という名前でも、URL が外部サービスを指していれば、そのサービスとデータを共有する扱いです。接続先、保持期間、入力データの扱いを確認してから有効にしてください。
+名前がlocalでも、URLが外部のサービスを指していれば、そのサービスとデータを共有することになります。接続先、保持期間、入力データの扱いを確認してから、有効にしてください。
 
-## local provider を有効にする
+## ローカルプロバイダを有効にする
 
 ```bash
 export SUI_LLM_PROVIDER=local
@@ -34,21 +30,21 @@ export SUI_LOCAL_LLM_BASE_URL='http://localhost:8001'
 export SUI_LOCAL_LLM_MODEL='local-model-name'
 ```
 
-`local_http` は `local` の alias として扱われます。
+`local_http` は、`local` の別名として扱います。
 
-> 注意: 上記は direct 起動時の例です。標準 Docker Compose はこれらのキーを配送しません。Compose 上で検証する場合は下記「GPU なしで動作イメージを確認する」の overlay 手順を使ってください。また `api` コンテナ内から見た `http://localhost:8001` はホストではなく `api` コンテナ自身を指すため、Compose 環境ではこの例をそのまま転記しないでください。
+> 注意: 上の例は、直接起動したときの設定です。標準のDocker Composeは、これらのキーを渡しません。Compose上で検証するときは、下の「GPUなしで動作イメージを確認する」の、overlayを使う手順に従ってください。また、`api` コンテナの中から見た `http://localhost:8001` は、ホストではなく `api` コンテナ自身を指します。Compose環境では、この例をそのまま写さないでください。
 
-設定を戻す場合は、provider を `none` に戻します。
+設定を元に戻すときは、プロバイダを `none` に戻します。
 
 ```bash
 export SUI_LLM_PROVIDER=none
 ```
 
-## HTTP contract
+## HTTPの仕様
 
-backend は `<base_url>/generate` に POST します。
+backendは、`<ベースURL>/generate` にPOSTします。
 
-Request:
+リクエストは、次の形です。
 
 ```json
 {
@@ -60,7 +56,7 @@ Request:
 }
 ```
 
-Response:
+応答は、次の形です。
 
 ```json
 {
@@ -68,38 +64,38 @@ Response:
 }
 ```
 
-`text` が文字列でない場合、provider validation error として扱われます。
+`text` が文字列でないときは、プロバイダの検証エラーとして扱います。
 
-この `/generate` は sui-sensemaking 独自の契約で、OpenAI 互換 API や Ollama の API とは**互換性がありません**。`SUI_LOCAL_LLM_BASE_URL` を Ollama 等へ直接向けても動作しません。接続するには、この契約（`POST /generate`、応答 `{"text": "<JSON文字列>"}`）を満たす薄いアダプタ層が必要です。
+この `/generate` は、sui-sensemaking独自の仕様です。OpenAI互換のAPIやOllamaのAPIとは、互換性がありません。`SUI_LOCAL_LLM_BASE_URL` をOllamaなどに直接向けても、動作しません。接続するには、この仕様（`POST /generate`、応答は `{"text": "<JSON文字列>"}`）を満たす、薄い変換層（アダプタ）が必要です。
 
-## GPU なしで動作イメージを確認する（モックアダプタ）
+## GPUなしで動作イメージを確認する（モックアダプタ）
 
-各 AI タスクは `text` の中に**タスクごとの厳密な JSON**（例: レイアウト提案は元の全カードを過不足なく含む、島サマリの根拠IDはその島のメンバーである、ナラティブは読み順と完全一致する等）を要求します。GPU 非搭載 PC で動く小規模・低精度モデルでは、この JSON を安定して生成できず検証エラー（422）が頻発しがちです。
+AIの各タスクは、`text` の中に、タスクごとに厳密なJSONを要求します。たとえば、レイアウトの提案には元のすべてのカードが過不足なく含まれること、島のサマリの根拠IDはその島のメンバーであること、ナラティブは読み順と完全に一致することです。GPUのないPCで動く小規模で精度の低いモデルでは、このJSONを安定して作れず、検証エラー（422）が頻繁に起きがちです。
 
-「動作イメージ」だけを GPU なしで確認したい場合は、リポジトリ同梱の決定論的モックアダプタを使えます。これは LLM ではなく、各タスクに**最小限の妥当な JSON** を返すだけのスタブです（レイアウトは単純なグリッド配置、要約・ナラティブは定型の下書き、統合候補・整合性チェックは空）。UI 上で AI 連携の往復と表示の流れを確認する用途に限定してください。
+動作のイメージだけをGPUなしで確認したいときは、リポジトリに同梱した、決定論的なモックアダプタを使えます。これはLLMではなく、各タスクに最小限の妥当なJSONを返すだけのスタブです。レイアウトは単純なグリッド配置、要約とナラティブは定型の下書き、統合の候補と整合性のチェックは空になります。画面上で、AI連携のやり取りと表示の流れを確認する用途に限って使ってください。
 
 ```bash
-# 別端末でモックアダプタを起動（Python 標準ライブラリのみ・依存なし）
+# 別の端末でモックアダプタを起動する（Python標準ライブラリだけで動き、依存はありません）
 python3 03_Implement/deploy/tools/mock_local_llm.py --host 127.0.0.1 --port 8001
 
-# backend 側で local provider を有効化し、モックに向ける
+# backend側でローカルプロバイダを有効にし、モックに向ける
 export SUI_LLM_PROVIDER=local
 export SUI_LOCAL_LLM_BASE_URL=http://localhost:8001
 export SUI_LOCAL_LLM_MODEL=mock
 ```
 
-> 注意: `mock_local_llm.py` は direct 起動（backend をローカルで直接起動する構成）向けの確認手段です。標準 Docker Compose 環境では、代わりに検証専用の `docker-compose.llm-stub.yml` overlay（`docker compose -f docker-compose.yml -f docker-compose.llm-stub.yml up -d`）を使ってください。この overlay は Compose ネットワーク内で完結する別の決定論的スタブ（`llm-stub` サービス）であり、`mock_local_llm.py` とは別の仕組みです。どちらも本番相当の利用者向けデプロイでは使いません。
+> 注意: `mock_local_llm.py` は、直接起動（backendをローカルで直接起動する構成）向けの確認手段です。標準のDocker Compose環境では、代わりに、検証専用の `docker-compose.llm-stub.yml` を重ねて使ってください（`docker compose -f docker-compose.yml -f docker-compose.llm-stub.yml up -d`）。これはCompose内のネットワークで完結する、別の決定論的なスタブ（`llm-stub` サービス）で、`mock_local_llm.py` とは別の仕組みです。どちらも、本番に近い、利用者向けの配備では使いません。
 
-モック有効時に画面で確認できる AI 機能:
+モックを有効にしたときに、画面で確認できるAI機能は、次のとおりです。
 
-- 既定の画面（「詳細」トグル OFF）: 島を選択して「AIで提案」（島サマリ）、島どうしの関係線を選択して「AIで生成」（関係サマリ）。
-- 「詳細」トグル ON: 上記に加えて、レイアウト提案・統合候補・ナラティブ生成／整合性チェック。
+- 既定の画面（「詳細」のトグルがOFF）: 島を選んで「AIで提案」（島のサマリ）、島どうしの関係線を選んで「AIで生成」（関係のサマリ）。
+- 「詳細」のトグルがON: 上に加えて、レイアウトの提案、統合の候補、ナラティブの生成と整合性のチェック。
 
-モックの出力は内容を持たない定型です。実際の示唆を得るには、`/generate` 契約に合わせて十分な JSON 追従性を持つ LLM を接続してください（通常は薄いアダプタ層が必要です）。
+モックの出力は、内容のない定型です。実際の示唆を得るには、`/generate` の仕様に合わせて、JSONに十分に従えるLLMを接続してください（通常は、薄い変換層が必要です）。
 
-## 疎通確認
+## 疎通の確認
 
-まず local endpoint 側を直接確認します。
+まず、ローカルのエンドポイントを直接確認します。
 
 ```bash
 curl -fsS http://localhost:8001/generate \
@@ -107,35 +103,35 @@ curl -fsS http://localhost:8001/generate \
   --data '{"task":"health","prompt":"Say ok","temperature":0.2,"max_tokens":16,"model":"local-model-name"}'
 ```
 
-次に sui-sensemaking backend とログを確認します。
+次に、sui-sensemakingのbackendとログを確認します。
 
 ```bash
 curl -fsS http://localhost:8080/api/healthz
 docker compose logs api --tail=100
 ```
 
-`/healthz` が通っても、LLM endpoint の疎通まで保証するわけではありません。AI 提案を実行し、provider error や timeout が出ないことも確認してください。
+`/healthz` が成功しても、LLMのエンドポイントとの疎通までは保証されません。AI提案を実行して、プロバイダのエラーやタイムアウトが出ないことも、確認してください。
 
 ## 運用上の注意
 
-- 入力に秘密情報、個人情報、未レビューの機密情報を含めないでください。共有してよい情報か迷う場合は [data_handling.md](data_handling.md) を確認します。
-- SafeMode の目的を緩める設定変更は、[security.md](security.md) と [security_operational_guidelines.md](security_operational_guidelines.md) を確認してから行ってください。
-- provider が不安定な場合は、まず `SUI_LLM_PROVIDER=none` に戻し、保存や表示などの基本操作が正常か確認します。
-- local provider の接続先（endpoint）のログに prompt 全文が残る場合があります。ログの保管先と閲覧権限を確認してください。
+- 入力に、秘密情報、個人情報、未レビューの機密情報を含めないでください。共有してよい情報か迷うときは、[data_handling.md](data_handling.md) を確認します。
+- SafeModeの目的を緩める設定の変更は、[security.md](security.md) と [security_operational_guidelines.md](security_operational_guidelines.md) を確認してから行ってください。
+- プロバイダが不安定なときは、まず `SUI_LLM_PROVIDER=none` に戻し、保存や表示などの基本操作が正常かを確認します。
+- ローカルプロバイダの接続先（エンドポイント）のログに、プロンプトの全文が残ることがあります。ログの保管先と、閲覧できる権限を確認してください。
 
 ## よくある失敗
 
 | 症状 | 確認すること |
 | --- | --- |
-| `SUI_LOCAL_LLM_BASE_URL is not set` | base URL が未設定です |
-| provider timeout | local provider の接続先（endpoint）が起動しているか、応答が遅すぎないか |
-| response missing text field | 接続先（endpoint）の応答が `{ "text": "..." }` になっているか |
-| AI disabled | `SUI_LLM_PROVIDER=none` のままではないか |
-| 401 または 403 | 接続先（endpoint）側の認証、proxy、ネットワーク制限 |
+| `SUI_LOCAL_LLM_BASE_URL is not set` | ベースURLが設定されていません。 |
+| プロバイダのタイムアウト | ローカルプロバイダの接続先（エンドポイント）が起動しているか、応答が遅すぎないか |
+| `response missing text field` | 接続先（エンドポイント）の応答が、`{ "text": "..." }` の形になっているか |
+| AIが無効と表示される | `SUI_LLM_PROVIDER=none` のままになっていないか |
+| 401または403 | 接続先（エンドポイント）側の認証、プロキシ、ネットワークの制限 |
 
-## large-scale との違い
+## 大規模LLMとの違い
 
-large-scale provider は、明示 opt-in、昇格許可、allowlist がすべて必要です。local provider とは別の安全境界として扱います。
+大規模LLMのプロバイダを使うには、明示的なopt-in、昇格の許可、許可リストの、すべてが必要です。ローカルプロバイダとは別の安全上の境界として扱います。
 
 ```bash
 export SUI_LLM_PROVIDER=large-scale
@@ -144,9 +140,9 @@ export SUI_LLM_LARGE_SCALE_OPT_IN=true
 export SUI_LARGE_SCALE_LLM_ALLOWLIST='llm.example.com'
 ```
 
-> 注意: 上記は direct 起動時の例です。標準 Docker Compose はこれらのキーを配送しません（[runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings) 参照）。
+> 注意: 上の例は、直接起動したときの設定です。標準のDocker Composeは、これらのキーを渡しません（[runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings) を参照）。
 
-large-scale provider を使う場合は、[configuration.md](configuration.md) と [security.md](security.md) を確認してください。
+大規模LLMのプロバイダを使うときは、[configuration.md](configuration.md) と [security.md](security.md) を確認してください。
 
 ## 関連文書
 

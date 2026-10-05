@@ -5,7 +5,7 @@ Revises: 20260815_0028
 
 `users.roles`（カンマ区切りのロール識別子）を追加。admin provisioning が
 この列へ書き込み、identity 解決がここから読み出す — クライアントヘッダ由来
-ではない server-verified な認可属性（SEC-AUTH-ATTRIB-01 D-a）。
+ではないserver-verifiedな認可属性（SEC-AUTH-ATTRIB-01 D-a）。
 """
 
 from collections.abc import Sequence

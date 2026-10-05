@@ -5,10 +5,11 @@ The tool never writes a result ledger. It reads a local DocumentV1 JSON and
 prints either the current human-authored structure (baseline phase) or eligible
 deterministic regrouping candidates (candidates phase).
 
-Run the baseline phase first, note your current interpretation without machine
-candidates, then run the candidates phase. Candidate output includes card text
-because a human must judge whether attention actually moved, but the text stays
-in local stdout unless the caller redirects it.
+Run the baseline phase first, record the current interpretation without machine
+candidates in a local note, then pass both the printed baseline receipt and that
+note to the candidates phase. Candidate output includes card text because a
+human must judge whether attention actually moved, but neither the source note
+nor its contents are reprinted; only its digest and byte count are shown.
 
 This tool does not turn a run into ADR-0089 T2 evidence by itself. T2 requires
 the Maintainer's own non-SUI practical use and qualitative observation.
@@ -21,21 +22,74 @@ import hashlib
 from pathlib import Path
 from typing import Literal
 
+from sui_sensemaking_api.attention_candidates import (
+    ATTENTION_METHOD_ID,
+    attention_candidates_from_ir,
+    attention_source_digest,
+    build_attention_ir,
+)
+from sui_sensemaking_api.llm_input_ir import IRGenerationError, held_card_ids
 from sui_sensemaking_api.models import DocumentV1
-
-try:
-    from scripts.measure_cognitive_candidate_novelty import measure_document
-except ModuleNotFoundError as exc:
-    if exc.name != "scripts":
-        raise
-    from measure_cognitive_candidate_novelty import measure_document
 
 
 Phase = Literal["baseline", "candidates"]
 
 
+class IncompleteAttentionProjectionError(ValueError):
+    """T2 cannot interpret an attention projection that lost source material."""
+
+
+class BaselineGateError(ValueError):
+    """Candidate reveal requires a bound baseline snapshot and human note."""
+
+
+def _require_complete_attention_projection(ir: dict) -> None:
+    truncation = ir.get("truncation", {})
+    if not truncation.get("truncated"):
+        return
+    reasons = truncation.get("reason_codes", [])
+    detail = ", ".join(str(reason) for reason in reasons) or "unknown"
+    raise IncompleteAttentionProjectionError(
+        f"attention projection was truncated ({detail}); T2 review is invalid"
+    )
+
+
 def _sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def _baseline_receipt(
+    source_sha256: str,
+    product_digest: str,
+    *,
+    method_id: str = ATTENTION_METHOD_ID,
+) -> str:
+    payload = (
+        "sui-cognitive-t2-baseline-v2\0"
+        + source_sha256
+        + "\0"
+        + product_digest
+        + "\0"
+        + method_id
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _require_baseline_gate(
+    *,
+    expected_receipt: str,
+    provided_receipt: str | None,
+    observation_raw: bytes | None,
+) -> tuple[str, int]:
+    if provided_receipt != expected_receipt:
+        raise BaselineGateError(
+            "candidate phase requires the Baseline receipt from the same snapshot"
+        )
+    if observation_raw is None or not observation_raw.strip():
+        raise BaselineGateError(
+            "candidate phase requires a non-empty baseline observation file"
+        )
+    return _sha256(observation_raw), len(observation_raw)
 
 
 def _card_text_by_id(document: DocumentV1) -> dict[str, str]:
@@ -47,6 +101,9 @@ def render_baseline(
     *,
     source_sha256: str | None = None,
 ) -> str:
+    ir = build_attention_ir(document)
+    _require_complete_attention_projection(ir)
+    product_digest = attention_source_digest(ir)
     by_id = _card_text_by_id(document)
     hold_by_id = {
         card.id: getattr(card, "holdState", None)
@@ -62,6 +119,12 @@ def render_baseline(
     ]
     if source_sha256 is not None:
         lines.append(f"Source SHA-256: {source_sha256}")
+        lines.append(
+            "Baseline receipt: "
+            + _baseline_receipt(source_sha256, product_digest)
+        )
+    lines.append(f"Attention methodId: {ATTENTION_METHOD_ID}")
+    lines.append(f"Attention sourceDigest: {product_digest}")
     lines.extend(
         [
             "",
@@ -98,6 +161,8 @@ def render_baseline(
             "- いま注意している材料は何か",
             "- いまの島分けを見直したい箇所はあるか",
             "- 保留・異論として残したいものは何か",
+            "",
+            "この3点をローカルのメモへ記録してから候補フェーズへ進む。",
         ]
     )
     return "\n".join(lines)
@@ -107,56 +172,51 @@ def render_candidates(
     document: DocumentV1,
     *,
     source_sha256: str,
+    baseline_receipt: str | None,
+    baseline_observation: bytes | None,
 ) -> str:
-    measurement = measure_document(
-        document,
-        source_sha256=source_sha256,
-        include_spatial=False,
+    ir = build_attention_ir(document)
+    _require_complete_attention_projection(ir)
+    product_digest = attention_source_digest(ir)
+    expected_receipt = _baseline_receipt(source_sha256, product_digest)
+    observation_sha256, observation_bytes = _require_baseline_gate(
+        expected_receipt=expected_receipt,
+        provided_receipt=baseline_receipt,
+        observation_raw=baseline_observation,
     )
+    candidates = attention_candidates_from_ir(ir)
     by_id = _card_text_by_id(document)
 
     lines = [
         "# Cognitive T2 review — deterministic candidates",
         "",
-        "候補は提案であり、採用・順位・確信度を表さない。",
+        "候補は製品APIと同じ決定論ロジックから得た提案であり、採用・順位・確信度を表さない。",
         "held/pending/shelved を含む候補は表示しない。",
         f"Source SHA-256: {source_sha256}",
+        f"Attention methodId: {ATTENTION_METHOD_ID}",
+        f"Attention sourceDigest: {product_digest}",
+        f"Baseline receipt: {expected_receipt}",
+        f"Baseline observation SHA-256: {observation_sha256}",
+        f"Baseline observation bytes: {observation_bytes}",
+        "Excluded hold card IDs: "
+        + (", ".join(held_card_ids(ir)) if held_card_ids(ir) else "none"),
         "",
     ]
 
-    candidates = measurement["candidates"]
     if not candidates:
         lines.append("Eligible deterministic candidates: none")
     else:
         for candidate in candidates:
             lines.append(
-                f"## {candidate['clusterId']} ({candidate['basis']})"
+                f"## {candidate.candidateId} ({candidate.basis} / {candidate.cue})"
             )
-            for card_id in candidate["cardIds"]:
+            for card_id in candidate.cardIds:
                 lines.append(f"- {card_id}: {by_id[card_id]}")
-
-            not_co = candidate["notAlreadyCoIslandedPairs"]
-            indirect = candidate["indirectRegroupingPairs"]
             lines.append(
-                "既存島に同居していない組: "
-                + (
-                    ", ".join(
-                        f"{pair['left']}↔{pair['right']}"
-                        for pair in not_co
-                    )
-                    if not_co
-                    else "なし"
-                )
-            )
-            lines.append(
-                "直接relationでもない間接再構成: "
-                + (
-                    ", ".join(
-                        f"{pair['left']}↔{pair['right']}"
-                        for pair in indirect
-                    )
-                    if indirect
-                    else "なし"
+                "注目組: "
+                + ", ".join(
+                    f"{left}↔{right}"
+                    for left, right in candidate.focusPairs
                 )
             )
             lines.append("")
@@ -182,13 +242,20 @@ def render_review(
     *,
     phase: Phase,
     source_sha256: str,
+    baseline_receipt: str | None = None,
+    baseline_observation: bytes | None = None,
 ) -> str:
     if phase == "baseline":
         return render_baseline(
             document,
             source_sha256=source_sha256,
         )
-    return render_candidates(document, source_sha256=source_sha256)
+    return render_candidates(
+        document,
+        source_sha256=source_sha256,
+        baseline_receipt=baseline_receipt,
+        baseline_observation=baseline_observation,
+    )
 
 
 def main() -> int:
@@ -207,6 +274,15 @@ def main() -> int:
         required=True,
         help="Run baseline first, then candidates after recording the baseline.",
     )
+    parser.add_argument(
+        "--baseline-receipt",
+        help="Receipt printed by the baseline phase for the same snapshot.",
+    )
+    parser.add_argument(
+        "--baseline-observation",
+        type=Path,
+        help="Local non-empty note recorded before revealing candidates.",
+    )
     args = parser.parse_args()
 
     try:
@@ -216,13 +292,30 @@ def main() -> int:
         print(f"FAIL: {exc}")
         return 1
 
-    print(
-        render_review(
+    observation_raw: bytes | None = None
+    if args.phase == "candidates" and args.baseline_observation is not None:
+        try:
+            observation_raw = args.baseline_observation.read_bytes()
+        except OSError as exc:
+            print(f"FAIL: {exc}")
+            return 1
+
+    try:
+        rendered = render_review(
             document,
             phase=args.phase,
             source_sha256=_sha256(raw),
+            baseline_receipt=args.baseline_receipt,
+            baseline_observation=observation_raw,
         )
-    )
+    except IRGenerationError as exc:
+        print(f"FAIL: {exc.to_contract()}")
+        return 1
+    except (IncompleteAttentionProjectionError, BaselineGateError) as exc:
+        print(f"FAIL: {exc}")
+        return 1
+
+    print(rendered)
     return 0
 
 

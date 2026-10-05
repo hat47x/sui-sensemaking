@@ -24,8 +24,8 @@
 
 ## トークン数の意味
 
-ここで得るトークン数は provider の課金値ではない。モデルごとにトークナイザが
-異なるため、回帰比較用の参照値として tiktoken の `o200k_base` を用いる。
+ここで得るトークン数はproviderの課金値ではない。モデルごとにトークナイザが
+異なるため、回帰比較用の参照値としてtiktokenの `o200k_base` を用いる。
 UTF-8バイト数も併記し、特定providerのトークナイザへ判断を固定しない。
 named provider の実測は `AI-IR-SCALE-01` R20（`measure_ai_route_provider_tokens.py`）
 の担当であり、本スクリプトはそれを代替しない。
@@ -119,7 +119,7 @@ def _card_id(index: int) -> str:
 
 
 def _hold_state_for(index: int) -> str | None:
-    """25枚に1枚へ hold を置く（300枚中12枚）。3値を巡回させる。"""
+    """25枚に1枚へholdを置く（300枚中12枚）。3値を巡回させる。"""
     if index % 25 != 7:
         return None
     return _HOLD_STATES[(index // 25) % len(_HOLD_STATES)]
@@ -129,7 +129,7 @@ def build_representative_document() -> DocumentV1:
     """300カード・30島の、決定論的でPIIを含まない代表文書を作る。
 
     AC-10 が求める「代表規模」を、単なる件数ではなく**切り詰めが実際に起きる**
-    形で満たす:
+    形で満たす。
 
     - 300カード（`MAX_CARDS=200` を超える）
     - 30島・10枚ずつ。`i10`〜`i29` の20島は `parentIslandId` で階層を持ち、
@@ -509,19 +509,19 @@ def main() -> int:
         "--max-cards",
         type=int,
         default=None,
-        help="計測時だけ MAX_CARDS を上書きする（production定数は変更しない）",
+        help="計測時だけMAX_CARDSを上書きする（production定数は変更しない）",
     )
     parser.add_argument(
         "--max-relations",
         type=int,
         default=None,
-        help="計測時だけ MAX_RELATIONS を上書きする（production定数は変更しない）",
+        help="計測時だけMAX_RELATIONSを上書きする（production定数は変更しない）",
     )
     parser.add_argument(
         "--max-text-chars",
         type=int,
         default=None,
-        help="計測時だけ MAX_TEXT_CHARS を上書きする（production定数は変更しない）",
+        help="計測時だけMAX_TEXT_CHARSを上書きする（production定数は変更しない）",
     )
     args = parser.parse_args()
 

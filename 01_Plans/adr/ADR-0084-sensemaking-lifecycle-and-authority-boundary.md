@@ -10,7 +10,7 @@
 
 SUI Sensemakingはこれまで、KJ法に着想を得た人間の意味形成を中心に据え、AIを一貫して「候補生成器」として扱ってきた。この境界は、現在のSafeMode、`proposal-only`、`human_reviewed`の運用を安全に成立させるうえで有効である。
 
-一方、SUIの長期的な価値はKJ法キャンバスだけに閉じない。人間とAIが未整理な材料から関係・仮説・構造・統合を形成し、その意味形成過程を跨セッションで蓄積・再検証できるsensemaking基盤として発展させる。
+一方、SUIの長期的な価値はKJ法キャンバスだけに閉じない。人間とAIが未整理な材料から関係・仮説・構造・統合を形成し、その意味形成過程をセッションをまたいで蓄積・再検証できるsensemaking基盤として発展させる。
 
 AI能力が拡大すれば、AIが担う領域も、単発の候補提示から、複数段階の探索、仮説形成、構造化、反証、統合へ広がる。その結果、人間の役割は、逐次操作から、方向づけ、理解、異議、承認へ移る可能性がある。
 
@@ -24,7 +24,7 @@ AI能力が拡大すれば、AIが担う領域も、単発の候補提示から�
 
 SUIは、人間および人工認知系が、未整理な材料から関係・仮説・構造・統合を形成し、その形成過程を保持しながら理解を成熟させるためのsensemaking基盤とする。
 
-KJ法に着想を得たキャンバスは、SUIにおける中核的な人間系sensemaking interfaceであり続ける。ただし、SUI Coreの内部表現、AIの探索方法、将来の認知プロトコルをKJ法だけに限定しない。
+KJ法に着想を得たキャンバスは、SUIにおける中核的な人間系のsensemakingインターフェースであり続ける。ただし、SUI Coreの内部表現、AIの探索方法、将来の認知プロトコルをKJ法だけに限定しない。
 
 ### D2. 「AIが考えること」と「受け入れ済みの意味へ昇格すること」を分離する
 
@@ -65,10 +65,10 @@ AI Workspace / WorkingGraph内では、来歴を保持したうえで複数段�
 
 SUIは、少なくとも次の利用状態を同じ情報資産上で支えられる方向へ進化する。
 
-1. **Human-led** — 人間が意味形成を行い、AIは観察・補助を担う
-2. **Collaborative** — 人間とAIが別々の観測・仮説を持ち寄る
-3. **Delegated** — 人間が範囲と目的を与え、AIが一定区間のsensemakingを進める
-4. **Supervised autonomous** — AIが継続的に探索・統合し、人間が理解・異議・承認を担う
+1. **Human-led**: 人間が意味形成を行い、AIは観察・補助を担う
+2. **Collaborative**: 人間とAIが別々の観測・仮説を持ち寄る
+3. **Delegated**: 人間が範囲と目的を与え、AIが一定区間のsensemakingを進める
+4. **Supervised autonomous**: AIが継続的に探索・統合し、人間が理解・異議・承認を担う
 
 これらを一方向の成熟度ランキングとはしない。対象、リスク、利用目的に応じて工程単位で異なる役割分担を選べることを目指す。
 
@@ -77,16 +77,16 @@ SUIは、少なくとも次の利用状態を同じ情報資産上で支えら�
 AIの自律度が上がっても、次は維持する。
 
 - 元Evidenceと派生解釈を混同しない
-- Unknown / Hold / Conflictを自動的に事実へ潰さない
+- Unknown / Hold / Conflictを自動的に事実へ変換しない
 - 少数意見・反証・違和感を都合の悪いノイズとして削除しない
-- AI生成物の主体、provider、入力範囲、来歴を追跡可能にする
-- 人間のreview / approvalをAIが偽装しない
+- AI生成物の主体、プロバイダ、入力範囲、来歴を追跡可能にする
+- 人間のレビューや承認をAIが偽装しない
 - 共有・公開時のSafeMode境界を迂回しない
 - 探索結果を不可逆に唯一の意味へ固定しない
 
 ### D6. 現行実装の安全境界は本ADRだけでは変更しない
 
-本ADRは長期のProduct / Domain boundaryを更新するものであり、現行runtimeの自動適用を有効化しない。
+本ADRは長期の製品・ドメインの境界を更新するものであり、現行のランタイムで自動適用を有効にしない。
 
 当面は次を維持する。
 
@@ -113,7 +113,7 @@ AIの自律度が上がっても、次は維持する。
 ### 期待される効果
 
 - SUIの存在理由が「AIの不得意を補う」「人間が必ず全操作を行う」ことに依存しなくなる。
-- KJ法キャンバスを保持したまま、AI-nativeなsensemaking手法を追加できる。
+- KJ法キャンバスを保持したまま、AIを前提としたsensemaking手法を追加できる。
 - AI能力の向上を、既存価値への脅威ではなく、より広い委任区間を可能にする変化として受け止められる。
 - 「候補」「仮説」「統合」「承認」を別状態として扱うことで、AIの内部自律性と人間の権限を両立できる。
 - 将来、人間が全カード操作を追わず、Review Capsule等を通じて理解・異議・承認に集中する設計へ移行できる。
@@ -124,12 +124,12 @@ AIの自律度が上がっても、次は維持する。
 - `ai_cognitive_externalization_requirements.md`の「AIは常に候補生成器」という表現を改訂する必要がある。
 - `ADR-0001`のAI要求は、AI Workspace内の自律処理とAccepted stateへの昇格を区別する必要がある。
 - 将来のデータモデルでは、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionの区別を検討する。
-- 自律度は精度スコアだけで自動昇格させず、対象業務・権限・損失可能性を含むpolicyとして扱う必要がある。
+- 自律度は精度スコアだけで自動昇格させず、対象業務・権限・損失可能性を含むポリシーとして扱う必要がある。
 
 ## Traceability
 
-- `00_Prompt/domain.md` — AIと共有・確定面のドメイン境界
-- `00_Prompt/cognitive_frame_and_evolution_criteria.md` — SUIの存在理由と長期進化基準
-- `00_Prompt/ai_cognitive_externalization_requirements.md` — AI Workspaceと人間・AI協働の要件
-- `01_Plans/adr/ADR-0001-value-to-requirements.md` — 価値から具体要求への変換
-- `AGENTS.md §7` — 現行開発時の安全不変条件。本ADRだけでは変更しない
+- `00_Prompt/domain.md`（AIと共有・確定面のドメイン境界）
+- `00_Prompt/cognitive_frame_and_evolution_criteria.md`（SUIの存在理由と長期進化基準）
+- `00_Prompt/ai_cognitive_externalization_requirements.md`（AI Workspaceと人間・AI協働の要件）
+- `01_Plans/adr/ADR-0001-value-to-requirements.md`（価値から具体要求への変換）
+- `AGENTS.md §7`（現行開発時の安全不変条件。本ADRだけでは変更しない）

@@ -13,12 +13,12 @@ Phase Aでは、以下4観点で文書間照合を実施した。
    - provider語彙を `none | fixture | local | external` へ統一。
    - `safeMode` 表記を統一し、外部送信制約との関係を固定。
 2. 責務境界
-   - provider spec は「I/Fと監査契約」、runtime constraints は「実行環境制約」、quality strategy は「ゲート基準」、escalation policy は「外部送信の運用条件」に責務分離。
+   - provider specは「I/Fと監査契約」、runtime constraintsは「実行環境制約」、quality strategyは「ゲート基準」、escalation policyは「外部送信の運用条件」に責務分離。
 3. fail-safe
    - default無効（`SUI_LLM_PROVIDER=none`）と `SUI_LLM_ESCALATION_ENABLED=false` を4文書で一致。
-   - `SUI_LLM_ESCALATION_ENABLED=false` 時に external へフォールバックしない規則を固定。
+   - `SUI_LLM_ESCALATION_ENABLED=false` 時にexternalへフォールバックしない規則を固定。
 4. 運用条件
-   - opt-in条件（local/external）と allowlist-only outbound を明文化。
+   - opt-in条件（local/external）とallowlist-only outboundを明文化。
 
 ## 2) Execute（差分表と確定案）
 
@@ -32,24 +32,24 @@ Phase Aでは、以下4観点で文書間照合を実施した。
 
 ## 3) Verify（相互参照・矛盾ゼロ確認）
 
-確認結果:
+確認結果は次のとおりです。
 
 - 4文書とも `SUI_LLM_PROVIDER=none` を既定として扱う。
-- 4文書とも external送信は opt-in + 制約付き（`SUI_LLM_ESCALATION_ENABLED=true` と allowlist-only outbound）で一致。
-- quality strategyの必須ゲートに safeMode と fail-safe（外部不使用）を含め、escalation policyと矛盾なし。
-- runtime constraints の実行モードは provider語彙と整合し、default無効・外部禁止（通常時）を保持。
+- 4文書ともexternal送信はopt-in + 制約付き（`SUI_LLM_ESCALATION_ENABLED=true` とallowlist-only outbound）で一致。
+- quality strategyの必須ゲートにsafeModeとfail-safe（外部不使用）を含め、escalation policyと矛盾なし。
+- runtime constraintsの実行モードはprovider語彙と整合し、default無効・外部禁止（通常時）を保持。
 
 ## 4) Report（完了判定 / 未解決論点）
 
 ### Phase A完了判定
 
 - 判定: **完了**
-- 根拠:
+- 根拠は次のとおりです。
   - 対象4文書の語彙・責務境界・fail-safe・運用条件の矛盾を解消。
   - 「コード変更なしでも完了判定できるレビュー成果物」として本報告を追加。
 
 ### 未解決論点（Phase B以降へ送る）
 
-1. `external` provider の具体的接続先命名（ベンダ中立名の運用ガイド詳細化）。
+1. `external` providerの具体的接続先命名（ベンダ中立名の運用ガイド詳細化）。
 2. `safeMode` の赤線化ルール詳細（フィールド単位）を運用手順へ落とし込む粒度。
 3. 監査ログ項目の保存期間・マスキング基準の運用設計。

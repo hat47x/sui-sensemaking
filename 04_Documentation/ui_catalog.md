@@ -1,41 +1,16 @@
-# 現行UIカタログ / Current UI Catalog
+# 現行UIカタログ
 
-対象読者: sui-sensemaking の画面構成を一覧で把握したい利用者・運用者・評価担当者。
+対象読者: sui-sensemakingの画面構成を一覧で把握したい利用者・運用者・評価担当者。
 
-目的:
+目的: 現在の画面に「どのUI要素があり、何のためにあるか」を、スクリーンショット付きで一望できるようにします。最初の操作は[最初の意味ある配置を作る](getting_started.md)、機能全体の確認は[受け入れ確認](acceptance_check.md)を参照してください。
 
-現在の画面に「どのUI要素があり、何のためにあるか」を、確認済みスクリーンショット付きで一望できるようにします。最初の操作は[最初の意味ある配置を作る](getting_started.md)、機能全体の確認は[受け入れ確認](acceptance_check.md)を参照してください。
-
-範囲外: 開発者向けの設計・実装手順と、現在提供していない機能の説明。
-
-## 確認情報
-
-| 項目 | 値 |
-| --- | --- |
-| 確認対象revision | `1367740d8d03cf53bc0ad1eb09ffc45684ff51e1` |
-| 最終確認日 | 2026-07-11 |
-| 表示条件 | 日本語、`SUI_LLM_PROVIDER=none`、SafeMode ON、秘密情報を含まない固定サンプル |
-| 画像検証 | 入口・全体5状態、価値状態6状態、UI要素12状態を再生成し、全23状態成功 |
-| 公開状態 | Go。下記の再確認条件に該当した場合は、再撮影が終わるまで要再確認へ戻す |
-
-画面ラベル、主要レイアウト、固定サンプル、locale、viewport、SafeMode/共有前確認、または撮影スクリプトが変わった場合は画像を再生成し、revision・確認日・検証結果を更新します。画像と実画面の差異を見つけた場合も、確認が終わるまで「現行」とみなしません。
-
-## 撮影条件
-
-- サンプル文書: `doc_phase1_canvas`（決定論的フィクスチャ。秘密情報・API key・顧客データを含まない）
-- UI locale: `ja` / LLM provider: `SUI_LLM_PROVIDER=none`（AI 無効・既定構成）
-- 既定ビューポート: 1440×900（レスポンシブ節は 390 / 768 / 960px）
-- 再生成スクリプト（リポジトリ正本）:
-  - `03_Implement/frontend/scripts/capture_release_screenshots.mjs`（入口・全体・選択・共有・モバイル）
-  - `03_Implement/frontend/scripts/capture_product_value_screenshots.mjs`（価値状態）
-  - `03_Implement/frontend/scripts/capture_ui_catalog.mjs`（本書の UI 要素カタログ）
-- ローカルに Playwright ブラウザ依存が無い場合は Playwright 公式 Docker イメージ内で実行します（手順は [assets/screenshots/README.md](assets/screenshots/README.md)）。
+表示条件: 日本語、`SUI_LLM_PROVIDER=none`、SafeMode ON、標準サンプル `doc_phase1_canvas`。
 
 ---
 
 ## 1. 起動 / 文書入口
 
-起動直後に表示される「作業を開始」パネル。新規作成・サンプル・最近の文書・document.json / レビューパック取り込み・SafeMode 状態を扱う入口です。
+起動直後に表示される「作業を開始」パネル。新規の作成、サンプル、最近の文書、`document.json` とレビューパックの取り込み、SafeModeの状態を扱う入口です。
 
 ![起動直後の作業開始パネル](assets/screenshots/start-document-entry.png)
 
@@ -47,21 +22,21 @@
 
 ## 3. ヘッダー / 主要ツールバー
 
-左から: `ファイル` / `編集` メニュー、`新規カード`、`島を作成`、`削除`、`保存`、`詳細`（AI・高度機能の表示トグル）、表示モード、検索、`表示`、`共有と再現`、SafeMode 状態があります。通常作業に必要な作成・島・削除・保存を先に表示し、高度な機能は`詳細`で段階的に開きます。
+左から: `ファイル` / `編集` メニュー、`新規カード`、`島を作成`、`削除`、`保存`、`詳細`（AIと高度な機能の表示を切り替える）、表示モード、検索、`表示`、`共有と再現`、SafeMode状態があります。通常作業に必要な作成・島・削除・保存を先に表示し、高度な機能は`詳細`で段階的に開きます。
 
 ![ヘッダーと主要ツールバー](assets/screenshots/ui-header-toolbar.png)
 
 ## 4. キャンバス: カードとドメイン表現バッジ
 
-カードには claimType（`事実`=緑 / `主張`=青 / `仮説`=紫 / `unknown`）、保留状態（`保留` / `未決` / `棚上げ`）、違和感（タグ数または点）、未レビュー（点）のバッジが表示されます。島は領域として囲み、見出しと折りたたみ操作を持ちます。
+カードには、主張の種別（claimType。`事実`は緑、`主張`は青、`仮説`は紫、`unknown`）、保留状態（`保留` / `未決` / `棚上げ`）、違和感（タグ数または点）、未レビュー（点）のバッジが表示されます。島は領域として囲み、見出しと折りたたみ操作を持ちます。
 
 ![カードのドメイン表現バッジと島](assets/screenshots/ui-card-domain-badges.png)
 
 ## 5. カード操作
 
-背景の右クリックで「ここに新規カード」、カードの右クリックで `カードを編集` / `関係線でつなぐ` / `島を作成` / `削除` のコンテキストメニュー。カードのダブルクリックで本文をインライン編集（Enter または外側クリックで確定、Esc で取消、Shift+Enter で改行）。
+背景の右クリックで「ここに新規カード」、カードの右クリックで `カードを編集` / `関係線でつなぐ` / `島を作成` / `削除` のコンテキストメニュー。カードのダブルクリックで本文をインライン編集（Enterまたは外側クリックで確定、Escで取消、Shift+Enterで改行）。
 
-![カード右クリックのコンテキストメニュー](assets/screenshots/ui-card-context-menu.png)
+![カードの右クリックのコンテキストメニュー](assets/screenshots/ui-card-context-menu.png)
 
 ![カードのインライン編集](assets/screenshots/ui-card-inline-edit.png)
 
@@ -77,23 +52,23 @@
 
 ## 7. 作業モード面（「詳細」ON）
 
-`詳細` を ON にしたうえで `作業モード` を開くと、差分・ナラティブ・マージ候補・パッチ・AI提案などの高度機能が、選択対象の確認欄とは別の作業面に表示されます。これにより、カードや島を選択した直後の右側パネルには、選択対象の確認と基本編集だけが残ります。
+`詳細` をONにしたうえで `作業モード` を開くと、差分・ナラティブ・マージ候補・パッチ・AI提案などの高度機能が、選択対象の確認欄とは別の作業面に表示されます。これにより、カードや島を選択した直後の右側パネルには、選択対象の確認と基本編集だけが残ります。
 
 ![「詳細」ON 時に展開される作業モード群](assets/screenshots/ui-advanced-work-mode-panels.png)
 
 ## 8. 表示（View）コントロール
 
-`表示` パネルでは、表示モード・視点プリセット（俯瞰/中間/詳細）・フォーカス・深さ・SafeMode を扱います。
+`表示` パネルでは、表示モード・視点プリセット（俯瞰/中間/詳細）・フォーカス・深さ・SafeModeを扱います。
 
 ![表示コントロール](assets/screenshots/ui-view-controls.png)
 
 ## 9. 共有前確認 / 書き出し
 
-`共有と再現` は「何を誰と共有するか」を起点にした確認フローです。共有前チェックで SafeMode・公開範囲・未レビュー情報・出力形式・レビューパック粒度を確認してから書き出します。
+`共有と再現` は「何を誰と共有するか」を起点にした確認フローです。共有前チェックでSafeMode・公開範囲・未レビュー情報・出力形式・レビューパック粒度を確認してから書き出します。
 
 ![共有と再現パネルの共有前確認](assets/screenshots/ui-share-preflight.png)
 
-![共有・書き出し前の SafeMode チェック](assets/screenshots/share-export-safe-mode.png)
+![共有と書き出しの前のSafeModeのチェック](assets/screenshots/share-export-safe-mode.png)
 
 ## 10. 読み取り専用モード
 
@@ -101,7 +76,7 @@
 
 ![読み取り専用モード](assets/screenshots/ui-read-only-mode.png)
 
-## 11. 価値状態の例（Product Value フィクスチャ）
+## 11. 価値を確認できる状態の例
 
 代表的な利用価値の状態。最初のまとまり作成、曖昧さの保持、レビューパックのトレース・読み取り専用レビューなど。
 
@@ -117,9 +92,9 @@
 
 | 幅 | 画像 |
 | --- | --- |
-| 390px（mobile） | ![390px のヘッダーと主要操作](assets/screenshots/mobile-toolbar-smoke-390.png) |
+| 390px（スマートフォン） | ![390px のヘッダーと主要操作](assets/screenshots/mobile-toolbar-smoke-390.png) |
 | 768px（tablet 相当） | ![768px レイアウト](assets/screenshots/ui-responsive-768.png) |
-| 960px（狭め desktop） | ![960px レイアウト](assets/screenshots/ui-responsive-960.png) |
+| 960px（狭めのデスクトップ） | ![960px レイアウト](assets/screenshots/ui-responsive-960.png) |
 
 ## 関連文書
 

@@ -42,16 +42,16 @@
       <span style="width:8px; height:8px; border-radius:2px; background:#7c3aed; display:inline-block;"></span>
       sui-sensemaking ・ Architecture ・ LLM Policy
     </div>
-    <h1 style="font-size:30px; line-height:1.34; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">Local-first + Escalation 方針</h1>
+    <h1 style="font-size:30px; line-height:1.34; font-weight:700; margin:18px 0 0; letter-spacing:0.01em; text-wrap:balance;">ローカル優先とエスカレーションの方針</h1>
     <p style="font-size:15px; line-height:1.7; color:#52606d; margin:14px 0 0; max-width:38em; text-wrap:pretty;">
-      コスト抑制と品質維持を両立するための運用ルール。システム既定は <code>none</code>（LLM無効）、<code>local</code> が opt-in の標準経路、<code>external</code> へのエスカレーションは <strong>opt-in かつ既定無効</strong>で outbound allowlist により制御する。
+      コストを抑えながら品質を保つための運用ルール。システムの既定は <code>none</code>（LLM無効）で、<code>local</code> が、明示的に有効にして使う標準の経路である。<code>external</code> へのエスカレーションは<strong>明示的に有効にしたときだけ使え、既定では無効</strong>で、外向きの通信は許可リストで制御する。
     </p>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:22px;">
       <span class="badge" style="background:#ecfdf5; color:#047857; border-color:#a7f3d0;">既定: LLM無効（none）</span>
-      <span class="badge" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">外部送信: 明示 opt-in のみ</span>
+      <span class="badge" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">外部送信: 明示的に有効にした場合のみ</span>
     </div>
     <p style="font-size:12.5px; line-height:1.7; color:#6b7280; margin:20px 0 0; padding:10px 13px; background:#f8fafc; border-left:3px solid #cbd5e1;">
-      本書が正本（<code>AGENTS.md</code> §3）。環境変数・実行パラメータの正本は <a href="runtime_parameter_registry.md">runtime_parameter_registry.md</a>。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
+      本書がこの方針の定義元である（<code>AGENTS.md</code> §3）。環境変数と実行パラメータの定義元は <a href="runtime_parameter_registry.md">runtime_parameter_registry.md</a> である。本書には必要最小限だけを書く。追加や改名のときは、先にそちらを更新する。
     </p>
   </header>
 
@@ -59,13 +59,13 @@
   <section style="padding:30px 0 0;">
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">01</span>
-      <h2 style="font-size:20px; font-weight:700; margin:0;">運用原則とデフォルト設定</h2>
+      <h2 style="font-size:20px; font-weight:700; margin:0;">運用原則と既定の設定</h2>
     </div>
     <ul class="compact" style="font-size:13.5px; color:#3e4c59; padding-left:22px; margin:12px 0 0;">
       <li>システム既定は <strong><code>none</code>（LLM無効）</strong>。</li>
       <li>LLM利用を有効化する場合の標準経路は <strong>LocalProvider</strong>。</li>
       <li>エスカレーションは<strong>例外処理</strong>であり、常用経路にしない。</li>
-      <li>外部強モデルへの送信は、明示設定がある場合のみ許可する。</li>
+      <li>外部の高性能モデルへの送信は、明示的な設定がある場合だけ許可する。</li>
     </ul>
     <table class="grid">
       <thead><tr><th style="width:44%;">設定キー</th><th>既定と契約</th></tr></thead>
@@ -74,22 +74,22 @@
         <tr><td><code>SUI_LLM_PROVIDER</code></td><td><code>none</code>（既定: 無効）。列挙は <code>none|local|local_http|large-scale|large_scale|external</code> を前提とする</td></tr>
       </tbody>
     </table>
-    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">設定変更には運用責任者の承認と監査ログ記録を要する。公開設定キーは <code>SUI_*</code> に統一し、接頭辞のない旧 LLM 設定キーは<strong>互換aliasを提供しない</strong>。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">設定を変更するには、運用責任者の承認と監査ログへの記録が必要である。公開する設定キーは <code>SUI_*</code> に統一し、接頭辞のない旧LLMの設定キーには、<strong>互換の別名を用意しない</strong>。</p>
   </section>
 
   <!-- 02 トリガとルーティング -->
   <section style="padding:32px 0 0;">
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">02</span>
-      <h2 style="font-size:20px; font-weight:700; margin:0;">エスカレーショントリガとルーティング</h2>
+      <h2 style="font-size:20px; font-weight:700; margin:0;">エスカレーションの契機とルーティング</h2>
     </div>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:10px 0 0;">トリガは仕様書で固定し、恣意的判定を避ける。以下はいずれも<strong>LLM不要で判定可能</strong>であること。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:10px 0 0;">契機は仕様書で固定し、恣意的な判定を避ける。以下はいずれも、<strong>LLMを使わずに判定できる</strong>こと。</p>
     <ol class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:10px 0 0;">
-      <li>schema validation failure</li>
+      <li>スキーマ検証の失敗</li>
       <li>重要セクションが空、または最小長未満</li>
-      <li>contradiction edge（否定関係）が存在するのに、出力に矛盾/反証セクションが欠落</li>
-      <li>閾値超過（カード数・クラスタ数・negation edge数など）</li>
-      <li>ルーブリックスコアが閾値未満（Layer B利用時）</li>
+      <li>contradiction edge（否定関係）があるのに、出力に矛盾または反証のセクションがない</li>
+      <li>閾値の超過（カード数、クラスタ数、negation edge数など）</li>
+      <li>ルーブリックの点数が閾値未満（Layer Bを使う場合）</li>
     </ol>
 
     <figure style="margin:18px 0 0;">
@@ -117,7 +117,7 @@ flowchart TD
     class G gate
     class T,E,R,L,M1,M2 step
       </pre>
-      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;"><code>intermediate</code> は proposal の材料生成に限定し、<strong>最終採否の決定権を持たない</strong>。<code>final_judgement</code> 経路が利用不能な場合、<code>intermediate</code> へ権限昇格せず <code>held</code> へ遷移する（fail-closed）。</figcaption>
+      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;"><code>intermediate</code> は、proposalの材料の生成に限り、<strong>最終的な採否を決める権限を持たない</strong>。<code>final_judgement</code> の経路が使えない場合は、<code>intermediate</code> に権限を引き上げず、<code>held</code> へ遷移して安全側で止める。</figcaption>
     </figure>
   </section>
 
@@ -125,13 +125,13 @@ flowchart TD
   <section style="padding:32px 0 0;">
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">03</span>
-      <h2 style="font-size:20px; font-weight:700; margin:0;">コスト制御とセキュリティ整合</h2>
+      <h2 style="font-size:20px; font-weight:700; margin:0;">コスト制御とセキュリティの整合</h2>
     </div>
     <table class="grid">
       <thead><tr><th style="width:22%;">領域</th><th>固定する契約</th></tr></thead>
       <tbody>
-        <tr><td>コスト制御</td><td><strong>現行実装:</strong> provider既定は<code>none</code>、外部エスカレーションは明示opt-inで、1要求の入力bytes・応答bytes・最大出力token数を上限検証する。**プロセス内の計測（OPS-LLM-COST-01 段階2）**: 呼出回数と入力/出力token（provider報告の<code>usage</code>・未報告は0）を<code>/ai/provider-status</code>の<code>callCounts</code>/<code>tokenUsage</code>から参照可能。単一プロセス前提。<br/><strong>未実装の計画:</strong> 月次／環境別の予算上限、上限到達時のlocal-only降格、成功率・エスカレーション率・失敗率dashboard、複数workerで予算を共有する共有計数store。これらは現時点の運用保証ではなく、設定値・共有store・降格時挙動を決定してから実装する</td></tr>
-        <tr><td>セキュリティ・プライバシー</td><td>safeMode ON時は、禁止対象の生カード文面を外部サービスに渡さない。エスカレーションログは理由コードを保持し、本文は最小化またはハッシュ化する。送信経路・承認履歴・モデル識別子を監査可能にする</td></tr>
+        <tr><td>コスト制御</td><td><strong>現行の実装:</strong> プロバイダの既定は<code>none</code>で、外部へのエスカレーションは明示的に有効にしたときだけ使える。1リクエストの入力バイト数、応答バイト数、最大出力トークン数には上限があり、検証する。<strong>プロセス内の計測（OPS-LLM-COST-01 段階2）:</strong> 呼び出し回数と入力・出力のトークン数（プロバイダが報告した<code>usage</code>。報告がなければ0）を、<code>/ai/provider-status</code>の<code>callCounts</code>と<code>tokenUsage</code>から参照できる。単一のプロセスを前提とする。<br/><strong>未実装の計画:</strong> 月次や環境別の予算の上限、上限に達したときのlocal-onlyへの降格、成功率・エスカレーション率・失敗率のダッシュボード、複数のワーカーで予算を共有するための共有の計数ストア。これらは現時点では運用上の保証ではない。設定値、共有ストア、降格時の挙動を決めてから実装する</td></tr>
+        <tr><td>セキュリティとプライバシー</td><td>safeModeがONのときは、禁止対象の生のカード文面を外部サービスに渡さない。エスカレーションのログは理由コードを保持し、本文は最小化するかハッシュ化する。送信経路、承認履歴、モデルの識別子を監査できるようにする</td></tr>
       </tbody>
     </table>
   </section>
@@ -141,12 +141,12 @@ flowchart TD
     <div style="display:flex; align-items:center; gap:9px;">
       <span style="font-size:13px; font-weight:700; color:#94a3b8; letter-spacing:0.08em;">04</span>
       <h2 style="font-size:20px; font-weight:700; margin:0;">CE2 低リスクAI支援 契約</h2>
-      <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">Stream C / proposal-only 固定</span>
+      <span style="font-size:11.5px; color:#94a3b8; font-weight:500;">Stream C / proposal-onlyで固定</span>
     </div>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:10px 0 0;">CE2（低リスクAI支援）では、LLM出力を「提案patch」に限定し、<strong>直接適用を禁止</strong>する。本節は <code>01_Plans/issues/done/issue-CE2-low-risk-ai-assist.md</code> の契約を architecture 観点で固定する。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:10px 0 0;">CE2（低リスクAI支援）では、LLM出力を「提案patch」に限り、<strong>直接の適用を禁止</strong>する。本節は、<code>01_Plans/issues/done/issue-CE2-low-risk-ai-assist.md</code> の契約を、アーキテクチャの観点で固定する。</p>
 
-    <h3 style="font-size:15px; font-weight:700; margin:20px 0 0;">CE2-C1: Proposal I/F 必須キー</h3>
-    <p style="font-size:12.5px; color:#6b7280; margin:6px 0 0;">下記5キーは CE2 Phase 1〜6 で固定し、<strong>改名・省略・型変更を禁止</strong>する。</p>
+    <h3 style="font-size:15px; font-weight:700; margin:20px 0 0;">CE2-C1: ProposalのI/Fの必須キー</h3>
+    <p style="font-size:12.5px; color:#6b7280; margin:6px 0 0;">下記の5キーは、CE2のPhase 1から6まで固定し、<strong>改名、省略、型の変更を禁止</strong>する。</p>
     <table class="grid">
       <thead><tr><th style="width:32%;">キー</th><th>型・既定</th></tr></thead>
       <tbody>
@@ -154,25 +154,25 @@ flowchart TD
         <tr><td><code>diff</code></td><td><code>object</code></td></tr>
         <tr><td><code>sourceBundleHash</code></td><td><code>string</code></td></tr>
         <tr><td><code>status</code></td><td><code>proposed | accepted | rejected | held</code></td></tr>
-        <tr><td><code>reviewState</code></td><td><code>unreviewed | human_reviewed</code>。既定は <code>unreviewed</code>、<code>human_reviewed</code> は<strong>人手操作でのみ</strong>設定可能</td></tr>
+        <tr><td><code>reviewState</code></td><td><code>unreviewed | human_reviewed</code>。既定は <code>unreviewed</code>、<code>human_reviewed</code> は<strong>人手の操作でのみ</strong>設定できる</td></tr>
       </tbody>
     </table>
 
-    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">CE2-C2: 実行禁止事項（Fail-safe）</h3>
-    <p style="font-size:12.5px; color:#6b7280; margin:6px 0 0;">以下を検知した場合、処理を継続せず停止する。停止時は <code>status=held</code> とし、手動レビュー待ちへ遷移させる。</p>
+    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">CE2-C2: 実行を禁止する事項（フェイルセーフ）</h3>
+    <p style="font-size:12.5px; color:#6b7280; margin:6px 0 0;">以下を検知した場合は、処理を続けずに停止する。停止するときは <code>status=held</code> とし、手動のレビュー待ちへ遷移させる。</p>
     <ol class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:8px 0 0;">
-      <li>auto-apply 経路（API/UI/worker）</li>
-      <li>AI による review 自動昇格（<code>unreviewed → human_reviewed</code>）</li>
-      <li><code>human_reviewed</code> 自動昇格（AI/worker/API いずれの経路でも禁止）</li>
-      <li>safeMode 保護後退（未レビュー本文混入を含む）</li>
-      <li>CE1最小I/Fモック契約との差異（<code>sourceBundleHash</code> 不整合など）</li>
+      <li>自動適用の経路（API/UI/worker）</li>
+      <li>AIによるレビュー状態の自動昇格（<code>unreviewed → human_reviewed</code>）</li>
+      <li><code>human_reviewed</code> の自動昇格（AI、worker、APIのどの経路でも禁止）</li>
+      <li>safeModeの保護の後退（未レビューの本文の混入を含む）</li>
+      <li>CE1の最小I/Fのモック契約との差異（<code>sourceBundleHash</code> の不整合など）</li>
     </ol>
 
-    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">CE2-C3: 依存切離し（CE1 モック契約）</h3>
+    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">CE2-C3: 依存の切り離し（CE1のモック契約）</h3>
     <ul class="compact" style="font-size:13px; color:#3e4c59; padding-left:22px; margin:8px 0 0;">
-      <li>CE2 は CE1 完了待ちを行わず、<code>ContextQuery + ContextBundle + bundleHash</code> をモック契約として参照する。</li>
-      <li>実体CE1との差異が確定した時点で drift を記録し、CE2 の適用フローを停止する。</li>
-      <li>drift 解消後にのみ <code>held</code> から再開できる。</li>
+      <li>CE2はCE1の完了を待たず、<code>ContextQuery + ContextBundle + bundleHash</code> をモック契約として参照する。</li>
+      <li>実際のCE1との差異が確定した時点で、driftを記録し、CE2の適用フローを停止する。</li>
+      <li>driftが解消された後にだけ <code>held</code> から再開できる。</li>
     </ul>
 
     <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">CE2-C4: CDC実行シーケンス</h3>
@@ -191,18 +191,18 @@ flowchart LR
     classDef hold fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
     class P1,P2,P3,P4,P5,P6 step
       </pre>
-      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">各Phase開始時に Read チェックポイントを実施し、status遷移（<code>proposed/accepted/rejected/held</code>）と proposal-only 境界を再確認する。<code>held</code> 中は <code>accepted/rejected/proposed</code> への自動遷移を禁止する。</figcaption>
+      <figcaption style="font-size:12.5px; color:#6b7280; margin-top:9px; line-height:1.65;">各Phaseの開始時にReadのチェックポイントを実施し、statusの遷移（<code>proposed/accepted/rejected/held</code>）とproposal-onlyの境界を再確認する。<code>held</code> の間は、<code>accepted/rejected/proposed</code> への自動の遷移を禁止する。</figcaption>
     </figure>
 
-    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">CE2-C5: 監査必須項目（Routing）</h3>
-    <p style="font-size:12.5px; color:#6b7280; margin:6px 0 0;">CE2/CE4 で生成される監査イベントには、少なくとも以下を含める。</p>
+    <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">CE2-C5: 監査で必須の項目（Routing）</h3>
+    <p style="font-size:12.5px; color:#6b7280; margin:6px 0 0;">CE2とCE4で生成される監査イベントには、少なくとも以下を含める。</p>
     <table class="grid">
       <thead><tr><th style="width:32%;">項目</th><th>内容</th></tr></thead>
       <tbody>
         <tr><td><code>routingStage</code></td><td><code>intermediate | final_judgement</code></td></tr>
-        <tr><td><code>provider</code></td><td>—</td></tr>
-        <tr><td><code>model</code></td><td>—</td></tr>
-        <tr><td><code>sourceBundleHash</code></td><td>—</td></tr>
+        <tr><td><code>provider</code></td><td>（記載なし）</td></tr>
+        <tr><td><code>model</code></td><td>（記載なし）</td></tr>
+        <tr><td><code>sourceBundleHash</code></td><td>（記載なし）</td></tr>
         <tr><td><code>proposalId</code></td><td>存在する場合</td></tr>
       </tbody>
     </table>

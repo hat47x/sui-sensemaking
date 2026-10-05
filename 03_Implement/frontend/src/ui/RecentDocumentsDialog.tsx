@@ -19,6 +19,8 @@ type RecentDocumentsDialogProps = {
   onOpenRecent: () => void;
   isLoading: boolean;
   activeDocumentId: string;
+  /** True when the active document is a pack/sample copy that has not been loaded from the server. */
+  canReopenCurrent?: boolean;
   /** GET /docs server list (第2反復): the tenant's documents with titles. When
    * present, shown above the localStorage recent ids so "canvas list" is not
    * limited to recently-opened documents. */
@@ -69,6 +71,7 @@ export function RecentDocumentsDialog({
   onOpenRecent,
   isLoading,
   activeDocumentId,
+  canReopenCurrent = false,
   documents,
   isCanvasListLoading,
   myDocumentsOnly,
@@ -79,7 +82,7 @@ export function RecentDocumentsDialog({
 }: RecentDocumentsDialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const hasDocumentChoices = recentDocumentIds.length > 0 || Boolean(documents?.length);
-  const canOpen = selectedRecentDocumentId.length > 0 && selectedRecentDocumentId !== activeDocumentId && !isLoading;
+  const canOpen = selectedRecentDocumentId.length > 0 && (canReopenCurrent || selectedRecentDocumentId !== activeDocumentId) && !isLoading;
 
   useEffect(() => {
     if (!isOpen || !panelRef.current) return;

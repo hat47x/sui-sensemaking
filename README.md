@@ -1,14 +1,14 @@
 # SUI Sensemaking
 
-> **重要: 本プロジェクトは、現在も生成AIを用いた開発中であり、人的レビューは不完全です。**
+> 重要: 本プロジェクトは、現在も生成AIを用いた開発中であり、人的レビューは不完全です。
 >
-> 実装・文書・安全性・利用手順の検証は完了していません。生成物をそのまま信頼したり、重要な判断に使用したりせず、利用前に人が内容と安全性を確認してください。外部利用者による検証も未実施です（ADR-0042 段階A）。
+> 実装・文書・安全性・利用手順の検証は完了していません。生成物をそのまま信頼したり、重要な判断に使用したりせず、利用前に人が内容と安全性を確認してください。外部利用者による検証も未実施です。
 
 A sensemaking environment where humans and artificial cognition can develop meaning without forcing premature closure.
 
-**SUI Sensemaking** は、人間とAIが未整理な情報から関係・仮説・構造・統合を形成し、
+SUI Sensemaking は、人間とAIが未整理な情報から関係・仮説・構造・統合を形成し、
 その意味形成の過程を保持しながら理解を成熟させていくための
-**sensemaking（意味探索・意味形成）基盤**です。
+sensemaking（意味探索・意味形成）基盤です。
 
 現在の中核インターフェースは、親和図法／KJ法に着想を得たキャンバスです。
 人間の「違和感」「保留」「未分化な意味」を空間上に置き、
@@ -16,10 +16,10 @@ AIの観測・候補・別解と行き来しながら考えを深めます。
 一方、SUIの内部表現と将来のAI認知は特定の手法だけに限定せず、
 人間主導、協働、委任、監督付き自律まで同じ情報資産上で扱えることを長期的な射程とします。
 
-設計思想は、川喜田二郎の著作（『発想法』1967 ほか）が示した
+設計思想は、川喜田二郎の著作（『発想法』1967ほか）が示した
 「断片をボトムアップに統合し、早すぎる収束を避ける」という方法論から
 直接の影響を受けています。ただし本プロジェクトは、
-川喜田二郎氏および株式会社川喜田研究所から**公認・後援を受けたものではなく**、
+川喜田二郎氏および株式会社川喜田研究所から公認・後援を受けたものではなく、
 登録商標「KJ法」の実装・公式版でもありません。
 商標と出典の扱いは [`NOTICE`](NOTICE) を参照してください。
 
@@ -41,7 +41,7 @@ AIの観測・候補・別解と行き来しながら考えを深めます。
 - チームや個人による思考の可視化・共有
 - 研究・企画・設計・政策・プロダクト検討などの前段整理
 
-SUI Sensemaking は、**一つの正解へ早く収束すること自体を目的にはしません。**
+SUI Sensemakingは、一つの正解へ早く収束すること自体を目的にはしません。
 
 > 分からないことを、分からないまま扱い、
 > 違和感や反証を失わず、
@@ -56,128 +56,125 @@ SUI Sensemaking は、**一つの正解へ早く収束すること自体を目�
 
 ---
 
-## ドキュメント導線（人間向け / AI向け）
+## 文書の案内（人間向けとAI向け）
 
-この README は **人間向けの入口**です。詳細な運用規約やAI向けの読み順は、役割に応じて次を参照してください。
+このREADMEは、人間向けの入口です。運用の規約やAI向けの読み順は、役割に応じて、次を参照してください。
 
-- **AIエージェント向けの入口**: [`AGENTS.md`](AGENTS.md)
-- **利用者向け公開入口**: [`04_Documentation/public_index.md`](04_Documentation/public_index.md)（一般利用者に最初に案内する入口）
-- **04文書の保守者入口**: [`04_Documentation/README.md`](04_Documentation/README.md)（公開入口ではなく、公開対象/除外対象の管理用）
-- **コントリビューション手順**: [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- **実装ガイド（開発者向け実行方法）**: [`03_Implement/README.md`](03_Implement/README.md)
+- AIエージェント向けの入口: [`AGENTS.md`](AGENTS.md)
+- 利用者向けの公開の入口: [`04_Documentation/public_index.md`](04_Documentation/public_index.md)（一般の利用者に、最初に案内する入口です）
+- 04の文書の保守者向けの入口: [`04_Documentation/README.md`](04_Documentation/README.md)（公開の入口ではなく、公開する文書と除外する文書の管理用です）
+- 貢献の手順: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- 実装のガイド（開発者向けの実行方法）: [`03_Implement/README.md`](03_Implement/README.md)
 
-> 開発レイヤ（`00_Prompt`〜`04_Documentation`）の詳細な説明・Read Order・Project Map は `AGENTS.md` に集約しています。
+> 開発の各階層（`00_Prompt` から `04_Documentation`）の詳しい説明、読む順序、プロジェクトの地図は、`AGENTS.md` にまとめています。
 
 
-### 文書公開境界（迷ったとき）
+### 文書の公開範囲（迷ったとき）
 
-| 区分 | 入口 | 公開配布での扱い |
+| 区分 | 入口 | 公開して配布するときの扱い |
 | --- | --- | --- |
-| 一般利用者向け | [`04_Documentation/public_index.md`](04_Documentation/public_index.md) | Gist など外部共有時の先頭に使う |
-| 04文書保守者向け | [`04_Documentation/README.md`](04_Documentation/README.md) | 公開対象一覧・除外対象の管理用。Gist本文には含めない |
-| 開発者向け | [`CONTRIBUTING.md`](CONTRIBUTING.md), [`03_Implement/README.md`](03_Implement/README.md) | 開発・テスト・実装手順として案内する |
-| 内部計画/AI運用向け | `00_Prompt/`, `01_Plans/`, `AGENTS.md` | 公開利用ガイドには混ぜず、必要な根拠として参照する |
+| 一般の利用者向け | [`04_Documentation/public_index.md`](04_Documentation/public_index.md) | Gistなど、外部へ共有するときの先頭に使う |
+| 04の文書の保守者向け | [`04_Documentation/README.md`](04_Documentation/README.md) | 公開する文書と除外する文書の管理用。Gistの本文には含めない |
+| 開発者向け | [`CONTRIBUTING.md`](CONTRIBUTING.md), [`03_Implement/README.md`](03_Implement/README.md) | 開発、テスト、実装の手順として案内する |
+| 内部の計画とAIの運用向け | `00_Prompt/`, `01_Plans/`, `AGENTS.md` | 公開する利用ガイドには混ぜず、必要な根拠として参照する |
 
-公開利用ガイドには、内部 issue、ADR の詳細、AIエージェント作業ログ、未承認仕様、組織固有の秘密設定を混ぜません。
+公開する利用ガイドには、内部のissue、ADRの詳細、AIエージェントの作業ログ、承認されていない仕様、組織固有の秘密の設定を混ぜません。
 
 ---
 
 
-## はじめに（人間向けクイックスタート）
+## はじめに（人間向けのクイックスタート）
 
-### 1) まず把握すること
+### 1. 最初に把握すること
 
-- このプロジェクトは **探索・意味形成・理解の継続を支えるsensemaking基盤** です。
-- 現在の公開機能は **人間のレビューと検証** を前提とし、AI生成物を自動で承認済み状態へ昇格させません。
-- 長期的なAI自律性の拡大と、現在のSafeMode・承認境界は分けて扱います。
-- セキュリティ・安全設計（safeMode 含む）は機能追加より優先されます。
+- このプロジェクトは、探索、意味の形成、理解の継続を支える、sensemakingの基盤です。
+- 現在の公開機能は、人間のレビューと検証を前提とし、AIが生成したものを、自動で承認済みの状態に昇格させません。
+- 長期的にAIの自律性を広げることと、現在のSafeModeと承認の境界は、分けて扱います。
+- セキュリティと安全の設計（SafeModeを含む）は、機能の追加より優先します。
 
-### 2) 利用者として最初に読む文書
+### 2. 利用者として最初に読む文書
 
-- 導入・セットアップ: [`04_Documentation/installation.md`](04_Documentation/installation.md)
-- 最初の価値体験: [`04_Documentation/getting_started.md`](04_Documentation/getting_started.md)
+- 導入とセットアップ: [`04_Documentation/installation.md`](04_Documentation/installation.md)
+- 最初の価値の体験: [`04_Documentation/getting_started.md`](04_Documentation/getting_started.md)
 - 設定値と環境変数: [`04_Documentation/configuration.md`](04_Documentation/configuration.md)
-- 日常運用: [`04_Documentation/operations.md`](04_Documentation/operations.md)
-- セキュリティ運用: [`04_Documentation/security.md`](04_Documentation/security.md)
-- 開発コーディング規約: [`02_Architecture/coding_standards.md`](02_Architecture/coding_standards.md)
+- 日常の運用: [`04_Documentation/operations.md`](04_Documentation/operations.md)
+- セキュリティの運用: [`04_Documentation/security.md`](04_Documentation/security.md)
+- 開発のコーディング規約: [`02_Architecture/coding_standards.md`](02_Architecture/coding_standards.md)
 
-### 3) 開発者として最初に実行すること
+### 3. 開発者として最初に実行すること
 
 ```bash
 cd 03_Implement/deploy
 docker compose up --build
 ```
 
-標準構成は loopback（`127.0.0.1`）限定の同一ホスト評価用です。別端末や LAN からの利用は既定で届きません（詳細は [`04_Documentation/installation.md`](04_Documentation/installation.md)）。
+標準の構成は、loopback（`127.0.0.1`）に限った、同じホストでの評価用です。別の端末やLANからは、既定では接続できません（詳しくは [`04_Documentation/installation.md`](04_Documentation/installation.md)）。
 
-- 詳細な実行方法（Frontend / Backend 個別起動、環境変数）は [`03_Implement/README.md`](03_Implement/README.md) を参照してください。
+frontendとbackendを個別に起動する方法や、環境変数の詳細は、[`03_Implement/README.md`](03_Implement/README.md) を参照してください。
 
-### 4) このリポジトリでの相談・報告窓口
+### 4. 相談と報告の窓口
 
-- バグ候補・機能案: [`CONTRIBUTING.md`](CONTRIBUTING.md) の現行手順に沿ってDiscussionsで共有し、実行可能な作業は内部issue memoへ整理
-- 脆弱性報告: [`SECURITY.md`](SECURITY.md)
-- 一般的なサポート導線: [`SUPPORT.md`](SUPPORT.md)
-
----
-
-## 現在の文書体系（人間向け要約）
-
-- **公開向け文書（ルート直下）**: プロジェクト方針・参加方法・公開ルール
-- **`01_Plans/`**: 開発計画とフェーズ
-- **`02_Architecture/`**: API・スキーマ・構成設計の正本
-- **`03_Implement/`**: 実装本体（frontend / backend / deploy）
-- **`04_Documentation/`**: 導入・設定・運用ガイド
-
-> AIエージェント向けの詳細な Read Order / Project Map は `AGENTS.md` に集約しています。
+- バグの候補と機能の案: Discussionsで共有してください。実行できる作業は、メンテナが [`ROADMAP.md`](ROADMAP.md) に整理します。
+- 脆弱性の報告: [`SECURITY.md`](SECURITY.md)
+- 一般的なサポート: [`SUPPORT.md`](SUPPORT.md)
 
 ---
 
-## SUI Sensemaking が目指さないこと
+## 文書の構成（人間向けの要約）
 
-誤解を避けるため、以下を明示します。
+- ルート直下の公開向けの文書: プロジェクトの方針、参加の方法、公開のルール
+- `01_Plans/`: 長期的な設計の判断（ADR）
+- `02_Architecture/`: API、スキーマ、構成の設計の正本
+- `03_Implement/`: 実装の本体（frontend、backend、deploy）
+- `04_Documentation/`: 導入、設定、運用のガイド
 
-- 単一の正解や合意へ早く収束することを成功条件にしません
-- AIの生成物を、来歴や権限境界を飛び越えて人間承認済みの意味として扱いません
-- きれいな最終図や生成量そのものをゴールにしません
-- 未測定・不確実性・対立・少数意見を都合よく消し去りません
-- KJ法キャンバスだけを、将来にわたる唯一のsensemaking手段として固定しません
-
-SUI Sensemaking は、
-**人間とAIの役割分担が変化しても、意味が形成された過程と未解決なものを失わずに扱えること**
-を目指します。
+> AIエージェント向けの、読む順序とプロジェクトの地図は、`AGENTS.md` にまとめています。
 
 ---
 
-## 言語運用方針（開発者向け）
+## SUI Sensemakingが目指さないこと
 
-- **コード（変数名・関数名・ファイル名）**：英語
-- **コミットメッセージ・Issue・思考整理**：日本語可
-- **README**：日本語（将来、英語版を追加予定）
+誤解を避けるため、次の点を明示します。
 
-思考速度とニュアンス保持を最優先します。
+- 単一の正解や合意に早く収束することを、成功の条件にしません。
+- AIの生成物を、来歴や権限の境界を越えて、人間が承認した意味として扱いません。
+- きれいな最終の図や、生成した量そのものを、ゴールにしません。
+- 未測定のこと、不確実性、対立、少数意見を、都合よく消しません。
+- KJ法のキャンバスだけを、将来にわたる唯一のsensemakingの手段として固定しません。
+
+SUI Sensemakingが目指すのは、人間とAIの役割分担が変わっても、意味が形成された過程と、未解決のものを失わずに扱えることです。
 
 ---
 
-## Project communication / 公開コミュニケーション
+## 使う言語（開発者向け）
 
-ルートディレクトリ直下の文書は、**開発コミュニティ（利用者・コントリビュータ・運用担当）との対外コミュニケーション**を目的とした公開ドキュメントです。  
-生成AIが更新時機を判断できるよう、以下を運用ルールとします。
+- コード（変数名、関数名、ファイル名）: 英語
+- コミットメッセージ、Issue、考えの整理: 日本語でも構いません
+- README: 日本語（将来、英語版を追加する予定です）
+
+考える速さと、ニュアンスを保つことを、最優先にします。
+
+---
+
+## 公開向けの文書の更新
+
+ルート直下の文書は、利用者、コントリビュータ、運用担当者といった、開発コミュニティとの対外的なやり取りのための、公開文書です。生成AIが更新するタイミングを判断できるよう、次を運用のルールとします。
 
 | 文書 | 位置づけ | 主な更新タイミング |
 |---|---|---|
-| [README.md](README.md) | プロジェクト概要・開発原則・文書案内の入口 | 方針変更、文書構成変更、初見利用者向け導線変更時 |
-| [ROADMAP.md](ROADMAP.md) | 今後の開発方針（短期・中期・長期）を示す公開計画 | リリース計画変更、優先度見直し、非目標更新時 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 貢献フロー・レビュー基準 | 開発フロー・レビュー要件更新時 |
-| [SECURITY.md](SECURITY.md) | 脆弱性報告と対応ポリシー | 報告窓口やSLA変更時 |
-| [SUPPORT.md](SUPPORT.md) | 問い合わせ・サポート窓口 | 連絡経路や対応範囲変更時 |
-| [CHANGELOG.md](CHANGELOG.md) | リリース差分の履歴 | リリース確定時（毎リリース更新） |
-| [NOTICE](NOTICE) | 商標・出典・帰属の明示（`LICENSE` が扱わない範囲） | 商標状況の変更時、依拠する出典の追加・変更時、プロダクト名称の決定時 |
+| [README.md](README.md) | プロジェクトの概要、開発の原則、文書の案内の入口 | 方針の変更、文書の構成の変更、初めて見る利用者向けの案内の変更 |
+| [ROADMAP.md](ROADMAP.md) | 今後の開発の方針と、未完の作業 | 優先度の見直し、作業の完了、非目標の更新 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 貢献の流れ | 開発の流れの更新 |
+| [SECURITY.md](SECURITY.md) | 脆弱性の報告と対応の方針 | 報告の窓口や対応の目安の変更 |
+| [SUPPORT.md](SUPPORT.md) | 問い合わせとサポートの窓口 | 連絡の経路や対応の範囲の変更 |
+| [CHANGELOG.md](CHANGELOG.md) | リリースごとの変更の履歴 | リリースを確定するとき（毎回更新） |
+| [NOTICE](NOTICE) | 商標、出典、帰属の明示（`LICENSE` が扱わない範囲） | 商標の状況の変更、依拠する出典の追加や変更、プロダクト名称の決定 |
 
-### 更新運用（AI/人間共通）
+### 更新のルール（AIと人間に共通）
 
-- 実装仕様の詳細は `01_Plans/` `02_Architecture/` `03_Implement/` を優先し、ルート文書はその要約・公開説明として更新する。  
-- ルート文書同士で矛盾が出る場合は、同一PR/同一コミットで同時修正する。  
-- リリース前には最低限 `README.md` `ROADMAP.md` `CHANGELOG.md` の整合を確認する。
+- 実装の仕様の詳細は、`01_Plans/`、`02_Architecture/`、`03_Implement/` を優先し、ルート直下の文書は、その要約と公開向けの説明として更新する。
+- ルート直下の文書どうしで矛盾が出たときは、同じPR、同じコミットで、同時に直す。
+- リリースの前に、最低限、`README.md`、`ROADMAP.md`、`CHANGELOG.md` が整合していることを確認する。
 
 ---
 
@@ -185,9 +182,6 @@ SUI Sensemaking は、
 
 本プロジェクトのソースコードと文書は [MIT License](LICENSE) で提供されます。
 
-**MIT License が許諾するのは著作権であり、商標権は許諾しません。**
-「KJ法」は株式会社川喜田研究所の登録商標（登録第4867036号）であり、
-本プロジェクトは同社および川喜田二郎氏の関係者から公認・後援を受けていません。
+MIT Licenseが許諾するのは著作権で、商標権は許諾しません。「KJ法」は、株式会社川喜田研究所の登録商標（登録第4867036号）です。本プロジェクトは、同社と川喜田二郎氏の関係者から、公認も後援も受けていません。
 
-fork・再配布・商用利用を検討する場合は、[`NOTICE`](NOTICE) に記載した
-商標・出典・帰属の条件を必ず確認してください。
+forkして再配布する場合や、商用利用を検討する場合は、[`NOTICE`](NOTICE) に書いた、商標、出典、帰属の条件を、必ず確認してください。

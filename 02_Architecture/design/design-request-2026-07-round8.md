@@ -75,7 +75,7 @@ sui-sensemakingの既存UIを前提に、**マスタ系設定データを安全�
 
 StartPanelとRecent documents dialogを、サーバー正本の文書一覧へ移行する提案を作ってください。
 
-必須要素:
+必須要素は次のとおりです。
 
 - タイトル、更新日時、補助的なID、主操作「開く」。本文抜粋、カード数、サムネイル、スコア、利用頻度順位は不要。
 - 更新日時の新しい順を既定にし、取得済みのタイトル/IDの絞り込みを提供。
@@ -172,7 +172,7 @@ Admin全体の将来IAは「アクセス登録」「外部接続」「システ�
 3. タブAは通知を受けるか、次requestで`tenant_session_changed`を受け、旧本文・Admin metadata・dialog・previewを背景へ残さず「利用範囲を再確認しています」へ置換。
 4. session再取得後、利用者がtenant Bのscopeを確認してからWorkspaceへ戻る。旧payloadの保存・import・share・exportを自動再送しない。
 
-必須状態:
+必須状態は次のとおりです。
 
 - `context-checking`: 見出しへfocus、旧本文なし、進行中操作を停止中。spinnerだけにしない。
 - `context-changed`: 他タブで切替があった説明、再読込を主操作、再認証／安全な入口へ戻るを条件付きで表示。
@@ -194,7 +194,7 @@ BroadcastChannelを使える場合と使えない場合の見た目は同じ最�
 5. **既存→提案の置換表**: StartPanel local recent、Recent dialog、View controls、Patch workspaceの各要素がどう変わるか。初期表示に何が増減するか。
 6. **a11y/focus仕様**: role、accessible name、初期focus、Tab順、Escape、focus復帰、live region、390pxでの読み順。
 7. **レッドライン**: 色・余白・タイポ・行高・truncate/折返し・メニュー開閉・token表示/閉鎖の禁止事項。
-8. **自己照合**: 下記の採否を✓/△/✗と理由つきで回答。
+8. **自己照合**: 下記の採否を○/△/×と理由つきで回答。
 
 可能なら既存の`.dc.html`成果物と同じ方式で、R8-A〜Hを切り替えられる操作可能なプロトタイプを1点作ってください。実装コードやAPIを発明するのではなく、状態fixtureで画面遷移を再現してください。R8-E/F/G/Hには「future SaaS / implementation gated」を成果物注記として付け、製品UIのバッジにはしないでください。
 

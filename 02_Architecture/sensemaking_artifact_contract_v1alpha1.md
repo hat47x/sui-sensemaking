@@ -1,34 +1,32 @@
 # Sensemaking Artifact Contract v1alpha1
 
-- Status: **Normative design contract / L0 Planned**
-- Date: 2026-09-18
-- Parent: `ADR-0085`, `ADR-0086`, `ADR-0087`
-- Payload / Authority Scope / Exchange: `02_Architecture/sensemaking_payload_authority_exchange_v1alpha1.md`
-- Runtime implementation: **Not yet**
-- Persistence implementation: **Not yet**
-- Current `DocumentV1`: **Unchanged**
+- 状態: **規範的な設計契約 / L0 計画中**
+- 日付: 2026-09-18
+- 親: `ADR-0085`, `ADR-0086`, `ADR-0087`
+- ペイロード、Authority Scope、交換: `02_Architecture/sensemaking_payload_authority_exchange_v1alpha1.md`
+- ランタイム実装: **未実装**
+- 永続化実装: **未実装**
+- 現行の `DocumentV1`: **変更なし**
 
 ## 1. 目的
 
-この契約は、SUI Sensemakingが将来AI Workspaceや人間との協働で生成する意味成果物について、
+この契約は、SUI Sensemakingが将来AI Workspaceや人間との協働で生成する意味成果物について、次の項目を定義します。現行のCanvasスキーマには早い段階で結合しません。
 
-- logical identity
-- exact revision identity
-- provenance
-- review
-- authority transition
+- 論理ID（logical identity）
+- 厳密なリビジョンID（exact revision identity）
+- 来歴（provenance）
+- レビュー（Review）
+- 権限の遷移（authority transition）
 - Review Capsule
-- retention boundary
+- 保持境界（retention boundary）
 
-を、現行Canvas schemaへ早期結合せず定義する。
-
-この契約の目的は「新しいDB tableを先に作ること」ではない。
+この契約の目的は「新しいDBテーブルを先に作ること」ではありません。
 
 目的は、
 
-> **何を同じ意味成果物として追跡し、何を別revisionとして固定し、何をReviewしたのか、誰がどのscopeで採用したのかを後から一意に説明できること**
+> **何を同じ意味成果物として追跡し、何を別リビジョンとして固定し、何をレビューしたのか、誰がどのスコープで採用したのかを、後から一意に説明できること**
 
-である。
+です。
 
 ---
 
@@ -46,24 +44,24 @@ export type ArtifactRevisionRefV1Alpha1 = {
 
 ### 不変条件
 
-1. `artifactId`はlogical identityであり、contentから独立する。
-2. `revisionId`はexact revision identityであり、content digestから独立する。
-3. `contentDigest`はintegrity / equality cross-checkであり、identityではない。
-4. Review / Authority / Decision / provenance relationは可能な限りexact revisionを参照する。
-5. 同じdigestを持つ別artifactを同一artifactへ自動統合しない。
-6. digest一致を「同じ意味」「同じ由来」「同じauthority」の証明に使わない。
+1. `artifactId` は論理IDであり、内容から独立している。
+2. `revisionId` は厳密なリビジョンIDであり、内容のダイジェストから独立している。
+3. `contentDigest` は完全性と同一性を照合するための値であり、IDではない。
+4. Review、Authority、Decision、来歴の関係は、可能な限り厳密なリビジョンを参照する。
+5. 同じダイジェストを持つ別の成果物を、自動的に同一の成果物へ統合しない。
+6. ダイジェストの一致を、「同じ意味」「同じ由来」「同じAuthority」の証明に使わない。
 
-### 2.2 Opaque refs
+### 2.2 不透明な参照
 
-actor、method、run、scope、policy等のrefはopaque stringとする。
+actor、method、run、スコープ、ポリシーなどの参照は、不透明な文字列とします。
 
-refへメールアドレス、credential、provider secret等の生識別情報を埋め込まない。
+参照には、メールアドレス、認証情報、プロバイダの秘密情報など、生の識別情報を埋め込みません。
 
-具体的namespace形式はv1alpha1では固定しない。
+具体的な名前空間の形式は、v1alpha1では固定しません。
 
 ---
 
-## 3. Semantic Artifact Revision
+## 3. 意味成果物のリビジョン
 
 ### 3.1 SemanticKind
 
@@ -78,9 +76,9 @@ export type SemanticKindV1Alpha1 =
   | "decision";
 ```
 
-Reviewはcontent artifactではなく独立recordとして扱う。これはADR-0085の概念上Reviewをsensemaking成果物として扱うことと矛盾しない。永続責務を分けるためのstorage classificationである。
+Reviewは内容の成果物ではなく、独立した記録として扱います。ADR-0085は概念上、Reviewをsensemakingの成果物として扱っており、これと矛盾しません。ここでの扱いは、永続化の責務を分けるための保存上の分類です。
 
-### 3.2 Lifecycle
+### 3.2 ライフサイクル
 
 ```ts
 export type ArtifactLifecycleV1Alpha1 =
@@ -91,7 +89,7 @@ export type ArtifactLifecycleV1Alpha1 =
   | "archived";
 ```
 
-LifecycleはAuthorityではない。
+ライフサイクルはAuthorityではありません。
 
 ```text
 held != Working
@@ -100,7 +98,7 @@ superseded != revoked-authority
 archived != invisible
 ```
 
-### 3.3 Revision envelope
+### 3.3 リビジョンのエンベロープ
 
 ```ts
 export type SemanticArtifactRevisionV1Alpha1 = {
@@ -116,23 +114,23 @@ export type SemanticArtifactRevisionV1Alpha1 = {
 };
 ```
 
-semantic payload本体はkind-specific content store / payload contractへ分離する。v1alpha1では各kindの本文schemaを固定しない。
+意味ペイロードの本体は、kindごとのコンテンツストアとペイロード契約に分けます。v1alpha1では、各kindの本文スキーマを固定しません。
 
-### 3.4 Revision invariants
+### 3.4 リビジョンの不変条件
 
-- `artifactId`, `revisionId`, `semanticKind`は非空。
-- 同じ`artifactId`の全revisionで`semanticKind`は同じ。
-- `revisionId`はrepository / tenant内で一意。
-- `parentRevisionIds`は同じ`artifactId`内のrevisionだけを参照する。
-- cycleは禁止。
-- Review / Authority / Decisionから参照済みrevisionはimmutable。
-- kind変更は新artifactで行う。
-- `contentDigest`検証失敗時、そのrevisionをsemantic payloadとして利用しない。
-- digest一致だけでrevisionを自動再利用しない。
+- `artifactId`、`revisionId`、`semanticKind` は空にしない。
+- 同じ `artifactId` のすべてのリビジョンで、`semanticKind` は同じにする。
+- `revisionId` は、リポジトリまたはテナントの中で一意にする。
+- `parentRevisionIds` は、同じ `artifactId` の中のリビジョンだけを参照する。
+- 循環は禁止する。
+- Review、Authority、Decisionから参照されたリビジョンは不変とする。
+- kindを変えるときは、新しい成果物として作る。
+- `contentDigest` の検証に失敗したリビジョンは、意味ペイロードとして利用しない。
+- ダイジェストが一致しただけでは、リビジョンを自動的に再利用しない。
 
 ---
 
-## 4. Provenance Envelope
+## 4. 来歴エンベロープ
 
 ### 4.1 型
 
@@ -169,48 +167,46 @@ export type ProvenanceEnvelopeV1Alpha1 = {
 };
 ```
 
-### 4.2 必須／任意境界
+### 4.2 必須と任意の境界
 
 | 条件 | 必須 |
 |---|---|
-| 新規artifact revision全般 | actor.kind, method.kind, createdAt |
-| AI / model生成 | `runRef` |
-| 別artifactから派生 | `inputArtifactRefs`にexact revision |
-| 外部資料を直接利用 | 可能な範囲で`sourceRefs` |
-| legacy importでactor不明 | `actor.kind="unknown"`。actor refを推測しない |
-| redaction / transformationあり | 変換を追跡するrefが存在する場合`transformationRefs` |
+| 新規の成果物リビジョン全般 | actor.kind, method.kind, createdAt |
+| AI / モデルによる生成 | `runRef` |
+| 別の成果物から派生 | `inputArtifactRefs` に厳密なリビジョン |
+| 外部資料を直接利用 | 可能な範囲で `sourceRefs` |
+| 旧データのimportでactorが不明 | `actor.kind="unknown"`。actor refは推測しない |
+| 墨消しや変換がある | 変換を追跡できる参照があれば `transformationRefs` |
 
 ### 4.3 AI runとの境界
 
-`runRef`の参照先が保持するもの:
+`runRef` の参照先は、次のような情報を保持します。
 
-- task
-- provider / model
-- input IR digest
-- output digest
-- policy version
+- タスク
+- プロバイダとモデル
+- 入力IRのダイジェスト
+- 出力のダイジェスト
+- ポリシーのバージョン
 - SafeMode
-- trace ID
+- トレースID
 
-等。
+これらを成果物リビジョンへ複製しません。
 
-artifact revisionへこれらを複製しない。
+プロバイダを変更しても成果物契約が変わらないことを優先します。
 
-Provider変更時もartifact contractが変わらないことを優先する。
+### 4.4 禁止事項
 
-### 4.4 禁止
-
-- 存在しないactor / sourceをAIが補う
-- provider内部activationをTruth / Importanceへ読み替えてprovenanceへ入れる
-- raw promptをprovenance envelopeへ複製する
-- credentialをrefへ含める
-- source refをauthorityの根拠と自動解釈する
+- 存在しないactorや出典をAIが補う
+- プロバイダ内部の活性化をTruthやImportanceへ読み替えて、来歴へ入れる
+- 生のプロンプトを来歴エンベロープへ複製する
+- 認証情報を参照へ含める
+- 出典の参照を、Authorityの根拠として自動的に解釈する
 
 ---
 
-## 5. Artifact間のprovenance relation
+## 5. 成果物間の来歴関係
 
-v1alpha1ではgeneric relation payloadを固定しないが、artifact lineageとして少なくとも次の役割を区別する。
+v1alpha1では汎用的なRelationペイロードを固定しません。ただし成果物の系譜として、少なくとも次の役割を区別します。
 
 ```ts
 export type ArtifactLineageRoleV1Alpha1 =
@@ -224,13 +220,13 @@ export type ArtifactLineageRoleV1Alpha1 =
   | "supersedes";
 ```
 
-この語彙は現行`Edge.type`へ追加するenumではない。
+この語彙は、現行の `Edge.type` へ追加する列挙ではありません。
 
-`Edge` / `EvidenceLink` / `CardLineageEdgeV1`と自動相互変換しない。
+`Edge`、`EvidenceLink`、`CardLineageEdgeV1` との間で、自動的に相互変換しません。
 
 ---
 
-## 6. Review Record
+## 6. Review記録
 
 ### 6.1 型
 
@@ -267,32 +263,30 @@ export type ReviewRecordV1Alpha1 = {
 };
 ```
 
-### 6.2 Review invariants
+### 6.2 Reviewの不変条件
 
-- targetはexact revision。
-- target revisionが変わればReviewは自動継承しない。
-- `reviewer.kind="human"`だけが将来のhuman review判定の根拠候補になれる。
-- AI Reviewをhuman reviewへ変換しない。
-- dispositionに`accepted` / `consensus`を追加しない。
-- Reviewを訂正するときはappend-onlyで新recordを作る。
-- `supersedesReviewId`は同じtargetを原則とする。異なるrevisionへReviewを移し替える用途に使わない。
+- targetは厳密なリビジョンにする。
+- target側のリビジョンが変わったら、Reviewを自動的に引き継がない。
+- 将来のhuman reviewの判定で根拠の候補になれるのは、`reviewer.kind="human"` だけである。
+- AIによるReviewを、human reviewへ変換しない。
+- dispositionに `accepted` や `consensus` を追加しない。
+- Reviewを訂正するときは、追記専用で新しい記録を作る。
+- `supersedesReviewId` は、同じtargetを指すのを原則とする。別のリビジョンへReviewを移し替える用途には使わない。
 
-### 6.3 現行ReviewAttributionとの関係
+### 6.3 現行のReviewAttributionとの関係
 
-現行`ReviewAttribution` / `human_reviewed`はそのまま維持する。
+現行の `ReviewAttribution` と `human_reviewed` は、そのまま維持します。
 
-将来generic Review recordを導入した場合、
+将来、汎用のReview記録を導入したときは、次の2つの関係をmigration ADRで決めます。
 
-- document-level human review metadata
-- artifact-level Review record
+- ドキュメント単位のhuman reviewメタデータ
+- 成果物単位のReview記録
 
-の関係をmigration ADRで決める。
-
-v1alpha1だけを理由に現行`reviewState`を導出値へ変更しない。
+v1alpha1だけを理由に、現行の `reviewState` を導出値へ変更しません。
 
 ---
 
-## 7. Authority Transition Event
+## 7. Authority遷移イベント
 
 ### 7.1 状態
 
@@ -327,49 +321,49 @@ export type AuthorityTransitionEventV1Alpha1 = {
 };
 ```
 
-### 7.3 Authority invariants
+### 7.3 Authorityの不変条件
 
-- stateはappend-only transition event列から導出する。
-- current stateだけを正本として上書きしない。
-- `expectedFrom`不一致はfail closed。
-- transitionはexact revisionに対して成立する。
-- 同じartifactの新revisionへauthorityを自動継承しない。
-- `scopeRef`は必須。無制限scopeを暗黙既定にしない。
-- ReviewがなくてもWorking→Candidateは可能にし得るが、Accepted / Consensus要件はpolicyで別途規定する。
-- Consensusはreview件数から自動算出しない。
-- `authorizedBy.kind="policy"`は将来予約であり、現行runtimeではAccepted / Consensusへの自動promotionに使わない。
+- 状態は、追記専用の遷移イベント列から導出する。
+- 現在の状態だけを唯一の記録として上書きしない。
+- `expectedFrom` が一致しないときは、安全側で拒否する。
+- 遷移は、厳密なリビジョンに対して成立する。
+- 同じ成果物の新しいリビジョンへ、Authorityを自動的に引き継がない。
+- `scopeRef` は必須とする。無制限のスコープを暗黙の既定にしない。
+- Reviewがなくても、Working→Candidateの遷移は可能にし得る。AcceptedとConsensusの要件は、ポリシーで別に定める。
+- Consensusは、Reviewの件数から自動的に算出しない。
+- `authorizedBy.kind="policy"` は将来の予約であり、現行のランタイムでは、AcceptedやConsensusへの自動昇格に使わない。
 
-### 7.4 代表遷移
+### 7.4 代表的な遷移
 
 | expectedFrom | to | 意味 |
 |---|---|---|
-| working | candidate | Review / adoption対象へ提示 |
-| candidate | working | 提示を撤回 |
-| candidate | accepted | scope内で採用 |
-| accepted | candidate | 採用を撤回・再検討 |
-| accepted | consensus | 定義済み手続きで共有採用 |
-| consensus | accepted | Consensus解除・scope縮小 |
+| working | candidate | Reviewや採用の対象として提示する |
+| candidate | working | 提示を取り下げる |
+| candidate | accepted | スコープ内で採用する |
+| accepted | candidate | 採用を取り消し、再検討する |
+| accepted | consensus | 定義済みの手続きで共有採用する |
+| consensus | accepted | Consensusを解除し、スコープを狭める |
 
-別revisionへ置換する場合は、旧revisionのauthority historyを改変せず、新revision側に独立transitionを作る。
+別のリビジョンへ置き換えるときは、古いリビジョンのAuthority履歴を変更しません。新しいリビジョン側に、独立した遷移を作ります。
 
 ---
 
 ## 8. Decisionとの接続
 
-Decisionはsemantic artifactであり、Authority eventそのものではない。
+Decisionは意味成果物であり、Authorityイベントそのものではありません。
 
-Decision payloadの具体schemaは未固定だが、少なくとも次を参照できることを要求する。
+Decisionペイロードの具体的なスキーマは未固定です。ただし少なくとも、次の項目を参照できることを要求します。
 
-- basis artifact revision refs
-- authority scope
-- decision actor / authority
-- selected option
-- held / rejected alternatives
+- 根拠となる成果物リビジョンへの参照
+- Authorityのスコープ
+- Decisionを行ったactorと、その権限
+- 選択した選択肢
+- 保留または棄却した代替案
 - createdAt
 
-DecisionがAccepted Synthesisをbasisにしても、そのSynthesisのTruthを証明しない。
+DecisionがAccepted Synthesisを根拠にしても、そのSynthesisが真であることは証明されません。
 
-Decisionを外部Actionへ接続する場合は、Execution / authorization境界を別契約とする。
+Decisionを外部のActionへ接続するときの実行と認可の境界は、別の契約とします。
 
 ---
 
@@ -401,9 +395,9 @@ export type ReviewCapsuleStructuralV1Alpha1 = {
 };
 ```
 
-Structural Capsuleは元record群から再構築可能なProjectionである。
+Structural Capsuleは、元の記録群から再構築できる投影です。
 
-`sourceSetDigest`は入力ref集合とprojection policyのcross-check用であり、authority証明ではない。
+`sourceSetDigest` は、入力の参照集合と投影ポリシーを照合するための値であり、Authorityの証明ではありません。
 
 ### 9.2 Narrative Explanation
 
@@ -416,89 +410,87 @@ export type ReviewCapsuleNarrativeV1Alpha1 = {
 };
 ```
 
-Narrativeは人間でもAIでも生成できる。
+Narrativeは、人間でもAIでも生成できます。
 
-Narrative textをReview / Authorityの正本にしない。
+NarrativeのtextをReviewやAuthorityの唯一の記録にはしません。
 
-### 9.3 Capsule invariants
+### 9.3 Capsuleの不変条件
 
-- Structural Capsuleから全refを元recordへ解決できる。
-- Strong contradictionや主要alternativeを説明都合で削除しない。
-- AI Narrativeはhuman Review recordを生成しない。
-- source setが変わったら、古いNarrativeを最新説明として再利用しない。
-- Capsule cache削除でcanonical dataを失わない。
+- Structural Capsuleのすべての参照を、元の記録へ解決できる。
+- 強い矛盾や主要な代替案を、説明の都合で削除しない。
+- AIのNarrativeは、human Reviewの記録を生成しない。
+- 入力集合が変わったら、古いNarrativeを最新の説明として再利用しない。
+- Capsuleのキャッシュを削除しても、正規のデータは失われない。
 
 ---
 
-## 10. 主要代替案のRetention Boundary
+## 10. 主要な代替案の保持境界
 
-### 10.1 Protected candidate
+### 10.1 保護対象の候補
 
-次のいずれかに該当するrevisionは、GC候補から自動除外するための保護入力になり得る。
+次のいずれかに該当するリビジョンは、GCの候補から自動的に除外する保護入力になり得ます。
 
-- Authority stateがCandidate / Accepted / Consensusに到達した
-- Review targetになった
-- Decisionのbasisになった
-- retained artifactから`alternative_to` / `contradicts` / `grounded_by`等で直接参照される
-- 後続Synthesisから明示参照される
-- 利用者 / policy pinがある
-- governed checkpointに含まれる
+- AuthorityがCandidate、Accepted、Consensusのいずれかに到達した
+- Reviewの対象になった
+- Decisionの根拠になった
+- 保持されている成果物から、`alternative_to`、`contradicts`、`grounded_by` などで直接参照されている
+- 後続のSynthesisから明示的に参照されている
+- 利用者またはポリシーによるピン留めがある
+- ガバナンス下のチェックポイントに含まれる
 
-### 10.2 Disposable microtrial
+### 10.2 破棄してよい小さな試行
 
-次を全て満たすWorking-only revisionはretention policyによりGC可能。
+次をすべて満たす、Workingだけのリビジョンは、保持ポリシーに従ってGCできます。
 
 - Reviewされていない
-- Authority promotionされていない
-- Decision basisでない
-- retained descendant / relationから到達不能
-- pinされていない
-- governed checkpointに含まれない
+- Authorityへ昇格していない
+- Decisionの根拠でない
+- 保持される子孫や関係から到達できない
+- ピン留めされていない
+- ガバナンス下のチェックポイントに含まれない
 
 ### 10.3 CoTとの境界
 
-保存対象は外在化されたartifact / relation / eventである。
+保存の対象は、外在化された成果物、関係、イベントです。
 
-次は保存必須ではない。
+次は、保存を必須としません。
 
-- token-by-token reasoning
-- hidden state
-- provider内部activation
-- beam / samplingの全candidate
-- model内部のdiscarded thought
+- トークン単位の推論
+- 隠れ状態
+- プロバイダ内部の活性化
+- ビームやサンプリングで得た全候補
+- モデル内部で破棄された思考
 
-ただし、後続の選択や人間Reviewに実質的に影響した代替案は、必要に応じて独立Hypothesis / Structure artifactとして外在化する。
+ただし、後続の選択や人間のReviewに実質的な影響を与えた代替案は、必要に応じて、独立したHypothesisまたはStructureの成果物として外在化します。
 
 ---
 
-## 11. Current Model Integration
+## 11. 現行モデルとの統合
 
 ### 11.1 DocumentV1
 
-`DocumentV1`は現在の可変Canvas正本であり、本契約のartifact storeではない。
+`DocumentV1` は、現在の可変なCanvasの唯一の記録であり、この契約の成果物ストアではありません。
 
-本契約を理由に、次を行わない。
+この契約を理由に、次の変更は行いません。
 
-- `semanticArtifacts[]`を追加
-- `reviews[]`を追加
-- `authorityEvents[]`を追加
-- `Card.claimType`をsemanticKindへ変更
-- `version: 2`へ上げる
+- `semanticArtifacts[]` を追加する
+- `reviews[]` を追加する
+- `authorityEvents[]` を追加する
+- `Card.claimType` をsemanticKindへ変更する
+- `version: 2` へ上げる
 
-将来はartifact側から、
+将来は、成果物の側から次を出典や文脈として参照する方式を、優先して検討します。
 
 ```text
 document revision ref
 entity ref (card / island / edge ...)
 ```
 
-をsource / contextとして参照する方式を優先検討する。
+### 11.2 Canvasリビジョン DAG
 
-### 11.2 Canvas revision DAG
+ADR-0070のCanvasリビジョンDAGは、Document全体の編集世代です。
 
-ADR-0070のcanvas revision DAGはDocument全体の編集世代である。
-
-semantic artifact revisionと原則は似るが、同じrevisionではない。
+意味成果物のリビジョンと原則は似ていますが、同じリビジョンではありません。
 
 ```text
 CanvasRevision
@@ -508,89 +500,95 @@ SemanticArtifactRevision
   = one semantic artifact's revision
 ```
 
-同一tableへ統合しない。
+同じテーブルへ統合しません。
 
-Content Store、canonical JSON、digest codec等の下位部品を共有するかは別途評価する。
+コンテンツストア、正規JSON、ダイジェストのコーデックなどの下位部品を共有するかどうかは、別に評価します。
 
 ### 11.3 InquiryJourneyV1 / RoundSnapshotV1
 
-`RoundSnapshotV1`は人が「ここまでを残す」と確認した不変なDocument成果である。
+`RoundSnapshotV1` は、人が「ここまでを残す」と確認した、不変なDocumentの成果です。
 
-semantic artifactはRoundSnapshotをsourceとして参照できるが、RoundSnapshotそのものをSynthesis artifact等へ自動変換しない。
+意味成果物は、RoundSnapshotを出典として参照できます。ただし、RoundSnapshotそのものをSynthesisの成果物などへ自動変換することはしません。
 
-既存`CardLineageEdgeV1.derived`はラウンド間カード系譜であり、artifact-level `derived_from`とは別contractのまま維持する。
+既存の `CardLineageEdgeV1.derived` は、ラウンド間のカード系譜です。成果物単位の `derived_from` とは別の契約のまま維持します。
 
 ### 11.4 ReviewAttribution
 
-現行document-level `human_reviewed` / ReviewAttributionを維持する。
+現行のドキュメント単位の `human_reviewed` とReviewAttributionを維持します。
 
-generic artifact Reviewの導入後にどちらを正本とするかはmigration判断とする。
+汎用的な成果物Reviewを導入した後に、どちらを唯一の記録にするかは、migrationの判断とします。
 
-### 11.5 AI generation run
+### 11.5 AI生成run
 
-AI artifact revisionでは`runRef`を既存AI generation runへ接続する。
+AIの成果物リビジョンでは、`runRef` を既存のAI生成runへ接続します。
 
-provider / model / prompt / policyをartifact metadataへ複製しない。
+プロバイダ、モデル、プロンプト、ポリシーを、成果物のメタデータへ複製しません。
 
 ### 11.6 WorkingGraph / ConsensusGraph
 
-- WorkingGraph = Working artifactを探索・編集するsurface
-- ConsensusGraph = Accepted / Consensus artifactを統合表示するsurface
+- WorkingGraph = Workingの成果物を探索、編集する作業面
+- ConsensusGraph = AcceptedとConsensusの成果物を統合して表示する作業面
 
-Graph自体をsemantic kindやauthority eventと同一視しない。
+Graph自体を、semantic kindやAuthorityイベントと同一視しません。
 
 ---
 
-## 12. Validation Matrix
+## 12. 検証マトリクス
 
-| Case | Expected |
+| ケース | 期待結果 |
 |---|---|
-| 同じdigest、別artifactId | 両方保持可能 |
-| 同じartifactId、semanticKind変更 | reject / new artifact required |
-| Review target revisionが存在しない | reject |
-| Review後に新revision作成 | 旧Reviewを新revisionへ継承しない |
-| AI review | human_reviewedへ昇格しない |
-| Authority expectedFrom mismatch | fail closed |
-| 5件のno_objection Review | Consensusを自動生成しない |
-| Candidate revisionがrejected lifecycleへ | authority historyは保持 |
-| Review Capsule cache削除 | canonical artifact / Review / Authority eventは不変 |
-| provider変更 | runRef解決先だけ変わりartifact contractは不変 |
-| contentDigest一致 | authorization / authenticityを意味しない |
-| source Evidence conflicting | 両方保持可能 |
-| Working microtrialが到達不能・未review・未pin | retention policyでGC可能 |
-| private CoTが存在しない | contract violationにしない |
+| 同じダイジェストで、別のartifactId | 両方を保持できる |
+| 同じartifactIdで、semanticKindを変更 | 拒否する。新しい成果物が必要 |
+| Reviewのtargetリビジョンが存在しない | 拒否する |
+| Reviewの後に新しいリビジョンを作成 | 古いReviewを新しいリビジョンへ引き継がない |
+| AIによるReview | human_reviewedへ昇格しない |
+| Authorityの expectedFrom が不一致 | 安全側で拒否する |
+| no_objectionのReviewが5件 | Consensusを自動生成しない |
+| Candidateのリビジョンがrejectedのライフサイクルへ移る | Authorityの履歴は保持する |
+| Review Capsuleのキャッシュを削除 | 正規の成果物、Review、Authorityイベントは変わらない |
+| プロバイダの変更 | runRefの解決先だけが変わり、成果物契約は変わらない |
+| contentDigestの一致 | 認可や真正性を意味しない |
+| 出典のEvidenceが矛盾している | 両方を保持できる |
+| Workingの小さな試行が、到達不能で、未review、未ピン | 保持ポリシーに従ってGCできる |
+| 非公開のCoTが存在しない | 契約違反にしない |
 
 ---
 
-## 13. Promotion Gates
+## 13. 昇格条件
 
-v1alpha1からruntime契約へ昇格する前に、少なくとも次を満たす。
+v1alpha1からランタイム契約へ昇格する前に、少なくとも次の条件を満たします。
 
-1. representative fixtureでartifact / revision / Review / Authority eventの往復を検証する。
-2. stale review target、stale authority state、同時promotion競合を再現する。
-3. SafeMode projectionでprovenance / Review / source refsの漏洩境界を確認する。
-4. human reviewとAI reviewがUI / export / APIで混ざらない。
-5. RoundSnapshot / canvas revisionとの重複容量を計測する。
-6. 100〜1000 artifact規模でReview Capsule再構築時間を測る。
-7. retention / GCでReview・Authority・Decision参照先を削除しない。
-8. import / exportでunknown future fields / version mismatchをfail-closedにする方針を決める。
-9. `SUI_LLM_PROVIDER=none`でもhuman artifact / Review / Authority操作が成立する。
-10. 現行`DocumentV1`の互換性を破壊する必要が生じた場合、実装前に別schema ADRを採択する。
+1. 代表的なフィクスチャで、成果物、リビジョン、Review、Authorityイベントの往復を検証する。
+2. 古くなったReviewのtarget、古くなったAuthorityの状態、同時昇格の競合を再現する。
+3. SafeModeの投影で、来歴、Review、出典の参照が漏れる境界を確認する。
+4. human reviewとAI reviewが、UI、エクスポート、APIで混ざらないことを確認する。
+5. RoundSnapshotやCanvasリビジョンと重複する容量を計測する。
+6. 100〜1000件規模の成果物で、Review Capsuleの再構築時間を測る。
+7. 保持とGCで、Review、Authority、Decisionの参照先を削除しない。
+8. importとexportで、未知の将来フィールドやバージョン不一致を安全側で拒否する方針を決める。
+9. `SUI_LLM_PROVIDER=none` でも、human成果物、Review、Authorityの操作が成立する。
+10. 現行の `DocumentV1` の互換性を壊す必要が生じたら、実装の前に別のスキーマADRを採択する。
 
 ---
 
 ## 14. 未決事項
 
-ADR-0087 / `sensemaking_payload_authority_exchange_v1alpha1.md`により、kind-specific payload、Relationのclosed core + namespaced extension、Authority Scope、Consensus participant snapshot、artifact exchange bundleの設計基線は追加した。
+ADR-0087と `sensemaking_payload_authority_exchange_v1alpha1.md` により、次の設計基線を追加しました。
 
-引き続き意図的に未決なのは次である。
+- kindごとのペイロード
+- Relationの閉じた中核と、名前空間付きの拡張
+- Authority Scope
+- Consensusの参加者スナップショット
+- 成果物交換バンドル
 
-- UUIDv7等の具体ID生成方式
-- Evidence source locator共通contract
-- Review finding schema
-- Consensus Policyの具体schema
-- physical DB schema / index
-- Content Store共用可否
-- artifact bundle署名 / authenticity
+引き続き意図的に未決なのは、次の項目です。
+
+- UUIDv7などの具体的なID生成方式
+- Evidenceの出典ロケータの共通契約
+- Reviewのfindingスキーマ
+- Consensus Policyの具体的なスキーマ
+- 物理DBスキーマとインデックス
+- コンテンツストアを共用できるか
+- 成果物バンドルの署名と真正性
 - Review CapsuleのUI表現
-- artifact exchange import UI
+- 成果物交換のimport UI

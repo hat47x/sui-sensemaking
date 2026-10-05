@@ -3,45 +3,43 @@
 - Status: Accepted
 - Date: 2026-09-18
 - Deciders: Maintainer
-- Scope: kind-specific semantic payload, Relation vocabulary, Authority Scope, Consensus participant snapshot, artifact import/export
+- Scope: kindごとのsemantic payload、Relationの語彙、Authority Scope、Consensusの参加者のスナップショット、artifactのimport/export
 - Related: `ADR-0084`, `ADR-0085`, `ADR-0086`
-- Runtime impact: None in this change
-- Schema impact: None in this change
+- Runtime impact: この変更では影響なし
+- Schema impact: この変更では影響なし
 
 ## Context
 
-ADR-0085 / ADR-0086により、SUI Sensemakingの意味成果物について、
+ADR-0085とADR-0086により、SUI Sensemakingの意味成果物について、次の項目の基本的な境界が定まった。
 
 - semantic kind
-- logical artifact identity
-- exact revision identity
+- 論理的なartifact identity
+- 厳密なrevision identity
 - provenance
 - Review
 - Authority transition
-- retention
+- 保持
 
-の基本境界が定まった。
+一方、実装できる契約へ進むには、次の未決事項を整理する必要がある。
 
-一方、実装可能な契約へ進むには、次の未決事項を整理する必要がある。
+1. Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Decisionのpayloadを、どこまで共通化するか。
+2. Relationの語彙を、閉じたenumにするか、自由な語彙を許すか。
+3. AcceptedやConsensusが「どの範囲で有効か」を示すAuthority Scopeを、どう表すか。
+4. Consensusを形成したときの参加者の集合を、後から再現でき、かつPIIを増やさない形で、どう固定するか。
+5. artifactをexportしてimportしたとき、source側のReview、Accepted、Consensusを、ローカルのauthorityとしてどう扱うか。
+6. SUI Information NetworkやWorkingGraph / ConsensusGraphとの関係を、どう保つか。
 
-1. Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Decisionのpayloadをどこまで共通化するか。
-2. Relation vocabularyをclosed enumにするか、自由語彙を許容するか。
-3. Accepted / Consensusが「どの範囲で有効か」を示すAuthority Scopeをどう表すか。
-4. Consensus形成時の参加者集合を、後から再現可能かつPIIを増やさずどう固定するか。
-5. artifactをexport / importしたとき、source側のReview / Accepted / Consensusをlocal authorityへどう扱うか。
-6. SUI Information Network、WorkingGraph / ConsensusGraphとの関係をどう保つか。
+特に、exportしたAccepted artifactを別のワークスペースへimportしただけで、ローカルのAcceptedにしてしまうと、権限の境界を越えたauthorityの洗い替え（authority laundering）が起きる。
 
-特に、exportされたAccepted artifactを別workspaceへimportしただけでlocal Acceptedへすると、権限境界を越えたauthority launderingが生じる。
-
-同様に、semantic payloadを一つの汎用`text + refs`へ潰すと、EvidenceとHypothesisの意味差がpayload層で消える。一方、各kindへ過剰に詳細なschemaを早期固定すると、KJ法以外のAI-native sensemakingや将来の認知Providerを不必要に制限する。
+同様に、semantic payloadを一つの汎用の `text + refs` にまとめてしまうと、EvidenceとHypothesisの意味の違いがpayload層で消える。一方、各kindのschemaを早い段階で細かく固定しすぎると、KJ法以外のAIネイティブなsensemakingや、将来の認知プロバイダを、不必要に制限する。
 
 ## Decision
 
-### D1. 共通envelopeとkind-specific payloadを分離する
+### D1. 共通のenvelopeと、kindごとのpayloadを分ける
 
-共通envelopeはidentity、revision、provenance、lifecycleだけを扱う。
+共通のエンベロープが扱うのは、identity、revision、provenance、ライフサイクルだけである。
 
-意味本文はsemantic kindごとのpayload contractへ分ける。
+意味の本文は、semantic kindごとのpayload契約へ分ける。
 
 ```text
 SemanticArtifactRevision
@@ -54,25 +52,25 @@ SemanticArtifactRevision
       kind-specific payload
 ```
 
-全kindへ共通の巨大optional objectを作らない。
+全kind共通の、巨大なoptionalオブジェクトは作らない。
 
-### D2. payloadは「意味の最小骨格」だけを固定する
+### D2. payloadでは「意味の最小限の骨格」だけを固定する
 
-v1alpha1では、各kindのpayloadは次の役割だけを固定する。
+v1alpha1では、各kindのpayloadについて、次の役割だけを固定する。
 
-- **Evidence**: 根拠として参照する内容またはsource segmentへのpointer
-- **Observation**: 何を認識したかというstatementと対象
+- **Evidence**: 根拠として参照する内容、またはsource segmentへのポインタ
+- **Observation**: 何を認識したかという記述と、その対象
 - **Relation**: predicateとparticipants
-- **Hypothesis**: 反証可能なstatementと対象
-- **Structure**: 構造種別とmember / relation refs
-- **Synthesis**: 統合された理解のbodyと構成要素refs
-- **Decision**: 選択・保留・追加調査等のdecision statementとbasis / alternative refs
+- **Hypothesis**: 反証できる記述と、その対象
+- **Structure**: 構造の種別と、memberおよびrelationへの参照
+- **Synthesis**: 統合された理解の本文と、構成要素への参照
+- **Decision**: 選択、保留、追加調査などのdecisionの記述と、basisおよびalternativeへの参照
 
-confidence、importance、rank、truth scoreを共通payload fieldにしない。
+confidence、importance、rank、truth scoreは、共通のpayloadフィールドにしない。
 
-### D3. Evidence payloadはsourceの複製を要求しない
+### D3. Evidence payloadは、sourceの複製を要求しない
 
-Evidenceはinline textだけに限定しない。
+Evidenceは、インラインのテキストだけに限らない。
 
 ```text
 Evidence payload
@@ -81,28 +79,28 @@ Evidence payload
     OR both
 ```
 
-大容量文書・画像・音声・外部recordをartifact本文へ複製しない。
+大容量の文書、画像、音声、外部のレコードを、artifactの本文へ複製しない。
 
-source pointerだけの場合でも、後から同じsegmentへ戻れるlocator / digest等をsource contract側で持てるようにする。
+sourceへのポインタだけの場合でも、後から同じsegmentへ戻るためのロケーターやダイジェストなどを、source契約の側で持てるようにする。
 
-Evidenceであることはsourceが正しいことを意味しない。
+Evidenceであることは、sourceが正しいことを意味しない。
 
-### D4. Observation / Hypothesisはstatementを共有してもkindを統合しない
+### D4. ObservationとHypothesisは、statementを共有してもkindを統合しない
 
-ObservationとHypothesisはどちらも自然言語statementを持ち得るが、同じ型へ統合しない。
+ObservationもHypothesisも、自然言語の記述を持ち得る。しかし、同じ型には統合しない。
 
-- Observation = 「この主体／認知系がこう認識した」
-- Hypothesis = 「この材料からこのように解釈できる」
+- Observation: 「この主体または認知系が、こう認識した」
+- Hypothesis: 「この材料から、このように解釈できる」
 
-同じ文面でもsemantic kindが異なれば別artifactである。
+文面が同じでも、semantic kindが違えば別のartifactである。
 
-### D5. Relationは「closed core + namespaced extension」とする
+### D5. Relationは「閉じたcore + 名前空間付きの拡張」とする
 
-Relation predicateを完全closed enumにも完全自由文字列にもしない。
+Relationのpredicateは、完全に閉じたenumにも、完全に自由な文字列にもしない。
 
-SUIがsystem behaviorへ利用するcore predicateはclosed vocabularyとする。
+SUIがシステムの挙動に使うコアのpredicateは、閉じた語彙とする。
 
-初期core:
+初期のcoreは次のとおり。
 
 - `sui.core/derived_from`
 - `sui.core/grounded_by`
@@ -115,9 +113,9 @@ SUIがsystem behaviorへ利用するcore predicateはclosed vocabularyとする�
 - `sui.core/contains`
 - `sui.core/precedes`
 
-domain-specific / experimental relationはnamespaced predicateとして許容する。
+ドメイン固有のrelationと実験的なrelationは、名前空間付きのpredicateとして許容する。
 
-例:
+例を挙げる。
 
 ```text
 domain:requirements/depends_on
@@ -125,23 +123,21 @@ method:kj/close_affinity
 experiment:csw/symbolic_resonance
 ```
 
-extension predicateは、登録されたpolicyがない限り、
+拡張predicateは、登録されたポリシーがない限り、次のものを発火させてはならない。
 
 - authority transition
-- retention root
-- automatic truth inference
+- 保持のルート
+- 真偽の自動推論
 - consensus
-- permission
+- 権限
 
-を発火させてはならない。
+未知の拡張relationは破棄せず、表示できる不透明なrelationとして保持する。
 
-未知extension relationは破棄せず、表示可能なopaque relationとして保持する。
+### D6. Relationは、二項のエッジに限らない
 
-### D6. Relationはbinary edgeへ限定しない
+将来の因果構造、複数のEvidenceによる共同の支持、n項の比較などを考慮し、Relation payloadはparticipantsの配列を持つ。
 
-将来の因果構造、複数Evidenceによる共同支持、n-aryな比較等を考慮し、Relation payloadはparticipants配列を持つ。
-
-participantはrole + exact artifact revision refで表現する。
+participantは、roleと、厳密なartifact revisionへの参照で表す。
 
 ```text
 predicate = supports
@@ -150,21 +146,19 @@ participants:
   - role=target
 ```
 
-core predicateごとのrole制約は別validation tableで固定する。
+コアのpredicateごとのrole制約は、別の検証テーブルで固定する。
 
-現行`Edge`は引き続きcanvas projectionであり、このRelation payloadへ自動migrationしない。
+現行の `Edge` は、引き続きキャンバスのプロジェクションである。このRelation payloadへ自動でマイグレーションはしない。
 
-### D7. Authority Scopeはpermission / visibilityから独立したimmutable recordとする
+### D7. Authority Scopeは、権限や可視性から独立した不変のレコードとする
 
-`scopeRef`はopaque stringのまま終わらせず、将来次のようなimmutable recordへ解決できることを要求する。
+`scopeRef` は、不透明な文字列のまま終わらせず、将来、次のような不変のレコードへ解決できることを要求する。
 
-Authority Scopeは、
+Authority Scopeは、次の点を定義する。
 
-> **このartifact revisionを、どの意味上の文脈でAccepted / Consensusとして扱うか**
+> **このartifact revisionを、どの意味上の文脈でAcceptedまたはConsensusとして扱うか**
 
-を定義する。
-
-初期scope kind:
+初期のscope kindは次のとおり。
 
 - `workspace`
 - `inquiry`
@@ -172,7 +166,7 @@ Authority Scopeは、
 - `decision_context`
 - `external_context`
 
-scope recordは少なくとも、
+scopeのレコードは、少なくとも次を持つ。
 
 - scopeRef
 - kind
@@ -181,9 +175,7 @@ scope recordは少なくとも、
 - parentScopeRef（任意）
 - createdAt
 
-を持つ。
-
-Authority ScopeはACLではない。
+Authority Scopeは、ACLではない。
 
 ```text
 authority scope != readable scope
@@ -191,42 +183,38 @@ authority scope != visibility
 authority scope != tenant boundary
 ```
 
-「見えるからAccepted」「公開したからConsensus」と扱わない。
+「見えるのでAccepted」「公開したのでConsensus」とは扱わない。
 
-### D8. scope継承は自動にしない
+### D8. scopeの継承は自動にしない
 
-parent scopeでAcceptedだからchild / sibling / external scopeでもAccepted、という暗黙継承をしない。
+親のscopeでAcceptedだからといって、子や兄弟や外部のscopeでもAcceptedとする、という暗黙の継承はしない。
 
-scope間でauthorityを引き継ぐ場合は、新しいAuthority transitionを作り、source authority eventをbasisとして参照する。
+scope間でauthorityを引き継ぐ場合は、新しいAuthority transitionを作り、元のauthority eventをbasisとして参照する。
 
-これにより、
+これにより、次のような状態を表現できる。
 
-> inquiry内ではAcceptedだが、組織全体の正式見解ではない
+> inquiry内ではAcceptedだが、組織全体の正式な見解ではない
 
-という状態を表現できる。
+### D9. Consensusの参加者の集合は、不変のスナップショットとして固定する
 
-### D9. Consensus participant setはimmutable snapshotとして固定する
+Consensus transitionでは、その時点の参加者の集合を、後から再現できなければならない。
 
-Consensus transitionでは、その時点の参加者集合を後から再現できる必要がある。
+`participantSetRef` は、不変のスナップショットのレコードへ解決する。
 
-`participantSetRef`はimmutable snapshot recordへ解決する。
-
-参加者snapshotは、
+参加者のスナップショットは、次を持つ。
 
 - participantSetRef
-- opaque participant refs
+- 不透明なparticipant ref
 - participant kind
-- eligibility / role ref（必要な場合）
-- source membership snapshot ref（必要な場合）
+- eligibilityまたはrole ref（必要な場合）
+- source membershipのスナップショットref（必要な場合）
 - createdAt
 
-を持つ。
+表示名やメールアドレスなどのPIIを、スナップショットに必須とはしない。
 
-表示名・メールアドレス等のPIIをsnapshotへ必須化しない。
+組織のmembershipが後から変わっても、過去のConsensusの参加者の集合を、遡って変更しない。
 
-組織membershipが後から変わっても、過去Consensusの参加者集合を遡及変更しない。
-
-### D10. Consensus participant setとConsensus policyを分離する
+### D10. Consensusの参加者の集合と、Consensusのポリシーを分ける
 
 「誰が対象だったか」と「どの手続きでConsensusとみなすか」を分ける。
 
@@ -237,24 +225,24 @@ ParticipantSet
   != Authority transition
 ```
 
-Consensus policyは将来、
+Consensusのポリシーは、将来、次のような手続きを表現できる。
 
-- explicit unanimous
-- explicit quorum
-- formally delegated procedure
-- domain-specific procedure
+- 明示的な全会一致
+- 明示的な定足数
+- 正式に委任された手続き
+- ドメイン固有の手続き
 
-等を表現できるが、v1alpha1では数式や多数決規則を固定しない。
+ただしv1alpha1では、数式や多数決の規則は固定しない。
 
-AI score / model confidence /単純review件数をConsensus policyの代用にしない。
+AIのスコア、モデルのconfidence、単純なreview件数を、Consensusのポリシーの代わりにしない。
 
-現行SUIではAI / systemだけのparticipant setからConsensusへ昇格させない。
+現行のSUIでは、AIとsystemだけの参加者の集合からConsensusへ昇格させない。
 
-### D11. exportはauthority historyを含めても、import先のlocal authorityへ自動適用しない
+### D11. exportにauthorityの履歴を含めても、import先のローカルauthorityへ自動で適用しない
 
-artifact bundleは、由来説明のためにsource側Review / Authority eventを含め得る。
+artifactのバンドルには、由来を説明するために、source側のReviewとAuthority eventを含めてよい。
 
-ただし別trust / workspace / networkへimportした時点では、それらは**source authority assertion**である。
+ただし、別のtrust、ワークスペース、ネットワークへimportした時点では、それらは**source authority assertion**である。
 
 ```text
 source Accepted
@@ -262,47 +250,47 @@ source Accepted
 local Working or Candidate
 ```
 
-local Accepted / Consensusにするには、local scope上の新しいAuthority transitionが必要である。
+ローカルのAcceptedやConsensusにするには、ローカルのscope上で、新しいAuthority transitionが必要である。
 
-これによりauthority launderingを防ぐ。
+これにより、authority launderingを防ぐ。
 
-### D12. imported Reviewはlocal human_reviewedを自動成立させない
+### D12. importしたReviewは、ローカルのhuman_reviewedを自動で成立させない
 
-source bundle内にhuman Reviewが含まれていても、それはsource contextのReview履歴として保持する。
+sourceのバンドルに人間のReviewが含まれていても、それはsourceの文脈でのReview履歴として保持する。
 
-import先の`human_reviewed`やlocal artifact Reviewを自動生成しない。
+import先の `human_reviewed` やローカルのartifactのReviewを、自動では生成しない。
 
-local reviewerが明示Reviewした場合に、新しいlocal Review recordを作る。
+ローカルのreviewerが明示的にReviewしたときに、新しいローカルのReviewレコードを作る。
 
-### D13. export bundleはself-contained closureまたは明示external dependencyを要求する
+### D13. export bundleは、自己完結したclosureか、明示した外部依存を要求する
 
-export rootから必要なartifact revision、Relation、Review、Authority event、Scope、ParticipantSet、source pointer metadataを辿る。
+exportのルートから、必要なartifact revision、Relation、Review、Authority event、Scope、ParticipantSet、source pointerのメタデータをたどる。
 
-各refは次のどちらかでなければならない。
+各refは、次のどちらかでなければならない。
 
-1. bundle内に自己完結して含まれる
-2. manifestでexternal dependencyとして明示される
+1. バンドルの中に、自己完結して含まれる
+2. manifestで、外部依存として明示される
 
-silent dangling refを許可しない。
+黙ってぶら下がったrefは許可しない。
 
-SafeMode / permission projectionはbundle生成前に適用し、元networkを変更しない。
+SafeModeと権限のプロジェクションは、バンドルを生成する前に適用する。元のネットワークは変更しない。
 
-### D14. import時のidentity collisionはfail closedまたはexplicit mappingとする
+### D14. import時のidentityの衝突は、安全側で拒否するか、明示的なマッピングとする
 
-同じ`artifactId / revisionId`がlocalに存在する場合、
+同じ `artifactId / revisionId` がローカルに存在する場合は、次のとおりとする。
 
-- digest / semantic kind / provenanceが完全整合するなら既存refへresolveできる
-- 一つでも不一致ならcollisionとしてfail closedする
+- ダイジェスト、semantic kind、provenanceが完全に整合するなら、既存のrefへ解決できる
+- 一つでも不一致があれば、衝突として安全側で拒否する
 - IDを黙って上書きしない
-- 自動的に「同じ意味」と統合しない
+- 自動的に「同じ意味」として統合しない
 
-cross-networkでlocal IDを再発行する実装を採る場合は、origin ref mappingを失わない。
+ネットワーク間でローカルのIDを再発行する実装を採る場合は、起点のrefのマッピングを失わない。
 
-### D15. SUI Information Networkを意味成果物の最終projection先とする
+### D15. SUI Information Networkを、意味成果物の最終的なプロジェクション先とする
 
-semantic artifact contractはInformation Networkと競合する別Product modelではない。
+semantic artifact契約は、Information Networkと競合する別のプロダクトモデルではない。
 
-将来のInformation Networkは、
+将来のInformation Networkは、次のものを問い合わせできる形へマテリアライズする。
 
 - artifact revisions
 - Relation artifacts
@@ -310,11 +298,9 @@ semantic artifact contractはInformation Networkと競合する別Product model�
 - provenance
 - Working / Consensus plane
 
-をQuery可能な形へmaterializeする。
+`QualitativeNetworkSnapshot` は、その時点、権限、scopeに応じた読み取りモデルである。artifact persistenceそのものではない。
 
-`QualitativeNetworkSnapshot`は、その時点・permission・scopeに応じたread modelであり、artifact persistenceそのものではない。
-
-したがって、
+したがって、次の関係を採る。
 
 ```text
 semantic artifact persistence
@@ -324,62 +310,60 @@ SUI Information Network / snapshot
 Context Projection
 ```
 
-という関係を採る。
+### D16. 物理的な永続化は、論理契約の確定後に、別のADRへ送る
 
-### D16. physical persistenceはlogical contract確定後に別ADRへ送る
+本ADRでは、テーブル名、DBのインデックス、オブジェクトストレージの配置を固定しない。
 
-本ADRではtable名・DB index・object storage layoutを固定しない。
+ただし、物理設計は次を満たす必要がある。
 
-ただしphysical designは次を満たす必要がある。
+- 不変のrevision
+- 追記専用のReviewとAuthority event
+- 厳密なrevisionへの外部キー相当の整合
+- provenance refのテナントとscopeの整合
+- 保持のルートからの到達可能性
+- SafeMode、削除、法的な保持との整合
+- 現在状態のキャッシュを正本にしない
+- authorityとconsensusの状態を、event列から再構築できる
 
-- immutable revision
-- append-only Review / Authority events
-- exact revision FK相当の整合
-- provenance refのtenant / scope整合
-- retention rootからの到達性
-- SafeMode / delete / legal retentionとの整合
-- current state cacheを正本化しない
-- authority / consensus stateをevent列から再構築可能
-
-RDB正規化、JSON aggregate、graph store、Content Store共有の比較は別ADRで行う。
+RDBの正規化、JSON集約、グラフストア、Content Storeの共有の比較は、別のADRで行う。
 
 ## Three-Element Verification（ADR-0067）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |---|---|---|
-| **業務設計** | 同じ成果物でもAuthorityはscopeごとに異なり、export/importしてもsource authorityをlocal authorityへ洗い替えない | データ: Scope / ParticipantSet / source authority historyを別recordで保持。機能: import時はlocal promotionを別操作にする |
-| **データ設計** | kind-specific payload、closed core + namespaced relation、immutable scope / participant snapshot、self-contained bundleを定義 | 業務: 未知relationや外部authorityを勝手に解釈しない。機能: dangling ref / ID collisionをfail closed |
-| **機能設計** | Artifact persistenceからInformation Networkをmaterializeし、Context Projectionはread modelとして維持する | 業務: query結果をauthorityへ昇格しない。データ: snapshotはcanonical persistenceではない |
+| **業務設計** | 同じ成果物でも、Authorityはscopeごとに異なる。export/importしても、source authorityをローカルのauthorityへ洗い替えない | データ: Scope、ParticipantSet、source authorityの履歴を、別のレコードで保持する。機能: importの際は、ローカルでの昇格を別の操作にする |
+| **データ設計** | kindごとのpayload、閉じたcoreと名前空間付きのrelation、不変のscopeとparticipantのスナップショット、自己完結したバンドルを定義する | 業務: 未知のrelationや外部のauthorityを、勝手に解釈しない。機能: ぶら下がったrefとIDの衝突を、安全側で拒否する |
+| **機能設計** | Artifact persistenceからInformation Networkをマテリアライズし、Context Projectionは読み取りモデルとして維持する | 業務: 問い合わせの結果を、authorityへ昇格しない。データ: スナップショットは、正本の永続化ではない |
 
 ## Consequences
 
 ### Positive
 
-- KJ法以外のsensemakingへ拡張しても、共通envelopeを壊さずpayloadを追加できる。
-- Relation vocabularyに秩序を持たせつつ、domain固有関係を失わない。
+- KJ法以外のsensemakingへ拡張しても、共通のエンベロープを壊さずに、payloadを追加できる。
+- Relationの語彙に秩序を持たせつつ、ドメイン固有の関係を失わない。
 - 「どの範囲でAcceptedか」を明示できる。
-- Consensusの参加者集合が組織membership変更で書き換わらない。
-- 外部からimportした「承認済み」をlocal承認へ誤昇格しない。
-- Information Networkとsemantic artifact modelの責務が接続する。
+- Consensusの参加者の集合が、組織のmembershipの変更で書き換わらない。
+- 外部からimportした「承認済み」を、ローカルの承認へ誤って昇格しない。
+- Information Networkとsemantic artifactモデルの責務が接続する。
 
 ### Costs / Open questions
 
-- kind-specific payload fieldの最終shapeはv1alpha1 contractで固定する必要がある。
-- core predicate role validation tableが必要。
-- Authority Scopeのparent関係をどこまで使うかはpilotが必要。
-- Consensus Policyの具体規則はmulti-user実装前に別設計が必要。
-- artifact bundleの署名・真正性証明は未決。
-- physical persistenceは未決。
+- kindごとのpayloadフィールドの最終的な形は、v1alpha1契約で固定する必要がある。
+- コアのpredicateのroleを検証するテーブルが必要である。
+- Authority Scopeの親子関係をどこまで使うかは、パイロットが必要である。
+- Consensusのポリシーの具体的な規則は、マルチユーザーの実装の前に、別の設計が必要である。
+- artifactのバンドルの署名と真正性の証明は未決である。
+- 物理的な永続化は未決である。
 
 ## Non-goals
 
-- 本ADRだけでDB / API / DocumentV1を変更しない。
-- Relation extensionを自動semantic inferenceへ使わない。
-- visibilityをauthorityへ変換しない。
-- source Accepted / Consensusをimport先へ自動継承しない。
-- imported human Reviewをlocal `human_reviewed`へ変換しない。
-- ConsensusをAI score / review件数から自動算出しない。
-- physical storage engineをこの段階で決めない。
+- 本ADRだけでは、DB、API、DocumentV1を変更しない。
+- Relationの拡張を、自動の意味推論に使わない。
+- 可視性をauthorityへ変換しない。
+- sourceのAcceptedやConsensusを、import先へ自動では継承しない。
+- importした人間のReviewを、ローカルの `human_reviewed` へ変換しない。
+- ConsensusをAIのスコアやreview件数から自動で算出しない。
+- この段階では、物理的なストレージエンジンを決めない。
 
 ## Traceability
 

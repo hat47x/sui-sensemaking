@@ -9,7 +9,7 @@
 
 ## Context
 
-ADR-0022 で DOC-OPS-04 系 ADR の共通I/F（用語・見出し・判定メタ）が固定された。次段の ADR-0023（候補B）では、可読性の最低基線を定義し、初読コストと再開コストを下げる必要がある。
+ADR-0022でDOC-OPS-04系ADRの共通I/F（用語・見出し・判定メタ）が固定された。次段のADR-0023（候補B）では、可読性の最低基線を定義し、初読コストと再開コストを下げる必要がある。
 
 issue-DOC-OPS-04（ADR候補B）で確認された主要課題は以下。
 
@@ -17,23 +17,23 @@ issue-DOC-OPS-04（ADR候補B）で確認された主要課題は以下。
 2. 用語ゆれにより、文書横断で判断基準がずれる。
 3. 変更時に「今回適用範囲」と「今回非対象範囲」の境界が不明瞭になりやすい。
 
-本ADRは **Readability baseline のみ** を扱う。CI必須化境界や例外承認フローは対象外とし、関連判断は別ADR（候補C/D）へ委譲する。
+本ADRは **Readability baselineのみ** を扱う。CI必須化境界や例外承認フローは対象外とし、関連判断は別ADR（候補C/D）へ委譲する。
 
 ## Plan（AC/DoD不足補完と合意ログ）
 
 ### AC/DoD不足の補完提案
 
-- AC補完-1: 対象文書に Audience / Goal / Non-goal / Outcome を明示する。
-- AC補完-2: Upstream Reference / Downstream Apply を各1件以上明示する。
+- AC補完-1: 対象文書にAudience / Goal / Non-goal / Outcomeを明示する。
+- AC補完-2: Upstream Reference / Downstream Applyを各1件以上明示する。
 - AC補完-3: 今回編集対象と非対象（Non-goal）を明示し、境界をレビュー可能にする。
 - DoD補完-1: ADR本文に `Context / Decision / Consequences / Traceability` を必須記載する。
-- DoD補完-2: ADR-0022 I/F逸脱の有無を Verify で明示する（逸脱時は理由を記録）。
+- DoD補完-2: ADR-0022 I/F逸脱の有無をVerifyで明示する（逸脱時は理由を記録）。
 
 ### 合意ログ（本ADR起票時点）
 
 - 合意-1（取得済）: 候補Bは可読性基線の定義に限定し、CI境界は扱わない。
 - 合意-2（取得済）: 候補Bは例外承認ルールを扱わない。
-- 合意-3（取得済）: ADR-0022 の固定I/F（語彙・見出し・判定メタ）を前提とし、逸脱時は理由を明文化する。
+- 合意-3（取得済）: ADR-0022の固定I/F（語彙・見出し・判定メタ）を前提とし、逸脱時は理由を明文化する。
 
 ## Decision
 
@@ -68,12 +68,12 @@ issue-DOC-OPS-04（ADR候補B）で確認された主要課題は以下。
 
 ## Consequences
 
-- 期待効果:
+- 期待効果は次のとおりです。
   - 初読者の理解開始点（Audience/Goal/Non-goal/Outcome）が揃い、読解コストを低減できる。
   - 変更レビュー時に適用境界（In/Out）が明確になり、差分判定の再現性が上がる。
   - 文書横断での用語ドリフトを早期検知しやすくなる。
 
-- 副作用/制約:
+- 副作用/制約は次のとおりです。
   - 執筆時に最小メタ記載の確認コストが増える。
   - 段階適用のため、移行期間は適用済み/未適用文書が混在する。
 
@@ -81,7 +81,7 @@ issue-DOC-OPS-04（ADR候補B）で確認された主要課題は以下。
 
 - ADR候補Bとして、Readability baseline（RBL-1〜RBL-5）を定義した。
 - 適用境界（In-Scope / Out-of-Scope）を明文化した。
-- 非目標として CI境界・例外承認を明示的に除外した。
+- 非目標としてCI境界・例外承認を明示的に除外した。
 
 ## Verify
 
@@ -99,13 +99,13 @@ issue-DOC-OPS-04（ADR候補B）で確認された主要課題は以下。
 ## Proceed
 
 - 状態: **完了（ADR-0023 Accepted）**
-- 未解決点:
+- 未解決点は次のとおりです。
   - なし。
 - 次Phase開始条件（ADR-0024）:
   1. ADR-0022のI/F語彙に変更兆候がないこと。
   2. ADR-0023で定義したRBL-1〜RBL-5と矛盾しないこと。
-- 変更影響:
-  - 品質ゲート境界（ADR-0024）は、Audience/Goal/Non-goal/Outcome を前提に判定する。
+- 変更影響は次のとおりです。
+  - 品質ゲート境界（ADR-0024）は、Audience/Goal/Non-goal/Outcomeを前提に判定する。
 
 ## Traceability
 
