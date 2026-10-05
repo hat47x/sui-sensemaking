@@ -497,6 +497,7 @@ class SuggestAttentionCandidatesResponse(BaseModel):
     candidates: list[AttentionCandidate]
     excludedCardIds: list[str] = Field(default_factory=list)
     truncated: bool = False
+    complexitySuppressed: bool = False
 
 
 class DetectContradictionRequest(BaseModel):

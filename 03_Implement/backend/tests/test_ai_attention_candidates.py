@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
+    MAX_ATTENTION_CANDIDATES,
     MAX_ATTENTION_FOCUS_PAIRS,
 )
 from sui_sensemaking_api.main import app
@@ -73,6 +74,7 @@ def test_transitive_relation_exposes_attention_without_score_or_provider() -> No
         ],
         "excludedCardIds": [],
         "truncated": False,
+        "complexitySuppressed": False,
     }
     assert "score" not in response.text
 
@@ -258,3 +260,111 @@ def test_truncated_projection_never_exposes_partial_candidates(
     body = response.json()
     assert body["truncated"] is True
     assert body["candidates"] == []
+
+
+@pytest.mark.parametrize(
+    ("candidate_count", "expected_visible", "expected_suppressed"),
+    [
+        (MAX_ATTENTION_CANDIDATES, MAX_ATTENTION_CANDIDATES, False),
+        (MAX_ATTENTION_CANDIDATES + 1, 0, True),
+    ],
+)
+def test_product_candidate_budget_is_all_or_none(
+    monkeypatch: pytest.MonkeyPatch,
+    candidate_count: int,
+    expected_visible: int,
+    expected_suppressed: bool,
+) -> None:
+    cards = []
+    relations = []
+    islands = []
+    clusters = []
+    for index in range(1, candidate_count + 1):
+        a = f"g{index}-a"
+        b = f"g{index}-b"
+        c = f"g{index}-c"
+        cards.extend(
+            [
+                {"id": a, "text": a, "text_norm": a, "char_len": len(a)},
+                {"id": b, "text": b, "text_norm": b, "char_len": len(b)},
+                {"id": c, "text": c, "text_norm": c, "char_len": len(c)},
+            ]
+        )
+        relations.extend(
+            [
+                {"id": f"r{index}-ab", "from": a, "to": b, "type": "related"},
+                {"id": f"r{index}-bc", "from": b, "to": c, "type": "related"},
+            ]
+        )
+        islands.extend(
+            [
+                {"id": f"i{index}-ab", "card_ids": [a, b]},
+                {"id": f"i{index}-c", "card_ids": [c]},
+            ]
+        )
+        clusters.append(
+            {
+                "cluster_id": f"cc-{index:04d}",
+                "card_ids": [a, b, c],
+                "basis": "relation",
+                "score": 1.0,
+            }
+        )
+
+    candidate_ir = {
+        "ir_version": "1.2",
+        "cards": cards,
+        "relations": relations,
+        "islands": islands,
+        "cluster_candidates": clusters,
+        "meta": {"doc_id": "candidate-budget", "doc_version": 1},
+        "truncation": {"truncated": False, "reason_codes": []},
+    }
+    monkeypatch.setattr(
+        ai,
+        "build_attention_ir",
+        lambda *_args, **_kwargs: candidate_ir,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": _doc()},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["methodId"] == ATTENTION_METHOD_ID
+    assert len(body["candidates"]) == expected_visible
+    assert body["complexitySuppressed"] is expected_suppressed
+    assert body["truncated"] is False
+
+
+def test_attention_candidates_reject_overlapping_visual_island_membership() -> None:
+    document = _doc(
+        islands=[
+            {
+                "id": "i-left",
+                "cardIds": ["c1", "c2"],
+                "title": "左",
+                "titleReviewed": True,
+            },
+            {
+                "id": "i-right",
+                "cardIds": ["c1", "c3"],
+                "title": "右",
+                "titleReviewed": True,
+            },
+        ]
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": document},
+        )
+
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "ambiguous_island_membership"
+    assert "lossy projection" in detail["message"]

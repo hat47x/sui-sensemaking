@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
-    attention_candidates_from_ir,
+    attention_candidate_result_from_ir,
     attention_source_digest,
     build_attention_ir,
 )
@@ -2986,12 +2986,14 @@ def suggest_attention_candidates(
     except IRGenerationError as exc:
         raise HTTPException(status_code=422, detail=exc.to_contract()) from exc
 
+    result = attention_candidate_result_from_ir(ir)
     return SuggestAttentionCandidatesResponse(
         methodId=ATTENTION_METHOD_ID,
         sourceDigest=attention_source_digest(ir),
-        candidates=attention_candidates_from_ir(ir),
+        candidates=result.candidates,
         excludedCardIds=held_card_ids(ir),
         truncated=bool(ir.get("truncation", {}).get("truncated")),
+        complexitySuppressed=result.complexity_suppressed,
     )
 
 
