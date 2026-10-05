@@ -261,16 +261,24 @@ def test_truncated_projection_never_exposes_partial_candidates(
     assert body["truncated"] is True
     assert body["candidates"] == []
 
-
-
-def test_more_than_product_candidate_budget_suppresses_entire_set(
+@pytest.mark.parametrize(
+    ("candidate_count", "expected_visible", "expected_suppressed"),
+    [
+        (MAX_ATTENTION_CANDIDATES, MAX_ATTENTION_CANDIDATES, False),
+        (MAX_ATTENTION_CANDIDATES + 1, 0, True),
+    ],
+)
+def test_product_candidate_budget_is_all_or_none(
     monkeypatch: pytest.MonkeyPatch,
+    candidate_count: int,
+    expected_visible: int,
+    expected_suppressed: bool,
 ) -> None:
     cards = []
     relations = []
     islands = []
     clusters = []
-    for index in range(1, MAX_ATTENTION_CANDIDATES + 2):
+    for index in range(1, candidate_count + 1):
         a = f"g{index}-a"
         b = f"g{index}-b"
         c = f"g{index}-c"
@@ -302,19 +310,19 @@ def test_more_than_product_candidate_budget_suppresses_entire_set(
             }
         )
 
-    over_budget_ir = {
+    candidate_ir = {
         "ir_version": "1.2",
         "cards": cards,
         "relations": relations,
         "islands": islands,
         "cluster_candidates": clusters,
-        "meta": {"doc_id": "over-budget", "doc_version": 1},
+        "meta": {"doc_id": "candidate-budget", "doc_version": 1},
         "truncation": {"truncated": False, "reason_codes": []},
     }
     monkeypatch.setattr(
         ai,
         "build_attention_ir",
-        lambda *_args, **_kwargs: over_budget_ir,
+        lambda *_args, **_kwargs: candidate_ir,
     )
 
     with TestClient(app) as client:
@@ -326,6 +334,6 @@ def test_more_than_product_candidate_budget_suppresses_entire_set(
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["methodId"] == ATTENTION_METHOD_ID
-    assert body["candidates"] == []
-    assert body["complexitySuppressed"] is True
+    assert len(body["candidates"]) == expected_visible
+    assert body["complexitySuppressed"] is expected_suppressed
     assert body["truncated"] is False
