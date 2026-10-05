@@ -453,8 +453,6 @@ def test_outcome_keeps_axes_separate_without_reprinting_notes() -> None:
     assert "候補なしでは見ていなかった材料へ注意が移った" not in rendered
     assert "表示量と確認負荷は許容範囲だった" not in rendered
 
-
-
 def test_candidate_receipt_binds_baseline_observation_content() -> None:
     document = _document()
     source_sha256 = "baseline-note-binding"
@@ -479,3 +477,28 @@ def test_candidate_receipt_binds_baseline_observation_content() -> None:
     )
 
     assert original != changed
+
+
+
+def test_outcome_rejects_changed_baseline_observation() -> None:
+    document = _document()
+    source_sha256 = "changed-baseline-note"
+    baseline_receipt, baseline_observation = _gate(document, source_sha256)
+    ir = build_attention_ir(document)
+    candidate_receipt = _candidate_receipt(
+        source_sha256=source_sha256,
+        product_digest=attention_source_digest(ir),
+        baseline_receipt=baseline_receipt,
+        baseline_observation_sha256=_sha256_for_test(baseline_observation),
+        candidates=attention_candidates_from_ir(ir),
+    )
+
+    with pytest.raises(CandidateGateError, match="Candidate receipt"):
+        render_outcome(
+            document,
+            source_sha256=source_sha256,
+            baseline_receipt=baseline_receipt,
+            baseline_observation="後から書き換えた事前判断".encode("utf-8"),
+            candidate_receipt=candidate_receipt,
+            post_observation=_post_observation(),
+        )
