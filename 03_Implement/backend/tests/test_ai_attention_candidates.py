@@ -261,6 +261,7 @@ def test_truncated_projection_never_exposes_partial_candidates(
     assert body["truncated"] is True
     assert body["candidates"] == []
 
+
 @pytest.mark.parametrize(
     ("candidate_count", "expected_visible", "expected_suppressed"),
     [
