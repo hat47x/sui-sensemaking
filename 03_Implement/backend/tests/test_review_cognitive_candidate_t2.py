@@ -25,6 +25,7 @@ from sui_sensemaking_api.attention_candidates import (
     attention_source_digest,
     build_attention_ir,
 )
+from sui_sensemaking_api.llm_input_ir import IRGenerationError
 from sui_sensemaking_api.models import DocumentV1
 
 
@@ -569,7 +570,6 @@ def test_t2_rejects_candidate_set_over_product_complexity_budget(
             baseline_receipt=receipt,
             baseline_observation="事前判断".encode("utf-8"),
         )
-
 
 
 def test_t2_baseline_rejects_overlapping_visual_island_membership() -> None:
