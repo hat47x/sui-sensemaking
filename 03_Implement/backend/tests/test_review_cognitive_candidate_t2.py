@@ -503,6 +503,7 @@ def test_outcome_rejects_changed_baseline_observation() -> None:
             post_observation=_post_observation(),
         )
 
+
 def test_t2_rejects_candidate_set_over_product_complexity_budget(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
