@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
+    MAX_ATTENTION_CANDIDATES,
     MAX_ATTENTION_FOCUS_PAIRS,
 )
 from sui_sensemaking_api.main import app
@@ -73,6 +74,7 @@ def test_transitive_relation_exposes_attention_without_score_or_provider() -> No
         ],
         "excludedCardIds": [],
         "truncated": False,
+        "complexitySuppressed": False,
     }
     assert "score" not in response.text
 
