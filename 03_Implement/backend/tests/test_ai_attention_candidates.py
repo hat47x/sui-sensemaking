@@ -338,3 +338,34 @@ def test_product_candidate_budget_is_all_or_none(
     assert len(body["candidates"]) == expected_visible
     assert body["complexitySuppressed"] is expected_suppressed
     assert body["truncated"] is False
+
+
+
+def test_attention_candidates_reject_overlapping_visual_island_membership() -> None:
+    document = _doc(
+        islands=[
+            {
+                "id": "i-left",
+                "cardIds": ["c1", "c2"],
+                "title": "左",
+                "titleReviewed": True,
+            },
+            {
+                "id": "i-right",
+                "cardIds": ["c1", "c3"],
+                "title": "右",
+                "titleReviewed": True,
+            },
+        ]
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": document},
+        )
+
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "ambiguous_island_membership"
+    assert "lossy projection" in detail["message"]
