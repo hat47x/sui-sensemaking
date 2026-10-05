@@ -8,10 +8,14 @@ import pytest
 
 from scripts.review_cognitive_candidate_t2 import (
     BaselineGateError,
+    CandidateGateError,
     IncompleteAttentionProjectionError,
+    PostObservationError,
     _baseline_receipt,
+    _candidate_receipt,
     render_baseline,
     render_candidates,
+    render_outcome,
     render_review,
 )
 from sui_sensemaking_api.attention_candidates import (
@@ -37,6 +41,37 @@ def _gate(document: DocumentV1, source_sha256: str) -> tuple[str, bytes]:
 
 def _sha256_for_test(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def _post_observation(**overrides: object) -> bytes:
+    value: dict[str, object] = {
+        "attentionShift": {
+            "assessment": "yes",
+            "note": "候補なしでは見ていなかった材料へ注意が移った",
+        },
+        "structureReconsideration": {
+            "assessment": "yes",
+            "note": "既存の島分けを見直すきっかけになった",
+        },
+        "holdDissentPreserved": {
+            "assessment": "yes",
+            "note": "保留はそのまま残した",
+        },
+        "noiseOrNarrowing": {
+            "assessment": "no",
+            "note": "探索が狭まったとは感じなかった",
+        },
+        "counterfactualWithoutCandidate": {
+            "assessment": "unlikely",
+            "note": "候補なしでは同じ見直しに到達しにくかった",
+        },
+        "complexityBudget": {
+            "assessment": "within",
+            "note": "表示量と確認負荷は許容範囲だった",
+        },
+    }
+    value.update(overrides)
+    return json.dumps(value, ensure_ascii=False).encode("utf-8")
 
 
 def test_baseline_does_not_reveal_machine_candidates() -> None:
@@ -276,3 +311,140 @@ def test_candidate_phase_rejects_receipt_from_different_method_version() -> None
             baseline_receipt=wrong_method_receipt,
             baseline_observation="事前判断".encode("utf-8"),
         )
+
+
+
+def test_candidate_receipt_binds_exact_candidate_payload() -> None:
+    document = _document()
+    source_sha256 = "candidate-payload"
+    ir = build_attention_ir(document)
+    digest = attention_source_digest(ir)
+    baseline_receipt, _ = _gate(document, source_sha256)
+    candidates = attention_candidates_from_ir(ir)
+
+    actual = _candidate_receipt(
+        source_sha256=source_sha256,
+        product_digest=digest,
+        baseline_receipt=baseline_receipt,
+        candidates=candidates,
+    )
+    empty = _candidate_receipt(
+        source_sha256=source_sha256,
+        product_digest=digest,
+        baseline_receipt=baseline_receipt,
+        candidates=[],
+    )
+
+    assert actual != empty
+
+
+def test_candidate_phase_prints_receipt_and_six_axis_template() -> None:
+    document = _document()
+    source_sha256 = "candidate-template"
+    receipt, observation = _gate(document, source_sha256)
+
+    rendered = render_candidates(
+        document,
+        source_sha256=source_sha256,
+        baseline_receipt=receipt,
+        baseline_observation=observation,
+    )
+
+    assert "Candidate receipt: " in rendered
+    assert "## Post-observation JSON template" in rendered
+    for axis in (
+        "attentionShift",
+        "structureReconsideration",
+        "holdDissentPreserved",
+        "noiseOrNarrowing",
+        "counterfactualWithoutCandidate",
+        "complexityBudget",
+    ):
+        assert f'"{axis}"' in rendered
+
+
+def test_outcome_requires_exact_candidate_receipt() -> None:
+    document = _document()
+    source_sha256 = "outcome-gate"
+    baseline_receipt, baseline_observation = _gate(document, source_sha256)
+
+    with pytest.raises(CandidateGateError, match="Candidate receipt"):
+        render_outcome(
+            document,
+            source_sha256=source_sha256,
+            baseline_receipt=baseline_receipt,
+            baseline_observation=baseline_observation,
+            candidate_receipt="0" * 64,
+            post_observation=_post_observation(),
+        )
+
+
+def test_outcome_requires_all_six_independent_axes() -> None:
+    document = _document()
+    source_sha256 = "outcome-schema"
+    baseline_receipt, baseline_observation = _gate(document, source_sha256)
+    ir = build_attention_ir(document)
+    candidate_receipt = _candidate_receipt(
+        source_sha256=source_sha256,
+        product_digest=attention_source_digest(ir),
+        baseline_receipt=baseline_receipt,
+        candidates=attention_candidates_from_ir(ir),
+    )
+
+    incomplete = json.loads(_post_observation())
+    incomplete.pop("complexityBudget")
+    with pytest.raises(PostObservationError, match="six required axes"):
+        render_outcome(
+            document,
+            source_sha256=source_sha256,
+            baseline_receipt=baseline_receipt,
+            baseline_observation=baseline_observation,
+            candidate_receipt=candidate_receipt,
+            post_observation=json.dumps(incomplete).encode("utf-8"),
+        )
+
+    invalid = json.loads(_post_observation())
+    invalid["attentionShift"]["assessment"] = 5
+    with pytest.raises(PostObservationError, match="attentionShift.assessment"):
+        render_outcome(
+            document,
+            source_sha256=source_sha256,
+            baseline_receipt=baseline_receipt,
+            baseline_observation=baseline_observation,
+            candidate_receipt=candidate_receipt,
+            post_observation=json.dumps(invalid).encode("utf-8"),
+        )
+
+
+def test_outcome_keeps_axes_separate_without_reprinting_notes() -> None:
+    document = _document()
+    source_sha256 = "outcome-valid"
+    baseline_receipt, baseline_observation = _gate(document, source_sha256)
+    ir = build_attention_ir(document)
+    candidate_receipt = _candidate_receipt(
+        source_sha256=source_sha256,
+        product_digest=attention_source_digest(ir),
+        baseline_receipt=baseline_receipt,
+        candidates=attention_candidates_from_ir(ir),
+    )
+    post = _post_observation()
+
+    rendered = render_outcome(
+        document,
+        source_sha256=source_sha256,
+        baseline_receipt=baseline_receipt,
+        baseline_observation=baseline_observation,
+        candidate_receipt=candidate_receipt,
+        post_observation=post,
+    )
+
+    assert "# Cognitive T2 review — outcome" in rendered
+    assert "- attentionShift: yes" in rendered
+    assert "- structureReconsideration: yes" in rendered
+    assert "- holdDissentPreserved: yes" in rendered
+    assert "- noiseOrNarrowing: no" in rendered
+    assert "- counterfactualWithoutCandidate: unlikely" in rendered
+    assert "- complexityBudget: within" in rendered
+    assert "総合scoreや自動昇格判定を生成しない" in rendered
+    assert "候補なしでは見ていなかった材料へ注意が移った" not in rendered
+    assert "表示量と確認負荷は許容範囲だった" not in rendered
