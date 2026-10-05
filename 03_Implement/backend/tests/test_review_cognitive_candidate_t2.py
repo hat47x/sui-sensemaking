@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from scripts.review_cognitive_candidate_t2 import (
+    AttentionComplexityError,
     BaselineGateError,
     CandidateGateError,
     IncompleteAttentionProjectionError,
@@ -20,7 +21,7 @@ from scripts.review_cognitive_candidate_t2 import (
 )
 from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
-    attention_candidates_from_ir,
+    attention_candidate_result_from_ir,
     attention_source_digest,
     build_attention_ir,
 )
@@ -186,7 +187,7 @@ def test_baseline_marks_unassigned_hold_without_promoting_it() -> None:
 def test_candidate_phase_matches_product_candidate_contract() -> None:
     document = _document()
     ir = build_attention_ir(document)
-    expected = attention_candidates_from_ir(ir)
+    expected = attention_candidate_result_from_ir(ir).candidates
 
     receipt, observation = _gate(document, "product-contract")
     rendered = render_candidates(
@@ -301,7 +302,7 @@ def test_candidate_phase_rejects_receipt_from_different_method_version() -> None
     wrong_method_receipt = _baseline_receipt(
         "method-mismatch",
         digest,
-        method_id="deterministic-structural-attention-v2",
+        method_id="deterministic-structural-attention-v3",
     )
 
     with pytest.raises(BaselineGateError, match="Baseline receipt"):
@@ -319,7 +320,7 @@ def test_candidate_receipt_binds_exact_candidate_payload() -> None:
     ir = build_attention_ir(document)
     digest = attention_source_digest(ir)
     baseline_receipt, _ = _gate(document, source_sha256)
-    candidates = attention_candidates_from_ir(ir)
+    candidates = attention_candidate_result_from_ir(ir).candidates
 
     actual = _candidate_receipt(
         source_sha256=source_sha256,
@@ -390,7 +391,7 @@ def test_outcome_requires_all_six_independent_axes() -> None:
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
         baseline_observation_sha256=_sha256_for_test(baseline_observation),
-        candidates=attention_candidates_from_ir(ir),
+        candidates=attention_candidate_result_from_ir(ir).candidates,
     )
 
     incomplete = json.loads(_post_observation())
@@ -428,7 +429,7 @@ def test_outcome_keeps_axes_separate_without_reprinting_notes() -> None:
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
         baseline_observation_sha256=_sha256_for_test(baseline_observation),
-        candidates=attention_candidates_from_ir(ir),
+        candidates=attention_candidate_result_from_ir(ir).candidates,
     )
     post = _post_observation()
 
@@ -459,7 +460,7 @@ def test_candidate_receipt_binds_baseline_observation_content() -> None:
     ir = build_attention_ir(document)
     digest = attention_source_digest(ir)
     baseline_receipt, baseline_observation = _gate(document, source_sha256)
-    candidates = attention_candidates_from_ir(ir)
+    candidates = attention_candidate_result_from_ir(ir).candidates
 
     original = _candidate_receipt(
         source_sha256=source_sha256,
@@ -489,7 +490,7 @@ def test_outcome_rejects_changed_baseline_observation() -> None:
         product_digest=attention_source_digest(ir),
         baseline_receipt=baseline_receipt,
         baseline_observation_sha256=_sha256_for_test(baseline_observation),
-        candidates=attention_candidates_from_ir(ir),
+        candidates=attention_candidate_result_from_ir(ir).candidates,
     )
 
     with pytest.raises(CandidateGateError, match="Candidate receipt"):
@@ -500,4 +501,71 @@ def test_outcome_rejects_changed_baseline_observation() -> None:
             baseline_observation="後から書き換えた事前判断".encode("utf-8"),
             candidate_receipt=candidate_receipt,
             post_observation=_post_observation(),
+        )
+
+
+def test_t2_rejects_candidate_set_over_product_complexity_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document = _document()
+    cards = []
+    relations = []
+    islands = []
+    clusters = []
+    for index in range(1, 6):
+        a = f"g{index}-a"
+        b = f"g{index}-b"
+        c = f"g{index}-c"
+        cards.extend(
+            [
+                {"id": a, "text": a, "text_norm": a, "char_len": len(a)},
+                {"id": b, "text": b, "text_norm": b, "char_len": len(b)},
+                {"id": c, "text": c, "text_norm": c, "char_len": len(c)},
+            ]
+        )
+        relations.extend(
+            [
+                {"id": f"r{index}-ab", "from": a, "to": b, "type": "related"},
+                {"id": f"r{index}-bc", "from": b, "to": c, "type": "related"},
+            ]
+        )
+        islands.extend(
+            [
+                {"id": f"i{index}-ab", "card_ids": [a, b]},
+                {"id": f"i{index}-c", "card_ids": [c]},
+            ]
+        )
+        clusters.append(
+            {
+                "cluster_id": f"cc-{index:04d}",
+                "card_ids": [a, b, c],
+                "basis": "relation",
+                "score": 1.0,
+            }
+        )
+    over_budget_ir = {
+        "ir_version": "1.2",
+        "cards": cards,
+        "relations": relations,
+        "islands": islands,
+        "cluster_candidates": clusters,
+        "meta": {"doc_id": "over-budget", "doc_version": 1},
+        "truncation": {"truncated": False, "reason_codes": []},
+    }
+    monkeypatch.setattr(
+        "scripts.review_cognitive_candidate_t2.build_attention_ir",
+        lambda _document: over_budget_ir,
+    )
+    source_sha256 = "over-budget"
+    receipt = _baseline_receipt(
+        source_sha256,
+        attention_source_digest(over_budget_ir),
+    )
+
+    with pytest.raises(AttentionComplexityError, match="complexity budget"):
+        render_candidates(
+            document,
+            source_sha256=source_sha256,
+            baseline_receipt=receipt,
+            baseline_observation="事前判断".encode("utf-8"),
         )

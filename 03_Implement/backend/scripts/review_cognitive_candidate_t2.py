@@ -25,7 +25,7 @@ from typing import Literal
 
 from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
-    attention_candidates_from_ir,
+    attention_candidate_result_from_ir,
     attention_source_digest,
     build_attention_ir,
 )
@@ -59,6 +59,10 @@ class CandidateGateError(ValueError):
 
 class PostObservationError(ValueError):
     """Post-candidate observation must cover each cognitive-increment axis."""
+
+
+class AttentionComplexityError(ValueError):
+    """T2 cannot reveal a candidate set that exceeds the product budget."""
 
 
 def _require_complete_attention_projection(ir: dict) -> None:
@@ -305,7 +309,13 @@ def render_candidates(
         provided_receipt=baseline_receipt,
         observation_raw=baseline_observation,
     )
-    candidates = attention_candidates_from_ir(ir)
+    result = attention_candidate_result_from_ir(ir)
+    if result.complexity_suppressed:
+        raise AttentionComplexityError(
+            "attention candidates exceed the product complexity budget; "
+            "T2 cognitive-increment review is invalid"
+        )
+    candidates = result.candidates
     candidate_receipt = _candidate_receipt(
         source_sha256=source_sha256,
         product_digest=product_digest,
@@ -392,7 +402,13 @@ def render_outcome(
         provided_receipt=baseline_receipt,
         observation_raw=baseline_observation,
     )
-    candidates = attention_candidates_from_ir(ir)
+    result = attention_candidate_result_from_ir(ir)
+    if result.complexity_suppressed:
+        raise AttentionComplexityError(
+            "attention candidates exceed the product complexity budget; "
+            "T2 cognitive-increment review is invalid"
+        )
+    candidates = result.candidates
     expected_candidate_receipt = _candidate_receipt(
         source_sha256=source_sha256,
         product_digest=product_digest,
@@ -547,6 +563,7 @@ def main() -> int:
         BaselineGateError,
         CandidateGateError,
         PostObservationError,
+        AttentionComplexityError,
     ) as exc:
         print(f"FAIL: {exc}")
         return 1
