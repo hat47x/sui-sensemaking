@@ -340,7 +340,6 @@ def test_product_candidate_budget_is_all_or_none(
     assert body["truncated"] is False
 
 
-
 def test_attention_candidates_reject_overlapping_visual_island_membership() -> None:
     document = _doc(
         islands=[
