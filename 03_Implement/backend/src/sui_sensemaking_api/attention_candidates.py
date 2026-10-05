@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from itertools import combinations
 
 from sui_sensemaking_api.llm_input_ir import (
+    IRGenerationError,
     build_llm_input_ir,
     held_card_ids,
     source_from_document,
@@ -18,7 +19,7 @@ from sui_sensemaking_api.models_ai import AttentionCandidate
 
 # Bump this identifier whenever the externally observable candidate treatment
 # changes (selection, suppression, cue semantics, or focus-pair semantics).
-ATTENTION_METHOD_ID = "deterministic-structural-attention-v2"
+ATTENTION_METHOD_ID = "deterministic-structural-attention-v3"
 MAX_ATTENTION_FOCUS_PAIRS = 8
 MAX_ATTENTION_CANDIDATES = 4
 
@@ -35,7 +36,24 @@ def build_attention_ir(
     include_spatial: bool = False,
     allow_unreviewed_text: bool = False,
 ) -> dict:
-    """Build the exact deterministic IR consumed by attention candidates."""
+    """Build attention IR only when the visual-island projection is lossless."""
+    island_ids_by_card: dict[str, list[str]] = {}
+    for island in document.islands:
+        for card_id in island.cardIds:
+            island_ids_by_card.setdefault(card_id, []).append(island.id)
+
+    ambiguous = {
+        card_id: island_ids
+        for card_id, island_ids in island_ids_by_card.items()
+        if len(set(island_ids)) > 1
+    }
+    if ambiguous:
+        raise IRGenerationError(
+            "ambiguous_island_membership",
+            "Attention candidates refuse a lossy projection when a card is listed "
+            "in multiple visual islands.",
+        )
+
     return build_llm_input_ir(
         source_from_document(document),
         include_coordinates=include_spatial,
