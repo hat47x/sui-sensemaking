@@ -101,11 +101,11 @@ def _require_baseline_gate(
 ) -> tuple[str, int]:
     if provided_receipt != expected_receipt:
         raise BaselineGateError(
-            "candidate phase requires the Baseline receipt from the same snapshot"
+            "candidate/outcome phase requires the Baseline receipt from the same snapshot"
         )
     if observation_raw is None or not observation_raw.strip():
         raise BaselineGateError(
-            "candidate phase requires a non-empty baseline observation file"
+            "candidate/outcome phase requires a non-empty baseline observation file"
         )
     return _sha256(observation_raw), len(observation_raw)
 
@@ -115,6 +115,7 @@ def _candidate_receipt(
     source_sha256: str,
     product_digest: str,
     baseline_receipt: str,
+    baseline_observation_sha256: str,
     candidates: list,
 ) -> str:
     candidate_payload = [
@@ -136,6 +137,8 @@ def _candidate_receipt(
         + ATTENTION_METHOD_ID
         + "\0"
         + baseline_receipt
+        + "\0"
+        + baseline_observation_sha256
         + "\0"
         + canonical
     ).encode("utf-8")
@@ -307,6 +310,7 @@ def render_candidates(
         source_sha256=source_sha256,
         product_digest=product_digest,
         baseline_receipt=expected_receipt,
+        baseline_observation_sha256=observation_sha256,
         candidates=candidates,
     )
     by_id = _card_text_by_id(document)
@@ -393,6 +397,7 @@ def render_outcome(
         source_sha256=source_sha256,
         product_digest=product_digest,
         baseline_receipt=expected_baseline_receipt,
+        baseline_observation_sha256=baseline_sha256,
         candidates=candidates,
     )
     if candidate_receipt != expected_candidate_receipt:
