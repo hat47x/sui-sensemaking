@@ -452,6 +452,7 @@ def test_outcome_keeps_axes_separate_without_reprinting_notes() -> None:
     assert "候補なしでは見ていなかった材料へ注意が移った" not in rendered
     assert "表示量と確認負荷は許容範囲だった" not in rendered
 
+
 def test_candidate_receipt_binds_baseline_observation_content() -> None:
     document = _document()
     source_sha256 = "baseline-note-binding"
