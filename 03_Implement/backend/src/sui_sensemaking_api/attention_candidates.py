@@ -19,7 +19,7 @@ from sui_sensemaking_api.models_ai import AttentionCandidate
 
 # Bump this identifier whenever the externally observable candidate treatment
 # changes (selection, suppression, cue semantics, or focus-pair semantics).
-ATTENTION_METHOD_ID = "deterministic-structural-attention-v3"
+ATTENTION_METHOD_ID = "deterministic-structural-attention-v4"
 MAX_ATTENTION_FOCUS_PAIRS = 8
 MAX_ATTENTION_CANDIDATES = 4
 
@@ -54,12 +54,30 @@ def build_attention_ir(
             "in multiple visual islands.",
         )
 
-    return build_llm_input_ir(
+    ir = build_llm_input_ir(
         source_from_document(document),
         include_coordinates=include_spatial,
         safe_mode=True,
         allow_unreviewed_text=allow_unreviewed_text,
     )
+
+    card_ids = {card["id"] for card in ir.get("cards", [])}
+    island_ids = {island["id"] for island in ir.get("islands", [])}
+    affiliations = sorted(
+        (
+            {
+                "id": affiliation.id,
+                "card_id": affiliation.cardId,
+                "island_id": affiliation.islandId,
+            }
+            for affiliation in document.affiliations or []
+            if affiliation.cardId in card_ids and affiliation.islandId in island_ids
+        ),
+        key=lambda item: (item["island_id"], item["card_id"], item["id"]),
+    )
+    if affiliations:
+        ir["affiliations"] = affiliations
+    return ir
 
 
 def attention_source_digest(ir: dict) -> str:
@@ -88,6 +106,14 @@ def attention_source_digest(ir: dict) -> str:
         }
         for island in ir.get("islands", [])
     ]
+    affiliations = [
+        {
+            "id": affiliation["id"],
+            "card_id": affiliation["card_id"],
+            "island_id": affiliation["island_id"],
+        }
+        for affiliation in ir.get("affiliations", [])
+    ]
     source = {
         "ir_version": ir.get("ir_version"),
         "doc_id": meta.get("doc_id"),
@@ -95,6 +121,7 @@ def attention_source_digest(ir: dict) -> str:
         "cards": cards,
         "relations": relations,
         "islands": islands,
+        "affiliations": affiliations,
     }
     if "coordinates" in ir:
         source["coordinates"] = ir["coordinates"]
@@ -113,11 +140,19 @@ def attention_candidate_result_from_ir(ir: dict) -> AttentionCandidateResult:
         return AttentionCandidateResult(candidates=[])
 
     held = set(held_card_ids(ir))
-    islands = [set(island["card_ids"]) for island in ir.get("islands", [])]
-    assigned = set().union(*islands) if islands else set()
-    co_island_pairs = {
+    groups_by_island = {
+        island["id"]: set(island["card_ids"])
+        for island in ir.get("islands", [])
+    }
+    for affiliation in ir.get("affiliations", []):
+        groups_by_island.setdefault(affiliation["island_id"], set()).add(
+            affiliation["card_id"]
+        )
+    groups = list(groups_by_island.values())
+    assigned = set().union(*groups) if groups else set()
+    co_grouped_pairs = {
         tuple(sorted(pair))
-        for members in islands
+        for members in groups
         for pair in combinations(sorted(members), 2)
     }
     direct_relation_pairs = {
@@ -133,16 +168,16 @@ def attention_candidate_result_from_ir(ir: dict) -> AttentionCandidateResult:
         members = set(card_ids)
         if members & held:
             continue
-        if any(members <= island for island in islands):
+        if any(members <= group for group in groups):
             continue
 
         pairs = set(combinations(card_ids, 2))
-        not_co_islanded = pairs - co_island_pairs
+        not_co_islanded = pairs - co_grouped_pairs
         if not not_co_islanded:
             continue
 
         unassigned = bool(members - assigned)
-        touched = sum(bool(members & island) for island in islands)
+        touched = sum(bool(members & group) for group in groups)
         basis = cluster["basis"]
         if basis == "relation":
             focus_pairs = sorted(not_co_islanded - direct_relation_pairs)
