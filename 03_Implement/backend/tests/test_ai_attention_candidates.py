@@ -456,8 +456,6 @@ def test_affiliation_identifier_does_not_change_attention_source_digest() -> Non
     assert renamed_response.status_code == 200
     assert first_response.json()["sourceDigest"] == renamed_response.json()["sourceDigest"]
 
-
-
 def test_invalid_affiliation_references_are_rejected_by_document_contract() -> None:
     document = _doc(
         affiliations=[
@@ -484,8 +482,6 @@ def test_duplicate_affiliation_pair_is_rejected_by_document_contract() -> None:
 
     assert response.status_code == 422
 
-
-
 def test_affiliation_cannot_duplicate_visual_containment() -> None:
     document = _doc(
         affiliations=[
@@ -497,8 +493,6 @@ def test_affiliation_cannot_duplicate_visual_containment() -> None:
         response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
 
     assert response.status_code == 422
-
-
 
 def test_empty_affiliation_list_is_digest_equivalent_to_absence() -> None:
     absent = _doc()
