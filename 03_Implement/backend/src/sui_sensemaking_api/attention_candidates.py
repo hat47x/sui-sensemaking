@@ -108,7 +108,6 @@ def attention_source_digest(ir: dict) -> str:
     ]
     affiliations = [
         {
-            "id": affiliation["id"],
             "card_id": affiliation["card_id"],
             "island_id": affiliation["island_id"],
         }
