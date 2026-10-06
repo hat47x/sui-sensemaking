@@ -442,7 +442,7 @@ export type Affiliation = {
 
 - `Affiliation` は包含ではないため、カードの座標・表示親・島の境界を変更しない。
 - 同じカードから複数の島へのAffiliationを許す。削除すれば元に戻る可逆な記述であり、自動的な移動・統合を行わない。
-- `id` と `(cardId, islandId)` の重複、および存在しないCard/Islandへの参照は新規データでは拒否する。
+- `id` と `(cardId, islandId)` の重複、存在しないCard/Islandへの参照、および同じ島への視覚包含とAffiliationの二重表現は新規データでは拒否する。
 - AI attention支援では包含とAffiliationの両方を「人間がすでに表したグルーピング」として扱い、Affiliation済みの関係を新規候補として再提示しない。
 - 既存の重複 `Island.cardIds` をAffiliationへ自動変換しない。どの包含を残すかは人間の判断だからである。
 
