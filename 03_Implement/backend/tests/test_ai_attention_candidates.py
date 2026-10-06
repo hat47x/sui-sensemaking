@@ -453,3 +453,31 @@ def test_affiliation_identifier_does_not_change_attention_source_digest() -> Non
     assert first_response.status_code == 200
     assert renamed_response.status_code == 200
     assert first_response.json()["sourceDigest"] == renamed_response.json()["sourceDigest"]
+
+
+
+def test_invalid_affiliation_references_are_rejected_by_document_contract() -> None:
+    document = _doc(
+        affiliations=[
+            {"id": "a-invalid", "cardId": "missing-card", "islandId": "missing-island"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
+
+    assert response.status_code == 422
+
+
+def test_duplicate_affiliation_pair_is_rejected_by_document_contract() -> None:
+    document = _doc(
+        affiliations=[
+            {"id": "a1", "cardId": "c3", "islandId": "i12"},
+            {"id": "a2", "cardId": "c3", "islandId": "i12"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
+
+    assert response.status_code == 422
