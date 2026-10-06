@@ -428,6 +428,24 @@ export type Edge = {
    - バックエンド（Pydantic）も同じ規約（`type: 非空 str`）で受理する。エクスポート → インポート → 保存の往復で `type` 文字列は不変とする。
 
 > 既定値: 新規に作成される関係線の既定は `related`（無方向）とし、種別の確定を強制しない（早すぎる収束の防止 = ADR-0001 P-01/P-04）。
+### 3.3.3 横断的所属（Affiliation）
+
+視覚的な島への包含と、意味上の横断的な所属を同じ `Island.cardIds` で表さない。`cardIds` は画面上の包含として、1枚のカードにつき高々1島を原則とする。複数の方法核・観点・分類にまたがる所属は、任意の `DocumentV1.affiliations` で表す。
+
+```ts
+export type Affiliation = {
+  id: string;
+  cardId: string;
+  islandId: string;
+};
+```
+
+- `Affiliation` は包含ではないため、カードの座標・表示親・島の境界を変更しない。
+- 同じカードから複数の島へのAffiliationを許す。削除すれば元に戻る可逆な記述であり、自動的な移動・統合を行わない。
+- `id` と `(cardId, islandId)` の重複、および存在しないCard/Islandへの参照は新規データでは拒否する。
+- AI attention支援では包含とAffiliationの両方を「人間がすでに表したグルーピング」として扱い、Affiliation済みの関係を新規候補として再提示しない。
+- 既存の重複 `Island.cardIds` をAffiliationへ自動変換しない。どの包含を残すかは人間の判断だからである。
+
 
 ### 3.4 Document
 
@@ -590,6 +608,7 @@ export type DocumentV1 = {
   cards: Array<Card & { claimType?: CardClaimType }>;
   edges: Array<Edge & { fromKind?: EdgeEndpointKind; toKind?: EdgeEndpointKind }>;
   islands: Island[];
+  affiliations?: Affiliation[];
   readingOrder?: string[];
   narratives?: Narrative[];
   relationSummaries?: RelationSummary[];
