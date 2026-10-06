@@ -1654,6 +1654,11 @@ class DocumentV1(BaseModel):
 
         card_ids = {card.id for card in self.cards}
         island_ids = {island.id for island in self.islands}
+        containment_pairs = {
+            (card_id, island.id)
+            for island in self.islands
+            for card_id in island.cardIds
+        }
         seen_ids: set[str] = set()
         seen_pairs: set[tuple[str, str]] = set()
         for affiliation in self.affiliations:
@@ -1662,6 +1667,11 @@ class DocumentV1(BaseModel):
             seen_ids.add(affiliation.id)
 
             pair = (affiliation.cardId, affiliation.islandId)
+            if pair in containment_pairs:
+                raise ValueError(
+                    "affiliation duplicates visual containment: "
+                    f"{affiliation.cardId} -> {affiliation.islandId}"
+                )
             if pair in seen_pairs:
                 raise ValueError(
                     "duplicate affiliation pair: "
