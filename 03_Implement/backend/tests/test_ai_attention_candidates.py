@@ -481,3 +481,17 @@ def test_duplicate_affiliation_pair_is_rejected_by_document_contract() -> None:
         response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
 
     assert response.status_code == 422
+
+
+
+def test_affiliation_cannot_duplicate_visual_containment() -> None:
+    document = _doc(
+        affiliations=[
+            {"id": "a-redundant", "cardId": "c1", "islandId": "i12"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
+
+    assert response.status_code == 422
