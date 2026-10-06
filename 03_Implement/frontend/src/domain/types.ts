@@ -100,6 +100,12 @@ export type Edge = {
   type: EdgeType;
 };
 
+export type Affiliation = {
+  id: string;
+  cardId: string;
+  islandId: string;
+};
+
 export type Point = {
   x: number;
   y: number;
@@ -331,6 +337,7 @@ export type DocumentV1 = {
   cards: Card[];
   edges: Edge[];
   islands: Island[];
+  affiliations?: Affiliation[];
   readingOrder?: string[];
   narratives?: Narrative[];
   relationSummaries?: RelationSummary[];

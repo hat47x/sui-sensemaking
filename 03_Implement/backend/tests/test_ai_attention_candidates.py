@@ -9,8 +9,10 @@ from sui_sensemaking_api.attention_candidates import (
     ATTENTION_METHOD_ID,
     MAX_ATTENTION_CANDIDATES,
     MAX_ATTENTION_FOCUS_PAIRS,
+    build_attention_ir,
 )
 from sui_sensemaking_api.main import app
+from sui_sensemaking_api.models import DocumentV1
 from sui_sensemaking_api.routes import ai
 from sui_sensemaking_api.settings import settings
 
@@ -24,7 +26,13 @@ def _no_provider(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(settings, "allow_unreviewed_ai_text", False)
 
 
-def _doc(*, held: str | None = None, edges: list[dict] | None = None, islands: list[dict] | None = None) -> dict:
+def _doc(
+    *,
+    held: str | None = None,
+    edges: list[dict] | None = None,
+    islands: list[dict] | None = None,
+    affiliations: list[dict] | None = None,
+) -> dict:
     cards = [
         {"id": "c1", "text": "観察一を確認する", "x": 0, "y": 0, "textReviewed": True},
         {"id": "c2", "text": "観察二を確認する", "x": 10, "y": 0, "textReviewed": True},
@@ -48,6 +56,7 @@ def _doc(*, held: str | None = None, edges: list[dict] | None = None, islands: l
             {"id": "i12", "cardIds": ["c1", "c2"], "title": "既存の島", "titleReviewed": True},
             {"id": "i3", "cardIds": ["c3"], "title": "別の島", "titleReviewed": True},
         ],
+        **({"affiliations": affiliations} if affiliations is not None else {}),
         "evidenceLinks": [],
     }
 
@@ -368,3 +377,140 @@ def test_attention_candidates_reject_overlapping_visual_island_membership() -> N
     detail = response.json()["detail"]
     assert detail["code"] == "ambiguous_island_membership"
     assert "lossy projection" in detail["message"]
+
+
+def test_cross_cutting_affiliation_is_preserved_without_duplicate_containment() -> None:
+    document = _doc(
+        islands=[
+            {"id": "i-left", "cardIds": ["c1"], "title": "左", "titleReviewed": True},
+            {"id": "i-right", "cardIds": ["c2"], "title": "右", "titleReviewed": True},
+        ],
+        affiliations=[
+            {"id": "a1", "cardId": "c3", "islandId": "i-left"},
+            {"id": "a2", "cardId": "c3", "islandId": "i-right"},
+        ],
+    )
+
+    ir = build_attention_ir(DocumentV1.model_validate(document))
+
+    assert ir["affiliations"] == [
+        {"id": "a1", "card_id": "c3", "island_id": "i-left"},
+        {"id": "a2", "card_id": "c3", "island_id": "i-right"},
+    ]
+
+
+def test_affiliation_prevents_reproposing_an_existing_human_group() -> None:
+    document = _doc(
+        affiliations=[
+            {"id": "a-c3-i12", "cardId": "c3", "islandId": "i12"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
+
+    assert response.status_code == 200, response.text
+    assert response.json()["methodId"] == ATTENTION_METHOD_ID
+    assert response.json()["candidates"] == []
+
+
+def test_affiliation_changes_attention_source_digest() -> None:
+    with TestClient(app) as client:
+        base = client.post("/ai/suggest-attention-candidates", json={"doc": _doc()})
+        affiliated = client.post(
+            "/ai/suggest-attention-candidates",
+            json={
+                "doc": _doc(
+                    affiliations=[
+                        {"id": "a-c3-i12", "cardId": "c3", "islandId": "i12"},
+                    ]
+                )
+            },
+        )
+
+    assert base.status_code == 200
+    assert affiliated.status_code == 200
+    assert base.json()["sourceDigest"] != affiliated.json()["sourceDigest"]
+
+
+def test_affiliation_identifier_does_not_change_attention_source_digest() -> None:
+    first = _doc(
+        affiliations=[
+            {"id": "a-first", "cardId": "c3", "islandId": "i12"},
+        ],
+    )
+    renamed = _doc(
+        affiliations=[
+            {"id": "a-renamed", "cardId": "c3", "islandId": "i12"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        first_response = client.post("/ai/suggest-attention-candidates", json={"doc": first})
+        renamed_response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": renamed},
+        )
+
+    assert first_response.status_code == 200
+    assert renamed_response.status_code == 200
+    assert first_response.json()["sourceDigest"] == renamed_response.json()["sourceDigest"]
+
+
+def test_invalid_affiliation_references_are_rejected_by_document_contract() -> None:
+    document = _doc(
+        affiliations=[
+            {"id": "a-invalid", "cardId": "missing-card", "islandId": "missing-island"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
+
+    assert response.status_code == 422
+
+
+def test_duplicate_affiliation_pair_is_rejected_by_document_contract() -> None:
+    document = _doc(
+        affiliations=[
+            {"id": "a1", "cardId": "c3", "islandId": "i12"},
+            {"id": "a2", "cardId": "c3", "islandId": "i12"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
+
+    assert response.status_code == 422
+
+
+def test_affiliation_cannot_duplicate_visual_containment() -> None:
+    document = _doc(
+        affiliations=[
+            {"id": "a-redundant", "cardId": "c1", "islandId": "i12"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
+
+    assert response.status_code == 422
+
+
+def test_empty_affiliation_list_is_digest_equivalent_to_absence() -> None:
+    absent = _doc()
+    explicit_empty = _doc(affiliations=[])
+
+    with TestClient(app) as client:
+        absent_response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": absent},
+        )
+        empty_response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": explicit_empty},
+        )
+
+    assert absent_response.status_code == 200
+    assert empty_response.status_code == 200
+    assert absent_response.json()["sourceDigest"] == empty_response.json()["sourceDigest"]

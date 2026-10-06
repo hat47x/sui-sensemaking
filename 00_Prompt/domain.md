@@ -109,6 +109,7 @@
 | たたき台 | Draft / Strawman | DraftCluster / ProvisionalLayout | AIが生成する仮配置・仮クラスタ |
 | グループ | Cluster | Cluster | 複数カードの仮統合単位 |
 | 島 | Island | Island | 複数カードや関係を視覚的に囲む意味のまとまり。KJ法の島に相当 |
+| 横断的所属 | Affiliation | Affiliation | カードを移動させず、複数の島・観点へ意味上所属させる可逆な記述 |
 | 代表視覚手掛かり | Representative Visual Cue | RepresentativeVisualCue（計画中） | 島または明示的に選んだ情報集合を見つけ直すため、表札や説明と併記する任意の小さな絵文字・アイコン・画像 |
 | 一次視覚資料 | Source Visual Material | SourceVisualMaterial（計画中） | 観察・取材・利用者作成で得た写真・図・スケッチなど、元の文脈や出典へ戻る必要がある定性資料 |
 | 根拠資料 | Evidence | Evidence（概念。永続型は計画中） | Sensemakingの根拠として参照される資料・記録。TruthやAccepted meaningとは同義ではない |
@@ -152,6 +153,13 @@
 
 ---
 
+### 3.2.1 島への包含と横断的所属
+
+- `Island.cardIds` は視覚的な包含を表す。1枚のカードを複数の島へ重複して入れることを、横断分類の表現として使わない。
+- 複数の方法核・観点・分類へ同時に属する意味は `DocumentV1.affiliations` で表す。Affiliationはカードの位置や表示親を変更せず、削除すれば元に戻る。
+- AIは横断的所属を一方の島へ縮約してはならず、重複した `cardIds` をAffiliationへ自動変換してもならない。どの包含を残すかは人間が決める。
+
+---
 ### 3.3 sensemaking意味成果物の不変条件
 
 詳細な概念モデルは `02_Architecture/sensemaking_semantic_model.md`、設計判断は `ADR-0085` を正本とする。

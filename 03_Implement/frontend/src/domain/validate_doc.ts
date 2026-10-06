@@ -1,4 +1,5 @@
 import type {
+  Affiliation,
   ContradictionSignalDecision,
   ContradictionSignalReviewStatus,
   CritiqueInput,
@@ -281,6 +282,26 @@ function validateEdge(item: unknown, index: number, errors: string[]): item is D
     valid = false;
   }
 
+  return valid;
+}
+
+
+function validateAffiliation(item: unknown, index: number, errors: string[]): item is Affiliation {
+  const path = `affiliations[${index}]`;
+  if (!isRecord(item)) {
+    errors.push(`${path}: must be an object`);
+    return false;
+  }
+
+  hasOnlyKeys(item, ["id", "cardId", "islandId"], path, errors);
+
+  let valid = true;
+  for (const key of ["id", "cardId", "islandId"] as const) {
+    if (typeof item[key] !== "string" || item[key].trim().length === 0) {
+      errors.push(`${path}.${key}: must be a non-empty string`);
+      valid = false;
+    }
+  }
   return valid;
 }
 
@@ -1255,6 +1276,7 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
       "cards",
       "edges",
       "islands",
+      "affiliations",
       "readingOrder",
       "narratives",
       "relationSummaries",
@@ -1328,6 +1350,69 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
     value.islands.forEach((item, index) => {
       validateIsland(item, index, errors);
     });
+  }
+
+  if (value.affiliations !== undefined) {
+    if (!Array.isArray(value.affiliations)) {
+      errors.push("document.affiliations: must be an array when provided");
+    } else {
+      const cardIds = new Set(
+        Array.isArray(value.cards)
+          ? value.cards
+              .filter((card): card is Record<string, unknown> => isRecord(card) && typeof card.id === "string")
+              .map((card) => card.id as string)
+          : [],
+      );
+      const islandIds = new Set(
+        Array.isArray(value.islands)
+          ? value.islands
+              .filter((island): island is Record<string, unknown> => isRecord(island) && typeof island.id === "string")
+              .map((island) => island.id as string)
+          : [],
+      );
+      const containmentPairs = new Set(
+        Array.isArray(value.islands)
+          ? value.islands.flatMap((island) =>
+              isRecord(island) && typeof island.id === "string" && Array.isArray(island.cardIds)
+                ? island.cardIds
+                    .filter((cardId): cardId is string => typeof cardId === "string")
+                    .map((cardId) => `${cardId}\0${island.id}`)
+                : [],
+            )
+          : [],
+      );
+      const seenIds = new Set<string>();
+      const seenPairs = new Set<string>();
+      value.affiliations.forEach((item, index) => {
+        if (!validateAffiliation(item, index, errors)) {
+          return;
+        }
+        if (seenIds.has(item.id)) {
+          errors.push(`affiliations[${index}].id: duplicate id '${item.id}'`);
+        }
+        seenIds.add(item.id);
+
+        const pair = `${item.cardId}\0${item.islandId}`;
+        if (containmentPairs.has(pair)) {
+          errors.push(
+            `affiliations[${index}]: duplicates visual containment '${item.cardId}' -> '${item.islandId}'`,
+          );
+        }
+        if (seenPairs.has(pair)) {
+          errors.push(
+            `affiliations[${index}]: duplicate pair '${item.cardId}' -> '${item.islandId}'`,
+          );
+        }
+        seenPairs.add(pair);
+
+        if (!cardIds.has(item.cardId)) {
+          errors.push(`affiliations[${index}].cardId: unknown card '${item.cardId}'`);
+        }
+        if (!islandIds.has(item.islandId)) {
+          errors.push(`affiliations[${index}].islandId: unknown island '${item.islandId}'`);
+        }
+      });
+    }
   }
 
   if (value.readingOrder !== undefined && !validateStringArray(value.readingOrder, "document.readingOrder", errors)) {

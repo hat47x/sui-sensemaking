@@ -303,7 +303,7 @@ def test_candidate_phase_rejects_receipt_from_different_method_version() -> None
     wrong_method_receipt = _baseline_receipt(
         "method-mismatch",
         digest,
-        method_id="deterministic-structural-attention-v4",
+        method_id="deterministic-structural-attention-v5",
     )
 
     with pytest.raises(BaselineGateError, match="Baseline receipt"):

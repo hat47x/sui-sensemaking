@@ -463,7 +463,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
   - `includeSpatial?: boolean`: 空間配置を候補生成へ使うか。既定は `false`
   - `allowUnreviewedText?: boolean`: 未レビュー本文の扱いはSafeMode境界に従う
 - レスポンス: `SuggestAttentionCandidatesResponse`
-  - `methodId: string`: 候補生成方式の意味上の版。現在は `deterministic-structural-attention-v3`
+  - `methodId: string`: 候補生成方式の意味上の版。現在は `deterministic-structural-attention-v4`
   - `sourceDigest: string`: 候補生成に使った構造断面のSHA-256
   - `candidates: AttentionCandidate[]`: 文書を書き換えない注意候補
     - `candidateId: string`
@@ -476,9 +476,10 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
   - `complexitySuppressed: boolean`: 有効な候補が製品の表示予算（現在4件）を超えたため、順位付けせず候補集合全体を抑制したか。
 - プロバイダを呼び出さない決定論的な候補APIであり、`SUI_LLM_PROVIDER=none` でも利用できる。出力は注意の向け先を示すだけで、島への採用、重要度、確信度、順位を決定しない。
 - 同じカードが複数の視覚島の `cardIds` に入っている場合、共有AI-IRの暫定「先勝ち」規則では人間の構造を損失するため、このAPIは `422 ambiguous_island_membership` でfail-closedにする。attention支援のために一方の所属へ勝手に縮約しない。
+- 視覚包含を重複させずに複数の観点へ属させる場合は `DocumentV1.affiliations` を使う。attention支援はAffiliationを既存の人間グルーピングとして扱い、同じ島に包含またはAffiliationされたカード対を「新しい跨島関係」と数えない。
 - 関係候補は、既存島への同居や既存の直接関係をそのまま再提示せず、まだ直接表現されていない跨島の組だけを `focusPairs` として返す。空間候補は `includeSpatial=true` の場合だけ有効になる。
 - 1候補の `focusPairs` が8組を超える場合は、その候補を返さない。さらに有効な候補が4件を超える場合は、上位N件の順位付けや任意切り捨てを行わず、`candidates=[]` と `complexitySuppressed=true` を返す。4件は普遍的な認知上限ではなく、注意支援が読むべき一覧へ変質しないための保守的な製品予算である。
-- `sourceDigest` はIRバージョン、文書識別、カードIDと保留状態、候補生成に使う関係、島、および空間候補を使う場合の正規化座標から決定論的に算出する。カード本文そのものはハッシュ対象にしないため、投影対象が変わらない本文編集では値を維持する。本文長の変化などでIRの投影対象が変わった場合は値も変わる。通常モードではカードの画面移動だけでは変化しない。これは候補方式のバージョンではなく、古い候補を構造更新後まで保持しないためのsource断面識別子である。
+- `sourceDigest` はIRバージョン、文書識別、カードIDと保留状態、候補生成に使う関係、島、Affiliationの `(cardId, islandId)`、および空間候補を使う場合の正規化座標から決定論的に算出する。Affiliationの識別子そのものやカード本文はハッシュ対象にしないため、意味上の所属が同じID変更や、投影対象が変わらない本文編集では値を維持する。本文長の変化などでIRの投影対象が変わった場合は値も変わる。通常モードではカードの画面移動だけでは変化しない。これは候補方式のバージョンではなく、古い候補を構造更新後まで保持しないためのsource断面識別子である。
 - `methodId` は `sourceDigest` と別の軸であり、候補選択、抑制条件、`cue` の意味、`focusPairs` の意味など、利用者が受け取る候補処置が変わる場合に更新する。同じ `sourceDigest` でも `methodId` が違えば同じ候補処置とはみなさない。
 
 **POST** `/ai/suggest-layout`
