@@ -26,6 +26,47 @@ describe("validateDocumentV1Strict", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("accepts valid cross-cutting affiliations", () => {
+    const result = validateDocumentV1Strict({
+      ...validDocument,
+      cards: [{ id: "c1", text: "A", x: 0, y: 0 }],
+      islands: [{ id: "i1", cardIds: [] }],
+      affiliations: [{ id: "a1", cardId: "c1", islandId: "i1" }],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.affiliations).toEqual([
+      { id: "a1", cardId: "c1", islandId: "i1" },
+    ]);
+  });
+
+  it("rejects duplicate or dangling affiliations", () => {
+    const result = validateDocumentV1Strict({
+      ...validDocument,
+      cards: [{ id: "c1", text: "A", x: 0, y: 0 }],
+      islands: [{ id: "i1", cardIds: [] }],
+      affiliations: [
+        { id: "a1", cardId: "c1", islandId: "i1" },
+        { id: "a2", cardId: "c1", islandId: "i1" },
+        { id: "a1", cardId: "missing", islandId: "missing-island" },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain(
+      "affiliations[1]: duplicate pair 'c1' -> 'i1'",
+    );
+    expect(result.errors).toContain("affiliations[2].id: duplicate id 'a1'");
+    expect(result.errors).toContain(
+      "affiliations[2].cardId: unknown card 'missing'",
+    );
+    expect(result.errors).toContain(
+      "affiliations[2].islandId: unknown island 'missing-island'",
+    );
+  });
+
   it("accepts supported card hold states and rejects unknown values", () => {
     expect(validateDocumentV1Strict({
       ...validDocument,
