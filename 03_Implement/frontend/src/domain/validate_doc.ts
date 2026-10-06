@@ -1370,6 +1370,17 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
               .map((island) => island.id as string)
           : [],
       );
+      const containmentPairs = new Set(
+        Array.isArray(value.islands)
+          ? value.islands.flatMap((island) =>
+              isRecord(island) && typeof island.id === "string" && Array.isArray(island.cardIds)
+                ? island.cardIds
+                    .filter((cardId): cardId is string => typeof cardId === "string")
+                    .map((cardId) => `${cardId}\0${island.id}`)
+                : [],
+            )
+          : [],
+      );
       const seenIds = new Set<string>();
       const seenPairs = new Set<string>();
       value.affiliations.forEach((item, index) => {
@@ -1382,6 +1393,11 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
         seenIds.add(item.id);
 
         const pair = `${item.cardId}\0${item.islandId}`;
+        if (containmentPairs.has(pair)) {
+          errors.push(
+            `affiliations[${index}]: duplicates visual containment '${item.cardId}' -> '${item.islandId}'`,
+          );
+        }
         if (seenPairs.has(pair)) {
           errors.push(
             `affiliations[${index}]: duplicate pair '${item.cardId}' -> '${item.islandId}'`,
