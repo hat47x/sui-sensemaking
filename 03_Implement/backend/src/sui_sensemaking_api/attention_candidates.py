@@ -120,8 +120,9 @@ def attention_source_digest(ir: dict) -> str:
         "cards": cards,
         "relations": relations,
         "islands": islands,
-        "affiliations": affiliations,
     }
+    if affiliations:
+        source["affiliations"] = affiliations
     if "coordinates" in ir:
         source["coordinates"] = ir["coordinates"]
     canonical = json.dumps(
