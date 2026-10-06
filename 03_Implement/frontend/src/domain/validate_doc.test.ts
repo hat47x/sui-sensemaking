@@ -45,11 +45,15 @@ describe("validateDocumentV1Strict", () => {
     const result = validateDocumentV1Strict({
       ...validDocument,
       cards: [{ id: "c1", text: "A", x: 0, y: 0 }],
-      islands: [{ id: "i1", cardIds: [] }],
+      islands: [
+        { id: "i1", cardIds: [] },
+        { id: "i2", cardIds: ["c1"] },
+      ],
       affiliations: [
         { id: "a1", cardId: "c1", islandId: "i1" },
         { id: "a2", cardId: "c1", islandId: "i1" },
         { id: "a1", cardId: "missing", islandId: "missing-island" },
+        { id: "a3", cardId: "c1", islandId: "i2" },
       ],
     });
 
@@ -64,6 +68,9 @@ describe("validateDocumentV1Strict", () => {
     );
     expect(result.errors).toContain(
       "affiliations[2].islandId: unknown island 'missing-island'",
+    );
+    expect(result.errors).toContain(
+      "affiliations[3]: duplicates visual containment 'c1' -> 'i2'",
     );
   });
 
