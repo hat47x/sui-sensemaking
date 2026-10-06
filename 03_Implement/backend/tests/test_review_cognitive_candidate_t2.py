@@ -155,6 +155,31 @@ def test_candidate_phase_excludes_held_cluster() -> None:
     assert "Excluded hold card IDs: c09" in rendered
 
 
+def test_baseline_displays_cross_cutting_affiliations_as_existing_structure() -> None:
+    value = json.loads(DEFAULT_FIXTURE.read_text(encoding="utf-8"))
+    for island in value["islands"]:
+        island["cardIds"] = [
+            card_id
+            for card_id in island["cardIds"]
+            if card_id != "c10"
+        ]
+    value["affiliations"] = [
+        {"id": "a-c10-i1", "cardId": "c10", "islandId": "i1"},
+        {"id": "a-c10-i2", "cardId": "c10", "islandId": "i2"},
+    ]
+    document = DocumentV1.model_validate(value)
+
+    rendered = render_baseline(document)
+
+    affiliation_line = (
+        "c10 [affiliation]: 買い物弱者を支える仕組みが十分でない"
+    )
+    assert rendered.count(affiliation_line) == 2
+    outside = rendered.split("## Cards outside current groups", maxsplit=1)
+    if len(outside) == 2:
+        assert "c10" not in outside[1]
+
+
 def test_baseline_marks_hold_inside_existing_island() -> None:
     value = json.loads(DEFAULT_FIXTURE.read_text(encoding="utf-8"))
     held = next(card for card in value["cards"] if card["id"] == "c10")
