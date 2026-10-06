@@ -995,6 +995,14 @@ class Edge(BaseModel):
     type: str = Field(min_length=1)
 
 
+class Affiliation(BaseModel):
+    """Non-containment card -> island membership that is reversible and many-to-many."""
+
+    id: str = Field(min_length=1)
+    cardId: str = Field(min_length=1)
+    islandId: str = Field(min_length=1)
+
+
 class Point(BaseModel):
     x: float
     y: float
@@ -1600,6 +1608,9 @@ class DocumentV1(BaseModel):
     cards: list[Card]
     edges: list[Edge]
     islands: list[Island]
+    affiliations: list[Affiliation] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     readingOrder: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
     narratives: list[Narrative] | None = Field(default=None, exclude_if=lambda value: value is None)
     relationSummaries: list[RelationSummary] | None = Field(
@@ -1635,6 +1646,38 @@ class DocumentV1(BaseModel):
         default=None, exclude_if=lambda value: value is None
     )
     shelf: list[ShelfEntry] | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def validate_affiliations(self) -> "DocumentV1":
+        if not self.affiliations:
+            return self
+
+        card_ids = {card.id for card in self.cards}
+        island_ids = {island.id for island in self.islands}
+        seen_ids: set[str] = set()
+        seen_pairs: set[tuple[str, str]] = set()
+        for affiliation in self.affiliations:
+            if affiliation.id in seen_ids:
+                raise ValueError(f"duplicate affiliation id: {affiliation.id}")
+            seen_ids.add(affiliation.id)
+
+            pair = (affiliation.cardId, affiliation.islandId)
+            if pair in seen_pairs:
+                raise ValueError(
+                    "duplicate affiliation pair: "
+                    f"{affiliation.cardId} -> {affiliation.islandId}"
+                )
+            seen_pairs.add(pair)
+
+            if affiliation.cardId not in card_ids:
+                raise ValueError(
+                    f"affiliation references unknown card: {affiliation.cardId}"
+                )
+            if affiliation.islandId not in island_ids:
+                raise ValueError(
+                    f"affiliation references unknown island: {affiliation.islandId}"
+                )
+        return self
 
 
 DocumentPayload = DocumentV1
