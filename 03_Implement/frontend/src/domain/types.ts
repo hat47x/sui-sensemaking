@@ -337,6 +337,7 @@ export type DocumentV1 = {
   cards: Card[];
   edges: Edge[];
   islands: Island[];
+  affiliations?: Affiliation[];
   readingOrder?: string[];
   narratives?: Narrative[];
   relationSummaries?: RelationSummary[];
