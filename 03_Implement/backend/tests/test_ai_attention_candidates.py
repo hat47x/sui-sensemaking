@@ -495,3 +495,23 @@ def test_affiliation_cannot_duplicate_visual_containment() -> None:
         response = client.post("/ai/suggest-attention-candidates", json={"doc": document})
 
     assert response.status_code == 422
+
+
+
+def test_empty_affiliation_list_is_digest_equivalent_to_absence() -> None:
+    absent = _doc()
+    explicit_empty = _doc(affiliations=[])
+
+    with TestClient(app) as client:
+        absent_response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": absent},
+        )
+        empty_response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": explicit_empty},
+        )
+
+    assert absent_response.status_code == 200
+    assert empty_response.status_code == 200
+    assert absent_response.json()["sourceDigest"] == empty_response.json()["sourceDigest"]
