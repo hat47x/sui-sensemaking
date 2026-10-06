@@ -432,3 +432,28 @@ def test_affiliation_changes_attention_source_digest() -> None:
     assert base.status_code == 200
     assert affiliated.status_code == 200
     assert base.json()["sourceDigest"] != affiliated.json()["sourceDigest"]
+
+
+
+def test_affiliation_identifier_does_not_change_attention_source_digest() -> None:
+    first = _doc(
+        affiliations=[
+            {"id": "a-first", "cardId": "c3", "islandId": "i12"},
+        ],
+    )
+    renamed = _doc(
+        affiliations=[
+            {"id": "a-renamed", "cardId": "c3", "islandId": "i12"},
+        ],
+    )
+
+    with TestClient(app) as client:
+        first_response = client.post("/ai/suggest-attention-candidates", json={"doc": first})
+        renamed_response = client.post(
+            "/ai/suggest-attention-candidates",
+            json={"doc": renamed},
+        )
+
+    assert first_response.status_code == 200
+    assert renamed_response.status_code == 200
+    assert first_response.json()["sourceDigest"] == renamed_response.json()["sourceDigest"]
