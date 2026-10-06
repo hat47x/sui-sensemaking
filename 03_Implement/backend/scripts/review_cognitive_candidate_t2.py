@@ -257,23 +257,37 @@ def render_baseline(
         ]
     )
 
-    island_card_ids: set[str] = set()
+    affiliations_by_island: dict[str, list[str]] = {}
+    for affiliation in document.affiliations or []:
+        affiliations_by_island.setdefault(affiliation.islandId, []).append(
+            affiliation.cardId
+        )
+    for card_ids in affiliations_by_island.values():
+        card_ids.sort()
+
+    represented_card_ids: set[str] = set()
     for island in document.islands:
         lines.append(f"- {island.id}: {island.title or '(untitled)'}")
         for card_id in island.cardIds:
-            island_card_ids.add(card_id)
+            represented_card_ids.add(card_id)
             text = by_id.get(card_id, "(missing card)")
             hold = hold_by_id.get(card_id)
             hold_note = f" [hold={hold}]" if hold else ""
             lines.append(f"  - {card_id}{hold_note}: {text}")
+        for card_id in affiliations_by_island.get(island.id, []):
+            represented_card_ids.add(card_id)
+            text = by_id.get(card_id, "(missing card)")
+            hold = hold_by_id.get(card_id)
+            hold_note = f" [hold={hold}]" if hold else ""
+            lines.append(f"  - {card_id}{hold_note} [affiliation]: {text}")
 
     unassigned = [
         card
         for card in document.cards
-        if card.id not in island_card_ids
+        if card.id not in represented_card_ids
     ]
     if unassigned:
-        lines.extend(["", "## Cards outside current islands"])
+        lines.extend(["", "## Cards outside current groups"])
         for card in unassigned:
             hold = getattr(card, "holdState", None)
             hold_note = f" [hold={hold}]" if hold else ""
