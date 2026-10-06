@@ -378,6 +378,7 @@ def test_attention_candidates_reject_overlapping_visual_island_membership() -> N
     assert detail["code"] == "ambiguous_island_membership"
     assert "lossy projection" in detail["message"]
 
+
 def test_cross_cutting_affiliation_is_preserved_without_duplicate_containment() -> None:
     document = _doc(
         islands=[
@@ -430,6 +431,7 @@ def test_affiliation_changes_attention_source_digest() -> None:
     assert base.status_code == 200
     assert affiliated.status_code == 200
     assert base.json()["sourceDigest"] != affiliated.json()["sourceDigest"]
+
 
 def test_affiliation_identifier_does_not_change_attention_source_digest() -> None:
     first = _doc(
