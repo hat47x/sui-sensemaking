@@ -33,6 +33,7 @@ export type EpistemicConflict = "none" | "inactive" | "present";
 export type EpistemicAssessmentInput = {
   assertionId: string;
   meaningFingerprint: string;
+  reviewSubjectFingerprint: string;
   reviewLogSequence: number;
   contentOrigin: string;
   ingestedBy?: string;
@@ -104,6 +105,7 @@ export type EpistemicConfirmationState = "unreviewed" | "confirmed" | "rejected"
 export type EpistemicUiItem = {
   assertionId: string;
   meaningFingerprint: string;
+  reviewSubjectFingerprint: string;
   reviewLogSequence: number;
   state: EpistemicUiState;
   label: string;
@@ -125,6 +127,7 @@ export type EpistemicReviewIntent = {
   operation: "confirm" | "mark-hypothesis" | "reject" | "request-review";
   source: "human-ui";
   expectedMeaningFingerprint: string;
+  expectedReviewSubjectFingerprint: string;
   expectedTargetBinding: EpistemicTargetBinding;
   expectedReviewLogSequence: number;
 };
@@ -221,6 +224,9 @@ function assertProjectionShape(projection: EpistemicProjectionInput): void {
     seen.add(assessment.assertionId);
     if (!/^sha256:[0-9a-f]{64}$/.test(assessment.meaningFingerprint)) {
       throw new Error(`invalid meaningFingerprint for ${assessment.assertionId}`);
+    }
+    if (!/^sha256:[0-9a-f]{64}$/.test(assessment.reviewSubjectFingerprint)) {
+      throw new Error(`invalid reviewSubjectFingerprint for ${assessment.assertionId}`);
     }
     if (!Number.isInteger(assessment.reviewLogSequence) || assessment.reviewLogSequence < 0) {
       throw new Error(`invalid reviewLogSequence for ${assessment.assertionId}`);
@@ -361,6 +367,7 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
       return {
         assertionId: assessment.assertionId,
         meaningFingerprint: assessment.meaningFingerprint,
+        reviewSubjectFingerprint: assessment.reviewSubjectFingerprint,
         reviewLogSequence: assessment.reviewLogSequence,
         state,
         ...presentation,
@@ -393,6 +400,7 @@ export function buildEpistemicReviewIntent(
     operation,
     source: "human-ui",
     expectedMeaningFingerprint: item.meaningFingerprint,
+    expectedReviewSubjectFingerprint: item.reviewSubjectFingerprint,
     expectedTargetBinding: item.targetBinding,
     expectedReviewLogSequence: item.reviewLogSequence,
   };
