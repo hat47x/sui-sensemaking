@@ -16,6 +16,8 @@ function projection(): EpistemicProjectionInput {
     assessments: [
       {
         assertionId: "user-premise",
+        meaningFingerprint: "sha256:0101010101010101010101010101010101010101010101010101010101010101",
+        reviewLogSequence: 0,
         contentOrigin: "user",
         metadataState: "complete",
         statementKind: "requirement",
@@ -29,6 +31,8 @@ function projection(): EpistemicProjectionInput {
       },
       {
         assertionId: "ai-candidate",
+        meaningFingerprint: "sha256:0202020202020202020202020202020202020202020202020202020202020202",
+        reviewLogSequence: 0,
         contentOrigin: "ai",
         metadataState: "complete",
         statementKind: "fact",
@@ -42,6 +46,8 @@ function projection(): EpistemicProjectionInput {
       },
       {
         assertionId: "confirmed",
+        meaningFingerprint: "sha256:0303030303030303030303030303030303030303030303030303030303030303",
+        reviewLogSequence: 1,
         contentOrigin: "external",
         metadataState: "complete",
         statementKind: "fact",
@@ -55,6 +61,8 @@ function projection(): EpistemicProjectionInput {
       },
       {
         assertionId: "confirmed-hypothesis",
+        meaningFingerprint: "sha256:0404040404040404040404040404040404040404040404040404040404040404",
+        reviewLogSequence: 1,
         contentOrigin: "user",
         metadataState: "complete",
         statementKind: "hypothesis",
@@ -68,6 +76,8 @@ function projection(): EpistemicProjectionInput {
       },
       {
         assertionId: "reanchored",
+        meaningFingerprint: "sha256:0505050505050505050505050505050505050505050505050505050505050505",
+        reviewLogSequence: 0,
         contentOrigin: "user",
         metadataState: "complete",
         statementKind: "decision",
@@ -81,6 +91,8 @@ function projection(): EpistemicProjectionInput {
       },
       {
         assertionId: "ambiguous",
+        meaningFingerprint: "sha256:0606060606060606060606060606060606060606060606060606060606060606",
+        reviewLogSequence: 0,
         contentOrigin: "ai",
         metadataState: "complete",
         statementKind: "fact",
@@ -95,6 +107,8 @@ function projection(): EpistemicProjectionInput {
       },
       {
         assertionId: "partial",
+        meaningFingerprint: "sha256:0707070707070707070707070707070707070707070707070707070707070707",
+        reviewLogSequence: 1,
         contentOrigin: "external",
         metadataState: "partial",
         statementKind: "fact",
@@ -109,6 +123,8 @@ function projection(): EpistemicProjectionInput {
       },
       {
         assertionId: "conflict",
+        meaningFingerprint: "sha256:0808080808080808080808080808080808080808080808080808080808080808",
+        reviewLogSequence: 1,
         contentOrigin: "external",
         metadataState: "complete",
         statementKind: "fact",
@@ -235,9 +251,20 @@ describe("epistemic review UI model", () => {
       assertionId: "ai-candidate",
       operation: "confirm",
       source: "human-ui",
+      expectedMeaningFingerprint: item.meaningFingerprint,
       expectedTargetBinding: "not-required",
+      expectedReviewLogSequence: 0,
     });
     expect(input).toEqual(original);
+  });
+
+  it("carries optimistic review preconditions into human intent", () => {
+    const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "confirmed");
+    if (!item) throw new Error("fixture item missing");
+    const intent = buildEpistemicReviewIntent(item, "reject");
+    expect(intent.expectedMeaningFingerprint).toBe(item.meaningFingerprint);
+    expect(intent.expectedReviewLogSequence).toBe(1);
+    expect(intent.expectedTargetBinding).toBe("exact");
   });
 
   it("fails closed for mixed bulk confirmation instead of over-approving eligible subset", () => {
@@ -298,6 +325,16 @@ describe("epistemic review UI model", () => {
       mayClaimProjectHealthy: false,
       severity: "attention",
     });
+  });
+
+  it("rejects invalid meaning binding receipts", () => {
+    const invalidFingerprint = projection();
+    invalidFingerprint.assessments[0].meaningFingerprint = "sha256:not-a-digest";
+    expect(() => buildEpistemicUiItems(invalidFingerprint)).toThrow(/invalid meaningFingerprint/);
+
+    const invalidSequence = projection();
+    invalidSequence.assessments[0].reviewLogSequence = -1;
+    expect(() => buildEpistemicUiItems(invalidSequence)).toThrow(/invalid reviewLogSequence/);
   });
 
   it("rejects unknown runtime enum values instead of silently making them confirmable", () => {
