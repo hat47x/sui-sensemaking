@@ -54,6 +54,19 @@ function projection(): EpistemicProjectionInput {
         useState: "premise",
       },
       {
+        assertionId: "confirmed-hypothesis",
+        contentOrigin: "user",
+        metadataState: "complete",
+        statementKind: "hypothesis",
+        confirmationState: "confirmed",
+        targetBinding: "exact",
+        contextCompatibility: "compatible",
+        freshness: "current",
+        lifecycleState: "active",
+        conflict: "none",
+        useState: "candidate-only",
+      },
+      {
         assertionId: "reanchored",
         contentOrigin: "user",
         metadataState: "complete",
@@ -141,6 +154,8 @@ describe("epistemic review UI model", () => {
     expect(item).toMatchObject({
       state: "working-premise",
       label: "作業前提",
+      confirmationState: "unreviewed",
+      confirmationLabel: "未確認",
     });
     expect(item?.actions).toContain("confirm");
   });
@@ -148,11 +163,25 @@ describe("epistemic review UI model", () => {
   it("keeps AI-generated unreviewed information visually unreviewed", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "ai-candidate");
     expect(item).toMatchObject({
-      state: "unreviewed",
-      label: "未確認",
+      state: "candidate",
+      label: "候補",
+      confirmationState: "unreviewed",
+      confirmationLabel: "未確認",
     });
     expect(item?.actions).toContain("confirm");
     expect(item?.actions).toContain("mark-hypothesis");
+  });
+
+  it("keeps confirmation separate from candidate use state", () => {
+    const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "confirmed-hypothesis");
+    expect(item).toMatchObject({
+      state: "candidate",
+      label: "候補",
+      confirmationState: "confirmed",
+      confirmationLabel: "確認済み",
+    });
+    expect(item?.actions).not.toContain("confirm");
+    expect(item?.actions).toContain("reject");
   });
 
   it("does not claim reanchoring proves semantic identity", () => {
