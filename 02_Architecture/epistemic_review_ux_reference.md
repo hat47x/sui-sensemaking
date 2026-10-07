@@ -25,18 +25,23 @@ TEIへconfirmation eventを書き戻す実adapterは後続とし、この段階�
 
 利用者へ常時すべてのmetadataを見せない。
 
-主要表示は次のとおり。
+表示では「現在作業でどう使えるか」と「人間確認済みか」を別軸にします。ここを一つのbadgeへ潰すと、たとえば確認済みのhypothesisを「未確認」と誤表示できます。
 
-| 状態 | 主表示 | 意味 |
+利用状態の主表示:
+
+| 利用状態 | 主表示 | 意味 |
 |---|---|---|
-| direct user premise / 未確認 | 作業前提 | 現在作業では使えるが、人間確認済みとは表示しない |
-| confirmed premise | 確認済み | current meaning / contextで確認済み |
-| AI candidate | 未確認 | 保存されていても未確認 |
+| premise | 作業前提 | 現在作業の前提として利用できる |
+| candidate-only | 候補 | 前提とは分けて保持する |
 | review-required / Conflict | 要確認 | 追加判断が必要 |
 | partial / absent metadata | 情報不足 | 見えていないreview / Evidence / relationの可能性を残す |
 | ambiguous target | 対象を確認 | annotation対象を一意に決められない |
 | detached target | 対象なし | 元対象へ再接続できない |
 | blocked | 利用停止 | premise利用しない |
+
+確認状態は別badgeとして `未確認 / 確認済み / 否定済み` を表示できます。
+
+したがってdirect user premiseは「作業前提 + 未確認」、human-confirmed factは「作業前提 + 確認済み」、human-confirmed hypothesisは「候補 + 確認済み」と表現できます。
 
 `reanchored`は通常利用できる場合もあるが、「元位置から移動した」詳細signalを残す。semantic identityの証明として表示しない。
 
