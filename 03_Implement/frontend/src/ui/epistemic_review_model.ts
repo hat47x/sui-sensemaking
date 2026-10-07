@@ -1,3 +1,4 @@
+export const TEI_EPISTEMIC_PROJECTION_CONTRACT = "tei.epistemic-projection/v0" as const;
 export const TEI_EPISTEMIC_PROJECTION_SCHEMA = "tei.reference.epistemic-assessment/v0" as const;
 
 export type EpistemicMetadataState = "complete" | "partial" | "absent";
@@ -46,6 +47,7 @@ export type EpistemicCoverageAreaInput = {
 };
 
 export type EpistemicProjectionInput = {
+  contract: string;
   schema: string;
   assessments: EpistemicAssessmentInput[];
   health: {
@@ -152,6 +154,9 @@ function unique(values: string[] | undefined): string[] {
 }
 
 function assertProjectionShape(projection: EpistemicProjectionInput): void {
+  if (projection.contract !== TEI_EPISTEMIC_PROJECTION_CONTRACT) {
+    throw new Error(`unsupported epistemic projection contract: ${projection.contract}`);
+  }
   if (projection.schema !== TEI_EPISTEMIC_PROJECTION_SCHEMA) {
     throw new Error(`unsupported epistemic projection schema: ${projection.schema}`);
   }
