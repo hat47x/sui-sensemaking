@@ -31,6 +31,8 @@ export type EpistemicConflict = "none" | "inactive" | "present";
 
 export type EpistemicAssessmentInput = {
   assertionId: string;
+  meaningFingerprint: string;
+  reviewLogSequence: number;
   contentOrigin: string;
   ingestedBy?: string;
   metadataState: EpistemicMetadataState;
@@ -100,6 +102,8 @@ export type EpistemicConfirmationState = "unreviewed" | "confirmed" | "rejected"
 
 export type EpistemicUiItem = {
   assertionId: string;
+  meaningFingerprint: string;
+  reviewLogSequence: number;
   state: EpistemicUiState;
   label: string;
   tone: "neutral" | "info" | "warning" | "danger";
@@ -119,7 +123,9 @@ export type EpistemicReviewIntent = {
   assertionId: string;
   operation: "confirm" | "mark-hypothesis" | "reject" | "request-review";
   source: "human-ui";
+  expectedMeaningFingerprint: string;
   expectedTargetBinding: EpistemicTargetBinding;
+  expectedReviewLogSequence: number;
 };
 
 export type BulkConfirmResult =
@@ -212,6 +218,12 @@ function assertProjectionShape(projection: EpistemicProjectionInput): void {
       throw new Error(`duplicate epistemic assertionId: ${assessment.assertionId}`);
     }
     seen.add(assessment.assertionId);
+    if (!/^sha256:[0-9a-f]{64}$/.test(assessment.meaningFingerprint)) {
+      throw new Error(`invalid meaningFingerprint for ${assessment.assertionId}`);
+    }
+    if (!Number.isInteger(assessment.reviewLogSequence) || assessment.reviewLogSequence < 0) {
+      throw new Error(`invalid reviewLogSequence for ${assessment.assertionId}`);
+    }
     assertKnown(assessment.metadataState, METADATA_STATES, "metadataState");
     assertKnown(assessment.targetBinding, TARGET_BINDINGS, "targetBinding");
     assertKnown(assessment.useState, USE_STATES, "useState");
@@ -347,6 +359,8 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
       const confirmation = confirmationPresentation(assessment.confirmationState);
       return {
         assertionId: assessment.assertionId,
+        meaningFingerprint: assessment.meaningFingerprint,
+        reviewLogSequence: assessment.reviewLogSequence,
         state,
         ...presentation,
         ...confirmation,
@@ -377,7 +391,9 @@ export function buildEpistemicReviewIntent(
     assertionId: item.assertionId,
     operation,
     source: "human-ui",
+    expectedMeaningFingerprint: item.meaningFingerprint,
     expectedTargetBinding: item.targetBinding,
+    expectedReviewLogSequence: item.reviewLogSequence,
   };
 }
 
