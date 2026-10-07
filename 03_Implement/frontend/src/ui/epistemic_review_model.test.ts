@@ -145,6 +145,13 @@ function projection(): EpistemicProjectionInput {
         reviewerCandidates: ["design-owner"],
       },
     ],
+    authorityLimits: [
+      "assessment-does-not-assert-objective-truth",
+      "target-anchor-resolution-does-not-prove-semantic-identity",
+      "coverage-mapping-is-input-not-semantic-completeness-proof",
+      "partial-transport-health-is-not-project-wide-health",
+      "reviewer-candidate-is-not-review-authority",
+    ],
   };
 }
 
@@ -291,6 +298,20 @@ describe("epistemic review UI model", () => {
       mayClaimProjectHealthy: false,
       severity: "attention",
     });
+  });
+
+  it("rejects unknown runtime enum values instead of silently making them confirmable", () => {
+    const input = projection();
+    (input.assessments[0] as unknown as { useState: string }).useState = "future-premise";
+    expect(() => buildEpistemicUiItems(input)).toThrow(/unsupported useState/);
+  });
+
+  it("requires authority stop-lines from the TEI projection", () => {
+    const input = projection();
+    input.authorityLimits = input.authorityLimits?.filter(
+      (value) => value !== "reviewer-candidate-is-not-review-authority",
+    );
+    expect(() => buildEpistemicReviewQueue(input)).toThrow(/missing epistemic authority limit/);
   });
 
   it("rejects unsupported semantic contract, schema, and duplicate assertion ids", () => {
