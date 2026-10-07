@@ -1,6 +1,22 @@
 export const TEI_EPISTEMIC_PROJECTION_CONTRACT = "tei.epistemic-projection/v0" as const;
 export const TEI_EPISTEMIC_PROJECTION_SCHEMA = "tei.reference.epistemic-assessment/v0" as const;
 
+const REQUIRED_AUTHORITY_LIMITS = new Set([
+  "assessment-does-not-assert-objective-truth",
+  "target-anchor-resolution-does-not-prove-semantic-identity",
+  "coverage-mapping-is-input-not-semantic-completeness-proof",
+  "partial-transport-health-is-not-project-wide-health",
+  "reviewer-candidate-is-not-review-authority",
+]);
+
+const METADATA_STATES = new Set(["complete", "partial", "absent"]);
+const TARGET_BINDINGS = new Set(["not-required", "exact", "reanchored", "ambiguous", "detached"]);
+const USE_STATES = new Set(["premise", "candidate-only", "review-required", "blocked"]);
+const CONTEXT_COMPATIBILITY = new Set(["compatible", "unknown", "incompatible"]);
+const FRESHNESS_STATES = new Set(["current", "unknown", "stale", "not-yet-valid"]);
+const CONFLICT_STATES = new Set(["none", "inactive", "present"]);
+const CONFIRMATION_STATES = new Set(["unreviewed", "confirmed", "rejected"]);
+
 export type EpistemicMetadataState = "complete" | "partial" | "absent";
 export type EpistemicTargetBinding =
   | "not-required"
@@ -157,6 +173,12 @@ function unique(values: string[] | undefined): string[] {
   return [...new Set(values ?? [])].sort();
 }
 
+function assertKnown(value: string, allowed: Set<string>, field: string): void {
+  if (!allowed.has(value)) {
+    throw new Error(`unsupported ${field}: ${value}`);
+  }
+}
+
 function assertProjectionShape(projection: EpistemicProjectionInput): void {
   if (projection.contract !== TEI_EPISTEMIC_PROJECTION_CONTRACT) {
     throw new Error(`unsupported epistemic projection contract: ${projection.contract}`);
@@ -164,6 +186,23 @@ function assertProjectionShape(projection: EpistemicProjectionInput): void {
   if (projection.schema !== TEI_EPISTEMIC_PROJECTION_SCHEMA) {
     throw new Error(`unsupported epistemic projection schema: ${projection.schema}`);
   }
+  if (!Array.isArray(projection.authorityLimits)) {
+    throw new Error("epistemic projection authorityLimits are required");
+  }
+  const limits = new Set(projection.authorityLimits);
+  for (const required of REQUIRED_AUTHORITY_LIMITS) {
+    if (!limits.has(required)) {
+      throw new Error(`missing epistemic authority limit: ${required}`);
+    }
+  }
+  if (!Array.isArray(projection.assessments)) {
+    throw new Error("epistemic projection assessments must be an array");
+  }
+  if (!projection.health || typeof projection.health !== "object") {
+    throw new Error("epistemic projection health is required");
+  }
+  assertKnown(projection.health.viewMetadataState, METADATA_STATES, "health.viewMetadataState");
+
   const seen = new Set<string>();
   for (const assessment of projection.assessments) {
     if (!assessment.assertionId) {
@@ -173,6 +212,31 @@ function assertProjectionShape(projection: EpistemicProjectionInput): void {
       throw new Error(`duplicate epistemic assertionId: ${assessment.assertionId}`);
     }
     seen.add(assessment.assertionId);
+    assertKnown(assessment.metadataState, METADATA_STATES, "metadataState");
+    assertKnown(assessment.targetBinding, TARGET_BINDINGS, "targetBinding");
+    assertKnown(assessment.useState, USE_STATES, "useState");
+    assertKnown(assessment.contextCompatibility, CONTEXT_COMPATIBILITY, "contextCompatibility");
+    assertKnown(assessment.freshness, FRESHNESS_STATES, "freshness");
+    assertKnown(assessment.conflict, CONFLICT_STATES, "conflict");
+    assertKnown(assessment.confirmationState, CONFIRMATION_STATES, "confirmationState");
+  }
+
+  for (const request of projection.reviewRequests ?? []) {
+    if (!request.assertionId) {
+      throw new Error("epistemic review request requires assertionId");
+    }
+    if (request.targetBinding !== undefined) {
+      assertKnown(request.targetBinding, TARGET_BINDINGS, "reviewRequest.targetBinding");
+    }
+  }
+
+  for (const area of projection.health.coverage?.areas ?? []) {
+    if (!area.areaId) {
+      throw new Error("epistemic coverage area requires areaId");
+    }
+    if (area.state !== "mapped" && area.state !== "gap") {
+      throw new Error(`unsupported coverage state: ${area.state}`);
+    }
   }
 }
 
