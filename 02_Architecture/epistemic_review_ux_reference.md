@@ -4,6 +4,8 @@
 
 TEI #958 / PR #961のcontext-scoped epistemic Projectionを、SUI Sensemakingが独自Truth modelへコピーせず、低摩擦なreview UIへ変換できるかを実証する。
 
+consumerはsemantic contract `tei.epistemic-projection/v0` とrepresentation schema `tei.reference.epistemic-assessment/v0` を別々に確認する。同じschemaでもcontractが未知なら拒否し、contractが既知でも未対応schemaを自動受理しない。
+
 最初のReferenceはReact画面へ直接埋め込まず、`epistemic_review_model.ts`というpure view-modelとして置く。これにより、現在の巨大な`App.tsx`へ早期に状態機械を混入させず、表示状態、許可操作、bulk safety、review queueの意味を先に固定できる。
 
 ## 既存primitiveを再利用する
