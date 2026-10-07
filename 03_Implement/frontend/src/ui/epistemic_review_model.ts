@@ -1,0 +1,382 @@
+export const TEI_EPISTEMIC_PROJECTION_SCHEMA = "tei.reference.epistemic-assessment/v0" as const;
+
+export type EpistemicMetadataState = "complete" | "partial" | "absent";
+export type EpistemicTargetBinding =
+  | "not-required"
+  | "exact"
+  | "reanchored"
+  | "ambiguous"
+  | "detached";
+export type EpistemicUseState = "premise" | "candidate-only" | "review-required" | "blocked";
+export type EpistemicContextCompatibility = "compatible" | "unknown" | "incompatible";
+export type EpistemicFreshness = "current" | "unknown" | "stale" | "not-yet-valid";
+export type EpistemicConflict = "none" | "inactive" | "present";
+
+export type EpistemicAssessmentInput = {
+  assertionId: string;
+  contentOrigin: string;
+  ingestedBy?: string;
+  metadataState: EpistemicMetadataState;
+  statementKind: string;
+  confirmationState: string;
+  reviewBinding?: string;
+  targetBinding: EpistemicTargetBinding;
+  contextCompatibility: EpistemicContextCompatibility;
+  freshness: EpistemicFreshness;
+  lifecycleState: string;
+  conflict: EpistemicConflict;
+  useState: EpistemicUseState;
+  inferredContextUsed?: boolean;
+  reasons?: string[];
+};
+
+export type EpistemicReviewRequestInput = {
+  assertionId: string;
+  targetBinding?: EpistemicTargetBinding;
+  reasons?: string[];
+  downstreamImpact?: string[];
+  reviewerCandidates?: string[];
+};
+
+export type EpistemicCoverageAreaInput = {
+  areaId: string;
+  criticality?: "low" | "normal" | "high" | "critical";
+  state: "mapped" | "gap";
+  reasons?: string[];
+};
+
+export type EpistemicProjectionInput = {
+  schema: string;
+  assessments: EpistemicAssessmentInput[];
+  health: {
+    level: string;
+    viewMetadataState: EpistemicMetadataState;
+    coverage?: {
+      areas?: EpistemicCoverageAreaInput[];
+    };
+  };
+  reviewRequests?: EpistemicReviewRequestInput[];
+  authorityLimits?: string[];
+};
+
+export type EpistemicUiAction =
+  | "confirm"
+  | "mark-hypothesis"
+  | "reject"
+  | "inspect-details"
+  | "resolve-target"
+  | "request-access"
+  | "request-review"
+  | "refresh-source";
+
+export type EpistemicUiState =
+  | "working-premise"
+  | "confirmed"
+  | "unreviewed"
+  | "review-required"
+  | "blocked"
+  | "metadata-incomplete"
+  | "target-ambiguous"
+  | "target-detached";
+
+export type EpistemicUiItem = {
+  assertionId: string;
+  state: EpistemicUiState;
+  label: string;
+  tone: "neutral" | "info" | "warning" | "danger";
+  statementKind: string;
+  targetBinding: EpistemicTargetBinding;
+  targetReanchored: boolean;
+  inferredContextUsed: boolean;
+  detailsRecommended: boolean;
+  actions: EpistemicUiAction[];
+  reasons: string[];
+};
+
+export type EpistemicReviewIntent = {
+  assertionId: string;
+  operation: "confirm" | "mark-hypothesis" | "reject" | "request-review";
+  source: "human-ui";
+  expectedTargetBinding: EpistemicTargetBinding;
+};
+
+export type BulkConfirmResult =
+  | { ok: true; intents: EpistemicReviewIntent[] }
+  | {
+      ok: false;
+      blocked: Array<{
+        assertionId: string;
+        state: EpistemicUiState;
+        reasons: string[];
+      }>;
+    };
+
+export type EpistemicReviewQueueItem =
+  | {
+      kind: "assertion-review";
+      id: string;
+      assertionId: string;
+      targetBinding?: EpistemicTargetBinding;
+      reasons: string[];
+      downstreamImpact: string[];
+      reviewerCandidates: string[];
+      reviewerCandidateIsAuthority: false;
+    }
+  | {
+      kind: "coverage-gap";
+      id: string;
+      areaId: string;
+      criticality: "low" | "normal" | "high" | "critical";
+      reasons: string[];
+      reviewerCandidateIsAuthority: false;
+    };
+
+export type EpistemicHealthPresentation = {
+  scope: "project" | "partial-view";
+  severity: "normal" | "attention" | "critical";
+  label: string;
+  mayClaimProjectHealthy: boolean;
+  coverageGapCount: number;
+  criticalCoverageGapCount: number;
+};
+
+export const EPISTEMIC_QUICK_KEYS: Readonly<Record<string, EpistemicUiAction>> = Object.freeze({
+  v: "confirm",
+  h: "mark-hypothesis",
+  x: "reject",
+  r: "request-review",
+});
+
+function unique(values: string[] | undefined): string[] {
+  return [...new Set(values ?? [])].sort();
+}
+
+function assertProjectionShape(projection: EpistemicProjectionInput): void {
+  if (projection.schema !== TEI_EPISTEMIC_PROJECTION_SCHEMA) {
+    throw new Error(`unsupported epistemic projection schema: ${projection.schema}`);
+  }
+  const seen = new Set<string>();
+  for (const assessment of projection.assessments) {
+    if (!assessment.assertionId) {
+      throw new Error("epistemic assessment requires assertionId");
+    }
+    if (seen.has(assessment.assertionId)) {
+      throw new Error(`duplicate epistemic assertionId: ${assessment.assertionId}`);
+    }
+    seen.add(assessment.assertionId);
+  }
+}
+
+function baseActions(assessment: EpistemicAssessmentInput): EpistemicUiAction[] {
+  const actions: EpistemicUiAction[] = ["inspect-details"];
+  if (assessment.useState !== "blocked") {
+    actions.push("request-review");
+  }
+  return actions;
+}
+
+function deriveState(assessment: EpistemicAssessmentInput): EpistemicUiState {
+  if (assessment.useState === "blocked" || assessment.lifecycleState !== "active") {
+    return "blocked";
+  }
+  if (assessment.metadataState !== "complete") {
+    return "metadata-incomplete";
+  }
+  if (assessment.targetBinding === "ambiguous") {
+    return "target-ambiguous";
+  }
+  if (assessment.targetBinding === "detached") {
+    return "target-detached";
+  }
+  if (assessment.useState === "review-required" || assessment.conflict === "present") {
+    return "review-required";
+  }
+  if (assessment.confirmationState === "confirmed" && assessment.useState === "premise") {
+    return "confirmed";
+  }
+  if (
+    assessment.contentOrigin === "user"
+    && assessment.useState === "premise"
+    && assessment.confirmationState !== "confirmed"
+  ) {
+    return "working-premise";
+  }
+  return "unreviewed";
+}
+
+function statePresentation(state: EpistemicUiState): Pick<EpistemicUiItem, "label" | "tone"> {
+  switch (state) {
+    case "working-premise":
+      return { label: "作業前提", tone: "info" };
+    case "confirmed":
+      return { label: "確認済み", tone: "neutral" };
+    case "unreviewed":
+      return { label: "未確認", tone: "neutral" };
+    case "review-required":
+      return { label: "要確認", tone: "warning" };
+    case "blocked":
+      return { label: "利用停止", tone: "danger" };
+    case "metadata-incomplete":
+      return { label: "情報不足", tone: "warning" };
+    case "target-ambiguous":
+      return { label: "対象を確認", tone: "warning" };
+    case "target-detached":
+      return { label: "対象なし", tone: "warning" };
+  }
+}
+
+function allowedActions(
+  assessment: EpistemicAssessmentInput,
+  state: EpistemicUiState,
+): EpistemicUiAction[] {
+  const actions = baseActions(assessment);
+  switch (state) {
+    case "blocked":
+      return ["inspect-details"];
+    case "metadata-incomplete":
+      return unique([...actions, "request-access", "refresh-source"]) as EpistemicUiAction[];
+    case "target-ambiguous":
+    case "target-detached":
+      return unique([...actions, "resolve-target"]) as EpistemicUiAction[];
+    case "review-required":
+      return actions;
+    case "confirmed":
+      return unique([...actions, "reject"]) as EpistemicUiAction[];
+    case "working-premise":
+    case "unreviewed":
+      return unique([...actions, "confirm", "mark-hypothesis", "reject"]) as EpistemicUiAction[];
+  }
+}
+
+export function buildEpistemicUiItems(projection: EpistemicProjectionInput): EpistemicUiItem[] {
+  assertProjectionShape(projection);
+  return projection.assessments
+    .map((assessment): EpistemicUiItem => {
+      const state = deriveState(assessment);
+      const presentation = statePresentation(state);
+      return {
+        assertionId: assessment.assertionId,
+        state,
+        ...presentation,
+        statementKind: assessment.statementKind,
+        targetBinding: assessment.targetBinding,
+        targetReanchored: assessment.targetBinding === "reanchored",
+        inferredContextUsed: Boolean(assessment.inferredContextUsed),
+        detailsRecommended:
+          assessment.targetBinding === "reanchored"
+          || Boolean(assessment.inferredContextUsed)
+          || assessment.metadataState !== "complete",
+        actions: allowedActions(assessment, state),
+        reasons: unique(assessment.reasons),
+      };
+    })
+    .sort((left, right) => left.assertionId.localeCompare(right.assertionId));
+}
+
+export function buildEpistemicReviewIntent(
+  item: EpistemicUiItem,
+  operation: EpistemicReviewIntent["operation"],
+): EpistemicReviewIntent {
+  const requiredAction: EpistemicUiAction = operation === "request-review" ? "request-review" : operation;
+  if (!item.actions.includes(requiredAction)) {
+    throw new Error(`${operation} is not allowed for ${item.assertionId} in state ${item.state}`);
+  }
+  return {
+    assertionId: item.assertionId,
+    operation,
+    source: "human-ui",
+    expectedTargetBinding: item.targetBinding,
+  };
+}
+
+export function buildBulkConfirmIntents(items: EpistemicUiItem[]): BulkConfirmResult {
+  const blocked = items
+    .filter((item) => !item.actions.includes("confirm"))
+    .map((item) => ({
+      assertionId: item.assertionId,
+      state: item.state,
+      reasons: item.reasons,
+    }));
+  if (blocked.length > 0) {
+    return { ok: false, blocked };
+  }
+  return {
+    ok: true,
+    intents: items.map((item) => buildEpistemicReviewIntent(item, "confirm")),
+  };
+}
+
+export function buildEpistemicReviewQueue(
+  projection: EpistemicProjectionInput,
+): EpistemicReviewQueueItem[] {
+  assertProjectionShape(projection);
+  const items: EpistemicReviewQueueItem[] = [];
+
+  for (const request of projection.reviewRequests ?? []) {
+    items.push({
+      kind: "assertion-review",
+      id: `assertion:${request.assertionId}`,
+      assertionId: request.assertionId,
+      targetBinding: request.targetBinding,
+      reasons: unique(request.reasons),
+      downstreamImpact: unique(request.downstreamImpact),
+      reviewerCandidates: unique(request.reviewerCandidates),
+      reviewerCandidateIsAuthority: false,
+    });
+  }
+
+  for (const area of projection.health.coverage?.areas ?? []) {
+    if (area.state !== "gap") {
+      continue;
+    }
+    items.push({
+      kind: "coverage-gap",
+      id: `coverage:${area.areaId}`,
+      areaId: area.areaId,
+      criticality: area.criticality ?? "normal",
+      reasons: unique(area.reasons),
+      reviewerCandidateIsAuthority: false,
+    });
+  }
+
+  const rank = { critical: 4, high: 3, normal: 2, low: 1 } as const;
+  return items.sort((left, right) => {
+    const leftRank = left.kind === "coverage-gap" ? rank[left.criticality] : 5;
+    const rightRank = right.kind === "coverage-gap" ? rank[right.criticality] : 5;
+    if (leftRank !== rightRank) {
+      return rightRank - leftRank;
+    }
+    return left.id.localeCompare(right.id);
+  });
+}
+
+export function buildEpistemicHealthPresentation(
+  projection: EpistemicProjectionInput,
+): EpistemicHealthPresentation {
+  assertProjectionShape(projection);
+  const gaps = (projection.health.coverage?.areas ?? []).filter((area) => area.state === "gap");
+  const criticalGaps = gaps.filter((area) => area.criticality === "critical" || area.criticality === "high");
+  const partial = projection.health.viewMetadataState !== "complete";
+
+  let severity: EpistemicHealthPresentation["severity"] = "normal";
+  if (projection.health.level === "critical" || criticalGaps.some((area) => area.criticality === "critical")) {
+    severity = "critical";
+  } else if (projection.health.level !== "healthy" || partial || criticalGaps.length > 0) {
+    severity = "attention";
+  }
+
+  return {
+    scope: partial ? "partial-view" : "project",
+    severity,
+    label: partial
+      ? "部分ビュー — プロジェクト全体の健全性は判定できません"
+      : severity === "critical"
+        ? "重要な確認事項があります"
+        : severity === "attention"
+          ? "確認が必要な情報があります"
+          : "重大なepistemic問題は検出されていません",
+    mayClaimProjectHealthy: !partial && severity === "normal",
+    coverageGapCount: gaps.length,
+    criticalCoverageGapCount: criticalGaps.length,
+  };
+}
