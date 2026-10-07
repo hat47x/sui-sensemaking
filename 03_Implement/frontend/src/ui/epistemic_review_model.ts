@@ -73,19 +73,23 @@ export type EpistemicUiAction =
 
 export type EpistemicUiState =
   | "working-premise"
-  | "confirmed"
-  | "unreviewed"
+  | "candidate"
   | "review-required"
   | "blocked"
   | "metadata-incomplete"
   | "target-ambiguous"
   | "target-detached";
 
+export type EpistemicConfirmationState = "unreviewed" | "confirmed" | "rejected";
+
 export type EpistemicUiItem = {
   assertionId: string;
   state: EpistemicUiState;
   label: string;
   tone: "neutral" | "info" | "warning" | "danger";
+  confirmationState: EpistemicConfirmationState;
+  confirmationLabel: "未確認" | "確認済み" | "否定済み";
+  confirmationTone: "neutral" | "danger";
   statementKind: string;
   targetBinding: EpistemicTargetBinding;
   targetReanchored: boolean;
@@ -196,27 +200,43 @@ function deriveState(assessment: EpistemicAssessmentInput): EpistemicUiState {
   if (assessment.useState === "review-required" || assessment.conflict === "present") {
     return "review-required";
   }
-  if (assessment.confirmationState === "confirmed" && assessment.useState === "premise") {
-    return "confirmed";
-  }
-  if (
-    assessment.contentOrigin === "user"
-    && assessment.useState === "premise"
-    && assessment.confirmationState !== "confirmed"
-  ) {
+  if (assessment.useState === "premise") {
     return "working-premise";
   }
-  return "unreviewed";
+  return "candidate";
+}
+
+function confirmationPresentation(
+  raw: string,
+): Pick<EpistemicUiItem, "confirmationState" | "confirmationLabel" | "confirmationTone"> {
+  switch (raw) {
+    case "confirmed":
+      return {
+        confirmationState: "confirmed",
+        confirmationLabel: "確認済み",
+        confirmationTone: "neutral",
+      };
+    case "rejected":
+      return {
+        confirmationState: "rejected",
+        confirmationLabel: "否定済み",
+        confirmationTone: "danger",
+      };
+    default:
+      return {
+        confirmationState: "unreviewed",
+        confirmationLabel: "未確認",
+        confirmationTone: "neutral",
+      };
+  }
 }
 
 function statePresentation(state: EpistemicUiState): Pick<EpistemicUiItem, "label" | "tone"> {
   switch (state) {
     case "working-premise":
       return { label: "作業前提", tone: "info" };
-    case "confirmed":
-      return { label: "確認済み", tone: "neutral" };
-    case "unreviewed":
-      return { label: "未確認", tone: "neutral" };
+    case "candidate":
+      return { label: "候補", tone: "neutral" };
     case "review-required":
       return { label: "要確認", tone: "warning" };
     case "blocked":
@@ -245,10 +265,11 @@ function allowedActions(
       return unique([...actions, "resolve-target"]) as EpistemicUiAction[];
     case "review-required":
       return actions;
-    case "confirmed":
-      return unique([...actions, "reject"]) as EpistemicUiAction[];
     case "working-premise":
-    case "unreviewed":
+    case "candidate":
+      if (assessment.confirmationState === "confirmed") {
+        return unique([...actions, "reject"]) as EpistemicUiAction[];
+      }
       return unique([...actions, "confirm", "mark-hypothesis", "reject"]) as EpistemicUiAction[];
   }
 }
@@ -259,10 +280,12 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
     .map((assessment): EpistemicUiItem => {
       const state = deriveState(assessment);
       const presentation = statePresentation(state);
+      const confirmation = confirmationPresentation(assessment.confirmationState);
       return {
         assertionId: assessment.assertionId,
         state,
         ...presentation,
+        ...confirmation,
         statementKind: assessment.statementKind,
         targetBinding: assessment.targetBinding,
         targetReanchored: assessment.targetBinding === "reanchored",
