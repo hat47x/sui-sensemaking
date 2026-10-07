@@ -11,6 +11,7 @@ import {
 
 function projection(): EpistemicProjectionInput {
   return {
+    contract: "tei.epistemic-projection/v0",
     schema: "tei.reference.epistemic-assessment/v0",
     assessments: [
       {
@@ -263,10 +264,14 @@ describe("epistemic review UI model", () => {
     });
   });
 
-  it("rejects unsupported projection schema and duplicate assertion ids", () => {
-    const unsupported = projection();
-    unsupported.schema = "tei.reference.epistemic-assessment/v999";
-    expect(() => buildEpistemicUiItems(unsupported)).toThrow(/unsupported epistemic projection schema/);
+  it("rejects unsupported semantic contract, schema, and duplicate assertion ids", () => {
+    const unsupportedContract = projection();
+    unsupportedContract.contract = "tei.epistemic-projection/v999";
+    expect(() => buildEpistemicUiItems(unsupportedContract)).toThrow(/unsupported epistemic projection contract/);
+
+    const unsupportedSchema = projection();
+    unsupportedSchema.schema = "tei.reference.epistemic-assessment/v999";
+    expect(() => buildEpistemicUiItems(unsupportedSchema)).toThrow(/unsupported epistemic projection schema/);
 
     const duplicate = projection();
     duplicate.assessments.push(structuredClone(duplicate.assessments[0]));
