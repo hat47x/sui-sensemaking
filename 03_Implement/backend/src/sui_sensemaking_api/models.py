@@ -15,7 +15,7 @@ from typing import Literal
 # fields is ever added; that is the point at which naive/aware mixing would
 # actually produce wrong results rather than accepted-but-unenforced data.
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from sqlalchemy import Boolean, CheckConstraint, Index, Integer, String, Text, text
 from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -1068,6 +1068,22 @@ class SummaryHistoryEntry(BaseModel):
     groundingIds: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
+class RepresentativeVisualCue(BaseModel):
+    # DOMAIN-VISUAL-CUE-01 (schemas.md §19.1). Mirrors the TS RepresentativeVisualCue in
+    # types.ts. Paths C/D (external or generated images) are deferred, so no rights fields.
+    kind: Literal["hand_drawn", "user_image", "preset_svg", "emoji"]
+    cueId: str
+    altText: str
+    imageRef: str | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def drop_image_ref_outside_image_kinds(self) -> "RepresentativeVisualCue":
+        # schemas.md §19.3: imageRef is meaningful only for hand_drawn / user_image.
+        if self.kind not in ("hand_drawn", "user_image"):
+            self.imageRef = None
+        return self
+
+
 class Island(BaseModel):
     id: str
     cardIds: list[str]
@@ -1089,6 +1105,23 @@ class Island(BaseModel):
     geometry: IslandGeometry | None = Field(default=None, exclude_if=lambda value: value is None)
     shape: IslandShape | None = Field(default=None, exclude_if=lambda value: value is None)
     shapeStale: bool | None = Field(default=None, exclude_if=lambda value: value is None)
+    representativeCue: RepresentativeVisualCue | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @field_validator("representativeCue", mode="before")
+    @classmethod
+    def omit_invalid_representative_cue(cls, value: object) -> object:
+        # schemas.md §19.3 / §19.6: an invalid cue omits only representativeCue. The island and
+        # the document are kept, so a stale or hand-edited cue never rejects the whole PUT.
+        # This matches the lenient rule of validate.ts parseRepresentativeCue.
+        if value is None:
+            return None
+        try:
+            RepresentativeVisualCue.model_validate(value)
+        except ValidationError:
+            return None
+        return value
 
     @model_validator(mode="after")
     def normalize_geometry_shape(self) -> "Island":

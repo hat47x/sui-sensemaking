@@ -44,6 +44,7 @@ TYPE_MAP: dict[str, str] = {
     "Card": "Card",
     "Edge": "Edge",
     "Island": "Island",
+    "RepresentativeVisualCue": "RepresentativeVisualCue",
     "Affiliation": "Affiliation",
     "EvidenceLink": "EvidenceLink",
     "Narrative": "Narrative",
@@ -62,10 +63,8 @@ TYPE_MAP: dict[str, str] = {
 
 # type name -> {field names TS has that Python is known and intentionally not to have yet}.
 KNOWN_TS_ONLY_GAPS: dict[str, set[str]] = {
-    # F-1 (still open as of this test's authoring): Island.representativeCue is
-    # silently dropped on every server round-trip. Tracked separately from R3/R4's
-    # scope; not fixed here. Removing this entry is the acceptance signal for that fix.
-    "Island": {"representativeCue"},
+    # F-1 (Island.representativeCue) is closed: the Python model declares it
+    # (DOMAIN-VISUAL-CUE-01, schemas.md §19). Each new entry must cite its tracking artifact.
 }
 
 # type name -> {field names Python has that TS is known and intentionally not to have}.
