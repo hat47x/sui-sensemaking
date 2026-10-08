@@ -77,6 +77,8 @@ ReferenceではUI actionとして次を置く。
 
 review-event intentだけはpure adapterでTEIの `tei.epistemic-review-command/v0` / `tei.reference.epistemic-review-command/v0` へ変換できる。commandにはreviewer / event ID / occurredAtと、meaning / subject / target / review-sequenceの楽観ロックreceiptを渡す。
 
+実行adapterはcommandだけでなく、review event時刻を包含するfresh mutation contextをTEI側へ渡す。UI表示時の古いProjection contextをそのまま再利用しない。TEI側でcurrent scope compatibility / target bindingを再評価し、変化していれば古いUI操作を拒否する。
+
 classification-change intentとreview-request intentはこのadapterの入力型にしない。
 
 実際のkeyboard bindingは画面統合時にaccessibility / IME / browser shortcutとの競合を確認して決める。ここではaction semanticsだけをcandidateとして固定する。
