@@ -25,7 +25,11 @@ SUIには既に次がある。
 
 TEIへconfirmation eventを書き戻す実adapterは後続とし、この段階では`EpistemicReviewIntent`だけを生成する。UI操作と永続化を分離し、既存reviewEventsやTEI sidecarへの接続方式を後から選べるようにする。
 
-intentには、表示時点の `meaningFingerprint`、`targetBinding`、`reviewLogSequence` を期待値として持たせる。永続化adapterはこれらを楽観ロックとしてTEIへ渡し、別surfaceで意味編集、target移動、review event追加が起きていれば古い確認操作を拒否できるようにする。件数とsequenceは同一視しない。
+intentには、表示時点の `meaningFingerprint`、opaqueな `reviewSubjectFingerprint`、`targetBinding`、`reviewLogSequence` を期待値として持たせる。
+
+`reviewSubjectFingerprint` はreview event自体を除いたepistemic subject（target、statement kind、scope、Evidence、relations等）の同時実行receiptであり、Truthやsemantic identityの証明には使わない。
+
+永続化adapterはこれらを楽観ロックとしてTEIへ渡し、別surfaceで意味編集、scope / classification / Evidence / relation変更、target移動、review event追加が起きていれば古い確認操作を拒否できるようにする。件数とsequenceは同一視しない。
 
 ## 表示モデル
 

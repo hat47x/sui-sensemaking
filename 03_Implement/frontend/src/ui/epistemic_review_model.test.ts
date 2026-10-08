@@ -17,6 +17,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "user-premise",
         meaningFingerprint: "sha256:0101010101010101010101010101010101010101010101010101010101010101",
+        reviewSubjectFingerprint: "sha256:1515151515151515151515151515151515151515151515151515151515151515",
         reviewLogSequence: 0,
         contentOrigin: "user",
         metadataState: "complete",
@@ -32,6 +33,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "ai-candidate",
         meaningFingerprint: "sha256:0202020202020202020202020202020202020202020202020202020202020202",
+        reviewSubjectFingerprint: "sha256:1616161616161616161616161616161616161616161616161616161616161616",
         reviewLogSequence: 0,
         contentOrigin: "ai",
         metadataState: "complete",
@@ -47,6 +49,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "confirmed",
         meaningFingerprint: "sha256:0303030303030303030303030303030303030303030303030303030303030303",
+        reviewSubjectFingerprint: "sha256:1717171717171717171717171717171717171717171717171717171717171717",
         reviewLogSequence: 1,
         contentOrigin: "external",
         metadataState: "complete",
@@ -62,6 +65,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "confirmed-hypothesis",
         meaningFingerprint: "sha256:0404040404040404040404040404040404040404040404040404040404040404",
+        reviewSubjectFingerprint: "sha256:1818181818181818181818181818181818181818181818181818181818181818",
         reviewLogSequence: 1,
         contentOrigin: "user",
         metadataState: "complete",
@@ -77,6 +81,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "reanchored",
         meaningFingerprint: "sha256:0505050505050505050505050505050505050505050505050505050505050505",
+        reviewSubjectFingerprint: "sha256:1919191919191919191919191919191919191919191919191919191919191919",
         reviewLogSequence: 0,
         contentOrigin: "user",
         metadataState: "complete",
@@ -92,6 +97,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "ambiguous",
         meaningFingerprint: "sha256:0606060606060606060606060606060606060606060606060606060606060606",
+        reviewSubjectFingerprint: "sha256:1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
         reviewLogSequence: 0,
         contentOrigin: "ai",
         metadataState: "complete",
@@ -108,6 +114,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "partial",
         meaningFingerprint: "sha256:0707070707070707070707070707070707070707070707070707070707070707",
+        reviewSubjectFingerprint: "sha256:1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
         reviewLogSequence: 1,
         contentOrigin: "external",
         metadataState: "partial",
@@ -124,6 +131,7 @@ function projection(): EpistemicProjectionInput {
       {
         assertionId: "conflict",
         meaningFingerprint: "sha256:0808080808080808080808080808080808080808080808080808080808080808",
+        reviewSubjectFingerprint: "sha256:1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
         reviewLogSequence: 1,
         contentOrigin: "external",
         metadataState: "complete",
@@ -253,6 +261,7 @@ describe("epistemic review UI model", () => {
       operation: "confirm",
       source: "human-ui",
       expectedMeaningFingerprint: item.meaningFingerprint,
+      expectedReviewSubjectFingerprint: item.reviewSubjectFingerprint,
       expectedTargetBinding: "not-required",
       expectedReviewLogSequence: 0,
     });
@@ -264,6 +273,7 @@ describe("epistemic review UI model", () => {
     if (!item) throw new Error("fixture item missing");
     const intent = buildEpistemicReviewIntent(item, "reject");
     expect(intent.expectedMeaningFingerprint).toBe(item.meaningFingerprint);
+    expect(intent.expectedReviewSubjectFingerprint).toBe(item.reviewSubjectFingerprint);
     expect(intent.expectedReviewLogSequence).toBe(1);
     expect(intent.expectedTargetBinding).toBe("exact");
   });
@@ -332,6 +342,10 @@ describe("epistemic review UI model", () => {
     const invalidFingerprint = projection();
     invalidFingerprint.assessments[0].meaningFingerprint = "sha256:not-a-digest";
     expect(() => buildEpistemicUiItems(invalidFingerprint)).toThrow(/invalid meaningFingerprint/);
+
+    const invalidSubject = projection();
+    invalidSubject.assessments[0].reviewSubjectFingerprint = "sha256:not-a-digest";
+    expect(() => buildEpistemicUiItems(invalidSubject)).toThrow(/invalid reviewSubjectFingerprint/);
 
     const invalidSequence = projection();
     invalidSequence.assessments[0].reviewLogSequence = -1;
