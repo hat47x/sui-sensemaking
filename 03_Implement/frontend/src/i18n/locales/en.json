@@ -1882,5 +1882,9 @@
   "epistemic.action.request_review": "Request review",
   "epistemic.action.refresh_source": "Refresh",
   "epistemic.hint.target_reanchored": "Target re-anchored",
-  "epistemic.hint.inferred_context": "Includes inferred context"
+  "epistemic.hint.inferred_context": "Includes inferred context",
+  "epistemic.health.partial": "Partial view — project-wide health cannot be determined",
+  "epistemic.health.critical": "Critical epistemic issues require attention",
+  "epistemic.health.attention": "Some information requires review",
+  "epistemic.health.normal": "No critical epistemic issues detected"
 }
