@@ -70,6 +70,21 @@ export type EpistemicCoverageAreaInput = {
   reasons?: string[];
 };
 
+export type EpistemicResolutionCoverageInput = {
+  eligible: number;
+  resolved: number;
+  confirmed: number;
+  nativePremise: number;
+  rejected: number;
+  unresolved: number;
+  ratio: number;
+  minimumRatio?: number;
+  minimumEligibleAssertions?: number;
+  requiredResolutions?: number;
+  state: "not-configured" | "unknown" | "insufficient-sample" | "healthy" | "attention";
+  reasons?: string[];
+};
+
 export type EpistemicProjectionInput = {
   contract: string;
   schema: string;
@@ -77,6 +92,7 @@ export type EpistemicProjectionInput = {
   health: {
     level: string;
     viewMetadataState: EpistemicMetadataState;
+    resolutionCoverage?: EpistemicResolutionCoverageInput;
     coverage?: {
       areas?: EpistemicCoverageAreaInput[];
     };
@@ -229,6 +245,9 @@ export type EpistemicHealthPresentation = {
   mayClaimProjectHealthy: boolean;
   coverageGapCount: number;
   criticalCoverageGapCount: number;
+  resolutionCoverageState?: EpistemicResolutionCoverageInput["state"];
+  resolvedRatio?: number;
+  requiredResolutions?: number;
 };
 
 export const EPISTEMIC_QUICK_KEYS: Readonly<Record<string, EpistemicUiAction>> = Object.freeze({
@@ -271,6 +290,45 @@ function assertProjectionShape(projection: EpistemicProjectionInput): void {
     throw new Error("epistemic projection health is required");
   }
   assertKnown(projection.health.viewMetadataState, METADATA_STATES, "health.viewMetadataState");
+  const resolutionCoverage = projection.health.resolutionCoverage;
+  if (resolutionCoverage !== undefined) {
+    const counts = [
+      resolutionCoverage.eligible,
+      resolutionCoverage.resolved,
+      resolutionCoverage.confirmed,
+      resolutionCoverage.nativePremise,
+      resolutionCoverage.rejected,
+      resolutionCoverage.unresolved,
+      resolutionCoverage.requiredResolutions ?? 0,
+      resolutionCoverage.minimumEligibleAssertions ?? 0,
+    ];
+    if (counts.some((value) => !Number.isInteger(value) || value < 0)) {
+      throw new Error("epistemic resolutionCoverage counts must be non-negative integers");
+    }
+    if (
+      resolutionCoverage.ratio < 0 ||
+      resolutionCoverage.ratio > 1 ||
+      (resolutionCoverage.minimumRatio !== undefined &&
+        (resolutionCoverage.minimumRatio < 0 || resolutionCoverage.minimumRatio > 1))
+    ) {
+      throw new Error("epistemic resolutionCoverage ratio must be between 0 and 1");
+    }
+    if (
+      resolutionCoverage.resolved > resolutionCoverage.eligible ||
+      resolutionCoverage.unresolved > resolutionCoverage.eligible ||
+      resolutionCoverage.resolved + resolutionCoverage.unresolved !== resolutionCoverage.eligible
+    ) {
+      throw new Error("epistemic resolutionCoverage counts are inconsistent");
+    }
+    const allowedStates = new Set([
+      "not-configured",
+      "unknown",
+      "insufficient-sample",
+      "healthy",
+      "attention",
+    ]);
+    assertKnown(resolutionCoverage.state, allowedStates, "health.resolutionCoverage.state");
+  }
 
   const seen = new Set<string>();
   for (const assessment of projection.assessments) {
@@ -623,5 +681,8 @@ export function buildEpistemicHealthPresentation(
     mayClaimProjectHealthy: !partial && severity === "normal",
     coverageGapCount: gaps.length,
     criticalCoverageGapCount: criticalGaps.length,
+    resolutionCoverageState: projection.health.resolutionCoverage?.state,
+    resolvedRatio: projection.health.resolutionCoverage?.ratio,
+    requiredResolutions: projection.health.resolutionCoverage?.requiredResolutions,
   };
 }
