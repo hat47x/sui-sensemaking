@@ -185,6 +185,7 @@ function projection(): EpistemicProjectionInput {
       "review-history-is-bounded-by-context-as-of",
       "review-binding-includes-context-kind-and-target-identity",
       "review-binding-includes-validity-window",
+      "checked-at-is-bound-to-current-subject",
       "reviewer-candidate-is-not-review-authority",
     ],
   };
