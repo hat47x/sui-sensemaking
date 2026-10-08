@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>認知機能と文化的体系から広げる発想 — SUI Sensemaking</title>
+  <style>
+    :root{color-scheme:light;--paper:#f6f3eb;--ink:#263530;--muted:#58675f;--line:#d6ddd3;--panel:#fffef9;--accent:#205b4b;--soft:#e8eee4;--warm:#8b4f28}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:1rem}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Yu Gothic UI","Meiryo",sans-serif}main{max-width:1220px;margin:auto;padding:40px 28px 80px}h1,h2,h3{line-height:1.45}h1{font-size:clamp(27px,4vw,45px);max-width:900px;margin:15px 0}h2{font-size:25px;margin-top:0}h3{font-size:19px}p{margin:12px 0}a{color:var(--accent);text-underline-offset:3px}code{font-size:.9em;overflow-wrap:anywhere}.eyebrow{color:var(--warm);font-weight:700;font-size:13px;letter-spacing:.08em}.lead{max-width:900px;font-size:18px}.note{color:var(--muted);font-size:14px}.panel{background:var(--panel);border:1px solid var(--line);padding:25px;border-radius:14px;margin:24px 0}nav{display:flex;gap:10px 22px;flex-wrap:wrap;margin:24px 0}nav a{font-size:14px}.stats{display:flex;gap:35px;flex-wrap:wrap;margin:24px 0}.stats strong{display:block;font-size:31px;line-height:1.3}.stats span{font-size:14px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.axes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.axes p{margin:0;padding:12px;background:var(--soft);border-radius:8px}.axes strong{display:block}.axes span{font-size:13px;color:var(--muted)}.frameworks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.framework{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}.framework h3{margin:0 0 10px}.framework p{font-size:14px}.framework summary{cursor:pointer;color:var(--accent);font-size:14px}.controls{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}.controls label{display:flex;flex-direction:column;font-size:13px;font-weight:700;gap:5px}input,select,button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid #87988e;border-radius:7px;padding:9px;min-height:44px;min-width:0}button{cursor:pointer}button:hover{background:var(--soft)}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.controls .wide{grid-column:1/-1}.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0}.count{font-size:14px;font-weight:700}.idea{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;scroll-margin-top:20px}.idea h3{margin:6px 0 10px}.idea .id{font:12px/1.5 ui-monospace,monospace;color:var(--muted)}.badges{display:flex;gap:6px;flex-wrap:wrap}.badge{font-size:12px;line-height:1.6;background:var(--soft);padding:3px 8px;border-radius:5px}.probe{border-left:3px solid var(--accent);padding-left:12px;font-size:14px;color:var(--muted)}.idea[hidden]{display:none}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}thead{background:var(--soft)}th{font-weight:700}ul,ol{padding-left:1.5em}li{margin:7px 0}.sample{background:var(--soft);border-radius:8px;padding:15px}.sample p{font-size:14px;margin:6px 0}.diagram-fallback{white-space:pre-wrap;font:14px/1.9 inherit;padding:14px;background:var(--soft);border-radius:8px}.mermaid{overflow:auto}.sources li{font-size:14px}.warning{border-left:4px solid var(--warm);padding-left:16px}.empty{padding:20px;background:var(--soft)}footer{font-size:13px;color:var(--muted);margin-top:35px}#ideas{margin-top:16px}@media(max-width:800px){.frameworks,.axes{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{grid-template-columns:1fr 1fr}.controls label:first-child{grid-column:1/-1}}@media(max-width:560px){main{padding:24px 16px 50px}.panel{padding:18px}.grid,.frameworks,.axes,.controls{grid-template-columns:1fr}.controls label:first-child{grid-column:auto}.stats{gap:22px}.idea{padding:16px}h2{font-size:22px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media print{body{background:white}main{max-width:none;padding:0}.controls,.actions,nav{display:none}.idea,.framework,.panel{break-inside:avoid}.grid{display:block}.idea{margin-bottom:12px}a{color:inherit}.mermaid{display:none}.diagram-fallback{display:block!important}}
+  </style>
+  <style>
+    .kernel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}.kernel h3{margin:0 0 12px}.kernel p,.kernel li{font-size:14px}.kernel .outcome{background:var(--soft);padding:12px;border-radius:7px}.probe-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}.probe-controls label{font-size:14px;display:flex;flex-direction:column;gap:5px}.probe-result{background:var(--soft);border-radius:8px;padding:16px}.probe-result h3{margin-top:0}.probe-result p{font-size:14px}.probe-result code{letter-spacing:.15em}.kernel-links{font-size:13px}.research-label{color:var(--warm);font-size:12px;font-weight:700}.experiment-paths{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.experiment-paths p{margin:0;background:var(--panel);padding:12px;border-radius:7px}@media(max-width:800px){.probe-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.probe-controls,.experiment-paths{grid-template-columns:1fr}}
+  </style>
+  <style>
+    #depth-cases .sample{margin:20px 0}#depth-cases th:first-child{width:22%}@media(max-width:560px){#depth-cases table{min-width:680px}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">SUI SENSEMAKING / 発散のための設計資料 / 2026-10-08</div>
+    <h1>認知機能と文化的体系から<br>発想の範囲を広げる</h1>
+    <p class="lead">注意の向け先から、問い、境界、推論、時間、身体、記憶、行動までを探索する。文化体系に固有の構造を仮に動かし、対象とぶつかるところから新しい機能案を作る。</p>
+    <p class="warning">この資料は発想案であり、採用済みの仕様・実装・価値実証ではない。102の体系別案、36の交差案、12の追加調査案を残した。案数は理解の網羅性や効果を示さない。</p>
+    <div class="stats" aria-label="発想案の内訳"><div><strong>150</strong><span>発想案</span></div><div><strong>23</strong><span>参照した体系・実践</span></div><div><strong>6</strong><span>深める機能の方向</span></div></div>
+    <nav aria-label="資料の目次"><a href="#stance">考え方</a><a href="#axes">認知の仕事</a><a href="#deepening">深める6方向</a><a href="#value-priorities">価値から計画へ</a><a href="#depth-cases">検証へつなぐ深掘り</a><a href="#operation-probe">操作を動かす</a><a href="#frameworks">文化体系</a><a href="#catalogue">発想を探す</a><a href="#case">架空資料での展開</a><a href="#entry">試せる入口</a><a href="#implementation">実現方式</a><a href="#sources">参照と限界</a></nav>
+  </header>
+
+  <section id="stance" class="panel">
+    <h2>文化体系との接触から、何を生むか</h2>
+    <p>まず対象の材料を読み、まだ説明できない差や引っかかりを残す。その後に「この体系の規則を仮に走らせるなら、何があるはずか」と強く考える。体系に合わない材料は、問いや組み替えを生む手掛かりになる。</p>
+    <p>ここで借りるのは、たとえば易の位置と組合せ、ニヤーヤの理由から適用への橋、マヤ暦の複数周期、波航海術の事前模型と現場の手掛かりの往復である。個々の体系の宗教、歴史、実践を、この操作だけで説明し尽くしたとは扱わない。</p>
+    <div class="diagram-fallback" id="diagram-fallback">対象の材料 → 体系固有の操作と接触 → 一致・抵抗・残差 → 新しい問い・機能案 → 元資料・観察へ返す → 理解を更新する
+                                    ↑ 別の体系との接触からも広げる</div>
+    <pre class="mermaid" id="contact-diagram" hidden>flowchart LR
+      T[対象の材料] --> C[体系固有の操作との接触]
+      F[文化体系の資料] --> C
+      C --> D[一致・抵抗・残差]
+      D --> Q[新しい問い・機能案]
+      Q --> R[元資料・観察へ返す]
+      R --> U[理解を更新する]
+      U --> T</pre>
+    <p class="note">図は探索の考え方を示す。SUIとCSWの接続が実装済みであることを示す図ではない。図の描画ライブラリを取得できない場合も、上の文章と本文は読める。</p>
+    <ul>
+      <li>対象が示すこと、体系から生まれたこと、両者の接触で生まれたこと、未解決のことを区別する。由来と、後に得た支持・反証も分ける。</li>
+      <li>体系名を外して問いが残るかを見る。それだけで対象側の事実や効果が証明されたことにはならない。</li>
+      <li>同じ一般的な問いで足りる案、無理な対応しか生まない案、有用な増分がない接触も残す。文化体系の使用自体を成果にしない。</li>
+      <li>AI Workspaceでの多段探索は射程に含める。人間の採用、Accepted、Consensus、<code>human_reviewed</code>への昇格は現行の権限境界に従う。</li>
+    </ul>
+  </section>
+
+  <section id="axes" class="panel">
+    <h2>認知の仕事を12方向に広げる</h2>
+    <p>検索や類似度だけに閉じず、利用者が何をできるようになるかで分ける。これは本資料の整理軸であり、人間の認知機能の学術的分類を主張するものではない。</p>
+    <div class="axes">
+      <p><strong>注意</strong><span>見ていない材料、空白、弱い手掛かりへ戻る</span></p>
+      <p><strong>問い</strong><span>二択、前提、争点、調べるべきことを変える</span></p>
+      <p><strong>分節・境界</strong><span>切り方、単位、内外、入口を置き直す</span></p>
+      <p><strong>条件・矛盾</strong><span>主張が成立する条件と、残る対立を扱う</span></p>
+      <p><strong>関係・全体</strong><span>部分、役割、ネットワークを往復する</span></p>
+      <p><strong>推論</strong><span>理由、例、適用、反例を辿る</span></p>
+      <p><strong>時間・変化</strong><span>周期、段階、位相差、不可逆性を考える</span></p>
+      <p><strong>立場・価値</strong><span>誰から見た意味か、何を守るかを開く</span></p>
+      <p><strong>身体・受容</strong><span>体験、表現、知覚、受け取り方を扱う</span></p>
+      <p><strong>記憶・来歴</strong><span>過去の材料、伝達経路、改変へ戻る</span></p>
+      <p><strong>自己点検</strong><span>自分の読み、誘導、過剰な説明を点検する</span></p>
+      <p><strong>試行・再開</strong><span>確認、可逆な試行、停止、再開へつなぐ</span></p>
+    </div>
+  </section>
+
+  <section id="deepening" class="panel">
+    <h2>発想を、理解の変化が残る6方向へ深める</h2>
+    <p>有望と判断する根拠は、SUIの一次利用仕事へ直接つながり、操作前後の違いを元資料で考えられ、小さな手作業から試せることである。これは設計上の判断であり、効果を測定した順位ではない。新たな36案をI115〜I150に追加した。</p>
+    <p>中心に置く問いは「案が増えたか」から一歩進めて、「何を別々に扱えるようになり、その違いが次の読み・構造・確認へどう残るか」とする。身体・集団・記憶・価値・時間も、この変化の中へ接続する。</p>
+    <div class="grid">
+      <article class="kernel" id="kernel-generation">
+        <h3>1. 条件を保った別解生成</h3>
+        <p><strong>使う場面</strong>：同じ表札の言い換えは増えるが、問題の捉え方が変わらないとき。</p>
+        <ol><li>材料の区別を仮の位置や条件へ対応づけ、割当の理由と未確定部分を置く。</li><li>易の位置構造を参照した一位置の反転、Llull由来の二項・三項の交差を行う。</li><li>パーニニ由来の継承条件の展開で、候補がどの前提を変えたかを戻す。</li></ol>
+        <p class="outcome"><strong>残すもの</strong>：変更した条件、変えなかった条件、新しい関係・問い、確かめる原文。例：「受付を増やす」から「担当交代後の照会経路を作る」へ問題を分ける。</p>
+        <p><strong>文化体系が働く部分</strong>：連想の雰囲気ではなく、位置・反転・組合せ・継承という操作で別の近傍を開く。対応づけは設計者の仮定とする。</p>
+        <p><strong>比較する相手</strong>：通常の条件表、形態分析、反実仮想の問い。これらで同じ関係が見えるなら、文化体系を常設する理由は薄い。</p>
+        <p class="kernel-links"><a href="#I115">I115〜I120：位置、順序、条件、未検討の交差</a></p>
+      </article>
+      <article class="kernel" id="kernel-grounding">
+        <h3>2. 推論と根拠へ往復できる説明</h3>
+        <p><strong>使う場面</strong>：説明は筋が通るが、どの材料がどの推論を支えるか分からないとき。</p>
+        <ol><li>ニヤーヤ由来の主張・理由・例・適用を展開する。</li><li>isnād / matn由来の本文と伝達経路を分け、共通出所への合流を辿る。</li><li>ヴェーダ詠唱の複数表現による系列保持を参照し、連続文・単位・隣接関係の差から、消えた条件を探す。</li></ol>
+        <p class="outcome"><strong>残すもの</strong>：推論の未確認部分と、伝達中の変形を別々に示した読み。原文が変わったのか、結論への橋が変わったのかを区別できる。</p>
+        <p><strong>文化体系が働く部分</strong>：論証、来歴、系列の忠実性を異なる操作として往復する。複数の表現が一致しても、同じ原文から作ったものを独立の証拠とは数えない。</p>
+        <p><strong>比較する相手</strong>：引用リンク、通常の差分、論証図。単なる転記ミスなら通常の差分で足りる。意味の橋を検討する必要が残るかを見る。</p>
+        <p class="kernel-links"><a href="#I121">I121〜I126：適用条件、伝達損失、反例</a></p>
+      </article>
+      <article class="kernel" id="kernel-memory">
+        <h3>3. 理解の差分を引き継ぐ記憶</h3>
+        <p><strong>使う場面</strong>：資料は保存したのに、前回何を疑い、なぜ組み替えたかを思い出せないとき。</p>
+        <ol><li>場所法由来の安定した索引と、そこへ結びつけた内容を分ける。</li><li>khipu由来の多チャンネルの記録構造から、本文以外の配置・所属・関係で保持していた差を洗い出す。</li><li>Ifá研究候補から、短い索引が一つの答えではなく複数の物語へ戻る構造を参照し、対象者が利用権を持つ過去事例を読み直す。</li></ol>
+        <p class="outcome"><strong>残すもの</strong>：変わった問い、更新した理由、残る反例、再開条件。似た過去の結論ではなく、「以前どの条件で読みを変えたか」へ戻れる。</p>
+        <p><strong>文化体系が働く部分</strong>：索引と内容、多チャンネルと意味不明部分、事例の検索と状況に応じた解釈を区別する。Ifáの詩句・占断・宗教的権威を再現しない。</p>
+        <p><strong>比較する相手</strong>：全文検索、ブックマーク、版の差分。記憶支援でなく記録量の増加になる場合は、現在の注意から外しても戻れる表示を試す。</p>
+        <p class="kernel-links"><a href="#I127">I127〜I132：再会、意味の差分、可逆な注意の退避</a></p>
+      </article>
+      <article class="kernel" id="kernel-dissent">
+        <h3>4. 異論ごとの応答を残す統合</h3>
+        <p><strong>使う場面</strong>：全体の説明はできたが、重要な異論へ答えたか確かめられないとき。1人とAIの作業にも使える。</p>
+        <ol><li>スコラ学の討論的著述を参照し、問い・異論・主応答・異論別の返答を分ける。</li><li>stasis由来の争点定位とジャイナ由来の条件付けで、応答がどの異論に答えているかを読む。</li><li>返答によって問題の条件を変えた箇所と、答えられず残った異論を置く。</li></ol>
+        <p class="outcome"><strong>残すもの</strong>：異論と返答の対応、残る異論、変更した条件。反対意見を一つの弱い要約にまとめず、統合が引き受ける限界を読める。</p>
+        <p><strong>文化体系が働く部分</strong>：「両論を挙げる」から、先の異論へ個別に戻る応答構造へ進む。AIが作った異論は模擬候補と明示し、実在者の発言を代弁したことにしない。</p>
+        <p><strong>比較する相手</strong>：通常の論点整理、賛否表、反例の確認。応答欄を埋めただけになるなら、保留を保持した元の材料へ戻す。</p>
+        <p class="kernel-links"><a href="#I133">I133〜I138：異論別応答、役割、未統合の保存</a></p>
+      </article>
+      <article class="kernel" id="kernel-values">
+        <h3>5. 価値と規則の衝突を読める構成</h3>
+        <p><strong>使う場面</strong>：何をすべきかという文が衝突し、どちらを採るかだけの話になっているとき。</p>
+        <ol><li>ミーマーンサー研究候補を参照し、規定・目的・対象・補足をどこまで一単位として読むかを検討する。</li><li>パーニニ研究候補から、継承条件・一般則・限定規則・規則間の扱いを展開する。</li><li>両方を保つ案、適用範囲を分ける案、解消できない衝突を候補として並べる。</li></ol>
+        <p class="outcome"><strong>残すもの</strong>：何を守るための規則か、どの場面に適用するか、誰の負担や価値が動くか。例：「録画で参加機会を広げる」と「率直に話せる場を守る」を別の目的として読む。</p>
+        <p><strong>文化体系が働く部分</strong>：文脈からの補足と明文を分け、規則の意味単位と適用の仕組みを区別する。目的から権限や例外を勝手に作らない。</p>
+        <p><strong>比較する相手</strong>：通常の要件整理と規則表。対象に優先関係が明記されていればそれに従う。SUIの安全不変条件を解釈で緩める操作には使わない。</p>
+        <p class="kernel-links"><a href="#I139">I139〜I144：規定、目的、例外、判断主体</a></p>
+      </article>
+      <article class="kernel" id="kernel-control">
+        <h3>6. 探索の進み方を調整する</h3>
+        <p><strong>使う場面</strong>：案が増え続ける、早く閉じすぎる、後で再開する条件が分からないとき。</p>
+        <ol><li>能の序破急研究候補から、準備・展開・集中という時間上の働きを読む。三等分の固定手順にはしない。</li><li>波航海術由来の次の手掛かりと、マヤ暦由来の複数条件の再来を分ける。</li><li>現在の問いを動かした差、次に得る材料、進む・戻る・止める条件を具体化する。</li></ol>
+        <p class="outcome"><strong>残すもの</strong>：問いの更新、可逆な試行、撤回・再開の契機。停止は候補数や美しい説明の完成ではなく、この作業で今確かめられることに結びつける。</p>
+        <p><strong>文化体系が働く部分</strong>：反復する時間、作業中の速度変化、現場の手掛かりを区別する。身体的な疲れや違和感は利用者の申告として扱い、操作履歴から内面を診断しない。</p>
+        <p><strong>比較する相手</strong>：通常の時間配分、タイムボックス、再開メモ。問いが変わらず手順だけ増えるなら、その操作は外す。</p>
+        <p class="kernel-links"><a href="#I145">I145〜I150：進行、身体、停止、経路の学習</a></p>
+      </article>
+    </div>
+    <h3>6方向を一つの探究につなぐ例</h3>
+    <p>架空の読書会で「録画を公開して参加機会を増やすか」を考える。B01「夜なら参加できる」、B02「短い会なら来たい」、B03「遠い人にも録画を」、B04「録画されると個人的な体験を話しにくい」、B05「結論だけ残って理由を思い出せない」、B06「新しい人は結論の背景が分からない」、B07「準備が同じ担当へ偏る」、B08「読む時間のない人も参加したい」という発言を置く。すべて本資料のための架空資料である。</p>
+    <div class="table-wrap"><table><thead><tr><th>操作</th><th>具体的に変わる問い・成果</th></tr></thead><tbody>
+      <tr><td>別解を作る</td><td>録画の有無を一つ変えるだけでなく、対話、参加導線、後から読む資料を別の位置として組み替える（B03・B04・B08）。</td></tr>
+      <tr><td>推論を戻す</td><td>「録画があれば理解できる」という橋を、視聴できること、背景を知ること、問い返せることへ分ける（B03・B06）。B06だけで録画の無効性は証明しない。</td></tr>
+      <tr><td>記憶をつなぐ</td><td>結論への短い索引から、当時の問い・異論・理由へ戻る経路を作る（B05・B06）。最終文の保存だけでは見えなかった必要物が具体化する。</td></tr>
+      <tr><td>異論へ返す</td><td>B04・B07・B08を別々の異論として残す。録画への返答が運営負担や事前読書の問題にも答えたことにはしない。</td></tr>
+      <tr><td>目的と規則を分ける</td><td>参加機会、率直な対話、理解の引継ぎ、運営負担を別の目的として置く。どれを優先するかは当事者の判断として残す。</td></tr>
+      <tr><td>次に確かめる</td><td>「対話と公開用の再構成を分ける」という一つの案について、発言のしやすさ、後から辿れる理由、再構成の負担をそれぞれ確認する。</td></tr>
+    </tbody></table></div>
+    <p><strong>ここから生まれる第三の構成</strong>は、「参加する機会」「その場で話す自由」「後から理解する経路」「維持する負担」を別々に扱いながらつなぐ作業面である。これは本資料の設計仮説であり、録画をしない案の採用や価値実証ではない。全ての方向を毎回実行する必要もない。</p>
+    <p><strong>取り込み時に見る差</strong>：新しい問いが、どの原文の読み、どの関係、どの保留、どの試行を変えたか。単に新しい語が付いた場合と区別する。通常の手作業、体系を使わない同等の問い、体系固有操作を比較し、残る認知増分がある範囲を選ぶ。</p>
+  </section>
+
+  <section id="value-priorities" class="panel">
+    <h2>SUIの一次価値に近いものから、計画へ取り込む</h2>
+    <p>文化体系の独自性より、SUIで利用者が何を理解し直せるかを優先する。<a href="../01_Plans/adr/ADR-0089-product-value-canon.md">価値の正本</a>に照らし、次の3件を<a href="../01_Plans/cognitive_cultural_validation_plan.md">段階計画</a>へ取り込んだ。これは価値への寄与にもとづく設計上の優先順位であり、実務効果の順位ではない。</p>
+    <ol>
+      <li><strong><a href="../01_Plans/cognitive_cultural_validation_plan.md#product-grounding">根拠へ戻って理解を見直す</a></strong>。説明、元カード、原文参照、未確認の適用条件を往復する。後から理由へ戻れる理解という核を先に支える。</li>
+      <li><strong><a href="../01_Plans/cognitive_cultural_validation_plan.md#product-alternatives">異論・保留を残して別の構造を比べる</a></strong>。異論に応答した範囲を確かめ、問いや条件を変えた別構成を元資料と比べる。残る真の対立も構造に残す。</li>
+      <li><strong><a href="../01_Plans/cognitive_cultural_validation_plan.md#product-continuity">理解の差を次の観察と再開へ引き継ぐ</a></strong>。変えた読み、変わらない前提、残る問い、観察結果へ戻る。結論の保存から、理由を再構成できる再開へ進める。</li>
+    </ol>
+    <p>各計画に利用場面、最小範囲、残す成果、受入条件、実務で確認する差を記載した。条件反転は第2計画の選択可能な操作、記憶・停止・再開は第3計画へ接続し、体系ごとの機能を並べて増やさない。provider=none、保留の容易さ、要求時に開く表示を維持する。</p>
+  </section>
+
+  <section id="depth-cases" class="panel">
+    <h2>体系の操作を、検証できる単位へ深める</h2>
+    <p>2026-10-08時点で、利用者の実務での有用性は未確認である。150案を保ちながら、一次価値へ直接つながる3方向を4つの設計例で深める。操作が何を分け、何を変え、どこで不要になるかを掘り下げ、<a href="../01_Plans/cognitive_cultural_validation_plan.md">段階計画</a>へ返す。以下は全て架空の設計例であり、T2の観察結果ではない。</p>
+    <p class="note">表が画面に収まらない場合は、表の中を横へスクロールして読める。</p>
+
+    <article id="depth-grounding" class="sample">
+      <h3>1. 根拠の数から、内容・経路・適用の違いへ</h3>
+      <p><strong>体系との接触</strong>：<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/nyaya-five-member-inference.md">ニヤーヤの理由・例・適用</a>と、<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/hadith-isnad-matn.md">isnād / matnの内容・伝達経路</a>を別の検査として動かす。一方を丁寧にたどれたことを、他方の保証にはしない。</p>
+      <p><strong>架空の材料</strong>：原通知R0には「試行期間中に申請できる。相談完了は担当者の確認後」とある。FAQのR1はR0を引用し、説明会資料R2はR1を再掲する。案内R3はR0から「申請できる」だけを抜き出した、と設定する。これらから「三つの案内が一致しているので、受付時点で相談は完了する」という主張を作ったとする。</p>
+      <div class="table-wrap"><table><thead><tr><th>分けて動かす操作</th><th>この設定から残る違い</th><th>まだ言えないこと</th></tr></thead><tbody>
+        <tr><td>経路の合流をたどる</td><td>R1・R2・R3は共通のR0へ戻る。三回の再話と、三回の独立した確認を区別する。</td><td>共通出所だから内容が誤り、とは言えない。実資料で経路が不明なら合流も確定しない。</td></tr>
+        <tr><td>本文の異同を読む</td><td>R3では期間条件と、相談完了の条件が失われている。どの変換で何が落ちたかを局所へ戻す。</td><td>欠落が意図的だった、実際に誤解を生んだ、とは言えない。</td></tr>
+        <tr><td>理由から適用への橋を開く</td><td>申請できることから相談完了へ移る追加仮定がある。原通知の文面はその橋を支えていない。</td><td>実運用で受付と確認が同時に完了する可能性は別に確認する必要がある。</td></tr>
+      </tbody></table></div>
+      <p><strong>新たに取り込める単位</strong>：未確認の伝達経路、支持の重複、適用条件の不足を別々に読み、該当原文へ戻る比較。既存のsupports経路表示だけで三つを判定できるとはしない。<code>Card.meta.source</code>は外部原文への手掛かり、<code>Card.sources</code>は統合元カード、<code>EvidenceLink</code>は支持・反証として意味を保つ。</p>
+      <p><strong>反例・不要になる条件</strong>：同じ案内を引用していても、ある資料が別の現場観察を加えている場合は、その部分まで重複と扱わない。出典文字列の一致や不一致では独立性を決められない。通常の引用表と原文確認でこの差が十分見えるなら、体系を常設する追加価値は未確認のままとする。</p>
+      <p><a href="#I121">I121</a>・<a href="#I122">I122</a>・<a href="#I124">I124</a>の深掘り。ここで得たのは検査の分離であり、真偽・信頼度の採点ではない。</p>
+    </article>
+
+    <article id="depth-dissent" class="sample">
+      <h3>2. 説明の完成から、異論に返した範囲へ</h3>
+      <p><strong>体系との接触</strong>：<a href="https://www.newadvent.org/summa/1002.htm">『神学大全』第1部第2問</a>で確認できる、主応答の後に個々の異論へ戻る著述構造を参照する。歴史的な権威や師弟関係は移さない。<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/research/framework-candidates/profiles/scholastic-disputed-question.md">CSWの研究用profile</a>は、成熟した通常のレビューとの重複を認め、runtime採用を保留している。</p>
+      <p><strong>架空の材料への再接触</strong>：読書会の問いを「参加機会を増やす運営案」と置き、B04の話しにくさ、B07の準備負担、B08の読む時間の不足を、別の懸念として保つ。案「毎回録画して公開する」へ返答を付けても、その返答がどの懸念を引き受けたかを別に見る。</p>
+      <div class="table-wrap"><table><thead><tr><th>残した懸念</th><th>仮の返答</th><th>返答後にも残る問い</th></tr></thead><tbody>
+        <tr><td>B04：録画されると個人的な体験を話しにくい</td><td>希望者だけを映す。</td><td>声や周囲の発言から個人が分かる場合、話しやすさを保てるか。録画の問題全体へ答えたことにはしない。</td></tr>
+        <tr><td>B07：準備が同じ担当へ偏る</td><td>録画と編集を分担する。</td><td>実際に引き受けられる人と時間はあるか。分担という語だけで負担を解消しない。</td></tr>
+        <tr><td>B08：読む時間のない人も参加したい</td><td>後で録画を見られる。</td><td>視聴時間と背景理解の条件は満たせるか。読書時間の不足へ録画が答えるという仮定を確かめる。</td></tr>
+      </tbody></table></div>
+      <p><strong>新たに取り込める単位</strong>：元の懸念の識別子を保ち、応答が変えた条件と未応答部分へ戻る比較。返答があること、異論が解消したこと、人が採用したことを区別する。共通の説明を付けただけで三件を応答済みにしない。</p>
+      <p><strong>反例・不要になる条件</strong>：元カードIDと個別応答、未解決点を通常のレビューで追えていれば、その方法で足りる。狭い問いに無関係な懸念まで強制的に結びつけず、問いを分けることも認める。懸念が残ることは説明の失敗と決めつけず、案の限界として引き継ぐ。</p>
+      <p><a href="#I133">I133</a>・<a href="#I134">I134</a>・<a href="#I135">I135</a>・<a href="#I138">I138</a>の深掘り。公開用の再構成を別に作る案でも、B07の負担は自動的に解消しない。</p>
+    </article>
+
+    <article id="depth-alternatives" class="sample">
+      <h3>3. 二択を開き、条件を戻し、別構成を元資料へ返す</h3>
+      <p><strong>深める区別</strong>：<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/catuskoti.md">四句分別</a>は問い・述語の置き方、<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/jain-sevenfold-predication.md">ジャイナ由来の操作</a>は述定の条件、<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/yijing.md">易を参照した反転</a>は仮の割当と変更箇所を扱う。三つを同じ分類器へまとめず、別々の働きとして動かす。</p>
+      <p><strong>問いの出発点</strong>：架空の読書会で、Pを「会の全対話を、不参加者へ録画公開する」と置く。B03の遠い人の参加機会、B04の話しにくさ、B07の運営負担を、この一つの二択へ入れたままでよいかを考える。</p>
+      <div class="table-wrap"><table><thead><tr><th>体系から参照する操作</th><th>この材料に対して動かすこと</th><th>具体的に残る問い・別構成</th></tr></thead><tbody>
+        <tr><td>四句分別由来の述語の点検</td><td>肯定・否定に加え、両方・どちらでもないという問いから、対象・場面・公開内容を一つにした枠を点検する。</td><td>公開する対象は全対話である必要があるか。対話と公開用の再構成資料を別々に扱う案を開く。</td></tr>
+        <tr><td>ジャイナ由来の条件付け</td><td>B03が求める参加の経路と、B04が問題にする個人的な体験の発話を、原文で分かる範囲まで戻す。不明な同意・対象・場面を補わない。</td><td>再構成資料なら参加機会を満たすか、話しやすさを保てるかは未確認。両方の目的が同じ場面でなお衝突する可能性も残す。</td></tr>
+        <tr><td>易を参照した仮の位置と変更</td><td>「公開対象」を仮の位置に置くなら、その割当と二つの選択肢を明示して変える。他の条件と未確定部分を保つ。</td><td>全対話から、人が確認した再構成資料へ変えたとき、B04への応答とB07の負担はどう動くか。新しい作業を誰が担えるかを確かめる。</td></tr>
+      </tbody></table></div>
+      <p><strong>論理上の飛躍を防ぐ</strong>：公開用の再構成を別に作る案は、元のPに対しては非P側に入る。それでも非Pに埋もれていた構成の違いを開ける。場面を分けたことを、同じ命題が同じ条件で肯定・否定された証拠にしない。回答不明、述語の不適合、真の対立も別々に残す。</p>
+      <p><strong>構造として残すもの</strong>：現在案Aと別構成Bで、共通の元カード、変更した問い、公開対象と対話の関係、保留した条件、異論別の応答、次の確認を比べる。B04を別案から消さず、B07の負担は未解決のまま保持する。カードの配置を動かしたことだけでは理解の変化に数えない。</p>
+      <p><strong>固有操作が不要になる条件</strong>：通常の条件表や反実仮想で同じ別構成が作れるなら、その方法を使う。六位置を使う場合は各位置の仮定を明示し、材料にない軸を埋めるための条件を作らない。現在の一条件比較に六位置が必要かは未確認であり、上の仮設定の操作例を自動で案件へ当てはめない。</p>
+      <p><strong>参照の境界</strong>：<a href="https://plato.stanford.edu/entries/contradiction/">SEPの四句分別の解説</a>は否定の射程を含む議論、<a href="https://iep.utm.edu/jain/">IEPのジャイナ哲学解説</a>は条件付けの訳語・解釈の違い、<a href="https://plato.stanford.edu/entries/chinese-change/appendix.html">SEPの易の付録</a>は二種の線と下から上への位置を照合する参照先とした。歴史的な運用全体を一つの現代アルゴリズムへ置き換えず、対象へ返す操作は本資料の設計上の借用として区別する。</p>
+      <p><a href="#I007">I007</a>・<a href="#I013">I013</a>・<a href="#I115">I115</a>・<a href="#I118">I118</a>・<a href="#I120">I120</a>・<a href="#I130">I130</a>を第2計画へ接続する。受入対象は、異論と保留を残して問い・関係・次の確認を変えられる比較である。</p>
+    </article>
+
+    <article id="depth-fieldwork" class="sample">
+      <h3>4. 次の作業から、読みを変え得る観察へ</h3>
+      <p><strong>体系との接触</strong>：<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/nyaya-five-member-inference.md">ニヤーヤの適用と反例</a>、<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/marshallese-wave-navigation.md">波航海術の事前モデルと現場への往復</a>を接続する。<a href="https://ocean.si.edu/human-connections/history-cultures/navigating-waters-micronesian-stick-charts">Smithsonianの紹介</a>での模型・訓練・現場の区別は操作の着想であり、SUIでの効果を証明するものではない。</p>
+      <p><strong>架空の問い</strong>：B06の背景理解について、A「短い背景資料が不足している」、B「後から問い返す経路がない」という二つの仮説を置く。両方、別の理由、不明も残す。「録画の視聴数を増やす」だけでは両仮説を区別する観察にならない。</p>
+      <ol>
+        <li>同じ背景資料を使い、問い返す経路の有無を比較する案を考える。参加者の同意と運営条件を満たすまで実施しない。</li>
+        <li>本人が残した疑問について、どこを問い返し、どの説明で読みが変わったかを見る。答えを先に教えた後の再現を、本人の構造発見として扱わない。</li>
+        <li>問い返す経路があっても変化しなければ、その事実だけでAを確定しない。背景資料の内容、時間、別の条件も残る。</li>
+        <li>回答なし、予想外、両仮説で説明できる結果も、元の問いへ戻して保つ。次の観察をするか、停止するかは人が判断する。</li>
+      </ol>
+      <p><strong>新たに取り込める単位</strong>：問い、観察前の見込み、実際の応答、理解の差、再開条件の接続。既存の<code>FieldworkRequestV1</code>と<code>RoundHandoffV1</code>を接点として検討するが、型と部分実装の存在を、保存・再開・共有までの運用保証にしない。正本のL0 Planned境界を維持する。</p>
+      <p><strong>反例・不要になる条件</strong>：両仮説が同じ結果を予想する観察、結果に合わせて予想を書き換える記録では増分を判断できない。通常の観察計画・再開メモで問いと結果をたどれるなら、新しい体系専用の進行管理は要らない。</p>
+      <p><a href="#I097">I097</a>・<a href="#I125">I125</a>・<a href="#I149">I149</a>の深掘り。単に次の作業を決めることから、結果によって何を読み直すかを明示する方向へ進める。</p>
+    </article>
+    <p class="warning">この架空例をもとに計画の範囲と受入条件を具体化できるが、有用性は例の整合性や資料の動作確認では確定しない。通常の方法、同等の問い、固有操作を実務で比べ、同じ摩擦と増分が再現した範囲から実装へ進める。</p>
+  </section>
+
+  <section id="operation-probe" class="panel">
+    <h2>位置の反転と経路の違いを、仮の設定で動かす</h2>
+    <p>易の六爻・二線種・位置を参照した設計用の小さな操作例である。下から上の六位置へ置く条件は本資料の仮定であり、伝統的な卦の意味、卦序、占断、案件の評価を表さない。値は独立の架空設定で、上の資料から自動判定したものではない。</p>
+    <p>同じ終状態へ着いても、先にどの条件を変えるかで途中に問うことは変わり得る。ここでは独立した二反転を比べるだけであり、現実の順序効果を計算するシミュレーションではない。</p>
+    <div class="probe-controls" id="probe-controls"></div>
+    <div class="actions"><button type="button" id="probe-reset">仮の初期設定へ戻す</button><span id="probe-status" role="status" aria-live="polite"></span></div>
+    <div class="probe-result"><h3>現在の仮配列</h3><p id="probe-state"></p><p id="probe-uncertainty"></p></div>
+    <h3>一位置だけ反転したとき、何を問い直すか</h3>
+    <div class="grid" id="probe-neighbors"></div>
+    <div class="probe-controls"><label>先に動かす位置<select id="probe-first"></select></label><label>次に動かす位置<select id="probe-second"></select></label></div>
+    <div class="experiment-paths"><p id="probe-path-a"></p><p id="probe-path-b"></p></div>
+    <p class="note">この操作で確認できるのは、仮の割当から生成される配列と問いの差である。問いの有用性、対象側の因果、文化体系の効果は別に確認する。入力はこのページ内でのみ使い、保存・送信・SUI文書への適用は行わない。</p>
+  </section>
+
+  <section id="frameworks">
+    <h2>23の体系・実践から借りる構造と、参照範囲</h2>
+    <p>15体系はCSWの現行dossier、追加の8体系・実践はCSWの研究用profileを参照した。研究候補はCSWのruntime採用と区別する。以下の機能案は本資料での設計上の展開であり、伝統そのものの規則や、その効果の実証ではない。リンク先は参照時のCSWリビジョンに固定している。</p>
+    <div id="framework-list" class="frameworks"></div>
+  </section>
+
+  <section id="catalogue" class="panel">
+    <h2>発想を探す</h2>
+    <p>各案には、行う操作と、対象へ返す問いを付けた。「試し方」は構想段階での入口を示す。実装工数、採用順位、価値の確かさを表すものではない。</p>
+    <div class="controls" role="search" aria-label="発想案の絞り込み">
+      <label>語句・案ID<input type="search" id="query" placeholder="例：周期、引継ぎ、I025"></label>
+      <label>文化体系<select id="framework-filter"><option value="">すべて</option></select></label>
+      <label>認知の仕事<select id="axis-filter"><option value="">すべて</option></select></label>
+      <label>案の種類<select id="type-filter"><option value="">すべて</option><option value="native">体系別の展開</option><option value="cross">体系を交差させる</option><option value="frontier">追加調査が必要</option></select></label>
+      <label>試し方<select id="mode-filter"><option value="">すべて</option></select></label>
+    </div>
+    <div class="actions"><button type="button" id="reset">絞り込みを解除</button><button type="button" id="show-entry">最初に試せる6案</button><button type="button" id="show-deep">深めた36案</button><span class="count" id="count" role="status" aria-live="polite"></span></div>
+    <p class="note">絞り込みはこの資料の表示だけを変える。採用、レビュー、製品データの変更は行わない。</p>
+    <noscript><p>案の一覧と絞り込みにはJavaScriptが必要です。上の考え方と、下の具体例・試行案はそのまま読めます。</p></noscript>
+  </section>
+  <div id="ideas" class="grid" aria-label="発想案の一覧"></div>
+  <p id="empty" class="empty" hidden>該当する案はありません。条件を減らすか、絞り込みを解除してください。</p>
+
+  <section id="case" class="panel">
+    <h2>架空の相談窓口資料に通してみる</h2>
+    <p>抽象的な「視点の追加」で終わらせず、同じ材料からどんな異なる問いが出るかを見る。以下はすべて本資料のために作った架空資料であり、実務利用や効果検証の記録ではない。</p>
+    <div class="sample" aria-label="架空の材料">
+      <p>D01「オンライン受付は夜にも使える」</p>
+      <p>D02「窓口とオンラインで、同じ説明を二度書いた」</p>
+      <p>D03「担当が変わった後、誰に聞けばよいか分からなかった」</p>
+      <p>D04「月末は同じ質問が増える。年度末は確認する書類も違う」</p>
+      <p>D05「説明は読めたが、これで手続きが終わったのか不安だった」</p>
+      <p>D06「家族が入力を手伝ったが、次の連絡は本人にしか届かなかった」</p>
+      <p>D07「三つの案内ページを読んだが、どれも同じ通知を引用していた」</p>
+      <p>D08「受付の完了画面を閉じた後、確認する場所を見失った」</p>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>接触</th><th>生じる問い・組み替え</th><th>対象へ返す確認</th></tr></thead>
+      <tbody>
+        <tr><td>四句分別 → ジャイナ</td><td>「使いやすい／使いにくい」を開き、「夜の受付」と「引継ぎ後の照会」という条件を別に置く（D01〜D03）。</td><td>条件を分けても、同じ場面で残る対立はあるか。両方が真だと先に確定しない。</td></tr>
+        <tr><td>古典stasis → ニヤーヤ</td><td>利用可能性、説明の重複、手続き完了の判断を分ける。「受付できたから相談は成立した」の推論の橋を問う（D01、D02、D05）。</td><td>受付完了が何を保証するか、案内の原文と実際の運用で確認する。</td></tr>
+        <tr><td>マヤ暦 → 易</td><td>月末の反復と年度末の条件変化を分け、どの段階の書類変更が負担を変えるかを問う（D04）。</td><td>単なる月別集計で足りるか。複数周期の比較で新しい条件が見えるか。</td></tr>
+        <tr><td>華厳 → 儒家</td><td>同じ家族が「入力補助者」から連絡経路の外へ移る。人物の属性から、関係によって変わる役割へ読みを移す（D06）。</td><td>本人の意思、代理範囲、連絡上の事情を確認し、家族への共有を自動提案しない。</td></tr>
+        <tr><td>isnād / matn</td><td>三つのページを、独立した三根拠として扱う前に共通の通知へ戻す（D07）。</td><td>同じ通知の引用か、別の検証を含むかを本文と経路の両方で確認する。</td></tr>
+        <tr><td>マンダラ → 波航海術</td><td>入口、受付、担当交代、再照会を経路として読み、途中で失われる手掛かりを探す（D03、D08）。</td><td>画面上の経路と実際の再訪操作が一致するかを確かめる。</td></tr>
+        <tr><td>ラサ論</td><td>説明を置いたことと、完了を受け取れたことを分ける（D05）。文面、表示順、周囲の案内の組合せを比較する。</td><td>不安の理由を推定で埋めず、本人の説明と操作観察へ戻す。</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>接触からの新しい機能案</strong>：受付・相談・連絡の成立を一つの「完了」に畳まず、材料と条件を辿れる経路を作る。D03、D05、D06、D08を関連づけ、「理解が引き継がれる条件」を問う。この構成は本資料で生まれた仮説であり、架空資料が原因や解決策を証明したものではない。</p>
+    <p class="note">体系が抵抗する点もある。マンダラの「中心」を完了や上位状態へ読み替えると、窓口へ戻る循環を見落とす。ジャイナの条件分解を進めすぎると、同じ条件での真の対立を消す。波航海術の比喩から、実在の相談者の身体感覚を推定することもできない。</p>
+  </section>
+
+  <section id="entry" class="panel">
+    <h2>実際に試せる入口を6つ残す</h2>
+    <p>150案を一括実装する計画にはしない。まず手作業でも認知の違いが見えるかを試せるものを挙げる。ここで選んだ理由は、既存のカード・関係・根拠・保留を使って比較できること。価値が高い順のランキングではない。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>案</th><th>最小の試行</th><th>既存資産との接点</th><th>見送り・修正の契機</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#I007">I007 二択の外を置く</a></td><td>対立して見えるカードを読み、元の述語が使えるかを問う。分類せず、別の問いを一つ残す。</td><td>Critique、hold、カードの比較。専用の四分類フィールドは増やさない。</td><td>一般的な「別の見方は」で同じ結果になる、矛盾を架空の条件で解消する。</td></tr>
+        <tr><td><a href="#I013">I013 主張へ条件を戻す</a></td><td>誰・時点・対象範囲を原文から書き出し、省略が読みに影響したかを見る。</td><td>原文への参照と条件付きの読み。Affiliationは人間が所属と判断した場合だけ使う。</td><td>原文にない条件を作る、細分化によって保留や対立が消える。</td></tr>
+        <tr><td><a href="#I019">I019 「だから」の橋を開く</a></td><td>結論、理由、例、今回への適用を並べ、資料で埋まらない橋を一つ示す。</td><td>EvidenceLinkと関係の比較。論証を展開しただけでcausalを確定しない。</td><td>五つの欄を埋める作業になり、具体的な確認先が増えない。</td></tr>
+        <tr><td><a href="#I025">I025 争点のすれ違いを示す</a></td><td>同じ対立に見える二つの発言が、何の問いに答えているかを書き比べる。</td><td>読み取り専用の比較とCritique。争点ラベルの強制はしない。</td><td>複数の争点を一つに押し込む、手続き上の異議を内容の否定へ変える。</td></tr>
+        <tr><td><a href="#I049">I049 共通の情報源へ戻る</a></td><td>複数の根拠が同じ引用元へ合流するかを、手で辿る。</td><td>既存の出典・来歴参照。取得不能な外部経路は不明のまま残す。</td><td>来歴の充実を真偽へ変える、出典を信頼度の順位にする。</td></tr>
+        <tr><td><a href="#I097">I097 問いを次の観察へ運ぶ</a></td><td>交差案から、確認する材料・比較・戻り先を一つずつ決める。</td><td>W型反復のFieldworkRequest、RoundHandoff、再開ブリーフ。</td><td>確認できない抽象的な問いの増殖、再開しても何も変わらない。</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>比較する進め方</strong>：SUI以外の自分の実務資料で、候補を見る前の読みを先に残す。候補提示後は、新たに見た材料、問い・構造の変更、保留・異論、ノイズ・誘導、候補なしでも到達した可能性、操作と表示の負担を分けて観察する。機微資料はローカルで扱う。</p>
+    <p>必要な場合は、支援なし、一般的な発想指示、体系固有の操作を比較する。同じ資料を見直すことによる学習と、提示順による影響が混ざるため、別の類似資料で順を変えて試す。1人での比較は採否を考える材料であり、一般的な因果効果の実証とはしない。</p>
+    <p>既存の決定論的attention候補のT2確認は、<code>review_cognitive_candidate_t2.py</code>の手順をそのまま使う。このスクリプトが文化体系案を評価できるとは扱わない。手作業の試行、T3の架空例、T2の実務利用、製品実装はそれぞれ区別する。</p>
+  </section>
+
+  <section id="implementation" class="panel">
+    <h2>認知器の方式も広く残す</h2>
+    <p>文化体系は「どんな問いを開くか」を供給し、認知器は対象から候補を探す仕事を担える。特定のモデルと文化体系を一対一に固定しない。下表は実現候補であり、方式の優劣やSUIでの有効性は未測定である。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>実現候補</th><th>広げられる仕事</th><th>限界と確認事項</th></tr></thead>
+      <tbody>
+        <tr><td>人間が選ぶ問いの短いセット</td><td>二択の解体、争点の比較、役割交代、観察への引継ぎ。</td><td>モデルなしで試せる。提示した問いが利用者の読みを誘導していないかを見る。</td></tr>
+        <tr><td>構造・グラフ・履歴の決定論的計算</td><td>島をまたぐ関係、間接経路、複数所属、版の差、根拠経路の合流。</td><td>現在のattention候補はこの一部。意味的矛盾や文化体系の解釈を検出済みとは言えない。</td></tr>
+        <tr><td>文字n-gram、TF-IDF、BM25</td><td>言葉の手掛かりで過去の残差や参照を探し、原文を読み直す。</td><td>表面上の一致と意味の近さを分ける。否定、同音語、言い換えによる誤反応を見る。</td></tr>
+        <tr><td>固定seedの疎表現、FlyHash系</td><td>大きな材料集合から連想の入口を探す。CPU・メモリの制約下で比較する。</td><td>ハエ嗅覚回路に着想を得た類似探索の先行研究がある。SUIの意味理解や認知増分は別の未検証事項。<a href="https://doi.org/10.1126/science.aam9868">Dasほか、2017</a>。</td></tr>
+        <tr><td>semantic encoder、関係候補の抽出器</td><td>語彙が違う材料の再会、条件付きの対比、推論の橋の候補。</td><td>下位方式で残る欠落があるときに検討する。類似度を意味の確かさや意見の重要度へ変えない。</td></tr>
+        <tr><td>エピソード検索と複数経路の読み戻し</td><td>過去の問い、棄却した案、再開条件を現在の材料と比較する。</td><td>似た過去案件からの転用が、時点や条件の違いを消さないかを見る。一般的なRAG研究はSUIの効果を証明しない。<a href="https://arxiv.org/abs/2005.11401">Lewisほか、2020</a>。</td></tr>
+        <tr><td>local LLMによる多段探索</td><td>体系固有の問い、反例、別解、構成案、体系同士の抵抗からの再探索。</td><td>生成した因果・内面・根拠を観察と混同しない。長文を渡すだけで材料を利用し切れるとは想定しない。<a href="https://arxiv.org/abs/2307.03172">Liuほか、2023</a>は当時の対象モデルで位置による性能差を報告している。</td></tr>
+        <tr><td>予測と観測を比べる小さな実行環境</td><td>手順・境界・周期について、仮定を変えた可逆な試行の結果を比較する。</td><td>シミュレーションが示すのは置いた仮定の帰結。現実の因果や人の行動へ直接移さない。</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>SUIへの接続で維持すること</strong>：SafeMode既定ON、proposal-only、人間だけが設定する<code>human_reviewed</code>、<code>SUI_LLM_PROVIDER=none</code>での主要価値、保留・異論の非破壊、共有・外部送信の境界。探索用の候補や内部scoreは人間承認を成立させない。</p>
+    <p>参照したattention実装は、関係・島・未所属などから注意候補を出し、holdを除外する。候補上限4、focusPairs上限8を持ち、過多の場合はランキングせず候補集合を抑制する。この資料の150案をそのまま一度に製品画面へ出す構成にはしない。</p>
+    <p>最初の接続は既存の意味保全IR、読み取り専用の比較、proposal/candidate境界で表せるかを見る。文化体系名やvector、activation、confidenceをDocumentV1へ追加することは決めていない。複数の観点への所属も、仮説の自動採用に使わない。</p>
+    <p class="note">文書の表示を絞ることと、探索で案を生むこと、製品へ採用することは別である。製品経路へ進める判断は<a href="../01_Plans/adr/ADR-0090-cognitive-assistance-candidate-layer-and-evidence-promotion.md">ADR-0090</a>と<a href="../01_Plans/adr/ADR-0089-product-value-canon.md">ADR-0089</a>に従う。初期画面の静けさ、保留、取り消しは<a href="../01_Plans/adr/ADR-0043-complexity-budget-for-cognitive-load.md">ADR-0043</a>に従う。</p>
+  </section>
+
+  <section id="sources" class="panel sources">
+    <h2>参照と、まだ確かめていないこと</h2>
+    <ul>
+      <li>SUIの現行正本：<a href="../00_Prompt/domain.md">domain.md</a>、<a href="../00_Prompt/sensemaking_technique.md">sensemaking_technique.md</a>、<a href="../00_Prompt/ai_sensemaking_execution_procedures.md">AI実行手順</a>、<a href="../00_Prompt/w_type_iterative_inquiry_requirements.md">W型反復</a>、ADR-0089・0090・0043。参照時HEADは<code>92c17cef</code>。<a href="../03_Implement/backend/src/sui_sensemaking_api/attention_candidates.py">現行attention候補の実装</a>も確認した。</li>
+      <li>CSWの構造記述：<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/portfolio.md">15体系のportfolio</a>と各dossier、<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/core/cognitive-stance.md">認知姿勢</a>、<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/core/discovery-pathway.md">発見の具体化</a>、<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/core/principles-and-constraints.md">原則と制約</a>。ローカルの<code>C:\GIT\hat47x\cultural-substrate-weaving</code>を読んだ。CSW自体の採用状態と、SUIへの採用は別である。</li>
+      <li>複合認知の研究草案：<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/research/strategy-2026-10/composite-cognition-design-method.md">CSW・SEI・SUIを組み合わせる認知基盤の設計方式</a>。責務分担と問いから観察への接続を参照した。現行SUIの権限を緩和する根拠には使わない。</li>
+      <li>公開資料で今回照合した部分：<a href="https://ocean.si.edu/human-connections/history-cultures/navigating-waters-micronesian-stick-charts">Smithsonian Oceanのstick chart解説</a>は模型・訓練・現場知覚の区別、<a href="https://www.jinjahoncho.or.jp/en/at-a-jinja/entering/">神社本庁の参拝案内</a>は境界と参拝前の準備、<a href="https://quisestlullus.narpan.net/en/principles-art">Centre de Documentació Ramon Llull</a>はArsの原理の参照に使った。これらは設計上の効能を証明する資料ではない。</li>
+      <li>追加した8体系・実践は、<a href="https://github.com/hat47x/cultural-substrate-weaving/tree/4157b01e/research/framework-candidates/profiles">CSWの研究用profile</a>で構造核、対象へ戻す問い、代替方法、適用範囲を確認した。ミーマーンサー、Ifáなどの保留や降格の状態をSUI側で解除したことにはならない。</li>
+      <li>追加の公開資料：<a href="https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Rhetorica_ad_Herennium/3%2A.html">『ヘレンニウス宛弁論術』第3巻</a>の場所と内容の区別、<a href="https://www.newadvent.org/summa/1002.htm">『神学大全』第1部第2問</a>の異論・主応答・異論別返答、<a href="https://web.stanford.edu/~kiparsky/Papers/panini_hist_of_phon_handbook.pdf">KiparskyによるPāṇini研究</a>、<a href="https://www.jstage.jst.go.jp/article/aija/81/728/81_2317/_article">序破急五段と能舞台の研究</a>を参照先とした。これらからSUIの効果を推定しない。</li>
+      <li>khipuは<a href="https://americanindian.si.edu/nk360/inka-water/ways-of-living/living">Smithsonianの教材</a>と<a href="https://github.com/khipulab/open-khipu-repository">Open Khipu Repository</a>、Ifáは<a href="https://ich.unesco.org/en/RL/ifa-divination-system-00146?RL=00146">UNESCOの公開紹介</a>、口承は<a href="https://www.unesco.org/archives/multimedia/document-4671">UNESCOのヴェーダ詠唱資料</a>を参照先とした。UNESCOの本文取得には一部制限があり、研究profileと取得できた紹介・検索抜粋の範囲で扱う。聖句、儀礼、専門的解釈の再現は行っていない。</li>
+      <li>マヤ暦の公開ページは最初の取得がタイムアウトした。構造の記述はCSW dossierに依拠する。全23体系・実践の原典精読、系譜ごとの比較、実践者による確認は実施していない。I103〜I114は調査の入口として残す。場所法・口承・能の時間構造は参照範囲を一部具体化したが、機能としての有効性は未確認である。</li>
+    </ul>
+    <p>本資料で実施したのは、現行仕様・実装の一部確認、体系固有操作からの発散、体系の交差、架空資料への適用例、試行候補の具体化である。実際の認知増分、CPU性能、認知器の方式比較、T2利用、製品UIへの統合は未検証。</p>
+  </section>
+  <footer>発想と体系にもとづく深掘りをこの資料に集約する。優先する製品範囲・受入条件・試行手順は<a href="../01_Plans/cognitive_cultural_validation_plan.md">段階計画</a>、今後の作業は<a href="../ROADMAP.md">ROADMAP.md</a>で扱う。長期的な設計判断が成立した時点でADRへ反映する。</footer>
+</main>
+
+<script id="idea-data" type="application/json">
+[
+["I001",["yi"],"time","structure","位置を替えて同じ出来事を読む","同じ発言を導入前・利用中・退出後の位置へ仮置きし、意味が変わる条件を並べる。","位置を変えても残る意味は何か。実際の発生段階は確認できるか。"],
+["I002",["yi"],"question","manual","一つの差だけ反転する","判断を支える条件を一つだけ反転し、次に問うべきことを作る。反転は設計側の感度分析と明示する。","何を反転したら結論が変わるか。その条件は対象側で動かせるか。"],
+["I003",["yi"],"relation","structure","局所と全体の食い違いを見る","小さな作業単位と全体の段階を別に置き、局所の完了が全体の完了に見える箇所を探す。","どの完了が、別の完了を代用しているか。"],
+["I004",["yi"],"boundary","manual","分節の位置そのものを比べる","同じ二種類の差でも、異なる位置へ割り当てた複数の構成を並べる。","選んだ位置は対象の差を表すか。体系に合わせて作った差ではないか。"],
+["I005",["yi"],"action","manual","遷移の途中を一つ増やす","現在と目標の間に、どの条件だけを先に変える試行があり得るかを置く。","その中間状態で新たに確かめられることは何か。"],
+["I006",["yi"],"meta","manual","きれいな卦対応から離れる","象意に似ているという説明を外し、位置・差・変化の問いだけで読みをやり直す。","象徴を外したとき、具体的な比較が残るか。"],
+["I007",["catus"],"question","manual","二択の外を置く","Pと非Pの選択をいったん開き、両方・どちらでもない可能性から述語の適用を問い直す。","そもそも、この二択は何を取りこぼしているか。"],
+["I008",["catus"],"condition","manual","両立の背後の層を探す","両立しない発言を、時間・主体・層の違いを勝手に補わずに読み比べる。","資料に示された層の違いはあるか。同じ条件で対立は残るか。"],
+["I009",["catus"],"attention","manual","どちらにも属さない材料を残す","既存の対立軸に入らないカードを別に読み、説明に必要な新しい区別を探す。","未分類なのか、軸が適用できないのか。"],
+["I010",["catus"],"boundary","manual","ラベルを動詞へ戻す","固定した属性ラベルを、その語が何をしていると述べているのかという問いへ戻す。","名づけによって固定した過程は何か。"],
+["I011",["catus"],"perspective","generative","目標の反対と外側を作る","『効率化する』という目標について、非効率化、両立、どちらでもない構成を仮説として作る。","目標を達成せずに対象の困りごとを減らす経路はあるか。"],
+["I012",["catus"],"meta","manual","矛盾を解消しない説明を作る","対立が未解決のまま何を理解できたかを言い直し、無理な統合を避ける。","説明の整合を守るために消した材料はないか。"],
+["I013",["jain"],"condition","manual","主張へ条件を戻す","誰から、どの時点、どの尺度、どの定義での主張かを原文と並べる。","条件を省いたことで、主張が強くなっていないか。"],
+["I014",["jain"],"perspective","manual","立場を回しても残る核を見る","同じ材料を複数の実際の立場から読み、共通部分と変わる部分を別に残す。","立場の違いで説明が変わる部分は、資料で支えられるか。"],
+["I015",["jain"],"boundary","semantic","一般化の適用範囲をほどく","広すぎる表札の候補に、対象範囲や例外を照合して、限定した別案を添える。","この表札が代弁しないカードはどれか。"],
+["I016",["jain"],"attention","manual","言い切れない差に名前を急がない","現在の語彙で述定できない感触を、引用・比較先・未解決の問いとして保持する。","何と言えないのかを、具体例同士の差として示せるか。"],
+["I017",["jain"],"action","manual","条件付きの試行を作る","『全面導入する』という案を、条件を明示した小さな実施候補へ解く。","成立条件を満たさない場面を、どう見分けて戻れるか。"],
+["I018",["jain"],"meta","manual","相対化で逃した対立を戻す","条件分解後に、同じ条件でも残る対立だけを再び並べる。","すべてを立場の違いへ回収していないか。"],
+["I019",["nyaya"],"reason","manual","『だから』の橋を開く","主張・理由・例・今回への適用・結論を並べ、資料にない橋を問いとして出す。","この理由が、この対象の結論を支えるのはなぜか。"],
+["I020",["nyaya"],"reason","semantic","理由の言い換えを見分ける","理由として示された文が、主張の反復なのか別の材料なのかを比較候補にする。","新しい根拠はどこにあるか。"],
+["I021",["nyaya"],"memory","manual","例と対象の違いを並べる","過去の成功例を今回の案件へ移す前に、関係が成り立つ条件を読み比べる。","例では成立したが、今回にはない条件は何か。"],
+["I022",["nyaya"],"attention","semantic","反対側の例へ案内する","理由は似ているのに結論が異なるカードを検索し、原文の比較へ戻す。","反例なのか、語の一致だけなのか。"],
+["I023",["nyaya"],"action","manual","未確認の適用を観察へ変える","論証の橋が欠けた場所を、必要な比較・確認資料・試行へ変換する。","何を観察すれば、この適用の可否を考え直せるか。"],
+["I024",["nyaya"],"meta","generative","流暢な説明を逆向きに読む","結論から理由と例を逆に辿り、生成した補足と対象由来の材料を分ける。","文章の滑らかさだけで接続した箇所はどこか。"],
+["I025",["stasis"],"question","manual","争点のすれ違いを示す","同じ対立に見える発言が、事実・定義・評価・手続きのどの問いへ答えているかを比較する。","双方は同じ問いへ答えているか。複数の争点は残るか。"],
+["I026",["stasis"],"condition","manual","事実を認めた後の対立を読む","事実が共有されたと仮定しても残る定義・評価の違いを別に取り出す。","何が確認されてもなお、対立は残るか。"],
+["I027",["stasis"],"boundary","semantic","言葉の定義が移る箇所を探す","同じ語で異なる対象を指している可能性を、引用を並べて示す。","語の意味が変わったのか、状況が変わったのか。"],
+["I028",["stasis"],"perspective","manual","内容と判断権限を分ける","内容への異議と、誰がどの場で判断するかへの異議を別々に読む。","手続きへの異議を、事実の否定として扱っていないか。"],
+["I029",["stasis"],"memory","semantic","争点が変わった履歴を見る","議論の前後で、答えている問いの種類が変わった候補を並べる。","変更は明示されているか。以前の問いは未回答で残っているか。"],
+["I030",["stasis"],"action","manual","争点に合う次の資料を選ぶ","争点ごとに、必要な観測・定義確認・価値比較・手続きを対応づける。","追加資料は、実際の争点に答えるか。"],
+["I031",["maya"],"time","manual","二つの周期を別に読む","短い業務周期と長い制度・生活上の周期を、観測された範囲で並べる。","一つの周期だけで『同じ時期』と呼んでいないか。"],
+["I032",["maya"],"condition","structure","部分的な再来を区別する","一つの条件だけが戻った場合と、複数条件が揃った場合を別の比較として置く。","何が戻り、何がまだ異なるか。"],
+["I033",["maya"],"attention","structure","位相のずれから例外を拾う","似た短期段階なのに長期条件が異なる場面を比較候補にする。","例外を生んだのは、別の周期との組合せか。"],
+["I034",["maya"],"memory","structure","周期と累積を同じ画面で読む","反復する活動と、戻らない経験・変更の系列を並べる。","繰り返しに見える中で、何が累積しているか。"],
+["I035",["maya"],"action","manual","再開する組合せ条件を決める","日付だけでなく、確認すべき複数条件が揃ったときの再開候補を考える。","待つことで分かることと、待つ費用は何か。"],
+["I036",["maya"],"meta","manual","周期を思い込んでいないか確かめる","暦の構造から得た着想と、対象側で実際に観測した周期を分ける。","周期として扱うだけの観測はあるか。単なる日付の一致ではないか。"],
+["I037",["huayan"],"relation","manual","部分から全体を読み返す","一枚の孤立したカードを起点に、既存の全体説明がどう見え直るかを読む。","全体のどの関係が、この一枚からは見えないか。"],
+["I038",["huayan"],"perspective","generative","別の全体で役割を変える","同じ要素を別の全体の中へ仮置きし、名前・機能・期待が変わる候補を作る。","保たれる属性と、関係から生じる役割はどれか。"],
+["I039",["huayan"],"relation","structure","複数所属を消さずに読む","一枚が複数のまとまりに関わる人間の構造を、包含と所属を分けて比較する。","どの所属の違いが、理解に必要か。"],
+["I040",["huayan"],"boundary","manual","まとめた後に差を戻す","統合案から元のカードへ戻り、表札の下で消えた差・抵抗・分離を再び置く。","統合前に言えていたのに、今は言えないことは何か。"],
+["I041",["huayan"],"attention","structure","中心を一枚ずつ移す","グラフ上の読み始めを替え、見える関係や周縁の変化を比較する。","接続数の多さと、意味上の中心を混同していないか。"],
+["I042",["huayan"],"meta","manual","全体優先と部分優先を往復する","全体に合わせて例外を消す読みと、部分を孤立させる読みの両方を点検する。","どちらの読みが、何を説明できなくしたか。"],
+["I043",["confucian"],"perspective","manual","同じ人の役割を替えて読む","人物を固定属性で扱わず、具体的な関係ごとに期待や行為の意味を並べる。","役割の変化を、人格の不一致と誤読していないか。"],
+["I044",["confucian"],"condition","semantic","役割名と行動の差を読む","名づけられた役割と、観察された行為の対応・不対応を引用で示す。","名前だけを理由に、行為や責任を推定していないか。"],
+["I045",["confucian"],"relation","manual","期待を運ぶ関係を置く","困りごとを個人の選択に帰す前に、どの関係がどんな期待を運ぶかを読む。","関係から来る要求同士は両立しているか。"],
+["I046",["confucian"],"body","manual","定型的なやり取りの前後を見る","同じ発言でも、挨拶・説明・引継ぎなどの前後で意味が変わる場面を比較する。","行為の型が変わった後、実際に何が言えるようになったか。"],
+["I047",["confucian"],"action","manual","小さな実践の変更を試す","繰り返すやり取りを一つだけ替え、注意や応答がどう変わるか観察候補にする。","儀礼という説明を外しても、具体的な変更と観測が残るか。"],
+["I048",["confucian"],"meta","manual","期待と拘束を別に読む","役割の期待が支援にも負担にもなる可能性を残し、歴史的な身分秩序を持ち込まない。","誰がその期待を望み、誰が異議を示しているか。"],
+["I049",["hadith"],"memory","structure","共通の情報源へ戻る","独立に見える複数の引用経路が、共通の原文へ合流していないかを辿る。","複数の記述は、別々の確認を含むか。"],
+["I050",["hadith"],"reason","manual","内容と伝達の主張を分ける","何が述べられたかと、誰から誰へ伝わったとされるかを別に置く。","経路の確かさを、そのまま内容の真偽に使っていないか。"],
+["I051",["hadith"],"condition","structure","分岐した文言を比べる","同じ出所から派生した説明で、どの枝にどんな条件や語の追加があるかを見る。","意味の差はどの受け渡しで生じたか。"],
+["I052",["hadith"],"attention","structure","経路の欠けを不明として示す","来歴が直接確認できる部分と、伝聞・推定・取得不能な部分を分ける。","不明な経路を、存在しない経路へ読み替えていないか。"],
+["I053",["hadith"],"memory","manual","要約を越えて原文へ戻す","要約がさらに要約されている場所から、取得できる最上流の本文へ戻る。","どの条件・留保・否定が途中で落ちたか。"],
+["I054",["hadith"],"meta","manual","出所の権威を外して読む","発言者や媒体の権威と切り離し、対象側の支持・反証を読み直す。","出典名を外したとき、何が根拠として残るか。"],
+["I055",["mandala"],"boundary","manual","多重の境界を探す","内と外の一線では表せない中間領域・入口・媒介点を材料から探す。","境界の間にある状態を、どこへ置いていたか。"],
+["I056",["mandala"],"perspective","structure","中心の意味を分ける","画面上の中心、機能上の中心、制度上の中心、注意の中心を比較する。","位置の中心を、重要性や望ましさへ変えていないか。"],
+["I057",["mandala"],"relation","structure","門を通る経路を読む","関係図に現れる経路から、通過に必要な媒介や条件を読み取り専用で辿る。","線があることと、実際に通過できることは同じか。"],
+["I058",["mandala"],"action","manual","接近順序を替えてみる","静的な配置だけでなく、どの入口からどの順で材料へ触れるかを比較する。","順を替えると、見落としや決めつけが変わるか。"],
+["I059",["mandala"],"attention","manual","周縁から読み始める","中心と決めた島から離れ、外側の保留や未統合カードから全体を読む。","中心の説明が拾わない問いは何か。"],
+["I060",["mandala"],"meta","manual","囲いの外に出た材料を読む","配置を整えるために外したカードを戻し、想定した空間構造の限界を示す。","この構造を採らない方がよく読める材料はどれか。"],
+["I061",["shinto"],"boundary","manual","作業に入る前後を区別する","探索、採用、共有などの中心行為の前に、何が準備として必要かを問い直す。","準備の完了と、内容の承認を混同していないか。"],
+["I062",["shinto"],"meta","manual","自分の予想を先に置く","資料を読む前の予想を短く残し、後で対象がそれをどう変えたかを比べる。","最初から知っていたことと、対象から受け取ったことは何か。"],
+["I063",["shinto"],"action","manual","退出後の戻り先を作る","作業を終えるときに、未解決の問いと次に読む材料だけを残す。","再開に必要な準備を、次回は短くできるか。"],
+["I064",["shinto"],"condition","manual","状態変更の契機を明示する","参加者が何をした後に扱いが変わるのかを、実際の手順と照らす。","作法を踏んだことを、妥当性の証明へ変えていないか。"],
+["I065",["shinto"],"body","manual","準備を省いた場面と比べる","中心行為の前の短い準備が、注意の向け方に違いを生むかを試行候補にする。","準備が役立つのか、ただ手間を増やしているのか。"],
+["I066",["shinto"],"perspective","manual","同じ入口でも異なる準備を見る","資料への習熟や役割によって必要な準備が異なる可能性を具体例から読む。","全員に同じ準備を要求してよいか。"],
+["I067",["wave"],"body","manual","模型と現場の情報を分ける","図から分かることと、現場で初めて得る手掛かりを別に置く。","計画の整合だけで、現場確認を済ませていないか。"],
+["I068",["wave"],"action","manual","次に現れる手掛かりを置く","目的地だけでなく、次の判断前に確認する兆候や観測を順に考える。","どの手掛かりがなければ、進み方を変えるか。"],
+["I069",["wave"],"attention","semantic","乱れを情報として読み直す","不規則な記録や例外をノイズ扱いする前に、状態を示す材料かを比較する。","この乱れから区別できる状態はあるか。"],
+["I070",["wave"],"relation","structure","相対的な経路を描く","絶対的な段階番号ではなく、『この観測の後にこの確認』という関係で進め方を置く。","固定順序を外すと、現場に合う経路は変わるか。"],
+["I071",["wave"],"memory","manual","思い出す模型を作る","詳しい手順を表示し続ける代わりに、後で現場の材料を思い出せる小さな関係図を試す。","模型は理解を助けるか。必要な具体性を忘れさせるか。"],
+["I072",["wave"],"meta","manual","モデルと観測の不一致を残す","期待した手掛かりが来なかったときに、対象を合わせず模型の読みを見直す。","見えなかったのか、起きなかったのか、模型が誤っていたのか。"],
+["I073",["llull"],"question","generative","未検討の三項を交差させる","目的・関係者・制約など三種類の区別を交差させ、まだ出ていない問いを作る。","組合せは対象の問いになるか。単にセルを埋めただけではないか。"],
+["I074",["llull"],"attention","structure","一度も並べていない材料を示す","既存の比較や所属を参照し、未検討の組合せを読む入口として示す。","未検討であること以外に、一緒に読む理由はあるか。"],
+["I075",["llull"],"perspective","generative","同じ要素の役割を回す","手段・目的・制約の位置を仮に入れ替え、別の構成が成立するかを問う。","入れ替えたことで、新しい目的を勝手に採用していないか。"],
+["I076",["llull"],"condition","manual","成立しない組合せを残す","組合せを対象の制約へ戻し、不成立・無意味・既出の理由を分ける。これは設計側の追加操作。","不成立なのか、材料がまだないのか。"],
+["I077",["llull"],"action","generative","新しい構成を小さな試行にする","生成した三項の関係を、変更するものと観察するものが明確な試行へ直す。","実際に一つだけ変更するなら何か。"],
+["I078",["llull"],"meta","manual","生成数と発見を切り離す","多数の組合せから、問い・比較・確認先を変えたものだけを読み直す。","列挙の量を、新規性や完全性の根拠にしていないか。"],
+["I079",["sankhya"],"reason","manual","表面の結果から上流へ遡る","成果物から、識別・入力・処理・表現の層へ仮説を分けて遡る。","『原因』と呼んだものも、別の過程の結果ではないか。"],
+["I080",["sankhya"],"perspective","manual","観察位置と対象過程を分ける","自分が見た範囲や注目と、対象側で起きたことを別に置く。","観察者の説明が、対象の内部過程へすり替わっていないか。"],
+["I081",["sankhya"],"relation","generative","生成の木を複数作る","同じ結果へ至る異なる生成過程を仮説として並べ、支持する材料を探す。","同じ見かけを生む別の経路はあるか。"],
+["I082",["sankhya"],"condition","manual","固定型から混合へ読み直す","一つの型に押し込んだ状態を、複数方向の働きが混じるという仮説で読み直す。","人物の性格診断にせず、観察可能な場面の差を示せるか。"],
+["I083",["sankhya"],"body","manual","入力から表現までの差を見る","見聞きしたもの、識別したもの、言語化したものの違いを資料で辿る。","表現されなかったものを、存在しなかったものと扱っていないか。"],
+["I084",["sankhya"],"meta","manual","自分の説明への同一化をほどく","自分が作った仮説を守るために、どの材料の読みを変えたかを点検する。","説明を撤回しても残る観察は何か。"],
+["I085",["rasa"],"body","manual","作り手の意図と受け手の経験を分ける","何を伝えようとしたかと、実際にどう受け取ったと記録されたかを並べる。","意図した効果を、受容の事実として語っていないか。"],
+["I086",["rasa"],"relation","manual","体験を作る材料の組合せを見る","文面だけでなく、順序・身体・音・周囲の表現を、記録された範囲で読む。","同じ文でも、何との組合せで経験が変わるか。"],
+["I087",["rasa"],"time","manual","場面間で受け取り方が移る点を探す","安心から困惑などの変化を、本人の記録と場面の遷移を並べて読む。","変化はどの地点に記録され、何が未確認か。"],
+["I088",["rasa"],"perspective","generative","同じ根拠で異なる構成を作る","資料の内容を保って表現順序を変えた複数案を作り、受け取り方の比較へつなぐ。","読みやすさの改善が、異論や保留を目立たなくしていないか。"],
+["I089",["rasa"],"attention","manual","感情ラベルの外の記述を拾う","一般的な感情語へ要約する前に、体験の具体的な言い回しを原文から読む。","感情名を付けたために落ちた体験の差は何か。"],
+["I090",["rasa"],"meta","manual","魅力的な叙述と支持を比べる","印象に残る物語の各部分を原文へ戻し、演出による理解と根拠の強さを分ける。","説得力が増えた理由は、材料か、表現か。"],
+["I091",["catus","jain"],"question","manual","二択を開いてから条件を戻す","述語の適用を疑った後、残った主張へ条件を結び直す。先に条件分解して軸を温存しない。","二択の変更と条件の追加は、それぞれ何を変えたか。"],
+["I092",["nyaya","hadith"],"reason","structure","推論の橋と情報経路を二重に辿る","根拠の内容が結論を支えるかと、その根拠がどこから来たかを別々に辿る。","経路が明確でも、適用の橋は不足していないか。"],
+["I093",["yi","maya"],"time","manual","周期の位置と局所の変化を重ねる","複数周期の現在位置を置き、その中の一条件を変えたときの違いを問う。","同じ変更でも、周期の組合せによって影響は違うか。"],
+["I094",["huayan","confucian"],"perspective","manual","関係を替えると役割も変わる模型","要素を別の全体へ置き、そこで生じる役割・期待・抵抗を並べる。","役割の変更を、同じ人物の本質の変更と混同していないか。"],
+["I095",["mandala","shinto"],"boundary","manual","通過できることと準備できたことを分ける","経路の門と、参加者の準備を別に置く。道があるだけで採用や共有を可能にしない。","構造上の入口と、行為の許可はどこで分かれるか。"],
+["I096",["rasa","nyaya"],"body","manual","伝わる説明と支える説明を照合する","受け取りやすい構成を作った後に、各主張の理由と適用へ戻す。","受容を改善しながら、根拠と未解決を保持できるか。"],
+["I097",["llull","wave"],"action","manual","問いを次の観察へ運ぶ","未検討の組合せから生じた問いを、次に現れる手掛かり・確認材料・戻り先へ変える。","実際の観察で、どの問いや構成を更新するか。"],
+["I098",["stasis","jain"],"condition","manual","条件分解しても残る争点を示す","立場や時点を揃えた後に、事実・定義・評価・手続きのどの対立が残るかを見る。","条件の違いと、価値の衝突を混ぜていないか。"],
+["I099",["sankhya","hadith"],"memory","structure","生成の層と伝達の層を分ける","対象で何が生じたかの仮説と、その説明がどう変形して伝わったかを別の経路として読む。","対象の変化を見ているのか、説明の変化を見ているのか。"],
+["I100",["huayan","llull"],"relation","generative","全体を替えて未検討の関係を作る","既存の全体の分節を一つ替え、これまで並ばなかった要素から新しい問いを作る。","新しい関係は、元の材料のどの差を説明できるか。"],
+["I101",["wave","maya"],"attention","manual","反復しない手掛かりで現在地を読む","反復が予想される時期に、戻らない兆候を探し、同じ経路を続ける前提を見直す。","今回だけ現れない手掛かりは何を意味し得るか。"],
+["I102",["rasa","mandala"],"body","manual","読む経路と受け取り方を一緒に比べる","入口や中心を替えた読み順を試し、原文の理解と保留の見え方を比べる。","順序を変えたことで、何が強調され、何が見えなくなったか。"],
+["I103",[],"question","research","連歌・連句の接続と転換を調べる","直前へ応じつつ同じ連想に留まらない構成が、問いの生成へ使えるかを調査する。","どの作品・規則・系譜を参照するか。自由連想と何が違うか。"],
+["I104",[],"body","research","能の間・序破急と注意の持続を調べる","提示を増やす以外に、間隔や展開の変化が考える余地を作るかを構想する。","原典上の意味と、UI上の設計仮説をどう区別するか。"],
+["I105",[],"memory","research","場所法と空間的な再会を調べる","過去の問いや保留を、位置と経路から思い出す設計を検討する。","記憶の補助と、配置に引きずられる誤読をどう比べるか。"],
+["I106",[],"memory","research","口承の反復と異同の保持を調べる","再話で核を保ちつつ変わる部分を、原文との照合へ接続する案を調べる。","特定の口承文化の実践を、一般的な要約へ薄めていないか。"],
+["I107",[],"action","research","職人の型・守破離の具体例を調べる","型を身につける、変更する、離れる各段階を、探索手順の固定と解除に使えるか検討する。","どの領域の型か。段階モデルを全員へ強制しないか。"],
+["I108",[],"perspective","research","遊戯・即興の制約生成を調べる","一時的な制約を置いて普段と異なる案を作り、制約を外した後の残り方を見る。","どの実践のどの規則から、新しい問いが生まれるか。"],
+["I109",[],"boundary","research","翻訳の非等価を材料にする","同じ発言を別言語・専門語で表したとき、対応しない語を問いの入口として残す。","原文の差なのか、翻訳側の追加なのか。対象話者の確認が必要か。"],
+["I110",[],"time","research","農耕・発酵の観察と待機を調べる","待つ、手を入れる、状態を読むという実践を、追加探索と停止の条件へ展開できるか調べる。","具体的な地域・技術の資料は何か。単なる熟成の比喩を越えるか。"],
+["I111",[],"perspective","research","共同資源と互酬の実践を調べる","個人の便益だけでなく、維持の負担と返礼がどこへ移るかを問う構成を探す。","誰のどの実践に基づくか。望ましい制度を先に決めていないか。"],
+["I112",[],"action","research","修復・補修から変更の単位を考える","全面置換以外に、壊れた接点だけを直し、履歴や違いを残す構成を調べる。","どの修復文化や技法を参照するか。傷を残すこと自体を美化しないか。"],
+["I113",[],"condition","research","暦の例外・閏・調整規則を調べる","一定の周期に収まらない差を、モデルを壊さずにどう扱うかという問いを開く。","特定の暦の計算と文化的意味を分けて確認できるか。"],
+["I114",[],"relation","research","対位法と多声の時間構造を調べる","異なる筋を一つの主旋律へ吸収せず、同時進行と交差として表す案を調べる。","どの音楽実践の規則か。多声の比喩だけで終わらないか。"],
+["I115",["yi"],"question","manual","問いを変えた位置へ戻れる別解","六位置への仮の割当と、一位置の反転から生まれた問いを対にして残す。対応が曖昧なら複数の割当を保つ。","問いはどの割当に依存するか。別の割当でも残るか。"],
+["I116",["llull","yi"],"action","structure","同じ終状態へ至る途中を比べる","二条件を違う順に変える仮の経路を並べ、中間状態で必要となる準備・観測を別に読む。","終状態が同じでも、途中で失う選択肢や増える負担はあるか。"],
+["I117",["panini"],"condition","manual","省略した前提を別解へ持ち運ぶ","候補が引き継ぐ条件を出典の見出し・前後の文から展開し、どの条件を変更した案か明示する。","単独で読んだ候補が、元の適用範囲を越えていないか。"],
+["I118",["jain","yi"],"perspective","manual","複数の割当から別の近傍を開く","同じ対象を、実務段階と関係者の位置など異なる仮の分節へ割り当て、別々に反転する。","割当を変えた結果、新しい問いが出たか。単なる言い換えか。"],
+["I119",["llull"],"relation","generative","第三の関係を一つ作る","既存の目的・手段・制約を三項で交差させ、元の対立のどちらにも還元できない接続案を作る。","何を保存し、何を分け、どの新しい関係を加えたか。"],
+["I120",["catus","llull"],"meta","manual","同じ前提から出た多数案を見抜く","別案を、変更した目的・条件・関係で読み比べる。同じ枠の言い換えだけなら枠の外を問う。","案数が増えた後、検討していない前提は何か。"],
+["I121",["nyaya","panini"],"reason","manual","推論の橋へ適用範囲を結ぶ","理由から結論へ渡る関係について、いつ・何に適用できる規則かを別に展開する。","観察が正しくても、この場面では適用できない可能性はあるか。"],
+["I122",["nyaya","hadith"],"reason","structure","同じ出所と独立した確認を分ける","推論を支える各記述の経路を辿り、共通原文の再話と、別の観察・比較を区別する。","三つの引用のうち、対象への新しい支持を加えたものはどれか。"],
+["I123",["vedic"],"memory","manual","説明から消えた隣接条件を探す","順序に意味がある原文について、連続文、明示した単位、重なる隣接組を読み比べる。","要約で『ただし』『その後』『この場合』の働きが変わっていないか。"],
+["I124",["hadith","vedic"],"condition","structure","変形の起点を局所へ戻す","原文から要約へ至る各変換を、単位境界と隣接関係も含めて比べ、条件が落ちた箇所へ戻す。","どの変換から読みが変わったか。同じ生成系の一致を証明にしていないか。"],
+["I125",["nyaya"],"action","manual","反例を区別できる観察を作る","同じ理由から異なる結論が出る二つの仮説について、どの観察なら区別できるかを設計する。","結果がどちらでも説明できてしまう確認になっていないか。"],
+["I126",["panini","nyaya"],"memory","structure","根拠の更新から関係する読みを開く","根拠や適用条件が変わったとき、それを使っていた主張・例・適用を候補として辿り直す。","更新を受ける結論と、条件が変わっても残る結論はどれか。"],
+["I127",["khipu"],"relation","manual","文章以外で保持した差を戻す","本文、配置、所属、線、印を別チャンネルとして読み、文章化したときに消えた関係を探す。","非言語の差に意味を勝手に付けず、利用者の意図を確認できるか。"],
+["I128",["ifa"],"memory","manual","短い索引から複数の過去事例へ戻る","コンパクトな特徴から、一つの模範解答ではなく、対象者が利用できる複数の事例を読み直す入口を作る。宗教的な詩句や割当は用いない。","似た事例でも異なる帰結へ至った条件は何か。"],
+["I129",["maya","khipu"],"time","structure","再来の中の累積を記憶する","繰り返した活動を、時期の条件と、その回で変わった関係・未解決の差へ分けて辿る。","前と同じ時期だが、もう戻っていないものは何か。"],
+["I130",["huayan","khipu"],"memory","manual","配置の差と意味の差を分ける","見た目の移動と、所属・役割・問いの変更を別に読み、理解を更新した差へ戻る。","配置を替えただけなのか、部分の意味も変わったのか。"],
+["I131",["loci"],"attention","manual","今は見ないが戻れる位置を作る","過去の問いや残差を、内容を削除せず現在の注意から退避させ、安定した索引で再会できるようにする。","表示を減らしても、再開の契機と原文へ戻る経路は残るか。"],
+["I132",["ifa","hadith"],"meta","manual","過去の物語を現在へ押し付けない","検索した事例の由来と帰結を辿り、現在の材料にない因果や人物像を持ち込んだ部分を戻す。","物語の一致を外すと、今回の材料に残る支持は何か。"],
+["I133",["scholastic"],"relation","manual","異論と返答を一対ずつ辿る","異なる異論にIDを付け、主応答のどの部分がどの異論へ答えているかを原文と並べる。","返答がなく残っている異論はどれか。"],
+["I134",["scholastic","stasis"],"question","manual","返答で争点が替わった場所を示す","異論と返答が答える問いを比べ、事実から評価などへ移った箇所を未解決として残す。","別の問いに答えて、元の異論を解消したことにしていないか。"],
+["I135",["scholastic","jain"],"condition","manual","答えるために変えた条件を明示する","返答が対象範囲・時点・立場を変えた場合、異論の元の条件と並べて示す。","その条件変更を当事者が引き受けるか。元の異論は残るか。"],
+["I136",["confucian","scholastic"],"perspective","manual","役割ごとの異論を具体的な負担へ戻す","実際の材料にある役割と異論を結び、同じ回答で負担が誰へ移るかを読む。","役割名から気持ちや同意を生成せず、資料で確かめられるか。"],
+["I137",["rasa","scholastic"],"body","manual","伝わりにくい異論を読み直す","表現の巧拙で異論の扱いが変わっていないかを見て、内容を保った別の言い方を原文と並べる。","読みやすくした結果、異論の強さや切実さを変えていないか。"],
+["I138",["scholastic","huayan"],"relation","generative","未解決の異論を含む統合を作る","全体説明へ吸収しない異論を残したまま、どこまでの理解・試行なら成立するかを構成する。","統合の限界を含めて、次に進める具体的な範囲は何か。"],
+["I139",["mimamsa"],"boundary","manual","規定・目的・補足の意味単位を読む","複数の文が一つの規定を作るのか、独立した要求かを原文のつながりから検討する。","分割したことで省いた目的や条件は何か。解釈で足したものは何か。"],
+["I140",["mimamsa","panini"],"condition","manual","衝突する要求の適用範囲を並べる","異なる目的を持つ規定の対象・条件・関係を展開し、両立・範囲分離・未解決を候補として残す。","明文にない優先順位を、文化体系から導いていないか。"],
+["I141",["panini"],"meta","manual","内容を変える規則と選択規則を分ける","直接の要求と、どの要求をどの順で使うかを決める規則を分けて辿る。","競合の解消方法は、対象側で誰がどこに定めているか。"],
+["I142",["shinto","mimamsa"],"action","manual","準備の完了と行為の許可を分ける","資料を整えたこと、内容を検討したこと、実際に採用・共有できることを別に置く。","手順を踏んだだけで、同意や承認を得たことにしていないか。"],
+["I143",["mimamsa","confucian"],"perspective","manual","目的を満たす代償の所在を示す","規定の目的を保つ候補について、必要な作業・制約・負担がどの関係へ移るかを読む。","目的達成の便益と、維持の負担を受ける相手は同じか。"],
+["I144",["mandala","panini"],"boundary","structure","到達経路と適用条件を重ねて読む","ある行為までの経路と、各段階で適用される条件を別々に辿り、抜けた媒介を問いにする。","経路がつながっていても、条件を満たさない通過はどこか。"],
+["I145",["joha"],"time","manual","探索の密度が変わる地点を読む","準備・展開・集中の働きから、問いや比較が変わる地点を探し、同じ長さの段階へ押し込まない。","展開を続ける意味と、集中する条件は何か。"],
+["I146",["joha","llull"],"action","manual","問いを動かした交差から先へ進む","組合せを増やす局面と、差が残った問いを具体化する局面を分け、次の作業を決める。","新しい交差が次の読みを変えなくなったら、何を確かめるか。"],
+["I147",["wave","joha"],"body","manual","本人の疲れや違和感を進行へ戻す","利用者が述べた疲れ・混乱・引っかかりを、休止や原文への戻り方を考える材料として扱う。","操作履歴から内面を推定せず、本人が調整できるか。"],
+["I148",["maya","joha"],"time","manual","外の期限と内の探究を分ける","業務の周期・期限と、理解が準備・展開・集中する進み方を別に置く。","締切に合わせた一時的な判断と、解消した問いを混同していないか。"],
+["I149",["yi","wave"],"action","manual","一条件の変更を手掛かりで確かめる","仮の反転から、何を一つ替え、何を観察し、どの結果なら戻すかを具体化する。","試行は仮定を区別できるか。現実の結果を模型の正しさへ直結させていないか。"],
+["I150",["loci","joha"],"memory","manual","効いた操作を条件付きで再利用する","複数の実務で、どの局面のどの操作が読みを変えたかを辿り、次回の選択候補にする。","案件固有の成功を固定手順へ変えず、使わない条件も残せるか。"]
+]
+</script>
+<script>
+  "use strict";
+  const frameworkBase="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/src/ja-JP/frameworks/";
+  const researchBase="https://github.com/hat47x/cultural-substrate-weaving/blob/4157b01e/research/framework-candidates/profiles/";
+  const frameworks=[
+    ["yi","易","yijing.md","二種類の爻、位置、三爻と六爻の組合せ。位置と局所変更から別の問いを作る。","卦の象意を対象の事実へ割り当てない。線の反転による感度分析は本資料側の構成であり、占断規則と同一視しない。"],
+    ["catus","四句分別","catuskoti.md","P、非P、両方、どちらでもないという隅から、二択と述語の適用を問い直す。","初期仏教・中観・後代論理の運用差を残す。四つの同時に真な状態や、真理値表へ固定しない。"],
+    ["jain","ジャイナ多面説・七分法","jain-sevenfold-predication.md","述定の条件・観点を露出させ、言い切れない部分と組合せを保持する。","無条件な相対主義や四句分別と同一視しない。条件は対象の材料で確かめる。"],
+    ["nyaya","ニヤーヤ五支論証","nyaya-five-member-inference.md","主張、理由、例証、適用、結論。理由から今回の対象へ渡る橋を見る。","初期Nyāyaの五支を中心にする。形式を埋めても妥当性・真理を得たとは扱わない。"],
+    ["stasis","古典stasis theory","classical-stasis-theory.md","何を争っているかを定位する。事実・定義・評価・手続きのすれ違いを探す。","四区分はCSWによる抽出。古代の諸著者に共通する唯一の表ではない。複数争点を残す。"],
+    ["maya","マヤ暦体系","maya-calendars.md","複数周期、部分と全体の再来、長期座標から、同じ時期に見える差を開く。","暦の機構に範囲を限定。人格・運勢・予言へ転用しない。生きた実践と地域差を消さない。"],
+    ["huayan","華厳・法蔵の全体と部分","huayan.md","部分が全体の中で何として成立するかを問う。統合と差異を同時に保つ。","法蔵中心の範囲。すべてが同じ、すべてが同じ強さでつながるというnetwork modelへ薄めない。"],
+    ["confucian","儒家の役割・礼","confucian-role-ritual.md","関係によって変わる意味、役割名と行為、定型的な相互作用の前後を読む。","『論語』中心の初期儒家からの展開。歴史的な性別・身分・政治秩序を現代の規範へ移さない。"],
+    ["hadith","ハディースのisnād / matn","hadith-isnad-matn.md","本文と伝承経路を別に保ち、枝の異同、合流、受け渡しの不明部分を読む。","宗教的な真正性評価や伝承者評価を代行しない。古典的批判と現代歴史学を一つの採点方式にしない。"],
+    ["mandala","チベット仏教マンダラ","tibetan-buddhist-mandala.md","中心、方位、門、多重の囲い、接近する経路という空間構造を問う。","具体的な尊格・色・方位対応・灌頂・観想は扱わない。中心への接近を高次・優位と決めない。"],
+    ["shinto","神社参拝の境界・準備","shinto-threshold-purification.md","境界を越え、準備を経て中心行為へ入り、退出するという差を見る。","現代の参拝案内中心の限定。清めの効力、穢れ、道徳や衛生の評価を対象へ移さない。"],
+    ["wave","マーシャル諸島の波航海術","marshallese-wave-navigation.md","事前の模型、相対経路、手掛かりの系列、現場での知覚を往復する。","公開資料に限る。stick chartを縮尺地図と扱わず、非公開の家族知や海上航行技能を再現しない。"],
+    ["llull","Llullの後期Ars","llull-ars.md","二項・三項の組合せと位置の回転から、自然な連想では出にくい問いを作る。","後期の三元期を中心とする。神学的原理や宣教の目的を持ち込まない。対象制約による絞り込みは本資料側の追加操作。"],
+    ["sankhya","サーンキヤ","sankhya.md","観察主体と生成過程、層の遡及、単一型から混合への読みを開く。","古典的25原理の形而上学を対象の事実としない。三guṇaを人物の固定性格診断にしない。"],
+    ["rasa","ラサ論","rasa.md","表現されるものと受け手の美的経験を分け、材料の組合せと場面遷移を考える。","美学の構造からの展開。日常感情の診断や普遍分類としない。八つと後代の九つの整理を混ぜない。"],
+    ["panini","パーニニの規則構造",researchBase+"panini-ashtadhyayi-rule-architecture.md","文脈からの条件継承、適用範囲、一般と限定、順序、規則間の扱いを別に読む。","研究候補。後代のメタ規則と古典本文を分ける。1.4.2を汎用の後勝ちへ変換しない。対象側の優先関係に従う。","research"],
+    ["vedic","ヴェーダ詠唱の系列保持",researchBase+"vedic-recitation-pathas.md","連続、分節、隣接の重なりなど複数の表現から、同じ系列の順序・境界を読み直す。","研究候補。地域・伝承差を残し、聖句の詠唱や発音を再現しない。汎用の暗号・誤り訂正方式と同一視しない。","research"],
+    ["khipu","インカkhipuの記録構造",researchBase+"inka-khipu-record-structure.md","付着の階層、位置、結び、物理属性など、複数のチャンネルに分かれた記録を読む。","研究候補。数的な意味が分かる部分と、解釈が未確定な部分を分ける。色や形の意味を創作して埋めない。","research"],
+    ["ifa","Ifáの索引と物語群",researchBase+"ifa-odu.md","コンパクトな索引、大きな物語群、状況に即した選択・解釈という構造を研究上の参照とする。","研究候補・適用保留。生きた宗教伝統の詩句・割当・占断・専門的権威を再現しない。案では利用権のある対象側の事例のみ扱う。","research"],
+    ["loci","古代ギリシア・ローマの場所法",researchBase+"greco-roman-method-of-loci.md","安定した位置の足場と、そこへ結びつける可変の内容を分け、意図した順に辿る。","研究候補。順序を対象へ無理に課さない。場所が空いているだけで欠落を事実認定しない。通常の索引で足りるかを比べる。","research"],
+    ["scholastic","スコラ学の討論的著述",researchBase+"scholastic-disputed-question.md","問い、別々の異論、主応答、異論ごとの返答を保持し、答えていない異論へ戻る。","研究候補。大学での討論、記録、編集された著述の差を残す。権威の引用を対象側の根拠へ置き換えない。","research"],
+    ["mimamsa","ミーマーンサーの解釈操作",researchBase+"mimamsa-hermeneutics.md","規定を作る意味単位、文脈からの補足、目的、衝突を分けて読む操作を限定して参照する。","研究候補・運用採用を意味しない。学派の文意理論を一つにしない。ヴェーダの権威・儀礼目的を対象へ移さず、目的から許可を創作しない。","research"],
+    ["joha","能の序破急",researchBase+"jo-ha-kyu.md","準備・展開・集中という時間上の働き、速度変化、閉じ方を読む。世阿弥・能に範囲を限定する。","研究候補。五段の構成や後代の説明層を区別する。三等分、普遍的な日本の時間法則、固定時間の処方にしない。","research"]
+  ];
+  const axes={attention:"注意",question:"問い",boundary:"分節・境界",condition:"条件・矛盾",relation:"関係・全体",reason:"推論",time:"時間・変化",perspective:"立場・価値",body:"身体・受容",memory:"記憶・来歴",meta:"自己点検",action:"試行・再開"};
+  const modes={manual:"手作業で試す",structure:"既存構造の計算を検討",semantic:"本文を読む方式を検討",generative:"生成による探索を検討",research:"文化資料の調査から"};
+  const rows=JSON.parse(document.getElementById("idea-data").textContent);
+  const frameworkNames=Object.fromEntries(frameworks.map(f=>[f[0],f[1]]));
+  const entryIds=new Set(["I007","I013","I019","I025","I049","I097"]);
+  const deepIds=new Set(rows.slice(114).map(row=>row[0]));
+  let entryOnly=false,deepOnly=false;
+  const nodes=[];
+  function make(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
+  function option(select,value,label){const el=make("option",label);el.value=value;select.append(el);}
+  const frameworkFilter=document.getElementById("framework-filter"),axisFilter=document.getElementById("axis-filter"),modeFilter=document.getElementById("mode-filter"),typeFilter=document.getElementById("type-filter"),query=document.getElementById("query");
+  frameworks.forEach(([id,name,file,operation,boundary,stage])=>{
+    option(frameworkFilter,id,name);
+    const card=make("article",undefined,"framework");card.id="framework-"+id;
+    const heading=make("h3");const link=make("a",name);link.href=file.startsWith("https:")?file:frameworkBase+file;heading.append(link);card.append(heading);if(stage==="research")card.append(make("p","研究用profileを参照・SUI未採用","research-label"));card.append(make("p",operation));
+    const details=make("details");details.append(make("summary","今回の範囲"),make("p",boundary));card.append(details);document.getElementById("framework-list").append(card);
+  });
+  Object.entries(axes).forEach(([id,name])=>option(axisFilter,id,name));
+  Object.entries(modes).forEach(([id,name])=>option(modeFilter,id,name));
+  rows.forEach(row=>{
+    const [id,cultures,axis,mode,title,operation,probe]=row;
+    const type=cultures.length===0?"frontier":cultures.length>1?"cross":"native";
+    const card=make("article",undefined,"idea");card.id=id;
+    const heading=make("h3",title);heading.id="title-"+id;card.setAttribute("aria-labelledby",heading.id);
+    const idlink=make("a",id,"id");idlink.href="#"+id;card.append(idlink,heading);
+    const badges=make("div",undefined,"badges");
+    const names=cultures.map(c=>frameworkNames[c]);
+    if(names.length===0)badges.append(make("span","追加調査が必要","badge"));
+    names.forEach(name=>badges.append(make("span",name,"badge")));
+    badges.append(make("span",axes[axis],"badge"),make("span",modes[mode],"badge"));
+    card.append(badges,make("p",operation),make("p","対象へ返す問い："+probe,"probe"));
+    document.getElementById("ideas").append(card);
+    nodes.push({card,id,cultures,axis,mode,type,text:[id,title,operation,probe,...names,axes[axis],modes[mode]].join(" ").toLowerCase()});
+  });
+  function applyFilters(){
+    const term=query.value.trim().toLowerCase();let count=0;
+    nodes.forEach(n=>{const show=(!term||n.text.includes(term))&&(!frameworkFilter.value||n.cultures.includes(frameworkFilter.value))&&(!axisFilter.value||n.axis===axisFilter.value)&&(!modeFilter.value||n.mode===modeFilter.value)&&(!typeFilter.value||n.type===typeFilter.value)&&(!entryOnly||entryIds.has(n.id))&&(!deepOnly||deepIds.has(n.id));n.card.hidden=!show;if(show)count++;});
+    document.getElementById("count").textContent=count+" / "+rows.length+" 案を表示";
+    document.getElementById("empty").hidden=count!==0;
+    document.getElementById("show-entry").setAttribute("aria-pressed",String(entryOnly));
+    document.getElementById("show-deep").setAttribute("aria-pressed",String(deepOnly));
+  }
+  function clearFilters(){[query,frameworkFilter,axisFilter,modeFilter,typeFilter].forEach(el=>{el.value="";});entryOnly=false;deepOnly=false;}
+  [query,frameworkFilter,axisFilter,modeFilter,typeFilter].forEach(el=>el.addEventListener("input",()=>{entryOnly=false;deepOnly=false;applyFilters();}));
+  document.getElementById("reset").addEventListener("click",()=>{clearFilters();applyFilters();});
+  document.getElementById("show-entry").addEventListener("click",()=>{const next=!entryOnly;clearFilters();entryOnly=next;applyFilters();});
+  document.getElementById("show-deep").addEventListener("click",()=>{const next=!deepOnly;clearFilters();deepOnly=next;applyFilters();});
+  function revealHash(){const id=decodeURIComponent(location.hash.slice(1));if(nodes.some(n=>n.id===id)){clearFilters();applyFilters();document.getElementById(id).scrollIntoView();}}
+  window.addEventListener("hashchange",revealHash);
+  applyFilters();revealHash();
+  const probePositions=[
+    ["受付結果の表示","表示を得られないと、どの確認ができなくなるか。","表示できても、次の理解に何が必要か。"],
+    ["照会先の明示","照会先が分からない間、誰が次の確認を担うか。","照会先を示すだけで、担当交代後にも辿れるか。"],
+    ["手続き条件の説明","条件が説明されないと、何を判断できないか。","説明した条件は、今回の状況へ適用できるか。"],
+    ["引継ぎ経路","引継ぎを外すと、どの関係が途切れるか。","引継ぎ先へ、何をどの範囲で渡せるか。"],
+    ["本人の理解確認","確認しない間、理解したと推定していたことは何か。","何をもって理解を確認し、何がまだ残るか。"],
+    ["退出後の参照","後から参照できないと、何をやり直すか。","参照できることと、再開できることは同じか。"]
+  ];
+  const probeInitial=["1","0","1","0","1","0"];
+  const probeInputs=[];
+  const probeFirst=document.getElementById("probe-first"),probeSecond=document.getElementById("probe-second");
+  probePositions.forEach(([name],index)=>{
+    const label=make("label","第"+(index+1)+"位置："+name);
+    const select=make("select");select.id="probe-p"+(index+1);
+    option(select,"0","0：ないと仮定");option(select,"1","1：あると仮定");option(select,"?","未確定");
+    select.value=probeInitial[index];label.append(select);document.getElementById("probe-controls").append(label);probeInputs.push(select);
+    option(probeFirst,String(index),"第"+(index+1)+"位置："+name);option(probeSecond,String(index),"第"+(index+1)+"位置："+name);
+  });
+  probeFirst.value="1";probeSecond.value="3";
+  function flipped(values,index){return values.map((value,i)=>i===index?(value==="1"?"0":"1"):value);}
+  function renderProbe(){
+    const values=probeInputs.map(input=>input.value),unknowns=values.filter(value=>value==="?").length;
+    document.getElementById("probe-state").textContent="下から上へ、第1〜第6位置： "+values.join(" ");
+    document.getElementById("probe-status").textContent=unknowns?"未確定が"+unknowns+"位置あります":"6位置を仮設定しました";
+    document.getElementById("probe-uncertainty").textContent=unknowns?"未確定を0か1へ勝手に割り当てません。位置を独立と仮定すると、整合する線種配列は"+(2**unknowns)+"通りあります。この数は確率や成熟度ではありません。":"0と1はこの例の便宜的な符号です。配列は優劣や承認状態を表しません。";
+    const neighbors=document.getElementById("probe-neighbors");neighbors.replaceChildren();
+    probePositions.forEach(([name,whenRemoved,whenAdded],index)=>{
+      const card=make("article",undefined,"probe-result");card.append(make("h3","第"+(index+1)+"位置："+name));
+      if(values[index]==="?"){card.append(make("p","この位置は未確定。反転する前に、何を確認すれば割当を判断できるかを問う。"));}
+      else{const next=flipped(values,index);card.append(make("p",values[index]+" → "+next[index]+" ／ 下から上："+next.join(" ")),make("p",values[index]==="1"?whenRemoved:whenAdded));}
+      neighbors.append(card);
+    });
+    const first=Number(probeFirst.value),second=Number(probeSecond.value);
+    const pathA=document.getElementById("probe-path-a"),pathB=document.getElementById("probe-path-b");
+    if(unknowns){pathA.textContent="経路A：未確定な割当があるため、確定した状態列の比較は保留します。";pathB.textContent="経路B：先に確認する材料と、割当が変わる条件を考えます。";return;}
+    if(first===second){pathA.textContent="比較する二つの位置を別々に選んでください。";pathB.textContent="同じ位置を二度反転する場合とは区別します。";return;}
+    const firstState=flipped(values,first),secondState=flipped(values,second);
+    const endA=flipped(firstState,second),endB=flipped(secondState,first);
+    pathA.textContent="経路A：第"+(first+1)+"位置 → 第"+(second+1)+"位置。 "+values.join("")+" → "+firstState.join("")+" → "+endA.join("")+"。最初に問うこと："+(values[first]==="1"?probePositions[first][1]:probePositions[first][2]);
+    pathB.textContent="経路B：第"+(second+1)+"位置 → 第"+(first+1)+"位置。 "+values.join("")+" → "+secondState.join("")+" → "+endB.join("")+"。最初に問うこと："+(values[second]==="1"?probePositions[second][1]:probePositions[second][2]);
+  }
+  [...probeInputs,probeFirst,probeSecond].forEach(input=>input.addEventListener("change",renderProbe));
+  document.getElementById("probe-reset").addEventListener("click",()=>{probeInputs.forEach((input,index)=>{input.value=probeInitial[index];});probeFirst.value="1";probeSecond.value="3";renderProbe();});
+  renderProbe();
+  window.addEventListener("DOMContentLoaded",async()=>{
+    if(!window.mermaid)return;
+    try{mermaid.initialize({startOnLoad:false,securityLevel:"strict",theme:"neutral"});const result=await mermaid.render("contact-svg",document.getElementById("contact-diagram").textContent);document.getElementById("contact-diagram").innerHTML=result.svg;document.getElementById("contact-diagram").hidden=false;document.getElementById("diagram-fallback").hidden=true;}catch{document.getElementById("contact-diagram").hidden=true;}
+  });
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js"></script>
+</body>
+</html>

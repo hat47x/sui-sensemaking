@@ -142,20 +142,24 @@ def test_different_shapes_do_not_match() -> None:
 
 
 def test_route_decorator_regex_extracts_multiline_calls() -> None:
-    """14 of routes/ai.py's 15 decorators write the path on the following line.
+    """Multi-line @router decorators must be extracted, not missed.
 
     ROUTE_DECORATOR_RE previously required the path string immediately after
-    the opening paren and missed all of these.
+    the opening paren and missed the decorators that write the path on the
+    following line. The expected count follows the route set in routes/ai.py;
+    update it together with api.md when a route is added (the count was 18
+    until /ai/suggest-attention-candidates was added in #3172).
     """
     content = AI_ROUTES_PATH.read_text(encoding="utf-8")
     matches = list(ROUTE_DECORATOR_RE.finditer(content))
-    assert len(matches) == 18, (
-        f"expected 18 @router decorators in routes/ai.py, extracted {len(matches)}: "
+    assert len(matches) == 19, (
+        f"expected 19 @router decorators in routes/ai.py, extracted {len(matches)}: "
         "a multi-line `@router.post(\\n    \"/x\", ...)` call is going undetected again"
     )
     paths = {m.group(2) for m in matches}
     assert "/external-tasks/register" in paths
     assert "/external-proposals/audit" in paths
+    assert "/suggest-attention-candidates" in paths
 
 
 def test_route_decorator_regex_extracts_empty_collection_root_path() -> None:

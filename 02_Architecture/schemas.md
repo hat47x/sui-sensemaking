@@ -653,6 +653,7 @@ export type VoidEntry = {
 - `claimType`、`fromKind`、`toKind`、`evidenceLinks` は `DocumentV1` スナップショット内で往復保持する。
 - `edges[].type` は未知種別を含めて往復保持する（§3.3.2の保全規約）。未知種別を理由にエッジを破棄・改変してはならない。
 - `evidenceLinks` は根拠・反証のリンクであり、SafeModeの共有・エクスポートで未レビュー本文や根拠情報をどう扱うかは共有前確認のポリシーに従う。
+- `affiliations` はSafeModeの共有・エクスポートで `omit`（投影に含めない）とする。これは所有者の方針が未決定の間の安全側の既定であり、`redact` / `preserve` への変更は所有者の判断事項である。
 - `patchApplyLog.stats` は根拠リンクの追加・削除件数（`upsertEvidenceLinks` / `deleteEvidenceLinks`）を含める。旧データで欠損する場合は0として扱う。
 - `critiqueInputs`、`reproposalDiffs`、`reviewAttribution`、`deterministicTieBreak` はA1契約の往復保持対象である。MVPでは画面上の個別編集や個別CRUDを提供せず、インポート・エクスポート・API保存時の型・検証・監査境界を固定する。
 - `targetRef` は `card:` / `island:` / `cluster:` / `edge:` / `proposal:` の名前空間を許可する。現行UIは島を `island:` として扱い、既存A1文書の `cluster:` と互換的に残す。
