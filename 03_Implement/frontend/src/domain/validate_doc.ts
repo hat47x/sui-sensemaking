@@ -15,8 +15,9 @@ import type {
   ReproposalDiff,
   ReviewAttribution,
   RelationSummary,
+  VoidEntry,
 } from "./types";
-import { DOCUMENT_DETERMINISTIC_TIE_BREAK_ORDER, KNOWN_EDGE_TYPES } from "./types";
+import { DOCUMENT_DETERMINISTIC_TIE_BREAK_ORDER, KNOWN_EDGE_TYPES, VOID_KINDS } from "./types";
 import { canUsePolygonPoints } from "./geometry/polygon_edit";
 
 type ValidationSuccess = {
@@ -783,7 +784,12 @@ function validateEvidenceLink(item: unknown, index: number, errors: string[]): i
     return false;
   }
 
-  hasOnlyKeys(item, ["id", "type", "fromCardId", "toCardId", "note", "createdAt"], path, errors);
+  hasOnlyKeys(
+    item,
+    ["id", "type", "fromCardId", "toCardId", "note", "createdAt", "contradictionState"],
+    path,
+    errors
+  );
 
   let valid = true;
   if (typeof item.id !== "string") {
@@ -815,6 +821,64 @@ function validateEvidenceLink(item: unknown, index: number, errors: string[]): i
   }
   if (item.createdAt !== undefined && typeof item.createdAt !== "string") {
     errors.push(`${path}.createdAt: must be a string when provided`);
+    valid = false;
+  }
+  // DOMAIN-EXPR-04 (types.ts EvidenceLink.contradictionState): optional; when present it must
+  // be one of the four review states. An out-of-enum value fails the document here, whereas
+  // the lenient parser in validate.ts drops the value.
+  if (item.contradictionState !== undefined && !validateContradictionState(item.contradictionState)) {
+    errors.push(`${path}.contradictionState: must be 'unconfirmed' | 'confirmed' | 'held' | 'resolved' when provided`);
+    valid = false;
+  }
+
+  return valid;
+}
+
+function validateContradictionState(value: unknown): value is NonNullable<EvidenceLink["contradictionState"]> {
+  return value === "unconfirmed" || value === "confirmed" || value === "held" || value === "resolved";
+}
+
+// schemas.md VoidEntry / types.ts VoidEntry. The field bounds mirror backend models.py
+// VoidEntry (title / detail: min_length=1). `voids` is written by the UI's void detection,
+// so a stored document must pass here or the import gate rejects it.
+function validateVoidEntry(item: unknown, index: number, errors: string[]): item is VoidEntry {
+  const path = `voids[${index}]`;
+  if (!isRecord(item)) {
+    errors.push(`${path}: must be an object`);
+    return false;
+  }
+
+  hasOnlyKeys(item, ["id", "kind", "title", "detail", "cardIds", "islandIds", "resolved", "createdAt"], path, errors);
+
+  let valid = true;
+  if (typeof item.id !== "string") {
+    errors.push(`${path}.id: must be a string`);
+    valid = false;
+  }
+  if (!VOID_KINDS.includes(item.kind as VoidEntry["kind"])) {
+    errors.push(`${path}.kind: must be one of ${VOID_KINDS.join(", ")}`);
+    valid = false;
+  }
+  if (typeof item.title !== "string" || item.title.length === 0) {
+    errors.push(`${path}.title: must be a non-empty string`);
+    valid = false;
+  }
+  if (typeof item.detail !== "string" || item.detail.length === 0) {
+    errors.push(`${path}.detail: must be a non-empty string`);
+    valid = false;
+  }
+  if (item.cardIds !== undefined && !validateStringArray(item.cardIds, `${path}.cardIds`, errors)) {
+    valid = false;
+  }
+  if (item.islandIds !== undefined && !validateStringArray(item.islandIds, `${path}.islandIds`, errors)) {
+    valid = false;
+  }
+  if (item.resolved !== undefined && typeof item.resolved !== "boolean") {
+    errors.push(`${path}.resolved: must be a boolean when provided`);
+    valid = false;
+  }
+  if (!isIsoTimestamp(item.createdAt)) {
+    errors.push(`${path}.createdAt: must be an ISO timestamp`);
     valid = false;
   }
 
@@ -1289,6 +1353,7 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
       "reviewAttribution",
       "deterministicTieBreak",
       "shelf",
+      "voids",
     ],
     "document",
     errors
@@ -1551,6 +1616,16 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
 
   if (value.deterministicTieBreak !== undefined) {
     validateDeterministicTieBreak(value.deterministicTieBreak, errors);
+  }
+
+  if (value.voids !== undefined) {
+    if (!Array.isArray(value.voids)) {
+      errors.push("document.voids: must be an array when provided");
+    } else {
+      value.voids.forEach((item, index) => {
+        validateVoidEntry(item, index, errors);
+      });
+    }
   }
 
   if (errors.length > 0) {
