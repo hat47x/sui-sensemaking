@@ -1897,5 +1897,7 @@
   "epistemic.health.downstream_impact": "Downstream impact: {value}",
   "epistemic.health.coverage_gap": "Coverage gap: {areaId}",
   "epistemic.health.open_review": "Review",
-  "epistemic.health.authority_note": "Reviewer candidates do not imply approval authority."
+  "epistemic.health.authority_note": "Reviewer candidates do not imply approval authority.",
+  "epistemic.health.resolution_unknown": "Resolution coverage cannot be determined",
+  "epistemic.health.resolution_insufficient_sample": "The sample is too small for a ratio-based health decision"
 }
