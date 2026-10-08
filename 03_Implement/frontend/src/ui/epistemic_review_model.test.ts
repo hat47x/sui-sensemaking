@@ -189,9 +189,9 @@ describe("epistemic review UI model", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "user-premise");
     expect(item).toMatchObject({
       state: "working-premise",
-      label: "作業前提",
+      labelKey: "epistemic.state.working_premise",
       confirmationState: "unreviewed",
-      confirmationLabel: "未確認",
+      confirmationLabelKey: "epistemic.confirmation.unreviewed",
     });
     expect(item?.actions).toContain("confirm");
   });
@@ -200,9 +200,9 @@ describe("epistemic review UI model", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "ai-candidate");
     expect(item).toMatchObject({
       state: "candidate",
-      label: "候補",
+      labelKey: "epistemic.state.candidate",
       confirmationState: "unreviewed",
-      confirmationLabel: "未確認",
+      confirmationLabelKey: "epistemic.confirmation.unreviewed",
     });
     expect(item?.actions).toContain("confirm");
     expect(item?.actions).toContain("mark-hypothesis");
@@ -212,9 +212,9 @@ describe("epistemic review UI model", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "confirmed-hypothesis");
     expect(item).toMatchObject({
       state: "candidate",
-      label: "候補",
+      labelKey: "epistemic.state.candidate",
       confirmationState: "confirmed",
-      confirmationLabel: "確認済み",
+      confirmationLabelKey: "epistemic.confirmation.confirmed",
     });
     expect(item?.actions).not.toContain("confirm");
     expect(item?.actions).toContain("reject");
@@ -233,7 +233,7 @@ describe("epistemic review UI model", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "ambiguous");
     expect(item).toMatchObject({
       state: "target-ambiguous",
-      label: "対象を確認",
+      labelKey: "epistemic.state.target_ambiguous",
     });
     expect(item?.actions).toContain("resolve-target");
     expect(item?.actions).not.toContain("confirm");
@@ -243,10 +243,10 @@ describe("epistemic review UI model", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "partial");
     expect(item).toMatchObject({
       state: "metadata-incomplete",
-      label: "情報不足",
+      labelKey: "epistemic.state.metadata_incomplete",
       sourceConfirmationState: "confirmed",
       confirmationState: "unknown",
-      confirmationLabel: "確認状態不明",
+      confirmationLabelKey: "epistemic.confirmation.unknown",
     });
     expect(item?.actions).toContain("request-access");
     expect(item?.actions).not.toContain("confirm");
@@ -256,7 +256,7 @@ describe("epistemic review UI model", () => {
     const input = projection();
     const item = buildEpistemicUiItems(input).find((value) => value.assertionId === "partial");
     expect(item?.confirmationState).toBe("unknown");
-    expect(item?.confirmationLabel).not.toBe("確認済み");
+    expect(item?.confirmationLabelKey).not.toBe("epistemic.confirmation.confirmed");
   });
 
   it("keeps conflict in review and does not offer one-click confirmation", () => {
