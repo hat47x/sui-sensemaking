@@ -40,6 +40,13 @@ MCP_DIR = os.path.join(ROOT_DIR, "03_Implement", "mcp")
 VENV_PYTHON = os.path.join(BACKEND_DIR, ".venv", "bin", "python")
 BIZ_KEY = "biz-test-key-mcp-audit"
 DOC_ID = "mcp-audit-doc"
+# SEC-AUDIT-DUP-01 (02_Architecture/api.md, POST /docs/{id}/context-audit): an
+# identical logical POST (tenant/doc/operation/equivalenceKey/bundleHash) inside
+# this window reaches the audit sink only once, while every HTTP response stays
+# "accepted". Each MCP read below is a separate audited read, so it must start
+# after the previous read's window has expired. Pinned here to the documented
+# default so the expected count does not depend on the environment.
+AUDIT_DEDUP_WINDOW_SECONDS = 5.0
 
 PASS = 0
 FAIL = 0
@@ -193,6 +200,7 @@ def main() -> int:
             # safe-mode events unless this is set, so the audit-chain E2E enables
             # it to prove the channel=mcp event is actually delivered.
             SUI_AUDIT_ALLOW_IN_SAFE_MODE="1",
+            SUI_AUDIT_DEDUP_WINDOW_SECONDS=str(AUDIT_DEDUP_WINDOW_SECONDS),
             # CE4 proposal decision requires an authenticated reviewer
             # (actor_ref), provided via x-forwarded-user; JIT-provision that
             # reviewer so the doc and the decision share one identity.
@@ -315,6 +323,10 @@ def main() -> int:
         # Exercise the remote-client transport against the same real backend.
         # The HTTP harness first proves that a valid signed token without the
         # read:context scope is denied, then completes the authorized tool call.
+        # Start it only after the previous read's dedup window has expired (see
+        # AUDIT_DEDUP_WINDOW_SECONDS); otherwise its identical CE-4 event is
+        # collapsed into the stdio read's event by design.
+        time.sleep(AUDIT_DEDUP_WINDOW_SECONDS + 1.0)
         http_proc = subprocess.run(
             [node_cli, "scripts/dogfood_mcp_http_e2e.mjs", DOC_ID],
             cwd=MCP_DIR,
@@ -368,6 +380,8 @@ def main() -> int:
         # 4c. MCP-side decision reflection: re-run verify_mcp.ts after the human
         #     decision so a generative-AI verifier confirms the CE4 proposal is
         #     now decided (accepted) via the MCP get_proposal_status tool.
+        # Same dedup-window separation before the second stdio read.
+        time.sleep(AUDIT_DEDUP_WINDOW_SECONDS + 1.0)
         proc2 = subprocess.run(
             [node_cli, tsx_cli, "scripts/verify_mcp.ts", DOC_ID, "reviewed-only"],
             cwd=MCP_DIR,
@@ -387,8 +401,11 @@ def main() -> int:
             print(proc2.stderr[-2000:])
 
         # 5. Give the async audit queue a moment, then assert the sink saw the
-        #    channel=mcp context-audit events for this document (2 stdio runs of
-        #    verify_mcp.ts + 1 HTTP client call = 3).
+        #    channel=mcp context-audit events for this document. One event per
+        #    read session is expected: each verify_mcp.ts run issues two
+        #    identical get_context_projection calls (the second is the bundle
+        #    determinism check), which the dedup window collapses into one, and
+        #    the HTTP client call contributes one. 2 stdio runs + 1 HTTP = 3.
         time.sleep(1.0)
         events = sink.snapshot()
         mcp_events = [
