@@ -57,12 +57,21 @@ intentには、表示時点の `meaningFingerprint`、opaqueな `reviewSubjectFi
 
 ## 1操作とquick key
 
-Referenceではintent生成に次のquick actionを割り当てる。
+ReferenceではUI actionとして次を置く。
 
 - `v`: confirm
 - `h`: hypothesis
 - `x`: reject
 - `r`: request review
+- 確認済み詳細操作: withdraw confirmation
+
+ただし内部intentは一つへまとめない。
+
+- confirm / reject / withdraw → append-only review event
+- mark hypothesis → statement kind変更
+- request review → stakeholder / reviewer handoff
+
+これにより、仮説化や確認依頼を誤ってreview eventとして永続化しない。
 
 実際のkeyboard bindingは画面統合時にaccessibility / IME / browser shortcutとの競合を確認して決める。ここではaction semanticsだけをcandidateとして固定する。
 
