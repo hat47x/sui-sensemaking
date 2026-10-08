@@ -49,7 +49,9 @@ intentには、表示時点の `meaningFingerprint`、opaqueな `reviewSubjectFi
 | detached target | 対象なし | 元対象へ再接続できない |
 | blocked | 利用停止 | premise利用しない |
 
-確認状態は別badgeとして `未確認 / 確認済み / 否定済み` を表示できます。
+確認状態は別badgeとして `未確認 / 確認済み / 否定済み` を表示できる。ただしmetadataがpartial / absentなら、source Projectionにconfirmedが残っていてもUIでは `確認状態不明` とする。hidden reject / withdraw等を否定できないためである。
+
+rawなsource confirmationは詳細情報として保持できるが、利用者向けの「確認済み」表示へそのまま流さない。
 
 したがってdirect user premiseは「作業前提 + 未確認」、human-confirmed factは「作業前提 + 確認済み」、human-confirmed hypothesisは「候補 + 確認済み」と表現できます。
 
