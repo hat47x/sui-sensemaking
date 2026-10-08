@@ -17,6 +17,7 @@ const authorityLimits = [
   "partial-transport-health-is-not-project-wide-health",
   "review-history-is-bounded-by-context-as-of",
   "review-binding-includes-context-kind-and-target-identity",
+  "review-binding-includes-validity-window",
   "reviewer-candidate-is-not-review-authority",
 ];
 
