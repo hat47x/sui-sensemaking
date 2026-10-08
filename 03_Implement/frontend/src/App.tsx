@@ -2603,7 +2603,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   const handleSuggestDocumentTitle = useCallback(
     async (islandTitles: string[], cardTexts: string[], currentTitle: string | undefined) => {
       try {
-        return await runTenantScopedApiRequest(() => suggestDocumentTitle(islandTitles, cardTexts, currentTitle, documentTitleModel, {
+        return await runTenantScopedApiRequest(() => suggestDocumentTitle(islandTitles, cardTexts, currentTitle, documentTitleModel, document?.cards, {
           tenantSessionContext: verifiedTenantSession,
         }));
       } catch (error) {
@@ -2617,7 +2617,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         throw new Error(resolveAiProviderErrorMessage(error, fallback));
       }
     },
-    [documentTitleModel, runTenantScopedApiRequest, verifiedTenantSession],
+    [document, documentTitleModel, runTenantScopedApiRequest, verifiedTenantSession],
   );
 
   const islandTitlesForSuggestion = useMemo(
