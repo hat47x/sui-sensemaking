@@ -130,6 +130,7 @@ async function routeMergePersistence(page: Page): Promise<{
             scoreSummary: { min: 0.92, max: 0.92, avg: 0.92 },
             reasonCodes: ["semantic_similarity"],
             snapshotVersion: CANDIDATE_GROUP_CONTRACT,
+            mergeMethod: "near_duplicate",
             cardIds: ["source-a", "source-b"],
             mergedTextDraft: "Long checkout waits frustrate customers.",
             rationale: "Both observations describe the same checkout-delay experience.",
@@ -171,19 +172,25 @@ test("recorded accept is explicitly applied, saved, and restored through the UI/
   await mergePanel.getByRole("button", { name: "Collect candidates" }).click();
   await expect(mergePanel).toContainText("source-a");
   await expect(mergePanel).toContainText("source-b");
-  await expect(mergePanel.getByRole("button", { name: "Accept" })).toBeDisabled();
+  await expect(mergePanel.getByRole("button", { name: "Accept", exact: true })).toBeDisabled();
 
   await mergePanel
     .getByPlaceholder("Record why you accept/partial/reject/defer this proposal")
     .fill("The two observations retain the same actor, situation, and factual position.");
-  await expect(mergePanel.getByRole("button", { name: "Accept" })).toBeEnabled();
-  await mergePanel.getByRole("button", { name: "Accept" }).click();
+  await expect(mergePanel.getByRole("button", { name: "Accept", exact: true })).toBeEnabled();
+  await mergePanel.getByRole("button", { name: "Accept", exact: true }).click();
   await expect(mergePanel).toContainText("Accepted");
 
   const applyButton = mergePanel.getByRole("button", { name: "Apply accepted merge" });
   await expect(applyButton).toBeEnabled();
   await applyButton.click();
   await expect(mergePanel.getByRole("button", { name: "Merge applied" })).toBeDisabled();
+
+  // Save is a core action outside the modal Work mode surface, as in the accept
+  // spec: close Work mode with its Close control before the real save flow.
+  const workMode = page.locator('[data-ui-region="work-mode"]');
+  await workMode.getByRole("button", { name: /Close|閉じる/ }).click();
+  await expect(workMode).toBeHidden();
 
   const saveButton = page.locator(SAVE);
   await expect(saveButton).toBeEnabled();
@@ -225,6 +232,8 @@ test("recorded accept is explicitly applied, saved, and restored through the UI/
   }
   await expect.poll(() => routed.getCount()).toBeGreaterThan(getsBeforeReload);
   await expect(page.getByRole("button", { name: "Long checkout waits frustrate customers." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Customers wait too long at checkout." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Checkout delays frustrate customers." })).toBeVisible();
+  // The source cards stay in the saved document (asserted above). With the default
+  // hideSourceCards view they are folded behind their representative on the canvas.
+  await expect(page.getByRole("button", { name: "Customers wait too long at checkout." })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Checkout delays frustrate customers." })).toHaveCount(0);
 });

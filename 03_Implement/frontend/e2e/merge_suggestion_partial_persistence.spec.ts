@@ -34,6 +34,9 @@ async function routePersistentDocument(page: Page) {
   await page.route("**/packs/index.json", async (route) => {
     await route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
   });
+  await page.route("**/ai/available-models", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ models: [], unavailableReason: "no_active_models" }) });
+  });
   await page.route("**/ai/provider-status", async (route) => {
     await route.fulfill({
       status: 200,
@@ -53,6 +56,7 @@ async function routePersistentDocument(page: Page) {
           scoreSummary: { min: 0.9, max: 0.95, avg: 0.925 },
           reasonCodes: ["e2e:partial-selection-contract"],
           snapshotVersion: "CTR-2B-01-CANDIDATE-GROUP-V1",
+          mergeMethod: "near_duplicate",
           cardIds: ["c1", "c2", "c3"],
           mergedTextDraft: MERGED_TEXT,
           rationale: "The first two can be represented together while the third may remain independent.",

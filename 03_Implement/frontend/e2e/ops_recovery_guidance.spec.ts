@@ -41,6 +41,11 @@ async function routeDocumentApi(
     failPut?: boolean;
   },
 ) {
+  // The first-run public pack is tried before the server document; a 404 keeps
+  // these tests on the server-document path they are about.
+  await page.route("**/packs/index.json", async (route: Route) => {
+    await route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
+  });
   await page.route("**/api/docs/**", async (route: Route) => {
     const method = route.request().method();
     if (method === "GET") {

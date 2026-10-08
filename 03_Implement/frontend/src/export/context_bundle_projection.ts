@@ -223,13 +223,18 @@ export async function buildContextProjection(input: ContextProjectionInput): Pro
   // otherwise let a SafeMode toggle change the hash for the same real content
   // -- but exposure state IS part of what was shared, so we hash id + reviewed
   // + redacted + the exposed text, and never the withheld original).
-  const voids = (doc.voids ?? []).map((v) => ({
-    id: v.id,
-    kind: v.kind,
-    resolved: v.resolved === true,
-    ...(v.cardIds && v.cardIds.length > 0 ? { cardIds: v.cardIds } : {}),
-    ...(v.islandIds && v.islandIds.length > 0 ? { islandIds: v.islandIds } : {}),
-  }));
+  // An unreviewed card's id must not surface through a void either (same gate as
+  // the links above): keep only reviewed card ids, and omit the field when none remain.
+  const voids = (doc.voids ?? []).map((v) => {
+    const reviewedVoidCardIds = (v.cardIds ?? []).filter((id) => reviewedCardIds.has(id));
+    return {
+      id: v.id,
+      kind: v.kind,
+      resolved: v.resolved === true,
+      ...(reviewedVoidCardIds.length > 0 ? { cardIds: reviewedVoidCardIds } : {}),
+      ...(v.islandIds && v.islandIds.length > 0 ? { islandIds: v.islandIds } : {}),
+    };
+  });
   const narrativeChecks = (doc.narratives ?? []).flatMap((narrative) =>
     (narrative.checks ?? []).map((check) => ({
       id: check.id,

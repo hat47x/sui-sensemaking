@@ -9,6 +9,8 @@ export default defineConfig({
   testIgnore: [
     "ux_perf_01_time_to_interactive.spec.ts",
     "saas_auth_browser_multi_instance.spec.ts",
+    // Needs a real OAuth broker on localhost:9100; run with its own harness.
+    "tenant_session_real_backend_multitab.spec.ts",
   ],
   timeout: 30_000,
   retries: 0,

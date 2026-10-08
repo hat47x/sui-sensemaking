@@ -314,4 +314,52 @@ describe("buildContextProjection: structural void and narrative-check state", ()
     expect(projection.voids).toEqual([]);
     expect(projection.narrativeChecks).toEqual([]);
   });
+
+  it("never returns an unreviewed card id through a void, under any constraint", async () => {
+    const doc: DocumentV1 = {
+      version: 1,
+      id: "doc-void-leak",
+      createdAt: "2026-10-08T00:00:00.000Z",
+      updatedAt: "2026-10-08T00:00:00.000Z",
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: [
+        { id: "c1", text: "reviewed one", x: 0, y: 0, textReviewed: true },
+        { id: "c3", text: "unreviewed draft", x: 100, y: 0, textReviewed: false },
+      ],
+      edges: [],
+      islands: [{ id: "i1", cardIds: ["c1", "c3"], title: "A", summaryText: "s", summaryReviewed: true }],
+      voids: [
+        {
+          id: "v-mixed",
+          kind: "orphaned_island",
+          title: "mixed",
+          detail: "mixed",
+          cardIds: ["c1", "c3"],
+          resolved: false,
+          createdAt: "2026-10-08T00:00:00.000Z",
+        },
+        {
+          id: "v-unreviewed-only",
+          kind: "orphaned_island",
+          title: "draft only",
+          detail: "draft only",
+          cardIds: ["c3"],
+          resolved: false,
+          createdAt: "2026-10-08T00:00:00.000Z",
+        },
+      ],
+    };
+
+    for (const constraint of CONTEXT_PROJECTION_CONSTRAINTS) {
+      for (const safeMode of [true, false]) {
+        const projection = await buildContextProjection({ doc, constraint, safeMode });
+        // Exact quoted id: a bare substring could match inside the hex bundleHash.
+        expect(JSON.stringify(projection)).not.toContain('"c3"');
+        expect(projection.voids).toEqual([
+          { id: "v-mixed", kind: "orphaned_island", resolved: false, cardIds: ["c1"] },
+          { id: "v-unreviewed-only", kind: "orphaned_island", resolved: false },
+        ]);
+      }
+    }
+  });
 });

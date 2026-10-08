@@ -53,6 +53,7 @@ function suggestionResponse() {
         scoreSummary: { min: 0.9, max: 0.9, avg: 0.9 },
         reasonCodes: ["near_duplicate"],
         snapshotVersion: "CTR-2B-01-CANDIDATE-GROUP-V1",
+        mergeMethod: "near_duplicate",
         cardIds: ["c-source-1", "c-source-2"],
         mergedTextDraft: "利用者の待ち時間が長いという観察が複数ある",
         rationale: "二つの観察は中心内容が近いが、元カードは保持して戻せるようにする。",

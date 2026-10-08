@@ -55,6 +55,7 @@ sui-sensemakingは、既定ではAI機能と外部連携を有効にしない安
 | カードや島から説明文を作る | [ナラティブ生成](narratives.md) |
 | インポートと書き出し、比較結果の再現性を理解する | [正規化と決定論](canonicalization.md) |
 | Copilot 等の定額課金AIエージェントに依頼・応答を取り込む | [外部エージェント連携ワークフロー](external_agent_workflow.md) |
+| 生成AIエージェントに文書の文脈を読み取り専用で渡す（MCP） | [生成AIエージェントをMCPで接続する](mcp_agent_connection.md) |
 
 ## 困ったとき
 
