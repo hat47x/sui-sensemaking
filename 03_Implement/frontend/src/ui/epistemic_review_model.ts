@@ -104,7 +104,7 @@ export type EpistemicUiState =
   | "target-ambiguous"
   | "target-detached";
 
-export type EpistemicConfirmationState = "unreviewed" | "confirmed" | "rejected";
+export type EpistemicConfirmationState = "unreviewed" | "confirmed" | "rejected" | "unknown";
 
 export type EpistemicUiItem = {
   assertionId: string;
@@ -114,9 +114,10 @@ export type EpistemicUiItem = {
   state: EpistemicUiState;
   label: string;
   tone: "neutral" | "info" | "warning" | "danger";
+  sourceConfirmationState: string;
   confirmationState: EpistemicConfirmationState;
-  confirmationLabel: "未確認" | "確認済み" | "否定済み";
-  confirmationTone: "neutral" | "danger";
+  confirmationLabel: "未確認" | "確認済み" | "否定済み" | "確認状態不明";
+  confirmationTone: "neutral" | "warning" | "danger";
   statementKind: string;
   targetBinding: EpistemicTargetBinding;
   targetReanchored: boolean;
@@ -326,23 +327,34 @@ function deriveState(assessment: EpistemicAssessmentInput): EpistemicUiState {
 }
 
 function confirmationPresentation(
-  raw: string,
-): Pick<EpistemicUiItem, "confirmationState" | "confirmationLabel" | "confirmationTone"> {
-  switch (raw) {
+  assessment: EpistemicAssessmentInput,
+): Pick<EpistemicUiItem, "sourceConfirmationState" | "confirmationState" | "confirmationLabel" | "confirmationTone"> {
+  if (assessment.metadataState !== "complete") {
+    return {
+      sourceConfirmationState: assessment.confirmationState,
+      confirmationState: "unknown",
+      confirmationLabel: "確認状態不明",
+      confirmationTone: "warning",
+    };
+  }
+  switch (assessment.confirmationState) {
     case "confirmed":
       return {
+        sourceConfirmationState: assessment.confirmationState,
         confirmationState: "confirmed",
         confirmationLabel: "確認済み",
         confirmationTone: "neutral",
       };
     case "rejected":
       return {
+        sourceConfirmationState: assessment.confirmationState,
         confirmationState: "rejected",
         confirmationLabel: "否定済み",
         confirmationTone: "danger",
       };
     default:
       return {
+        sourceConfirmationState: assessment.confirmationState,
         confirmationState: "unreviewed",
         confirmationLabel: "未確認",
         confirmationTone: "neutral",
@@ -399,7 +411,7 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
     .map((assessment): EpistemicUiItem => {
       const state = deriveState(assessment);
       const presentation = statePresentation(state);
-      const confirmation = confirmationPresentation(assessment.confirmationState);
+      const confirmation = confirmationPresentation(assessment);
       return {
         assertionId: assessment.assertionId,
         meaningFingerprint: assessment.meaningFingerprint,
