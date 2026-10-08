@@ -106,17 +106,32 @@ export type EpistemicUiState =
 
 export type EpistemicConfirmationState = "unreviewed" | "confirmed" | "rejected" | "unknown";
 
+export type EpistemicStateLabelKey =
+  | "epistemic.state.working_premise"
+  | "epistemic.state.candidate"
+  | "epistemic.state.review_required"
+  | "epistemic.state.blocked"
+  | "epistemic.state.metadata_incomplete"
+  | "epistemic.state.target_ambiguous"
+  | "epistemic.state.target_detached";
+
+export type EpistemicConfirmationLabelKey =
+  | "epistemic.confirmation.unreviewed"
+  | "epistemic.confirmation.confirmed"
+  | "epistemic.confirmation.rejected"
+  | "epistemic.confirmation.unknown";
+
 export type EpistemicUiItem = {
   assertionId: string;
   meaningFingerprint: string;
   reviewSubjectFingerprint: string;
   reviewLogSequence: number;
   state: EpistemicUiState;
-  label: string;
+  labelKey: EpistemicStateLabelKey;
   tone: "neutral" | "info" | "warning" | "danger";
   sourceConfirmationState: string;
   confirmationState: EpistemicConfirmationState;
-  confirmationLabel: "未確認" | "確認済み" | "否定済み" | "確認状態不明";
+  confirmationLabelKey: EpistemicConfirmationLabelKey;
   confirmationTone: "neutral" | "warning" | "danger";
   statementKind: string;
   targetBinding: EpistemicTargetBinding;
@@ -328,12 +343,12 @@ function deriveState(assessment: EpistemicAssessmentInput): EpistemicUiState {
 
 function confirmationPresentation(
   assessment: EpistemicAssessmentInput,
-): Pick<EpistemicUiItem, "sourceConfirmationState" | "confirmationState" | "confirmationLabel" | "confirmationTone"> {
+): Pick<EpistemicUiItem, "sourceConfirmationState" | "confirmationState" | "confirmationLabelKey" | "confirmationTone"> {
   if (assessment.metadataState !== "complete") {
     return {
       sourceConfirmationState: assessment.confirmationState,
       confirmationState: "unknown",
-      confirmationLabel: "確認状態不明",
+      confirmationLabelKey: "epistemic.confirmation.unknown",
       confirmationTone: "warning",
     };
   }
@@ -342,42 +357,42 @@ function confirmationPresentation(
       return {
         sourceConfirmationState: assessment.confirmationState,
         confirmationState: "confirmed",
-        confirmationLabel: "確認済み",
+        confirmationLabelKey: "epistemic.confirmation.confirmed",
         confirmationTone: "neutral",
       };
     case "rejected":
       return {
         sourceConfirmationState: assessment.confirmationState,
         confirmationState: "rejected",
-        confirmationLabel: "否定済み",
+        confirmationLabelKey: "epistemic.confirmation.rejected",
         confirmationTone: "danger",
       };
     default:
       return {
         sourceConfirmationState: assessment.confirmationState,
         confirmationState: "unreviewed",
-        confirmationLabel: "未確認",
+        confirmationLabelKey: "epistemic.confirmation.unreviewed",
         confirmationTone: "neutral",
       };
   }
 }
 
-function statePresentation(state: EpistemicUiState): Pick<EpistemicUiItem, "label" | "tone"> {
+function statePresentation(state: EpistemicUiState): Pick<EpistemicUiItem, "labelKey" | "tone"> {
   switch (state) {
     case "working-premise":
-      return { label: "作業前提", tone: "info" };
+      return { labelKey: "epistemic.state.working_premise", tone: "info" };
     case "candidate":
-      return { label: "候補", tone: "neutral" };
+      return { labelKey: "epistemic.state.candidate", tone: "neutral" };
     case "review-required":
-      return { label: "要確認", tone: "warning" };
+      return { labelKey: "epistemic.state.review_required", tone: "warning" };
     case "blocked":
-      return { label: "利用停止", tone: "danger" };
+      return { labelKey: "epistemic.state.blocked", tone: "danger" };
     case "metadata-incomplete":
-      return { label: "情報不足", tone: "warning" };
+      return { labelKey: "epistemic.state.metadata_incomplete", tone: "warning" };
     case "target-ambiguous":
-      return { label: "対象を確認", tone: "warning" };
+      return { labelKey: "epistemic.state.target_ambiguous", tone: "warning" };
     case "target-detached":
-      return { label: "対象なし", tone: "warning" };
+      return { labelKey: "epistemic.state.target_detached", tone: "warning" };
   }
 }
 
