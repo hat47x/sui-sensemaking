@@ -8,6 +8,10 @@ import { EpistemicHealthAlert } from "./EpistemicHealthAlert";
 
 const authorityLimits = [
   "assessment-does-not-assert-objective-truth",
+  "content-fingerprint-does-not-restore-review-history",
+  "meaning-fingerprint-is-input-not-semantic-proof",
+  "assessment-does-not-grant-write-or-runtime-authority",
+  "assessment-does-not-grant-canonical-acceptance",
   "target-anchor-resolution-does-not-prove-semantic-identity",
   "coverage-mapping-is-input-not-semantic-completeness-proof",
   "resolution-coverage-is-operational-readiness-not-truth-ratio",
