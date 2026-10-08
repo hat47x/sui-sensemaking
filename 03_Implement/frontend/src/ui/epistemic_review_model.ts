@@ -7,6 +7,7 @@ const REQUIRED_AUTHORITY_LIMITS = new Set([
   "coverage-mapping-is-input-not-semantic-completeness-proof",
   "partial-transport-health-is-not-project-wide-health",
   "review-history-is-bounded-by-context-as-of",
+  "review-binding-includes-context-kind-and-target-identity",
   "reviewer-candidate-is-not-review-authority",
 ]);
 
