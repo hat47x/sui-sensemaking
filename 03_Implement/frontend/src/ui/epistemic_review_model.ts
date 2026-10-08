@@ -86,6 +86,7 @@ export type EpistemicUiAction =
   | "confirm"
   | "mark-hypothesis"
   | "reject"
+  | "withdraw-confirmation"
   | "inspect-details"
   | "resolve-target"
   | "request-access"
@@ -123,9 +124,8 @@ export type EpistemicUiItem = {
   reasons: string[];
 };
 
-export type EpistemicReviewIntent = {
+export type EpistemicIntentBinding = {
   assertionId: string;
-  operation: "confirm" | "mark-hypothesis" | "reject" | "request-review";
   source: "human-ui";
   expectedMeaningFingerprint: string;
   expectedReviewSubjectFingerprint: string;
@@ -133,8 +133,27 @@ export type EpistemicReviewIntent = {
   expectedReviewLogSequence: number;
 };
 
+export type EpistemicReviewEventIntent = EpistemicIntentBinding & {
+  kind: "review-event";
+  operation: "confirm" | "reject" | "withdraw";
+};
+
+export type EpistemicClassificationIntent = EpistemicIntentBinding & {
+  kind: "classification-change";
+  statementKind: "hypothesis";
+};
+
+export type EpistemicReviewRequestIntent = EpistemicIntentBinding & {
+  kind: "review-request";
+};
+
+export type EpistemicUiIntent =
+  | EpistemicReviewEventIntent
+  | EpistemicClassificationIntent
+  | EpistemicReviewRequestIntent;
+
 export type BulkConfirmResult =
-  | { ok: true; intents: EpistemicReviewIntent[] }
+  | { ok: true; intents: EpistemicReviewEventIntent[] }
   | {
       ok: false;
       blocked: Array<{
@@ -352,7 +371,7 @@ function allowedActions(
     case "working-premise":
     case "candidate":
       if (assessment.confirmationState === "confirmed") {
-        return unique([...actions, "reject"]) as EpistemicUiAction[];
+        return unique([...actions, "reject", "withdraw-confirmation"]) as EpistemicUiAction[];
       }
       return unique([...actions, "confirm", "mark-hypothesis", "reject"]) as EpistemicUiAction[];
   }
@@ -388,22 +407,55 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
     .sort((left, right) => left.assertionId.localeCompare(right.assertionId));
 }
 
-export function buildEpistemicReviewIntent(
-  item: EpistemicUiItem,
-  operation: EpistemicReviewIntent["operation"],
-): EpistemicReviewIntent {
-  const requiredAction: EpistemicUiAction = operation === "request-review" ? "request-review" : operation;
-  if (!item.actions.includes(requiredAction)) {
-    throw new Error(`${operation} is not allowed for ${item.assertionId} in state ${item.state}`);
-  }
+function intentBinding(item: EpistemicUiItem): EpistemicIntentBinding {
   return {
     assertionId: item.assertionId,
-    operation,
     source: "human-ui",
     expectedMeaningFingerprint: item.meaningFingerprint,
     expectedReviewSubjectFingerprint: item.reviewSubjectFingerprint,
     expectedTargetBinding: item.targetBinding,
     expectedReviewLogSequence: item.reviewLogSequence,
+  };
+}
+
+export function buildEpistemicReviewIntent(
+  item: EpistemicUiItem,
+  operation: EpistemicReviewEventIntent["operation"],
+): EpistemicReviewEventIntent {
+  const requiredAction: EpistemicUiAction =
+    operation === "withdraw" ? "withdraw-confirmation" : operation;
+  if (!item.actions.includes(requiredAction)) {
+    throw new Error(`${operation} is not allowed for ${item.assertionId} in state ${item.state}`);
+  }
+  return {
+    ...intentBinding(item),
+    kind: "review-event",
+    operation,
+  };
+}
+
+export function buildEpistemicClassificationIntent(
+  item: EpistemicUiItem,
+): EpistemicClassificationIntent {
+  if (!item.actions.includes("mark-hypothesis")) {
+    throw new Error(`mark-hypothesis is not allowed for ${item.assertionId} in state ${item.state}`);
+  }
+  return {
+    ...intentBinding(item),
+    kind: "classification-change",
+    statementKind: "hypothesis",
+  };
+}
+
+export function buildEpistemicReviewRequestIntent(
+  item: EpistemicUiItem,
+): EpistemicReviewRequestIntent {
+  if (!item.actions.includes("request-review")) {
+    throw new Error(`request-review is not allowed for ${item.assertionId} in state ${item.state}`);
+  }
+  return {
+    ...intentBinding(item),
+    kind: "review-request",
   };
 }
 
