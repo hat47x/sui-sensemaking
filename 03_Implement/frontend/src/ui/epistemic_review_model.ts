@@ -7,6 +7,7 @@ const REQUIRED_AUTHORITY_LIMITS = new Set([
   "assessment-does-not-assert-objective-truth",
   "target-anchor-resolution-does-not-prove-semantic-identity",
   "coverage-mapping-is-input-not-semantic-completeness-proof",
+  "resolution-coverage-is-operational-readiness-not-truth-ratio",
   "partial-transport-health-is-not-project-wide-health",
   "review-history-is-bounded-by-context-as-of",
   "review-binding-includes-context-kind-and-target-identity",
