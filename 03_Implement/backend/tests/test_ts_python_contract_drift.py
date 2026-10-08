@@ -56,6 +56,8 @@ TYPE_MAP: dict[str, str] = {
     "PatchApplyLogEntry": "PatchApplyLogEntry",
     "ReviewAttribution": "ReviewAttribution",
     "DeterministicTieBreak": "DeterministicTieBreak",
+    "ReproposalDiff": "ReproposalDiff",
+    "ReproposalDiffOp": "ReproposalDiffOp",
     "MergeSuggestionDecisionEntry": "MergeSuggestionDecision",
     "DocumentV1": "DocumentV1",
 }

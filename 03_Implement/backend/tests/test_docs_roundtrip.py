@@ -1348,6 +1348,41 @@ def test_docs_v1_hil_rs_contract_fields_reject_spoofed_reviewer_sqlite(
     assert put_response.json()["detail"] == "reviewerRef must match authenticated identity"
 
 
+def _assert_v1_reproposal_rationale_roundtrip(client: TestClient, doc_id: str) -> None:
+    payload = _sample_payload_v1_with_hil_rs_contract_fields(
+        doc_id, reviewer_ref="reviewer:opaque-1"
+    )
+    diff_rationale = "crit-1の指摘を受けて、card-1だけを動かす再提案"
+    op_rationale = "card-1の位置だけを変え、近すぎる配置を解消する"
+    reproposal = payload["reproposalDiffs"][0]
+    reproposal["rationale"] = diff_rationale
+    reproposal["diffOps"][0]["rationale"] = op_rationale
+
+    put_response = client.put(
+        f"/docs/{doc_id}",
+        json=payload,
+        headers={"x-actor-ref": "reviewer:opaque-1"},
+    )
+    assert put_response.status_code == 200, put_response.text
+
+    get_response = client.get(f"/docs/{doc_id}")
+    assert get_response.status_code == 200
+    get_reproposal = get_response.json()["reproposalDiffs"][0]
+    assert get_reproposal["rationale"] == diff_rationale
+    assert get_reproposal["diffOps"][0]["rationale"] == op_rationale
+
+
+def test_docs_v1_reproposal_rationale_roundtrip_sqlite(sqlite_client: TestClient) -> None:
+    _assert_v1_reproposal_rationale_roundtrip(sqlite_client, "doc-roundtrip-v1-repropos-rationale")
+
+
+@pytest.mark.postgres
+def test_docs_v1_reproposal_rationale_roundtrip_postgres(postgres_client: TestClient) -> None:
+    _assert_v1_reproposal_rationale_roundtrip(
+        postgres_client, "doc-roundtrip-v1-repropos-rationale-pg"
+    )
+
+
 def test_docs_creation_records_lifecycle_and_creator(
     sqlite_client: TestClient, tmp_path
 ) -> None:
