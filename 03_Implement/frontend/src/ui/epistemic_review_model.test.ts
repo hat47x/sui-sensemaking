@@ -8,6 +8,7 @@ import {
   buildEpistemicReviewQueue,
   buildEpistemicReviewRequestIntent,
   buildEpistemicUiItems,
+  buildTeiEpistemicReviewCommand,
   type EpistemicProjectionInput,
 } from "./epistemic_review_model";
 
@@ -290,6 +291,40 @@ describe("epistemic review UI model", () => {
       operation: "confirm",
       assertionId: "ai-candidate",
     });
+  });
+
+  it("maps only review-event intent into the TEI review command contract", () => {
+    const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "ai-candidate");
+    if (!item) throw new Error("fixture item missing");
+    const intent = buildEpistemicReviewIntent(item, "confirm");
+    expect(buildTeiEpistemicReviewCommand(intent, {
+      reviewer: "user:reviewer",
+      eventId: "review-001",
+      occurredAt: "2026-10-08T09:00:00Z",
+    })).toEqual({
+      contract: "tei.epistemic-review-command/v0",
+      schema: "tei.reference.epistemic-review-command/v0",
+      assertionId: "ai-candidate",
+      operation: "confirm",
+      reviewer: "user:reviewer",
+      eventId: "review-001",
+      occurredAt: "2026-10-08T09:00:00Z",
+      expectedMeaningFingerprint: item.meaningFingerprint,
+      expectedReviewSubjectFingerprint: item.reviewSubjectFingerprint,
+      expectedTargetBinding: "not-required",
+      expectedLastSequence: 0,
+    });
+  });
+
+  it("rejects incomplete TEI review-command actor metadata", () => {
+    const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "ai-candidate");
+    if (!item) throw new Error("fixture item missing");
+    const intent = buildEpistemicReviewIntent(item, "confirm");
+    expect(() => buildTeiEpistemicReviewCommand(intent, {
+      reviewer: " ",
+      eventId: "review-001",
+      occurredAt: "2026-10-08T09:00:00Z",
+    })).toThrow(/reviewer, eventId, and occurredAt are required/);
   });
 
   it("supports withdrawing confirmation without rejecting content", () => {
