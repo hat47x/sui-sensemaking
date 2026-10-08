@@ -107,6 +107,49 @@ describe("EpistemicHealthAlert", () => {
     expect(html).toContain("not a truth ratio");
   });
 
+  it("does not present an unknown resolution ratio as a determinate percentage", () => {
+    const input = projection();
+    input.health.viewMetadataState = "partial";
+    input.health.resolutionCoverage = {
+      eligible: 4,
+      resolved: 3,
+      confirmed: 1,
+      nativePremise: 2,
+      rejected: 0,
+      unresolved: 1,
+      ratio: 0.75,
+      minimumRatio: 0.8,
+      minimumEligibleAssertions: 4,
+      state: "unknown",
+      reasons: ["RESOLUTION_COVERAGE_METADATA_INCOMPLETE"],
+    };
+    const html = renderToStaticMarkup(createElement(EpistemicHealthAlert, { projection: input }));
+    expect(html).toContain("確定状態の比率は判定できません");
+    expect(html).not.toContain("75%");
+    expect(html).not.toContain("80%");
+  });
+
+  it("does not present an insufficient sample as a health ratio decision", () => {
+    const input = projection();
+    input.health.resolutionCoverage = {
+      eligible: 2,
+      resolved: 1,
+      confirmed: 0,
+      nativePremise: 1,
+      rejected: 0,
+      unresolved: 1,
+      ratio: 0.5,
+      minimumRatio: 0.8,
+      minimumEligibleAssertions: 4,
+      state: "insufficient-sample",
+      reasons: ["RESOLUTION_COVERAGE_SAMPLE_TOO_SMALL"],
+    };
+    const html = renderToStaticMarkup(createElement(EpistemicHealthAlert, { projection: input }));
+    expect(html).toContain("サンプルが少ないため比率で判定しません");
+    expect(html).not.toContain("50%");
+    expect(html).not.toContain("80%");
+  });
+
   it("renders nothing for normal health with no review queue", () => {
     const input = projection();
     input.health.level = "healthy";
