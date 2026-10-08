@@ -29,7 +29,10 @@ export function EpistemicHealthAlert({
 
   const visible = queue.slice(0, Math.max(0, maxItems));
   const hasResolutionPolicy =
-    health.resolvedRatio !== undefined && health.minimumResolvedRatio !== undefined;
+    health.resolvedRatio !== undefined &&
+    health.minimumResolvedRatio !== undefined &&
+    health.resolutionCoverageState !== "unknown" &&
+    health.resolutionCoverageState !== "insufficient-sample";
 
   return (
     <section
@@ -44,7 +47,11 @@ export function EpistemicHealthAlert({
     >
       <div style={{ fontWeight: 700 }}>{t(health.labelKey)}</div>
 
-      {hasResolutionPolicy ? (
+      {health.resolutionCoverageState === "unknown" ? (
+        <div style={{ marginTop: 4 }}>{t("epistemic.health.resolution_unknown")}</div>
+      ) : health.resolutionCoverageState === "insufficient-sample" ? (
+        <div style={{ marginTop: 4 }}>{t("epistemic.health.resolution_insufficient_sample")}</div>
+      ) : hasResolutionPolicy ? (
         <div style={{ marginTop: 4 }}>
           {t("epistemic.health.resolution_summary", {
             resolvedPercent: percent(health.resolvedRatio ?? 0),
