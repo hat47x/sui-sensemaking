@@ -215,10 +215,16 @@ export type EpistemicReviewQueueItem =
       reviewerCandidateIsAuthority: false;
     };
 
+export type EpistemicHealthLabelKey =
+  | "epistemic.health.partial"
+  | "epistemic.health.critical"
+  | "epistemic.health.attention"
+  | "epistemic.health.normal";
+
 export type EpistemicHealthPresentation = {
   scope: "project" | "partial-view";
   severity: "normal" | "attention" | "critical";
-  label: string;
+  labelKey: EpistemicHealthLabelKey;
   mayClaimProjectHealthy: boolean;
   coverageGapCount: number;
   criticalCoverageGapCount: number;
@@ -606,13 +612,13 @@ export function buildEpistemicHealthPresentation(
   return {
     scope: partial ? "partial-view" : "project",
     severity,
-    label: partial
-      ? "部分ビュー — プロジェクト全体の健全性は判定できません"
+    labelKey: partial
+      ? "epistemic.health.partial"
       : severity === "critical"
-        ? "重要な確認事項があります"
+        ? "epistemic.health.critical"
         : severity === "attention"
-          ? "確認が必要な情報があります"
-          : "重大なepistemic問題は検出されていません",
+          ? "epistemic.health.attention"
+          : "epistemic.health.normal",
     mayClaimProjectHealthy: !partial && severity === "normal",
     coverageGapCount: gaps.length,
     criticalCoverageGapCount: criticalGaps.length,
