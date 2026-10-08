@@ -1886,5 +1886,16 @@
   "epistemic.health.partial": "Partial view — project-wide health cannot be determined",
   "epistemic.health.critical": "Critical epistemic issues require attention",
   "epistemic.health.attention": "Some information requires review",
-  "epistemic.health.normal": "No critical epistemic issues detected"
+  "epistemic.health.normal": "No critical epistemic issues detected",
+  "epistemic.health.alert_group": "Project knowledge health",
+  "epistemic.health.resolution_summary": "Resolved information: {resolvedPercent}% (policy {minimumPercent}%)",
+  "epistemic.health.required_reviews": "Suggested additional reviews: {count}",
+  "epistemic.health.resolution_not_truth": "This is an operational uncertainty-resolution measure, not a truth ratio.",
+  "epistemic.health.review_queue": "Review candidates",
+  "epistemic.health.reviewer_candidates": "Reviewer candidates: {value}",
+  "epistemic.health.no_reviewer_candidate": "No reviewer candidate is configured",
+  "epistemic.health.downstream_impact": "Downstream impact: {value}",
+  "epistemic.health.coverage_gap": "Coverage gap: {areaId}",
+  "epistemic.health.open_review": "Review",
+  "epistemic.health.authority_note": "Reviewer candidates do not imply approval authority."
 }
