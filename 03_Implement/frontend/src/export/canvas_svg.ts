@@ -3,6 +3,7 @@ import { getDerivedIslandEdges } from "../domain/island_edge_aggregate";
 import { getIslandCenter, getIslandWorldBounds, type BoundsRect, type VisibleBoundsViewState } from "../domain/geometry/bounds";
 import { getIslandPolygonPoints } from "../domain/geometry/island_geometry";
 import { isSelfIntersectingPolygon } from "../domain/geometry/polygon_self_intersection";
+import { deriveDocumentSafeModeProjection } from "../domain/inquiry_bundle_safe_mode";
 import type { Card, DocumentV1, Island } from "../domain/types";
 
 const CARD_WIDTH = 220;
@@ -91,7 +92,10 @@ function islandLabel(island: Island): string {
   return island.title?.trim() || island.id;
 }
 
-export function exportCanvasToSVG({ doc, viewState, camera: _camera, area, safeMode }: ExportCanvasToSvgInput): string {
+export function exportCanvasToSVG({ doc: sourceDoc, viewState, camera: _camera, area, safeMode }: ExportCanvasToSvgInput): string {
+  // SafeMode 有効時は、共有・書き出し共通の投影（bundle_export と同じ規則）を通してから描画する。
+  // 投影はカード本文・島タイトル・要約・批評を墨消しし、id・座標・形状・接続などの構造は残す。
+  const doc = safeMode ? deriveDocumentSafeModeProjection(sourceDoc) : sourceDoc;
   const cardsById = new Map(doc.cards.map((card) => [card.id, card]));
   const islands = doc.islands.filter((island) => viewState.visibleIslandIds.has(island.id));
   const cards = doc.cards.filter((card) => {
