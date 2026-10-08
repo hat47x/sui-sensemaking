@@ -1886,5 +1886,16 @@
   "epistemic.health.partial": "部分ビュー — プロジェクト全体の健全性は判定できません",
   "epistemic.health.critical": "重要な確認事項があります",
   "epistemic.health.attention": "確認が必要な情報があります",
-  "epistemic.health.normal": "重大なepistemic問題は検出されていません"
+  "epistemic.health.normal": "重大なepistemic問題は検出されていません",
+  "epistemic.health.alert_group": "プロジェクト知識の健全性",
+  "epistemic.health.resolution_summary": "確定状態の情報: {resolvedPercent}%（基準 {minimumPercent}%）",
+  "epistemic.health.required_reviews": "追加確認の目安: {count}件",
+  "epistemic.health.resolution_not_truth": "これは作業上の未確定解消率であり、真偽の割合ではありません。",
+  "epistemic.health.review_queue": "確認候補",
+  "epistemic.health.reviewer_candidates": "確認者候補: {value}",
+  "epistemic.health.no_reviewer_candidate": "確認者候補は未設定です",
+  "epistemic.health.downstream_impact": "影響先: {value}",
+  "epistemic.health.coverage_gap": "未整理領域: {areaId}",
+  "epistemic.health.open_review": "確認する",
+  "epistemic.health.authority_note": "確認者候補の表示は、承認権限を意味しません。"
 }
