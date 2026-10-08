@@ -172,8 +172,14 @@ if curl -s -o /dev/null -w '%{http_code}' --max-time 2 "$API_BASE/healthz" 2>/de
   # curl/MCP checks and report it as a precondition skip — never a failure.
   migrated=1
   if [ -x "$VENV_PYTHON" ] && [ -f alembic.ini ]; then
-    cur=$("$VENV_PYTHON" -m alembic current 2>/dev/null | grep -oE '^[0-9_]+' | head -1)
-    head=$("$VENV_PYTHON" -m alembic heads 2>/dev/null | grep -oE '^[0-9_]+' | head -1)
+    # Check the DB that the backend under test uses: the self-contained one
+    # started above (SELF_DB), otherwise the configured default. Without this
+    # the check reads the default DB and skips the API checks whenever the
+    # self-contained backend is used.
+    mig_env=()
+    if [ -n "$SELF_DB" ]; then mig_env=("SUI_DATABASE_URL=sqlite:///$SELF_DB"); fi
+    cur=$(env ${mig_env[@]+"${mig_env[@]}"} "$VENV_PYTHON" -m alembic current 2>/dev/null | grep -oE '^[0-9_]+' | head -1)
+    head=$(env ${mig_env[@]+"${mig_env[@]}"} "$VENV_PYTHON" -m alembic heads 2>/dev/null | grep -oE '^[0-9_]+' | head -1)
     # DOGFOOD-09: an empty `alembic current` means the DB has NO alembic_version
     # row (never migrated) — that is also "not migrated" and must skip the API
     # checks instead of running them into raw 500s.
