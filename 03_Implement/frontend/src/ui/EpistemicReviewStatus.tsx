@@ -1,3 +1,4 @@
+import { t } from "../i18n/translate";
 import type { EpistemicUiAction, EpistemicUiItem } from "./epistemic_review_model";
 
 type EpistemicReviewStatusProps = {
@@ -6,16 +7,16 @@ type EpistemicReviewStatusProps = {
   compact?: boolean;
 };
 
-const ACTION_LABEL: Readonly<Record<EpistemicUiAction, string>> = Object.freeze({
-  confirm: "確認",
-  "mark-hypothesis": "仮説",
-  reject: "否定",
-  "withdraw-confirmation": "確認を撤回",
-  "inspect-details": "詳細",
-  "resolve-target": "対象を選び直す",
-  "request-access": "アクセスを確認",
-  "request-review": "確認を依頼",
-  "refresh-source": "情報を更新",
+const ACTION_LABEL_KEY: Readonly<Record<EpistemicUiAction, string>> = Object.freeze({
+  confirm: "epistemic.action.confirm",
+  "mark-hypothesis": "epistemic.action.mark_hypothesis",
+  reject: "epistemic.action.reject",
+  "withdraw-confirmation": "epistemic.action.withdraw_confirmation",
+  "inspect-details": "epistemic.action.inspect_details",
+  "resolve-target": "epistemic.action.resolve_target",
+  "request-access": "epistemic.action.request_access",
+  "request-review": "epistemic.action.request_review",
+  "refresh-source": "epistemic.action.refresh_source",
 });
 
 const TONE_STYLE = {
@@ -67,7 +68,7 @@ export function EpistemicReviewStatus({
   return (
     <div
       role="group"
-      aria-label={`認識状態: ${item.assertionId}`}
+      aria-label={t("epistemic.status.group_label", { assertionId: item.assertionId })}
       style={{
         display: "flex",
         alignItems: "center",
@@ -76,13 +77,13 @@ export function EpistemicReviewStatus({
         fontSize: 12,
       }}
     >
-      {badge(item.label, item.tone)}
-      {badge(item.confirmationLabel, item.confirmationTone)}
+      {badge(t(item.labelKey), item.tone)}
+      {badge(t(item.confirmationLabelKey), item.confirmationTone)}
       {item.targetReanchored ? (
-        <span style={{ fontSize: 11, color: "#64748b" }}>対象位置を再特定</span>
+        <span style={{ fontSize: 11, color: "#64748b" }}>{t("epistemic.hint.target_reanchored")}</span>
       ) : null}
       {item.inferredContextUsed ? (
-        <span style={{ fontSize: 11, color: "#64748b" }}>推定文脈を含む</span>
+        <span style={{ fontSize: 11, color: "#64748b" }}>{t("epistemic.hint.inferred_context")}</span>
       ) : null}
       {actions.map((action) => (
         <button
@@ -99,7 +100,7 @@ export function EpistemicReviewStatus({
             cursor: "pointer",
           }}
         >
-          {ACTION_LABEL[action]}
+          {t(ACTION_LABEL_KEY[action])}
         </button>
       ))}
     </div>
