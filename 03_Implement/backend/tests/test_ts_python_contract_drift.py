@@ -44,6 +44,7 @@ TYPE_MAP: dict[str, str] = {
     "Card": "Card",
     "Edge": "Edge",
     "Island": "Island",
+    "Affiliation": "Affiliation",
     "EvidenceLink": "EvidenceLink",
     "Narrative": "Narrative",
     "NarrativeCheck": "NarrativeCheck",

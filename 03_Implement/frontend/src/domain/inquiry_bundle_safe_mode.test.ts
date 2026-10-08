@@ -24,6 +24,12 @@ function addSensitiveDocumentFields(document: DocumentV1): void {
     y: 100,
     holdState: "shelved",
   });
+  document.cards.push({
+    id: "card-3",
+    text: "SECRET_THIRD_CARD",
+    x: 320,
+    y: 100,
+  });
   document.edges = [
     {
       id: "edge-1",
@@ -73,6 +79,11 @@ function addSensitiveDocumentFields(document: DocumentV1): void {
         imageRef: "idb-ref-1",
       },
     },
+  ];
+  // card-3 is outside island-1's visual containment, so this is a valid
+  // cross-cutting affiliation rather than a duplicate of Island.cardIds.
+  document.affiliations = [
+    { id: "SECRET_AFFILIATION_ID", cardId: "card-3", islandId: "island-1" },
   ];
   document.readingOrder = ["island-1"];
   document.narratives = [
@@ -297,6 +308,7 @@ describe("deriveInquirySafeModeBundle", () => {
     expect(safeDocument.islands[0].representativeCue?.altText).not.toBe("SECRET_CUE_ALT_TEXT");
     expect(safeDocument.reproposalDiffs).toBeUndefined();
     expect(safeDocument.contradictionSignalDecisions).toBeUndefined();
+    expect(safeDocument.affiliations).toBeUndefined();
     expect(safeDocument.patchApplyLog?.[0].baseDocSignature).toBeUndefined();
     expect(safeDocument.patchApplyLog?.[0].patchSourceSignature).toBeUndefined();
     expect(safeDocument.mergeSuggestionDecisions?.[0].decidedBy).toBeUndefined();
