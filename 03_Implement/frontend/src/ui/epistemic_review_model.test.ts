@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildBulkConfirmIntents,
   buildEpistemicHealthPresentation,
+  buildEpistemicClassificationIntent,
   buildEpistemicReviewIntent,
   buildEpistemicReviewQueue,
+  buildEpistemicReviewRequestIntent,
   buildEpistemicUiItems,
   type EpistemicProjectionInput,
 } from "./epistemic_review_model";
@@ -259,14 +261,46 @@ describe("epistemic review UI model", () => {
     if (!item) throw new Error("fixture item missing");
     expect(buildEpistemicReviewIntent(item, "confirm")).toEqual({
       assertionId: "ai-candidate",
-      operation: "confirm",
       source: "human-ui",
       expectedMeaningFingerprint: item.meaningFingerprint,
       expectedReviewSubjectFingerprint: item.reviewSubjectFingerprint,
       expectedTargetBinding: "not-required",
       expectedReviewLogSequence: 0,
+      kind: "review-event",
+      operation: "confirm",
     });
     expect(input).toEqual(original);
+  });
+
+  it("separates review, classification, and handoff intents", () => {
+    const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "ai-candidate");
+    if (!item) throw new Error("fixture item missing");
+
+    expect(buildEpistemicClassificationIntent(item)).toMatchObject({
+      kind: "classification-change",
+      statementKind: "hypothesis",
+      assertionId: "ai-candidate",
+    });
+    expect(buildEpistemicReviewRequestIntent(item)).toMatchObject({
+      kind: "review-request",
+      assertionId: "ai-candidate",
+    });
+    expect(buildEpistemicReviewIntent(item, "confirm")).toMatchObject({
+      kind: "review-event",
+      operation: "confirm",
+      assertionId: "ai-candidate",
+    });
+  });
+
+  it("supports withdrawing confirmation without rejecting content", () => {
+    const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "confirmed");
+    if (!item) throw new Error("fixture item missing");
+    expect(item.actions).toContain("withdraw-confirmation");
+    expect(buildEpistemicReviewIntent(item, "withdraw")).toMatchObject({
+      kind: "review-event",
+      operation: "withdraw",
+      assertionId: "confirmed",
+    });
   });
 
   it("carries optimistic review preconditions into human intent", () => {
