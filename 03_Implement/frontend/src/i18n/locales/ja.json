@@ -1897,5 +1897,7 @@
   "epistemic.health.downstream_impact": "影響先: {value}",
   "epistemic.health.coverage_gap": "未整理領域: {areaId}",
   "epistemic.health.open_review": "確認する",
-  "epistemic.health.authority_note": "確認者候補の表示は、承認権限を意味しません。"
+  "epistemic.health.authority_note": "確認者候補の表示は、承認権限を意味しません。",
+  "epistemic.health.resolution_unknown": "確定状態の比率は判定できません",
+  "epistemic.health.resolution_insufficient_sample": "サンプルが少ないため比率で判定しません"
 }
