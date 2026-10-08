@@ -244,9 +244,19 @@ describe("epistemic review UI model", () => {
     expect(item).toMatchObject({
       state: "metadata-incomplete",
       label: "情報不足",
+      sourceConfirmationState: "confirmed",
+      confirmationState: "unknown",
+      confirmationLabel: "確認状態不明",
     });
     expect(item?.actions).toContain("request-access");
     expect(item?.actions).not.toContain("confirm");
+  });
+
+  it("does not render hidden-history partial metadata as confirmed", () => {
+    const input = projection();
+    const item = buildEpistemicUiItems(input).find((value) => value.assertionId === "partial");
+    expect(item?.confirmationState).toBe("unknown");
+    expect(item?.confirmationLabel).not.toBe("確認済み");
   });
 
   it("keeps conflict in review and does not offer one-click confirmation", () => {
