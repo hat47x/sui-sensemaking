@@ -248,6 +248,7 @@ export type EpistemicHealthPresentation = {
   criticalCoverageGapCount: number;
   resolutionCoverageState?: EpistemicResolutionCoverageInput["state"];
   resolvedRatio?: number;
+  minimumResolvedRatio?: number;
   requiredResolutions?: number;
 };
 
@@ -684,6 +685,7 @@ export function buildEpistemicHealthPresentation(
     criticalCoverageGapCount: criticalGaps.length,
     resolutionCoverageState: projection.health.resolutionCoverage?.state,
     resolvedRatio: projection.health.resolutionCoverage?.ratio,
+    minimumResolvedRatio: projection.health.resolutionCoverage?.minimumRatio,
     requiredResolutions: projection.health.resolutionCoverage?.requiredResolutions,
   };
 }
