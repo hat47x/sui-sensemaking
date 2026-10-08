@@ -73,6 +73,10 @@ ReferenceではUI actionとして次を置く。
 
 これにより、仮説化や確認依頼を誤ってreview eventとして永続化しない。
 
+review-event intentだけはpure adapterでTEIの `tei.epistemic-review-command/v0` / `tei.reference.epistemic-review-command/v0` へ変換できる。commandにはreviewer / event ID / occurredAtと、meaning / subject / target / review-sequenceの楽観ロックreceiptを渡す。
+
+classification-change intentとreview-request intentはこのadapterの入力型にしない。
+
 実際のkeyboard bindingは画面統合時にaccessibility / IME / browser shortcutとの競合を確認して決める。ここではaction semanticsだけをcandidateとして固定する。
 
 ## accidental over-approvalを防ぐ
