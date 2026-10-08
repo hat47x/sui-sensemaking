@@ -1,5 +1,7 @@
 export const TEI_EPISTEMIC_PROJECTION_CONTRACT = "tei.epistemic-projection/v0" as const;
 export const TEI_EPISTEMIC_PROJECTION_SCHEMA = "tei.reference.epistemic-assessment/v0" as const;
+export const TEI_EPISTEMIC_REVIEW_COMMAND_CONTRACT = "tei.epistemic-review-command/v0" as const;
+export const TEI_EPISTEMIC_REVIEW_COMMAND_SCHEMA = "tei.reference.epistemic-review-command/v0" as const;
 
 const REQUIRED_AUTHORITY_LIMITS = new Set([
   "assessment-does-not-assert-objective-truth",
@@ -151,6 +153,20 @@ export type EpistemicUiIntent =
   | EpistemicReviewEventIntent
   | EpistemicClassificationIntent
   | EpistemicReviewRequestIntent;
+
+export type TeiEpistemicReviewCommand = {
+  contract: typeof TEI_EPISTEMIC_REVIEW_COMMAND_CONTRACT;
+  schema: typeof TEI_EPISTEMIC_REVIEW_COMMAND_SCHEMA;
+  assertionId: string;
+  operation: EpistemicReviewEventIntent["operation"];
+  reviewer: string;
+  eventId: string;
+  occurredAt: string;
+  expectedMeaningFingerprint: string;
+  expectedReviewSubjectFingerprint: string;
+  expectedTargetBinding: EpistemicTargetBinding;
+  expectedLastSequence: number;
+};
 
 export type BulkConfirmResult =
   | { ok: true; intents: EpistemicReviewEventIntent[] }
@@ -456,6 +472,31 @@ export function buildEpistemicReviewRequestIntent(
   return {
     ...intentBinding(item),
     kind: "review-request",
+  };
+}
+
+export function buildTeiEpistemicReviewCommand(
+  intent: EpistemicReviewEventIntent,
+  input: { reviewer: string; eventId: string; occurredAt: string },
+): TeiEpistemicReviewCommand {
+  const reviewer = input.reviewer.trim();
+  const eventId = input.eventId.trim();
+  const occurredAt = input.occurredAt.trim();
+  if (!reviewer || !eventId || !occurredAt) {
+    throw new Error("reviewer, eventId, and occurredAt are required");
+  }
+  return {
+    contract: TEI_EPISTEMIC_REVIEW_COMMAND_CONTRACT,
+    schema: TEI_EPISTEMIC_REVIEW_COMMAND_SCHEMA,
+    assertionId: intent.assertionId,
+    operation: intent.operation,
+    reviewer,
+    eventId,
+    occurredAt,
+    expectedMeaningFingerprint: intent.expectedMeaningFingerprint,
+    expectedReviewSubjectFingerprint: intent.expectedReviewSubjectFingerprint,
+    expectedTargetBinding: intent.expectedTargetBinding,
+    expectedLastSequence: intent.expectedReviewLogSequence,
   };
 }
 
