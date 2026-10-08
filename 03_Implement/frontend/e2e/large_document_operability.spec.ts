@@ -138,5 +138,7 @@ test("large document keeps search, panel fit, and export operable", async ({ pag
   const diagnosticsEntryName = Object.keys(zip.files).find((name) => name.endsWith("diagnostics.md"));
   expect(diagnosticsEntryName).toBeTruthy();
   const diagnosticsText = await zip.file(diagnosticsEntryName!)!.async("string");
-  expect(diagnosticsText).toContain("connectivityScore");
+  // Anti-scoring (74462443): the metrics table is rendered, and it carries no score row.
+  expect(diagnosticsText).toContain("## Metrics");
+  expect(diagnosticsText).not.toContain("connectivityScore");
 });

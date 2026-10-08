@@ -88,7 +88,8 @@ test("bundle diagnostics includes structural metrics and remains deterministic a
   expect(diagnosticsMdRun1).toContain("| largestComponentRatio | 0.75 |");
   expect(diagnosticsMdRun1).toContain("| bridgeEdgeCount | 2 |");
   expect(diagnosticsMdRun1).toContain("| isolationRate | 0.25 |");
-  expect(diagnosticsMdRun1).toContain("| connectivityScore | 0.6667 |");
+  // Anti-scoring (74462443): the connectivity score row is intentionally absent.
+  expect(diagnosticsMdRun1).not.toContain("connectivityScore");
   expect(diagnosticsMdRun1).toContain("| degreeSkewRatio | 2 |");
 
   const diagnosticsMdRun2 = await exportDiagnosticsMd(page);

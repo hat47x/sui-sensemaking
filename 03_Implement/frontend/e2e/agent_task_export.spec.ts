@@ -51,6 +51,17 @@ async function routeFixture(page: Page): Promise<void> {
   await page.route("**/export-audit", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "accepted" }) });
   });
+  // The task correlation must be registered before the sheet is released
+  // (fail-closed in the app). Echo the taskId the client sent, as the backend
+  // does; the response carries no body text (ExternalAgentTaskRegistrationResponse).
+  await page.route("**/ai/external-tasks/register", async (route) => {
+    const sent = JSON.parse(route.request().postData() ?? "{}") as { taskId?: string };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ registered: true, taskId: sent.taskId, provenanceLevel: "user_presented_unsigned" }),
+    });
+  });
 }
 
 async function readDownloadText(download: Download): Promise<string> {
