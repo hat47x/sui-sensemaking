@@ -6,9 +6,32 @@ import { expect, test, type Page } from "@playwright/test";
 // change (AC-1), an orphaned proposal is kept and flagged rather than
 // dropped (AC-3), a baseDocSignature-mismatched patch is routed to file
 // export instead of a silent apply (AC-3), and re-pasting the same
-// response does not create duplicate proposals (AC-4).
+// response does not create duplicate proposals (AC-4). A response without a
+// correlation block gets no audit id: its proposals cannot be imported, but
+// they can be discarded locally.
 
 const FIXED_TIMESTAMP = "2026-07-09T00:00:00.000Z";
+const RESPONSE_TASK_ID = "22222222-2222-2222-2222-222222222222";
+const ALL_KINDS_TASK_ID = "33333333-3333-3333-3333-333333333333";
+const AGENT_TASK_LEDGER_KEY = "sui-sensemaking/agent-task-ledger-v1";
+
+// Import and Export are offered only for correlated proposals. A response is
+// correlated when its correlation block matches a task already recorded in
+// the local ledger (verifyAgentResponseCorrelation), so each fixture response
+// echoes a correlation block and the ledger is seeded in beforeEach.
+function buildCorrelation(taskId: string) {
+  return {
+    schemaVersion: "agent-task.v1",
+    taskId,
+    createdAt: FIXED_TIMESTAMP,
+    docId: "doc_agent_response_e2e_fixture",
+    baseDocSignature: `doc_agent_response_e2e_fixture:${FIXED_TIMESTAMP}`,
+    bundleHash: `e2e-bundle-${taskId}`,
+    queryCanonicalHash: `e2e-query-${taskId}`,
+    taskKind: "island_titles",
+    locale: "ja",
+  };
+}
 
 function buildFixtureDocument() {
   return {
@@ -34,7 +57,8 @@ function buildFixtureDocument() {
 function buildResponseJson(): string {
   return JSON.stringify({
     schemaVersion: "agent-response.v1",
-    taskId: "22222222-2222-2222-2222-222222222222",
+    taskId: RESPONSE_TASK_ID,
+    correlation: buildCorrelation(RESPONSE_TASK_ID),
     agent: "test-agent",
     proposals: [
       {
@@ -86,10 +110,49 @@ async function routeFixture(page: Page): Promise<void> {
   await page.route("**/ai/proposals/audit", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "accepted" }) });
   });
+  await page.route("**/ai/external-proposals/register", async (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}") as { proposalId: string };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ registered: true, proposalId: body.proposalId, provenanceLevel: "user_presented_unsigned" }),
+    });
+  });
+  await page.route("**/ai/external-proposals/audit", async (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}") as { proposalId: string; decision: string };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        recorded: true,
+        eventId: `e2e-${body.decision}`,
+        proposalId: body.proposalId,
+        status: body.decision === "adopt" ? "accepted" : body.decision === "reject" ? "rejected" : "held",
+        reviewState: "unreviewed",
+        recordedAt: FIXED_TIMESTAMP,
+      }),
+    });
+  });
+}
+
+// The ledger key is the legacy (unscoped) key: the e2e run has no tenant session.
+async function seedAgentTaskLedger(page: Page): Promise<void> {
+  const entries = [RESPONSE_TASK_ID, ALL_KINDS_TASK_ID].map((taskId) => ({ ...buildCorrelation(taskId), exportedAt: FIXED_TIMESTAMP }));
+  await page.addInitScript(
+    ({ key, value }: { key: string; value: string }) => {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        // Without storage the responses stay uncorrelated: Import is unavailable.
+      }
+    },
+    { key: AGENT_TASK_LEDGER_KEY, value: JSON.stringify(entries) },
+  );
 }
 
 test.beforeEach(async ({ page }) => {
   await routeFixture(page);
+  await seedAgentTaskLedger(page);
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto("/?locale=en");
   const startPanel = page.locator('[data-panel="start-document-entry"]');
@@ -160,7 +223,8 @@ test("all 5 proposal kinds can be individually imported as unreviewed, undo-able
   const undoButton = page.getByRole("button", { name: "Undo", exact: true });
   const allKindsResponse = JSON.stringify({
     schemaVersion: "agent-response.v1",
-    taskId: "33333333-3333-3333-3333-333333333333",
+    taskId: ALL_KINDS_TASK_ID,
+    correlation: buildCorrelation(ALL_KINDS_TASK_ID),
     proposals: [
       {
         proposalId: "k-island-title",
@@ -173,7 +237,7 @@ test("all 5 proposal kinds can be individually imported as unreviewed, undo-able
         proposalId: "k-merge-candidate",
         kind: "merge_candidate",
         targetRef: { cardIds: ["c1", "c2"] },
-        content: { mergedText: "merged text" },
+        content: { mergedText: "merged text", mergeMethod: "near_duplicate" },
         rationale: "r2",
       },
       {
@@ -233,4 +297,33 @@ test("re-pasting the same response does not create duplicate proposals", async (
   await page.getByTestId("agent-response-parse-button").click();
   await expect(page.getByTestId("status-message")).toContainText("already been imported");
   await expect(page.getByTestId("agent-response-proposal-clean-island-title")).toHaveCount(1);
+});
+
+test("an uncorrelated proposal has no Import action and Discard removes it without touching the document", async ({ page }) => {
+  const undoButton = page.getByRole("button", { name: "Undo", exact: true });
+  const uncorrelatedResponse = JSON.stringify({
+    schemaVersion: "agent-response.v1",
+    taskId: "44444444-4444-4444-4444-444444444444",
+    proposals: [
+      {
+        proposalId: "no-correlation",
+        kind: "island_title",
+        targetRef: { islandId: "i1" },
+        content: { title: "Suggested Title" },
+        rationale: "no correlation block",
+      },
+    ],
+  });
+
+  await page.getByRole("button", { name: "Import agent response" }).click();
+  await page.getByTestId("agent-response-paste-input").fill(uncorrelatedResponse);
+  await page.getByTestId("agent-response-parse-button").click();
+
+  const card = page.getByTestId("agent-response-proposal-no-correlation");
+  await expect(card).toContainText("cannot be audited");
+  await expect(card.getByRole("button", { name: "Import" })).toHaveCount(0);
+
+  await card.getByRole("button", { name: "Discard" }).click();
+  await expect(card).toHaveCount(0);
+  await expect(undoButton).toBeDisabled();
 });

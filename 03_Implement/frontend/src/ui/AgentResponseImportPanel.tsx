@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { t } from "../i18n/translate";
 import type { ParsedAgentProposal, AgentResponseImportMode } from "../import/agent_response_import";
 import type { ImportedProposalReview } from "../import/agent_response_import";
@@ -79,6 +79,15 @@ export function AgentResponseImportPanel({
 }: AgentResponseImportPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const parseErrorsId = useId();
+  // An uncorrelated proposal has no audit record, so App refuses onReject for
+  // it. Its Discard only hides the card here: no document write, no apply or
+  // import call, and nothing is marked reviewed.
+  const [dismissedReviewKeys, setDismissedReviewKeys] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const visibleReviews = reviews.filter((review) => !dismissedReviewKeys.has(review.reviewKey));
+  const dismissUncorrelatedReview = (reviewKey: string) => {
+    setDismissedReviewKeys((previous) => new Set(previous).add(reviewKey));
+    panelRef.current?.focus();
+  };
 
   useEffect(() => {
     if (!isOpen || !panelRef.current) return;
@@ -191,9 +200,9 @@ export function AgentResponseImportPanel({
         </div>
       ) : null}
 
-      {reviews.length > 0 ? (
+      {visibleReviews.length > 0 ? (
         <div style={{ display: "grid", gap: 8 }}>
-          {reviews.map((review) => (
+          {visibleReviews.map((review) => (
             <div
               key={review.reviewKey}
               data-testid={`agent-response-proposal-${review.proposalId}`}
@@ -228,9 +237,18 @@ export function AgentResponseImportPanel({
                 <div style={{ fontSize: 11, color: "#9a3412" }}>{t("agent_response_import.patch_delete_ops_warning")}</div>
               ) : null}
               {review.status === "pending" && !review.auditProposalId ? (
-                <div style={{ fontSize: 11, color: "#92400e" }}>
-                  {t("agent_response_import.audit_required_status_message")}
-                </div>
+                <>
+                  <div style={{ fontSize: 11, color: "#92400e" }}>
+                    {t("agent_response_import.audit_required_status_message")}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dismissUncorrelatedReview(review.reviewKey)}
+                    style={{ ...buttonStyle, justifySelf: "start" }}
+                  >
+                    {t("agent_response_import.reject")}
+                  </button>
+                </>
               ) : review.status === "pending" ? (
                 <div style={{ display: "flex", gap: 6 }}>
                   {review.orphaned ? null : review.patchSignatureMismatch ? (
