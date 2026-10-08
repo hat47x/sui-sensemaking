@@ -1,12 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildEpistemicUiItems,
   type EpistemicAssessmentInput,
   type EpistemicProjectionInput,
 } from "./epistemic_review_model";
+import { setActiveLocale } from "../i18n/translate";
 import { EpistemicReviewStatus } from "./EpistemicReviewStatus";
 
 const authorityLimits = [
@@ -62,6 +63,9 @@ function render(overrides: Partial<EpistemicAssessmentInput>, compact = false): 
 }
 
 describe("EpistemicReviewStatus", () => {
+  beforeEach(() => {
+    setActiveLocale("ja");
+  });
   it("renders direct user premise and human confirmation as separate axes", () => {
     const html = render({
       contentOrigin: "user",
@@ -115,6 +119,18 @@ describe("EpistemicReviewStatus", () => {
     expect(html).toContain(">否定<");
     expect(html).not.toContain("詳細");
     expect(html).not.toContain("確認を依頼");
+  });
+
+  it("renders English copy through the shared catalog", () => {
+    setActiveLocale("en");
+    const html = render({
+      contentOrigin: "user",
+      statementKind: "requirement",
+      useState: "premise",
+    });
+    expect(html).toContain("Working premise");
+    expect(html).toContain("Unreviewed");
+    expect(html).toContain(">Confirm<");
   });
 
   it("exposes an accessible group label", () => {
