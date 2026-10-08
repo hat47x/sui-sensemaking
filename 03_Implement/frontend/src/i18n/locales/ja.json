@@ -1882,5 +1882,9 @@
   "epistemic.action.request_review": "確認を依頼",
   "epistemic.action.refresh_source": "情報を更新",
   "epistemic.hint.target_reanchored": "対象位置を再特定",
-  "epistemic.hint.inferred_context": "推定文脈を含む"
+  "epistemic.hint.inferred_context": "推定文脈を含む",
+  "epistemic.health.partial": "部分ビュー — プロジェクト全体の健全性は判定できません",
+  "epistemic.health.critical": "重要な確認事項があります",
+  "epistemic.health.attention": "確認が必要な情報があります",
+  "epistemic.health.normal": "重大なepistemic問題は検出されていません"
 }
