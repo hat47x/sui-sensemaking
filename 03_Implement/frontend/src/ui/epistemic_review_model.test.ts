@@ -4,6 +4,7 @@ import {
   buildBulkConfirmIntents,
   buildEpistemicHealthAlertQueue,
   buildEpistemicHealthPresentation,
+  buildEpistemicInspectionSummary,
   buildEpistemicClassificationIntent,
   buildEpistemicReviewIntent,
   buildEpistemicReviewQueue,
@@ -234,6 +235,39 @@ describe("epistemic review UI model", () => {
       lifecycleState: "active",
       conflict: "none",
     });
+  });
+
+  it("builds inspect-details summary without inventing source details", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "reanchored",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const summary = buildEpistemicInspectionSummary(item);
+    expect(summary).toMatchObject({
+      assertionId: "reanchored",
+      source: "projection-summary",
+      state: "working-premise",
+      targetBinding: "reanchored",
+      contextCompatibility: "compatible",
+      metadataState: "complete",
+    });
+    expect(summary.onDemandDetailsRequired).toEqual(["target", "context", "evidence"]);
+    expect(summary).not.toHaveProperty("target");
+    expect(summary).not.toHaveProperty("context");
+    expect(summary).not.toHaveProperty("evidence");
+  });
+
+  it("keeps inspection reasons as projection-derived signals", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "partial",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const summary = buildEpistemicInspectionSummary(item);
+    expect(summary.reasons).toEqual(item.reasons);
+    expect(summary.metadataState).toBe("partial");
+    expect(summary.confirmationState).toBe("unknown");
   });
 
   it("keeps confirmation separate from candidate use state", () => {
