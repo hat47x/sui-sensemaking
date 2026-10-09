@@ -1,6 +1,7 @@
 import { memo, useRef, useState } from "react";
 import type { FocusEvent, KeyboardEvent, PointerEvent } from "react";
 
+import { canonicalHoldState } from "../domain/hold_state_ops";
 import type { Card } from "../domain/types";
 import { t } from "../i18n/translate";
 
@@ -116,7 +117,7 @@ function CardViewComponent({
   const critiqueTagCount = card.critiqueTags?.length ?? 0;
   const claimType = card.claimType;
   const isTextReviewed = card.textReviewed === true;
-  const holdState = card.holdState;
+  const holdState = canonicalHoldState(card.holdState);
   const representativeCount = card.repOf?.length ?? 0;
   const compactText = card.text.trim().split(/\n+/).join(" ").slice(0, 72);
   // UX-VISUAL-01 AC-3 (ADR-0048 D1): even at far LOD the "needs attention"
@@ -133,7 +134,6 @@ function CardViewComponent({
   };
   const HOLD_STATE_STYLE: Record<string, { bg: string; fg: string }> = {
     held: { bg: "#fef3c7", fg: "#92400e" },
-    pending: { bg: "#e0e7ff", fg: "#3730a3" },
     shelved: { bg: "#f1f5f9", fg: "#64748b" },
   };
   const holdStateLabel = holdState ? t(`side_panel.hold_state.${holdState}`) : "";

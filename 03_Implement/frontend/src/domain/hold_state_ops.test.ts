@@ -1,17 +1,26 @@
 import { describe, expect, it } from "vitest";
 import type { Card, DocumentV1 } from "./types";
-import { updateCardHoldState, updateCardHoldStateAndShelf } from "./hold_state_ops";
+import { canonicalHoldState, updateCardHoldState, updateCardHoldStateAndShelf } from "./hold_state_ops";
 
 const cards: Card[] = [
   { id: "card-1", text: "one", x: 0, y: 0 },
   { id: "card-2", text: "two", x: 10, y: 10, holdState: "held" },
 ];
 
+describe("canonicalHoldState", () => {
+  it("reads the legacy pending state as held", () => {
+    expect(canonicalHoldState("pending")).toBe("held");
+    expect(canonicalHoldState("held")).toBe("held");
+    expect(canonicalHoldState("shelved")).toBe("shelved");
+    expect(canonicalHoldState(undefined)).toBeUndefined();
+  });
+});
+
 describe("updateCardHoldState", () => {
   it("sets a selected hold state without changing other cards", () => {
-    const result = updateCardHoldState(cards, "card-1", "pending");
+    const result = updateCardHoldState(cards, "card-1", "shelved");
 
-    expect(result[0]).toEqual({ ...cards[0], holdState: "pending" });
+    expect(result[0]).toEqual({ ...cards[0], holdState: "shelved" });
     expect(result[1]).toBe(cards[1]);
   });
 

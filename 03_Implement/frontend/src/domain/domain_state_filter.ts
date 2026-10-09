@@ -4,6 +4,7 @@
  * ADR-0046 性能予算: 代表規模での主要操作=不変（O(n)単一パス、n≦300）/ メインスレッド100ms超の同期処理=なし
  */
 import type { Card } from "./types";
+import { canonicalHoldState } from "./hold_state_ops";
 
 export type DomainStateFilter = {
   /** Filter by claim type. Empty = no filter. */
@@ -38,8 +39,8 @@ export function matchesDomainStateFilter(card: Card, filter: DomainStateFilter):
   }
 
   if (filter.holdStates && filter.holdStates.length > 0) {
-    const hs = card.holdState;
-    if (!hs || !filter.holdStates.includes(hs)) {
+    const hs = canonicalHoldState(card.holdState);
+    if (!hs || !filter.holdStates.some((state) => canonicalHoldState(state) === hs)) {
       return false;
     }
   }

@@ -23,6 +23,7 @@ import {
   formatIslandRelationExplanationMarkdown,
   type IslandRelationEdgeSelection,
 } from "../domain/island_relation_explain";
+import { canonicalHoldState } from "../domain/hold_state_ops";
 import type { Card, ContradictionSignalReviewStatus, CritiqueTag, DocumentV1, EvidenceLink, HoldState, Island, RelationSummary, RepresentativeVisualCue } from "../domain/types";
 import { RELATION_SUMMARY_TEXT_MAX_LENGTH } from "../domain/relation_summary_ops";
 import type { OutlineQualityReport } from "../domain/view/outline_quality";
@@ -4026,7 +4027,7 @@ export function SidePanel({
               </label>
               <select
                 id="selected-card-hold-state"
-                value={selectedCard.holdState ?? "active"}
+                value={canonicalHoldState(selectedCard.holdState) ?? "active"}
                 disabled={isReadOnly}
                 onChange={(event) => {
                   onCardHoldStateChange(event.target.value as HoldState | "active");
@@ -4044,7 +4045,6 @@ export function SidePanel({
               >
                 <option value="active">{t("side_panel.hold_state.active")}</option>
                 <option value="held">{t("side_panel.hold_state.held")}</option>
-                <option value="pending">{t("side_panel.hold_state.pending")}</option>
                 <option value="shelved">{t("side_panel.hold_state.shelved")}</option>
               </select>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>

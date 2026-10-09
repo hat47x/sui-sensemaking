@@ -29,7 +29,8 @@ describe("matchesDomainStateFilter", () => {
 
   it("filters by holdState", () => {
     expect(matchesDomainStateFilter(c({ holdState: "held" }), { holdStates: ["held"] })).toBe(true);
-    expect(matchesDomainStateFilter(c({ holdState: "pending" }), { holdStates: ["held"] })).toBe(false);
+    expect(matchesDomainStateFilter(c({ holdState: "pending" }), { holdStates: ["held"] })).toBe(true);
+    expect(matchesDomainStateFilter(c({ holdState: "shelved" }), { holdStates: ["held"] })).toBe(false);
     expect(matchesDomainStateFilter(c(), { holdStates: ["held"] })).toBe(false);
   });
 });

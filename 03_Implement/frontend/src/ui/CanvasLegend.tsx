@@ -138,7 +138,6 @@ export function CanvasLegend({ onClose }: CanvasLegendProps) {
         <div style={groupTitleStyle}>{t("legend.group.hold")}</div>
         <div style={{ display: "grid", gap: 2 }}>
           <span style={rowStyle}>{swatch("#fef3c7")}{t("side_panel.hold_state.held")}</span>
-          <span style={rowStyle}>{swatch("#e0e7ff")}{t("side_panel.hold_state.pending")}</span>
           <span style={rowStyle}>{swatch("#f1f5f9")}{t("side_panel.hold_state.shelved")}</span>
         </div>
       </div>

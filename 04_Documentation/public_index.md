@@ -19,7 +19,7 @@ sui-sensemakingは、カード、島、関係線を使って情報を整理し�
 | やりたいこと | 読む手順 |
 | --- | --- |
 | まず起動したい | [導入手順](installation.md) |
-| 起動後、最初のまとまりと未決を作りたい | [最初の意味ある配置を作る](getting_started.md) |
+| 起動後、最初のまとまりと保留を作りたい | [最初の意味ある配置を作る](getting_started.md) |
 | 起動前に設定値を確認したい | [設定ガイド](configuration.md) |
 | 共有や書き出しの前に、安全を確認したい | [データ取り扱い](data_handling.md) |
 | 日常運用の流れを知りたい | [運用手順](operations.md) |
@@ -44,7 +44,7 @@ sui-sensemakingは、既定ではAI機能と外部連携を有効にしない安
 
 | 目的 | 読む手順 |
 | --- | --- |
-| 標準サンプルでカード・島・未決を安全に体験する | [最初の意味ある配置を作る](getting_started.md) |
+| 標準サンプルでカード・島・保留を安全に体験する | [最初の意味ある配置を作る](getting_started.md) |
 | Docker Composeで標準の構成を起動する | [導入手順](installation.md) |
 | すべての環境変数と既定値を確認する | [設定ガイド](configuration.md) |
 | 起動、停止、更新、バックアップを行う | [運用手順](operations.md) |
