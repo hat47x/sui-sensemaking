@@ -1,7 +1,7 @@
 import { t } from "../i18n/translate";
 import {
+  buildEpistemicHealthAlertQueue,
   buildEpistemicHealthPresentation,
-  buildEpistemicReviewQueue,
   type EpistemicProjectionInput,
   type EpistemicReviewQueueItem,
 } from "./epistemic_review_model";
@@ -22,7 +22,7 @@ export function EpistemicHealthAlert({
   maxItems = 3,
 }: EpistemicHealthAlertProps) {
   const health = buildEpistemicHealthPresentation(projection);
-  const queue = buildEpistemicReviewQueue(projection);
+  const queue = buildEpistemicHealthAlertQueue(projection);
   if (health.severity === "normal" && queue.length === 0) {
     return null;
   }
