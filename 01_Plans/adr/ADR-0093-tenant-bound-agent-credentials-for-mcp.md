@@ -27,7 +27,7 @@ CVI（不変条件）のうち、share/exportで未レビュー情報・秘密�
 3. **MCPの役割。** stdio transport は、プロセスごとに一つのagent資格情報を環境変数で受け取り、backendへそのまま渡す。静的な `SUI_API_KEY` は `saas-multitenant` では使わない。HTTP transport は、MCPが検証するOAuthのトークン（外部IdPが署名したもの）とagent資格情報が別物なので、両者をどう対応付けるかを決めるまで `saas-multitenant` では起動を拒否したままにする。起動時の拒否は、資格情報の経路が揃い、下の試験が通った後に、transportごとに解除する。
 4. **backendでの検査。** agent principalの要求は、ゲストと同じ順序で処理する。(1) トークンのハッシュから資格情報を引く、(2) 状態・失効・バージョンを毎要求で確認する、(3) 資格情報のtenantでDBスコープを設定する、(4) 付与されたdocIdだけを読む。付与外の文書、他tenantの文書は同じ404にする。書き込み、export、share、archive は `403 agent_write_not_enabled` で閉じる。agentが通れるのは、`GET /docs`（付与された文書のmetadataだけ）、`GET /docs/{id}`、`GET /ai/proposals/status`、`POST /docs/{id}/context-audit` の四つで、この四つ以外は、`action=read` の経路でも `403 agent_route_not_enabled` で閉じる（判断ログや類似候補のように、本文由来の派生データを返す経路を、個別に検討するまで開けない）。AIの実行や提案の決定の経路は、agentのヘッダーを通常の利用者の認証として受け付けない。
 5. **即時失効。** `agent.revoke` は次の要求から効く。interactiveなsession（`tenantSessionVersion`）を持たないagentは、毎要求の状態確認が失効の保証になる。キャッシュする場合は、`deployment + tenantId + agentId + credentialVersion` をキーにし、トークンの有効期限を越えて保持しない。
-6. **安全の既定は変えない。** SafeMode既定ON、未レビューのカードは `safeMode:false` でも公開しない（`mcp/README.md`のDOGFOOD-05）。agent資格情報は、これらを緩めるcapabilityを持たない。MCPの投影だけに任せず、backendも `textReviewed` が true でないカードの `text` を空にして返す。島の題名・要約、関係の要約、ナラティブなど、カード本文以外の本文を含む項目は第1段階の対象外で、閉じるまで下の解除条件を満たさない。
+6. **安全の既定は変えない。** SafeMode既定ON、未レビューのカードは `safeMode:false` でも公開しない（`mcp/README.md`のDOGFOOD-05）。agent資格情報は、これらを緩めるcapabilityを持たない。MCPの投影だけに任せず、backendも `GET /docs/{id}` で、許可リスト方式の文書を返す。許可した構造項目（カードの位置・種別・保留状態、辺、島の構成、根拠リンクの端点、voidの種別、ナラティブ点検の件数と方向）と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残す。文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細などは返さない。必須で空にできない文字列には `[withheld]` を入れて、伏せたことが分かる形にする。`GET /docs` の題名も返さない。許可リストなので、`DocumentV1` に本文を含む項目が増えても、明示するまでagentへは出ない。カードや島のidは残す（投影の件数と整合を保つため）。
 7. **監査。** 監査eventは `tenantId` を持ち、主体は `x-actor-ref` ヘッダーではなく検証済みの `agent:<agentId>` から求める。本文・タイトル・トークンは含めない。MCPが送るCE-4の読み取り監査は、資格情報のtenantと文書に束縛された範囲だけ受け付ける。
 
 ### 比較した選択肢
@@ -55,7 +55,7 @@ CVI（不変条件）のうち、share/exportで未レビュー情報・秘密�
 | 2 | 付与外のdocIdが404になり、存在しない文書・他tenantの文書と区別できない | 固定済み |
 | 3 | 失効、期限切れ、バージョン不一致、付与の取り消しが次の要求で拒否される | 固定済み（キャッシュは持たない） |
 | 4 | 書き込み、export、archive が403 | 固定済み。share、AI実行、提案の決定は、agentの資格情報を認証として受け付けないことの試験が未整備 |
-| 5 | 未レビューのカード本文が出ない | カード本文は固定済み。島・関係・ナラティブなど他の本文は**未対応** |
+| 5 | 確認していない本文が出ない | 固定済み（許可リスト方式。カード本文、島の題名・要約、関係の要約、ナラティブ、根拠リンクの注記、void、文書の題名） |
 | 6 | リクエストのheaderやqueryでtenantを指定しても、その値でDBスコープが決まらない | 固定済み |
 | 7 | 監査eventに `tenantId` と、検証済みのagentに由来する主体があり、本文・トークンがない | 固定済み |
 | 8 | トークン平文が、保存・ログ・エラー応答のどこにも現れない | 保存と応答は固定済み。ログは未確認 |

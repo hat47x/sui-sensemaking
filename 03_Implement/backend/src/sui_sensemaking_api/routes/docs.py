@@ -8,7 +8,17 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Literal, cast
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -609,18 +619,99 @@ def _audit_actor_ref(request: Request, access_request: AccessRequest) -> str | N
     return request.headers.get("x-actor-ref")
 
 
-def _withhold_unreviewed_card_text(payload: dict) -> None:
-    """textReviewed が true でないカードの本文を空にする（agent主体向け）。
+# 必須で空にできない文字列項目へ入れる、「伏せた」ことを示す印。
+_AGENT_WITHHELD = "[withheld]"
+_AGENT_CARD_FIELDS = ("id", "x", "y", "claimType", "holdState", "textReviewed")
+_AGENT_EDGE_FIELDS = ("id", "fromId", "toId", "fromKind", "toKind", "type")
+_AGENT_ISLAND_FIELDS = (
+    "id",
+    "cardIds",
+    "parentIslandId",
+    "placardCardId",
+    "collapsed",
+    "titleReviewed",
+)
+_AGENT_EVIDENCE_LINK_FIELDS = ("id", "type", "fromCardId", "toCardId", "contradictionState")
+_AGENT_VOID_FIELDS = ("id", "kind", "createdAt", "resolved", "cardIds", "islandIds")
 
-    島の題名・要約、関係の要約、ナラティブなど他の本文を含む項目は、この関数の対象外。
-    それらを閉じるまで、MCP の saas-multitenant 起動拒否は解除しない（ADR-0093）。
+
+def _pick(source: object, fields: tuple[str, ...]) -> dict:
+    if not isinstance(source, dict):
+        return {}
+    return {name: source[name] for name in fields if name in source}
+
+
+def _agent_document_view(payload: dict) -> dict:
+    """agent主体に返す文書。許可した構造項目だけを写し、本文は確認済みのものに限る。
+
+    許可リスト方式なので、将来 DocumentV1 に本文を含む項目が増えても、ここへ明示するまで
+    agent へは出ない。人が確認していないカード本文・島の題名は空にする。文書の題名、島の
+    要約、関係の要約、ナラティブ本文、根拠リンクの注記、void の題名・詳細などは返さない。
+    カードや島のidと構造は残す（投影の件数と整合を保つため）。ADR-0093。
     """
-    cards = payload.get("cards")
-    if not isinstance(cards, list):
-        return
-    for card in cards:
-        if isinstance(card, dict) and card.get("textReviewed") is not True:
-            card["text"] = ""
+
+    def _list(name: str) -> list:
+        value = payload.get(name)
+        return value if isinstance(value, list) else []
+
+    cards = []
+    for card in _list("cards"):
+        view = _pick(card, _AGENT_CARD_FIELDS)
+        reviewed = isinstance(card, dict) and card.get("textReviewed") is True
+        view["text"] = card.get("text", "") if reviewed else ""
+        cards.append(view)
+
+    islands = []
+    for island in _list("islands"):
+        view = _pick(island, _AGENT_ISLAND_FIELDS)
+        reviewed = isinstance(island, dict) and island.get("titleReviewed") is True
+        if reviewed and isinstance(island.get("title"), str):
+            view["title"] = island["title"]
+        islands.append(view)
+
+    view: dict = {
+        **_pick(payload, ("version", "id", "createdAt", "updatedAt", "transform")),
+        "cards": cards,
+        "edges": [_pick(edge, _AGENT_EDGE_FIELDS) for edge in _list("edges")],
+        "islands": islands,
+    }
+    if "evidenceLinks" in payload:
+        view["evidenceLinks"] = [
+            _pick(link, _AGENT_EVIDENCE_LINK_FIELDS) for link in _list("evidenceLinks")
+        ]
+    if "voids" in payload:
+        # 題名と詳細は必須項目なので、印だけを入れて形を保つ。
+        view["voids"] = [
+            {**_pick(void, _AGENT_VOID_FIELDS), "title": _AGENT_WITHHELD, "detail": _AGENT_WITHHELD}
+            for void in _list("voids")
+        ]
+    if "narratives" in payload:
+        view["narratives"] = [
+            {
+                "id": narrative.get("id"),
+                "title": _AGENT_WITHHELD,
+                "text": _AGENT_WITHHELD,
+                "reviewed": narrative.get("reviewed") is True,
+                "checks": [
+                    {
+                        **_pick(check, ("id", "createdAt", "kind", "counts")),
+                        "issues": [
+                            {
+                                **_pick(issue, ("severity", "direction")),
+                                "message": _AGENT_WITHHELD,
+                            }
+                            for issue in (check.get("issues") or [])
+                            if isinstance(issue, dict)
+                        ],
+                    }
+                    for check in (narrative.get("checks") or [])
+                    if isinstance(check, dict)
+                ],
+            }
+            for narrative in _list("narratives")
+            if isinstance(narrative, dict)
+        ]
+    return view
 
 
 @router.get("", response_model=list[DocumentListItem])
@@ -681,7 +772,8 @@ def list_documents(
             response.headers["X-Next-Cursor"] = (
                 f"{quote(granted_items[-1].updated_at)}:{granted_items[-1].id}"
             )
-        return granted_items
+        # 文書の題名は、確認済みかどうかを持たない本文なので、agentへは返さない。
+        return [item.model_copy(update={"title": None}) for item in granted_items]
     requesting_user_id, tenant = _resolve_request_identity_and_tenant(request=request, db=db)
     adapter = getattr(request.app.state, "access_control_adapter", None)
     adapter_is_real = adapter is not None and getattr(adapter, "name", None) != "noop"
@@ -700,7 +792,9 @@ def list_documents(
     return items
 
 
-def _transition_lifecycle(request: Request, db: Session, doc_id: str, state: Literal["active", "archived"]) -> Response:
+def _transition_lifecycle(
+    request: Request, db: Session, doc_id: str, state: Literal["active", "archived"]
+) -> Response:
     # SEC-DOC-BOUND-06: archive/unarchive is a write-equivalent operation (it
     # locks/unlocks PUT via the ADR-0073 D2=A 423 gate) and must pass the same
     # capability check PUT does. It must not rely on tenant match alone.
@@ -712,7 +806,9 @@ def _transition_lifecycle(request: Request, db: Session, doc_id: str, state: Lit
         safe_mode=False,
         read_only=False,
     )
-    changed = DatabaseDocumentContentStore(db).set_lifecycle_state(tenant=tenant, doc_id=doc_id, state=state)
+    changed = DatabaseDocumentContentStore(db).set_lifecycle_state(
+        tenant=tenant, doc_id=doc_id, state=state
+    )
     if not changed:
         raise HTTPException(status_code=404, detail="Document not found")
     db.commit()
@@ -764,8 +860,8 @@ def get_document(
     response.headers["ETag"] = _format_etag(_compute_etag(doc_row.payload_json))
     payload = json.loads(stored_document.content.text)
     if access_request.auth.provider == "agent_credential":
-        # ADR-0093: 外部agentには、人が確認していないカード本文を渡さない。
-        _withhold_unreviewed_card_text(payload)
+        # ADR-0093: 外部agentには、許可した構造項目と、人が確認した本文だけを渡す。
+        payload = _agent_document_view(payload)
 
     dispatcher = getattr(request.app.state, "audit_dispatcher", None)
     if dispatcher is not None:
@@ -1028,7 +1124,9 @@ def _evict_stale_ce4_tracker_entries(now: float) -> None:
     for key in stale:
         del _ce4_audit_event_tracker[key]
     while len(_ce4_audit_event_tracker) > _CE4_TRACKER_MAX_ENTRIES:
-        oldest_key = min(_ce4_audit_event_tracker, key=lambda k: _ce4_audit_event_tracker[k].last_touched)
+        oldest_key = min(
+            _ce4_audit_event_tracker, key=lambda k: _ce4_audit_event_tracker[k].last_touched
+        )
         del _ce4_audit_event_tracker[oldest_key]
 
 

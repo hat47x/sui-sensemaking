@@ -38,7 +38,8 @@ FUTURE = (NOW + timedelta(days=7)).isoformat()
 
 
 def _payload(doc_id: str, title: str, cards: list[dict] | None = None) -> dict[str, object]:
-    return {
+    rich = cards is not None
+    body: dict[str, object] = {
         "version": 1,
         "id": doc_id,
         "title": title,
@@ -49,6 +50,82 @@ def _payload(doc_id: str, title: str, cards: list[dict] | None = None) -> dict[s
         "edges": [],
         "islands": [],
     }
+    if rich:
+        # カード本文以外にも本文を含む項目。確認済みの題名だけが agent へ出る。
+        body["islands"] = [
+            {
+                "id": "i-reviewed",
+                "cardIds": ["c-reviewed"],
+                "title": "REVIEWED-ISLAND-TITLE",
+                "titleReviewed": True,
+                "summaryText": "SECRET-ISLAND-SUMMARY",
+                "critique": "SECRET-ISLAND-CRITIQUE",
+            },
+            {
+                "id": "i-unreviewed",
+                "cardIds": ["c-unreviewed"],
+                "title": "SECRET-UNREVIEWED-ISLAND-TITLE",
+                "titleReviewed": False,
+            },
+        ]
+        body["evidenceLinks"] = [
+            {
+                "id": "e1",
+                "type": "supports",
+                "fromCardId": "c-reviewed",
+                "toCardId": "c-unreviewed",
+                "note": "SECRET-LINK-NOTE",
+                "createdAt": TIMESTAMP,
+            }
+        ]
+        body["voids"] = [
+            {
+                "id": "v1",
+                "kind": "unreviewed_content",
+                "title": "SECRET-VOID-TITLE",
+                "detail": "SECRET-VOID-DETAIL",
+                "cardIds": ["c-reviewed"],
+                "createdAt": TIMESTAMP,
+            }
+        ]
+        body["narratives"] = [
+            {
+                "id": "n1",
+                "title": "SECRET-NARRATIVE-TITLE",
+                "text": "SECRET-NARRATIVE-TEXT",
+                "reviewed": False,
+                "checks": [
+                    {
+                        "id": "chk1",
+                        "createdAt": TIMESTAMP,
+                        "kind": "consistency",
+                        "issues": [
+                            {
+                                "severity": "warn",
+                                "message": "SECRET-CHECK-MESSAGE",
+                                "direction": "a_missing_in_b",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+        body["relationSummaries"] = [
+            {
+                "id": "r1",
+                "createdAt": TIMESTAMP,
+                "islandAId": "i-reviewed",
+                "islandBId": "i-unreviewed",
+                "relationType": "related",
+                "derived": False,
+                "text": "SECRET-RELATION-TEXT",
+                "reviewed": False,
+                "groundingCardIds": [],
+                "groundingEdgeIds": [],
+                "sourceSignature": "sig",
+            }
+        ]
+    return body
 
 
 class SpyDispatcher:
@@ -157,8 +234,10 @@ def test_same_doc_id_resolves_only_inside_the_credentials_tenant(env) -> None:
     a_to_b_only = client.get("/docs/b-only", headers=_h(env["token_a"]))
     b_to_a_only = client.get("/docs/a-ungranted", headers=_h(env["token_b"]))
 
-    assert a.json()["title"] == "A shared"
-    assert b.json()["title"] == "B shared"
+    # 文書の題名は agent へ返さない。同じ docId でも、tenant ごとの内容で区別する。
+    assert a.json()["title"] is None and b.json()["title"] is None
+    assert len(a.json()["cards"]) == 3
+    assert b.json()["cards"] == []
     assert a_to_b_only.status_code == 404
     assert b_to_a_only.status_code == 404
 
@@ -203,7 +282,7 @@ def test_list_returns_only_granted_documents(env) -> None:
     assert a.status_code == 200, a.text
     assert [item["id"] for item in a.json()] == ["shared-doc"]
     assert [item["id"] for item in b.json()] == ["shared-doc"]
-    assert a.json()[0]["title"] != b.json()[0]["title"]
+    assert a.json()[0]["title"] is None and b.json()[0]["title"] is None
 
 
 def test_credential_revocation_applies_to_the_next_request(env) -> None:
@@ -289,6 +368,35 @@ def test_unreviewed_card_text_is_withheld_from_agents(env) -> None:
 
     assert texts == {"c-reviewed": "REVIEWED-TEXT", "c-unreviewed": "", "c-unknown": ""}
     assert "SECRET" not in json.dumps(body)
+
+
+def test_only_reviewed_text_and_allowed_structure_reach_agents(env) -> None:
+    response = env["client"].get("/docs/shared-doc", headers=_h(env["token_a"]))
+    body = response.json()
+    serialized = json.dumps(body)
+
+    assert response.status_code == 200, response.text
+    # 本文を含む他の項目は、許可リストに無いので出ない。
+    for withheld in (
+        "SECRET-ISLAND-SUMMARY",
+        "SECRET-ISLAND-CRITIQUE",
+        "SECRET-UNREVIEWED-ISLAND-TITLE",
+        "SECRET-LINK-NOTE",
+        "SECRET-VOID-TITLE",
+        "SECRET-VOID-DETAIL",
+        "SECRET-NARRATIVE-TITLE",
+        "SECRET-NARRATIVE-TEXT",
+        "SECRET-CHECK-MESSAGE",
+        "SECRET-RELATION-TEXT",
+        "A shared",  # 文書の題名
+    ):
+        assert withheld not in serialized, withheld
+    assert "relationSummaries" not in body
+    # 確認済みの本文と構造は出る。
+    titles = {island["id"]: island.get("title") for island in body["islands"]}
+    assert titles == {"i-reviewed": "REVIEWED-ISLAND-TITLE", "i-unreviewed": None}
+    assert [link["id"] for link in body["evidenceLinks"]] == ["e1"]
+    assert body["narratives"][0]["checks"][0]["issues"][0]["direction"] == "a_missing_in_b"
 
 
 def test_proposal_status_and_context_audit_are_scoped_to_the_grant(env) -> None:

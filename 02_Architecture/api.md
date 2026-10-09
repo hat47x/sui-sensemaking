@@ -891,7 +891,7 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 - **tenantの決まり方**: トークンのハッシュから、サーバー側の行（資格情報）を引いて決める。リクエストのheader・query・body・pathで指定した値は使わない。
 - **通れるroute**: `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つだけ。`GET /docs` は付与された文書のmetadataだけを返す。判断ログ、類似候補など、読み取りでも本文由来の派生データを返す経路は `403 agent_route_not_enabled` で閉じる。
 - **拒否**: 不正、未知、失効、期限切れ、バージョン不一致は、区別せず `401 agent_credential_invalid` とする。付与外の文書、存在しない文書、他tenantの文書は、同じ `404 agent_document_not_granted` を返す。書き込み、export、archive は `403 agent_write_not_enabled`。
-- **本文**: `GET /docs/{doc_id}` は、`textReviewed` が true でないカードの `text` を空にして返す。島の題名・要約など、カード本文以外の本文を含む項目は、第1段階では対象外である（`ADR-0093` の解除条件を参照）。
+- **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。
 - **監査**: eventの主体は `x-actor-ref` ではなく、検証済みの `agent:<agentId>` から求める。
 - **即時失効**: 状態・期限・付与は毎要求で確認する。キャッシュは持たない。
 - **登録**: 資格情報の登録・失効のAPIは、この段階では提供しない（リポジトリ層の操作のみ）。トークン平文は登録時に一度だけ返し、保存しない。
