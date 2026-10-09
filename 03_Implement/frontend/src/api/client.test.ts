@@ -107,7 +107,7 @@ describe("tenant-scoped document request precondition", () => {
     });
     await postExportAudit(
       "doc-1",
-      { safeMode: true, exportKind: "agent-task" },
+      { safeMode: true, exportKind: "agent-task", exportId: "export-version-0001" },
       { tenantSessionContext },
     );
 
@@ -139,12 +139,34 @@ describe("tenant-scoped document request precondition", () => {
 
     const attempt = postExportAudit(
       "doc-1",
-      { safeMode: true, exportKind: "agent-task" },
+      { safeMode: true, exportKind: "agent-task", exportId: "export-refused-0001" },
       { tenantSessionContext },
     );
 
     await expect(attempt).rejects.toBeInstanceOf(ApiError);
     await expect(attempt).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("sends each export's exportId in the body so separate exports of one kind stay distinct", async () => {
+    // SEC-AUDIT-DUP-01: the backend suppresses only a repeat of the same exportId.
+    // The body must carry the id the caller passed, unchanged.
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(JSON.stringify({ status: "accepted" }), { status: 200 }));
+
+    await postExportAudit(
+      "doc-1",
+      { safeMode: false, exportKind: "agent-task", exportId: "export-copy-0001" },
+      { tenantSessionContext },
+    );
+    await postExportAudit(
+      "doc-1",
+      { safeMode: false, exportKind: "agent-task", exportId: "export-json-0002" },
+      { tenantSessionContext },
+    );
+
+    const bodyOf = (index: number) => JSON.parse((fetchMock.mock.calls[index]?.[1] as RequestInit).body as string);
+    expect(bodyOf(0)).toEqual({ safeMode: false, exportKind: "agent-task", exportId: "export-copy-0001" });
+    expect(bodyOf(1)).toEqual({ safeMode: false, exportKind: "agent-task", exportId: "export-json-0002" });
   });
 
   it("creates a document with If-None-Match only inside a tenant session", async () => {

@@ -208,10 +208,7 @@ def test_post_export_audit_safe_mode_is_refused_and_not_recorded(tmp_path) -> No
     assert spy.events == []
 
 
-def test_export_audit_double_post_reaches_sink_once(tmp_path) -> None:
-    # SEC-AUDIT-DUP-01: the route passes a logical dedup_key, so a client
-    # retry / double-click of the identical export is not double-counted at
-    # the external sink. Both HTTP responses stay 200 (accepted).
+def _recording_export_dispatcher() -> tuple[RecordingAuditTransport, AuditDispatcher]:
     transport = RecordingAuditTransport()
     dispatcher = AuditDispatcher(
         enabled=True,
@@ -219,11 +216,18 @@ def test_export_audit_double_post_reaches_sink_once(tmp_path) -> None:
         transport=transport,
         queue_size=10,
     )
+    return transport, dispatcher
+
+
+def test_export_audit_double_post_reaches_sink_once(tmp_path) -> None:
+    # SEC-AUDIT-DUP-01: a client retry of the SAME export (same exportId) is not
+    # double-counted at the external sink. Both HTTP responses stay 200 (accepted).
+    transport, dispatcher = _recording_export_dispatcher()
     with _sqlite_client(tmp_path) as client:
         client.app.state.audit_dispatcher = dispatcher
         client.app.state.access_control_adapter = AllowAllAdapter()
 
-        body = {"safeMode": False, "exportKind": "bundle"}
+        body = {"safeMode": False, "exportKind": "agent-task", "exportId": "export-retry-0001"}
         first = client.post(
             "/docs/doc-export/export-audit",
             json=body,
@@ -244,15 +248,76 @@ def test_export_audit_double_post_reaches_sink_once(tmp_path) -> None:
     assert transport.events[0].docId == "doc-export"
 
 
+def test_export_audit_same_kind_distinct_export_ids_both_reach_sink(tmp_path) -> None:
+    # SEC-AUDIT-DUP-01 (exportId): two separate exports of the same kind within
+    # the dedup window are two records. The agent-task copy, .md download and
+    # task.json download all share exportKind="agent-task", so the kind alone must
+    # not merge them.
+    transport, dispatcher = _recording_export_dispatcher()
+    with _sqlite_client(tmp_path) as client:
+        client.app.state.audit_dispatcher = dispatcher
+        client.app.state.access_control_adapter = AllowAllAdapter()
+
+        for export_id in ("export-copy-0001", "export-md-0002", "export-json-0003"):
+            response = client.post(
+                "/docs/doc-export/export-audit",
+                json={"safeMode": False, "exportKind": "agent-task", "exportId": export_id},
+                headers={"x-actor-ref": "user-2"},
+            )
+            assert response.status_code == 200
+            assert response.json() == {"status": "accepted"}
+
+    assert len(transport.events) == 3
+
+
+def test_export_audit_without_export_id_is_not_deduped(tmp_path) -> None:
+    # SEC-AUDIT-DUP-01 (exportId): an older client sends no exportId. Without an
+    # identity there is nothing to deduplicate on, so each POST is recorded and
+    # no record is dropped. The HTTP responses stay 200 (accepted).
+    transport, dispatcher = _recording_export_dispatcher()
+    with _sqlite_client(tmp_path) as client:
+        client.app.state.audit_dispatcher = dispatcher
+        client.app.state.access_control_adapter = AllowAllAdapter()
+
+        body = {"safeMode": False, "exportKind": "agent-task"}
+        for _ in range(2):
+            response = client.post(
+                "/docs/doc-export/export-audit",
+                json=body,
+                headers={"x-actor-ref": "user-2"},
+            )
+            assert response.status_code == 200
+            assert response.json() == {"status": "accepted"}
+
+    assert len(transport.events) == 2
+
+
+@pytest.mark.parametrize(
+    "export_id",
+    ["short", "has space 0001", "bad/char-0001", "x" * 65],
+)
+def test_export_audit_rejects_malformed_export_id_without_recording(tmp_path, export_id: str) -> None:
+    # exportId is a client-generated opaque identifier: 8-64 characters from
+    # [A-Za-z0-9_-]. Anything else is refused by validation before the route runs,
+    # so nothing reaches the audit sink.
+    transport, dispatcher = _recording_export_dispatcher()
+    with _sqlite_client(tmp_path) as client:
+        client.app.state.audit_dispatcher = dispatcher
+        client.app.state.access_control_adapter = AllowAllAdapter()
+
+        response = client.post(
+            "/docs/doc-export/export-audit",
+            json={"safeMode": False, "exportKind": "agent-task", "exportId": export_id},
+            headers={"x-actor-ref": "user-2"},
+        )
+
+    assert response.status_code == 422
+    assert transport.events == []
+
+
 def test_export_audit_distinct_kinds_both_reach_sink(tmp_path) -> None:
     # SEC-AUDIT-DUP-01: different logical exports (exportKind) are not deduped.
-    transport = RecordingAuditTransport()
-    dispatcher = AuditDispatcher(
-        enabled=True,
-        allow_in_safe_mode=True,
-        transport=transport,
-        queue_size=10,
-    )
+    transport, dispatcher = _recording_export_dispatcher()
     with _sqlite_client(tmp_path) as client:
         client.app.state.audit_dispatcher = dispatcher
         client.app.state.access_control_adapter = AllowAllAdapter()

@@ -818,6 +818,11 @@ def put_document(
 class ExportAuditPayload(BaseModel):
     safeMode: bool = True
     exportKind: str = "bundle"
+    # 書き出し1回ごとの識別子（クライアント生成）。同じ exportId の再送だけを重複とみなす。
+    # 省略時（古いクライアント）は重複抑止をせず、記録を落とさない。
+    exportId: str | None = Field(
+        default=None, min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"
+    )
 
 
 class ContextAuditPayload(BaseModel):
@@ -1115,13 +1120,21 @@ def post_export_audit(
                     **build_auth_assurance_metadata(access_request.auth),
                 },
             ),
-            # SEC-AUDIT-DUP-01: same logical export suppressed within the dedup
-            # window (client retry / double-click on the export action).
+            # SEC-AUDIT-DUP-01: only a repeat of the same exportId (a retry of one
+            # export) is suppressed within the dedup window. Each export carries
+            # its own exportId, so distinct exports of the same kind are all
+            # recorded. Without exportId (older clients) no dedup is applied, so
+            # a record is not dropped for lack of an identity.
             dedup_key=(
-                "export-audit",
-                tenant.tenant_id,
-                doc_id,
-                payload.exportKind,
+                (
+                    "export-audit",
+                    tenant.tenant_id,
+                    doc_id,
+                    payload.exportKind,
+                    payload.exportId,
+                )
+                if payload.exportId is not None
+                else None
             ),
         )
 

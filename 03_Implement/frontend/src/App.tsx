@@ -228,6 +228,7 @@ import { resolveIslandDisplayTitle } from "./i18n/island_title";
 import { resolveViewLocale } from "./i18n/view_locale_resolution";
 import { resolvePublicPackIdFromSearch } from "./domain/policy/public_pack";
 import { createCancelableTaskRunner } from "./utils/compute_scheduler";
+import { createExportId } from "./utils/export_id";
 import { DiffWorkerClient } from "./worker/diff_client";
 import { DiagnosticsWorkerClient } from "./worker/diagnostics_client";
 import type { DiagnosticsProgressStage } from "./worker/diagnostics_protocol";
@@ -9377,11 +9378,14 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     agentTaskDesiredCount,
   ]);
 
-  const reportAgentTaskExportAudit = useCallback(() => {
+  // exportId identifies one export action (SEC-AUDIT-DUP-01). Each handler below
+  // creates its own id, so separate copy / .md / task.json exports of the same
+  // kind are each recorded instead of being merged by the backend dedup window.
+  const reportAgentTaskExportAudit = useCallback((exportId: string) => {
     if (!document) return;
     void runTenantScopedApiRequest(() => postExportAudit(
       document.id,
-      { safeMode, exportKind: "agent-task" },
+      { safeMode, exportKind: "agent-task", exportId },
       { tenantSessionContext: verifiedTenantSession },
     )).catch(() => {
       // The local export already completed and there is nothing to roll back,
@@ -9406,6 +9410,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   }, [runTenantScopedApiRequest, verifiedTenantSession]);
 
   const handleCopyAgentTaskSheet = useCallback(async () => {
+    const exportId = createExportId();
     const output = await runTenantScopedOptionalTask(buildCurrentAgentTaskSheet);
     if (!output) return;
     try {
@@ -9418,13 +9423,14 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       await navigator.clipboard.writeText(output.taskSheetMd);
       recordAgentTaskExport(output.correlation, appStorage.scope);
       setStatusMessage(t("agent_task_export.copied"));
-      reportAgentTaskExportAudit();
+      reportAgentTaskExportAudit(exportId);
     } catch {
       setStatusMessage(t("agent_task_export.copy_failed"));
     }
   }, [appStorage.scope, buildCurrentAgentTaskSheet, registerAgentTask, reportAgentTaskExportAudit, runTenantScopedOptionalTask]);
 
   const handleDownloadAgentTaskSheet = useCallback(async () => {
+    const exportId = createExportId();
     const output = await runTenantScopedOptionalTask(buildCurrentAgentTaskSheet);
     if (!output) return;
     try {
@@ -9436,10 +9442,11 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     downloadTextFile("task-sheet.md", "text/markdown", output.taskSheetMd);
     recordAgentTaskExport(output.correlation, appStorage.scope);
     setStatusMessage(t("agent_task_export.downloaded_md"));
-    reportAgentTaskExportAudit();
+    reportAgentTaskExportAudit(exportId);
   }, [appStorage.scope, buildCurrentAgentTaskSheet, registerAgentTask, reportAgentTaskExportAudit, runTenantScopedOptionalTask]);
 
   const handleDownloadAgentTaskJson = useCallback(async () => {
+    const exportId = createExportId();
     const output = await runTenantScopedOptionalTask(buildCurrentAgentTaskSheet);
     if (!output) return;
     try {
@@ -9451,7 +9458,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     downloadTextFile("task.json", "application/json", output.taskJson);
     recordAgentTaskExport(output.correlation, appStorage.scope);
     setStatusMessage(t("agent_task_export.downloaded_json"));
-    reportAgentTaskExportAudit();
+    reportAgentTaskExportAudit(exportId);
   }, [appStorage.scope, buildCurrentAgentTaskSheet, registerAgentTask, reportAgentTaskExportAudit, runTenantScopedOptionalTask]);
 
   // EXT-AGENT-02: parsing/reviewing a pasted response never touches the
