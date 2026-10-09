@@ -61,12 +61,9 @@ TYPE_MAP: dict[str, str] = {
 }
 
 # type name -> {field names TS has that Python is known and intentionally not to have yet}.
-KNOWN_TS_ONLY_GAPS: dict[str, set[str]] = {
-    # F-1 (still open as of this test's authoring): Island.representativeCue is
-    # silently dropped on every server round-trip. Tracked separately from R3/R4's
-    # scope; not fixed here. Removing this entry is the acceptance signal for that fix.
-    "Island": {"representativeCue"},
-}
+# F-1 (Island.representativeCue) is fixed: the Python model now declares it, so
+# the allowlist entry was removed as this test requires.
+KNOWN_TS_ONLY_GAPS: dict[str, set[str]] = {}
 
 # type name -> {field names Python has that TS is known and intentionally not to have}.
 KNOWN_PY_ONLY_GAPS: dict[str, set[str]] = {}
