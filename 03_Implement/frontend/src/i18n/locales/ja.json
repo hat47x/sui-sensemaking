@@ -1250,6 +1250,7 @@
   "ai.provider_error.disabled": "AI機能は現在無効です（SUI_LLM_PROVIDER=none）。",
   "ai.provider_error.timeout": "AI機能への接続がタイムアウトしました。運用担当者に確認してください。",
   "ai.provider_error.validation": "AIからの応答を確認できませんでした。運用担当者に確認してください。",
+  "ai.provider_error.too_large": "文書が大きすぎるため、AIへ送信しませんでした。範囲を分けて、もう一度確認してください。",
   "ai.provider_error.unavailable": "AI機能に接続できません。運用担当者に確認してください。",
   "ai.model_policy_changed": "管理者によってモデル設定が更新されました。利用可能なモデル一覧を再読み込みしました。",
   "side_panel.image.preview_error": "画像プレビューを読み込めません。",

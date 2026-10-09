@@ -179,7 +179,6 @@ const DOCUMENT_FIELDS = {
   cards: "rebuild",
   edges: "rebuild",
   islands: "rebuild",
-  affiliations: "omit",
   readingOrder: "preserve",
   narratives: "rebuild",
   relationSummaries: "rebuild",

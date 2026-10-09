@@ -343,6 +343,8 @@ function resolveAiProviderErrorMessage(error: unknown, fallback: string): string
       return t("ai.provider_error.timeout");
     case "validation":
       return t("ai.provider_error.validation");
+    case "too_large":
+      return t("ai.provider_error.too_large");
     case "unavailable":
       return t("ai.provider_error.unavailable");
     default:
