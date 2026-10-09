@@ -193,9 +193,6 @@ const DOCUMENT_FIELDS = {
   shelf: "rebuild",
   contradictionSignalDecisions: "omit",
   voids: "rebuild",
-  // Affiliation holds ids only (no card text). SafeMode keeps every card id too,
-  // so passing the id links through adds no exposure beyond cards and islands.
-  affiliations: "rebuild",
 } satisfies Record<keyof DocumentV1, FieldPolicy>;
 
 const CARD_FIELDS = {
@@ -1082,9 +1079,6 @@ export function deriveDocumentSafeModeProjection(
       : {}),
     ...(document.shelf !== undefined ? { shelf: document.shelf.map(sanitizeShelfEntry) } : {}),
     ...(document.voids !== undefined ? { voids: document.voids.map(sanitizeVoidEntry) } : {}),
-    ...(document.affiliations !== undefined
-      ? { affiliations: document.affiliations.map((affiliation) => ({ ...affiliation })) }
-      : {}),
   };
 }
 
