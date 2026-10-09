@@ -185,6 +185,63 @@ describe("validateImportedDocument", () => {
     expect(byId("i_missing_alt")?.representativeCue).toBeUndefined();
   });
 
+  it("omits the whole representativeCue for a non-string imageRef in any kind, keeping the island (DOMAIN-VISUAL-CUE-01, schemas.md §19.3 / §19.6)", () => {
+    const now = new Date().toISOString();
+    const result = validateImportedDocument({
+      version: 1,
+      id: "doc_cue_image_ref_type",
+      createdAt: now,
+      updatedAt: now,
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: [{ id: "c1", text: "A", x: 0, y: 0 }],
+      edges: [],
+      islands: [
+        {
+          // hand_drawn with a numeric imageRef: the cue is invalid as a whole, not only the ref
+          id: "i_hand_drawn_number_ref",
+          cardIds: ["c1"],
+          representativeCue: { kind: "hand_drawn", cueId: "cue-1", altText: "sketch", imageRef: 123 },
+        },
+        {
+          id: "i_user_image_object_ref",
+          cardIds: ["c1"],
+          representativeCue: { kind: "user_image", cueId: "cue-2", altText: "photo", imageRef: { key: "idb-key-1" } },
+        },
+        {
+          // preset_svg does not use imageRef, but a non-string value still invalidates the cue (models.py validates before dropping)
+          id: "i_preset_array_ref",
+          cardIds: ["c1"],
+          representativeCue: { kind: "preset_svg", cueId: "place", altText: "place", imageRef: ["idb-key-1"] },
+        },
+        {
+          id: "i_emoji_boolean_ref",
+          cardIds: ["c1"],
+          representativeCue: { kind: "emoji", cueId: "📍", altText: "location", imageRef: true },
+        },
+        {
+          // null is treated as an absent imageRef (models.py accepts None), so the cue is kept without a ref
+          id: "i_user_image_null_ref",
+          cardIds: ["c1"],
+          representativeCue: { kind: "user_image", cueId: "cue-3", altText: "photo", imageRef: null },
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const byId = (id: string) => result.document.islands.find((island) => island.id === id);
+    for (const id of ["i_hand_drawn_number_ref", "i_user_image_object_ref", "i_preset_array_ref", "i_emoji_boolean_ref"]) {
+      expect(byId(id)?.representativeCue, id).toBeUndefined();
+      expect(byId(id)?.cardIds, id).toEqual(["c1"]);
+    }
+    expect(byId("i_user_image_null_ref")?.representativeCue).toEqual({
+      kind: "user_image",
+      cueId: "cue-3",
+      altText: "photo",
+    });
+  });
+
   it("keeps island placardCardId from imported v1 JSON", () => {
     const now = new Date().toISOString();
     const result = validateImportedDocument({

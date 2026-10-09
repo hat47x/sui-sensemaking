@@ -301,8 +301,11 @@ function parseSummaryHistory(value: unknown): SummaryHistoryEntry[] | undefined 
   return entries.length > 0 ? entries : undefined;
 }
 
-// DOMAIN-VISUAL-CUE-01 (schemas.md §19.3): fail-closed to known keys
-// (kind/cueId/altText/imageRef). imageRef is ignored outside
+// DOMAIN-VISUAL-CUE-01 (schemas.md §19.3 / §19.6): fail-closed to known keys
+// (kind/cueId/altText/imageRef). A cue is invalid as a whole (not just its imageRef)
+// when imageRef is present but not a string, regardless of kind; this matches
+// models.py RepresentativeVisualCue, which validates before dropping. null is
+// treated as an absent imageRef, as models.py does. imageRef is ignored outside
 // hand_drawn/user_image (mirrors Card.meta/Card.ka empty-value omission).
 function parseRepresentativeCue(value: unknown): RepresentativeVisualCue | undefined {
   if (
@@ -310,6 +313,7 @@ function parseRepresentativeCue(value: unknown): RepresentativeVisualCue | undef
     || (value.kind !== "hand_drawn" && value.kind !== "user_image" && value.kind !== "preset_svg" && value.kind !== "emoji")
     || typeof value.cueId !== "string"
     || typeof value.altText !== "string"
+    || (value.imageRef !== undefined && value.imageRef !== null && typeof value.imageRef !== "string")
   ) {
     return undefined;
   }
