@@ -28,6 +28,7 @@ import type {
   VoidEntry,
   VoidKind,
 } from "./types";
+import { VOID_KINDS } from "./types";
 import { KNOWN_EDGE_TYPES } from "./types";
 import { canUsePolygonPoints } from "./geometry/polygon_edit";
 import {
@@ -546,14 +547,6 @@ function parseShelf(value: unknown, cardIds: Set<string>): ShelfEntry[] | undefi
 
   return shelf.length > 0 ? shelf : undefined;
 }
-
-const VOID_KINDS: readonly VoidKind[] = [
-  "unintegrated_card",
-  "orphaned_island",
-  "unspoken_island",
-  "unexplained_relation",
-  "unreviewed_content",
-];
 
 function parseVoids(value: unknown): VoidEntry[] | undefined {
   if (!Array.isArray(value)) {

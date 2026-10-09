@@ -367,6 +367,16 @@ export type VoidKind =
   | "unexplained_relation"
   | "unreviewed_content";
 
+// Runtime list of VoidKind, shared by the lenient parser (validate.ts) and the
+// strict import gate (validate_doc.ts) so the two cannot disagree on kinds.
+export const VOID_KINDS: readonly VoidKind[] = [
+  "unintegrated_card",
+  "orphaned_island",
+  "unspoken_island",
+  "unexplained_relation",
+  "unreviewed_content",
+];
+
 export type VoidEntry = {
   id: string;
   kind: VoidKind;

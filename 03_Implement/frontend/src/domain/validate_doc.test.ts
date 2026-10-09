@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { checkIslandMembershipIntegrity, validateDocumentV1Strict } from "./validate_doc";
 import type { DocumentV1 } from "./types";
+import { detectVoidCandidates } from "./void_detection";
 
 describe("validateDocumentV1Strict", () => {
   const now = new Date().toISOString();
@@ -128,6 +129,157 @@ describe("validateDocumentV1Strict", () => {
     if (result.ok) return;
 
     expect(result.errors).toContain("document: unknown field 'unknownField'");
+  });
+
+  // Regression: `voids` (types.ts DocumentV1.voids, schemas.md) and
+  // EvidenceLink.contradictionState (DOMAIN-EXPR-04) are written by the UI, so a
+  // legitimate document carrying them must pass the strict import gate.
+  it("accepts stored voids and EvidenceLink.contradictionState", () => {
+    const result = validateDocumentV1Strict({
+      ...validDocument,
+      cards: [
+        { id: "c1", text: "A", x: 0, y: 0 },
+        { id: "c2", text: "B", x: 10, y: 0 },
+        { id: "c3", text: "C", x: 20, y: 0 },
+      ],
+      evidenceLinks: [
+        { id: "ev1", type: "contradicts", fromCardId: "c1", toCardId: "c2", contradictionState: "unconfirmed" },
+        { id: "ev2", type: "contradicts", fromCardId: "c2", toCardId: "c3", contradictionState: "confirmed" },
+        { id: "ev3", type: "contradicts", fromCardId: "c3", toCardId: "c1", contradictionState: "held" },
+        { id: "ev4", type: "contradicts", fromCardId: "c1", toCardId: "c3", contradictionState: "resolved" },
+      ],
+      voids: [
+        {
+          id: "void-1",
+          kind: "unintegrated_card",
+          title: "どの島にも属さないカード",
+          detail: "カード c3 はどの島にも属していません",
+          cardIds: ["c3"],
+          resolved: false,
+          createdAt: now,
+        },
+        {
+          id: "void-2",
+          kind: "unreviewed_content",
+          title: "未レビューの内容",
+          detail: "レビュー前の内容が残っています",
+          resolved: true,
+          createdAt: now,
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it("accepts voids written by void detection (the app's own writer) without altering them", () => {
+    const base = {
+      version: 1,
+      id: "doc-voids-strict",
+      createdAt: now,
+      updatedAt: now,
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: [
+        { id: "c1", text: "alpha", x: 0, y: 0 },
+        { id: "c2", text: "beta", x: 10, y: 10 },
+        { id: "c3", text: "lone", x: 500, y: 500 },
+      ],
+      edges: [
+        { id: "e1", fromId: "i1", toId: "i2", fromKind: "island", toKind: "island", type: "related" },
+      ],
+      islands: [
+        { id: "i1", cardIds: ["c1"], title: "A", summaryText: "s", summaryReviewed: true },
+        { id: "i2", cardIds: ["c2"], title: "B", summaryText: "", summaryReviewed: false },
+      ],
+      relationSummaries: [],
+    };
+    const detected = detectVoidCandidates(base as unknown as DocumentV1, { nowIso: now });
+    expect(detected.voids.length).toBeGreaterThan(0);
+
+    const result = validateDocumentV1Strict({ ...base, voids: detected.voids });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.voids).toEqual(detected.voids);
+  });
+
+  it("keeps rejecting unknown fields inside voids, EvidenceLink, and the root", () => {
+    const result = validateDocumentV1Strict({
+      ...validDocument,
+      cards: [
+        { id: "c1", text: "A", x: 0, y: 0 },
+        { id: "c2", text: "B", x: 10, y: 0 },
+      ],
+      evidenceLinks: [
+        {
+          id: "ev1",
+          type: "contradicts",
+          fromCardId: "c1",
+          toCardId: "c2",
+          contradictionState: "held",
+          contradictionStatus: "held",
+        },
+      ],
+      voids: [
+        {
+          id: "void-1",
+          kind: "unspoken_island",
+          title: "表札なし",
+          detail: "島に表札がありません",
+          severity: "high",
+          createdAt: now,
+        },
+      ],
+      unknownRootField: true,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.errors).toContain("evidenceLinks[0]: unknown field 'contradictionStatus'");
+    expect(result.errors).toContain("voids[0]: unknown field 'severity'");
+    expect(result.errors).toContain("document: unknown field 'unknownRootField'");
+  });
+
+  it("rejects malformed voids and out-of-enum contradictionState values", () => {
+    const result = validateDocumentV1Strict({
+      ...validDocument,
+      cards: [
+        { id: "c1", text: "A", x: 0, y: 0 },
+        { id: "c2", text: "B", x: 10, y: 0 },
+      ],
+      evidenceLinks: [
+        { id: "ev1", type: "contradicts", fromCardId: "c1", toCardId: "c2", contradictionState: "bogus" },
+      ],
+      voids: [
+        { id: "void-1", kind: "bogus_kind", title: "t", detail: "d", createdAt: now },
+        { id: "void-2", kind: "orphaned_island", title: "", detail: "d", createdAt: now },
+        { id: "void-3", kind: "orphaned_island", title: "t", detail: "d", resolved: "yes", createdAt: now },
+        { id: "void-4", kind: "orphaned_island", title: "t", detail: "d", createdAt: "not-a-date" },
+        { id: "void-5", kind: "orphaned_island", title: "t", detail: "d", cardIds: [1], createdAt: now },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.errors).toContainEqual(expect.stringMatching(/^voids\[0\]\.kind: must be one of /));
+    expect(result.errors).toContain("voids[1].title: must be a non-empty string");
+    expect(result.errors).toContain("voids[2].resolved: must be a boolean when provided");
+    expect(result.errors).toContain("voids[3].createdAt: must be an ISO timestamp");
+    expect(result.errors).toContain("voids[4].cardIds[0]: must be a string");
+    expect(result.errors).toContain(
+      "evidenceLinks[0].contradictionState: must be 'unconfirmed' | 'confirmed' | 'held' | 'resolved' when provided",
+    );
+  });
+
+  it("rejects voids that are not an array", () => {
+    const result = validateDocumentV1Strict({ ...validDocument, voids: { id: "void-1" } });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.errors).toContain("document.voids: must be an array when provided");
   });
 
   it("accepts polygon geometry", () => {
