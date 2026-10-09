@@ -20,12 +20,14 @@ from sui_sensemaking_api.routes.docs import (
     _resolve_request_tenant,
     _transition_lifecycle,
 )
+from sui_sensemaking_api.routes.agent_credential_admin import _authorize as _authorize_agent_credential_admin
 from sui_sensemaking_api.routes.document_access_admin import _authorize_document_policy_management
 from sui_sensemaking_api.routes.inquiry_bundles import _trusted_session as _inquiry_bundle_trusted_session
 from sui_sensemaking_api.routes.guest_session import GuestRedeemRequest, redeem_guest_session
 from sui_sensemaking_api.saas_request_context import resolve_trusted_saas_request_session
 from sui_sensemaking_api.tenant_session_precondition import (
     require_tenant_scoped_api_precondition,
+    require_tenant_scoped_api_precondition_unless_agent,
     require_tenant_session_request_precondition,
 )
 
@@ -148,7 +150,13 @@ def test_all_tenant_content_ai_and_context_routes_install_precondition() -> None
     assert tenant_content_routes
     for route in tenant_content_routes:
         dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
-        assert require_tenant_scoped_api_precondition in dependency_calls, route.path
+        accepted = {require_tenant_scoped_api_precondition}
+        if route.path == "/ai/proposals/status":
+            # ADR-0093: the one AI route an agent credential may read. The variant
+            # skips only the interactive-session check; the handler still
+            # authorizes the credential, grant and tenant through _authorize_request.
+            accepted.add(require_tenant_scoped_api_precondition_unless_agent)
+        assert accepted & dependency_calls, route.path
 
 
 def test_all_document_and_document_admin_routes_use_shared_authorization_boundaries() -> None:
@@ -189,6 +197,9 @@ _TENANT_SCOPED_BOUNDARY_CALLS = frozenset(
     {
         _authorize_request,
         _authorize_document_policy_management,
+        # ADR-0093: Tenant Admin の agent 資格情報管理。信頼済みSaaS sessionと
+        # tenantSessionVersion、capability を一か所で確認する。
+        _authorize_agent_credential_admin,
         _inquiry_bundle_trusted_session,
         # 第2反復: metadata-only / lifecycle routes resolve the tenant + session
         # precondition without a per-document read (no SafeMode/card decision

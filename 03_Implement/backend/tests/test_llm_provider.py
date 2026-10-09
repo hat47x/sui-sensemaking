@@ -21,6 +21,7 @@ from sui_sensemaking_api.llm.provider import (
     NoneProvider,
     ProviderDisabledError,
     ProviderRequestError,
+    RegisteredProviderConfig,
     generate_with_fallback,
     get_provider,
 )
@@ -315,7 +316,8 @@ def test_local_provider_rejects_oversized_request_before_transport(
                     prompt="x" * MAX_LLM_PROVIDER_REQUEST_BYTES,
                 )
             )
-        assert exc_info.value.code == "provider_validation"
+        assert exc_info.value.code == "provider_request_too_large"
+        assert exc_info.value.to_contract()["code"] == "provider_request_too_large"
         assert "x" * 64 not in str(exc_info.value)
         assert transport_called is False
     finally:
@@ -356,6 +358,77 @@ def test_generate_with_fallback_keeps_original_error_when_disabled() -> None:
         settings.llm_provider = original_provider
         settings.llm_fallback_to_none = original_fallback
         settings.local_llm_base_url = original_url
+
+
+def _local_registered_config() -> RegisteredProviderConfig:
+    return RegisteredProviderConfig(
+        provider_id="local-a",
+        provider_kind="local",
+        base_url="http://127.0.0.1:11434",
+        api_key_ref=None,
+        model_id="local-model",
+    )
+
+
+def test_stop_switch_none_blocks_registered_provider_before_any_transport(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SUI_LLM_PROVIDER=none is an unconditional stop switch (api.md
+    AI-MODEL-GOVERNANCE-03). A registry-selected request must raise
+    ProviderDisabledError before its transport is built or any outbound
+    request is opened, even though its own providerKind is fully configured."""
+    from sui_sensemaking_api.llm import provider as llm_provider
+
+    monkeypatch.setattr(settings, "llm_provider", "none")
+    monkeypatch.setattr(settings, "llm_fallback_to_none", False)
+
+    def _transport_must_not_be_built(config):  # noqa: ANN001
+        raise AssertionError("registered transport must not be built while none is set")
+
+    def _outbound_must_not_open(req, timeout_seconds):  # noqa: ANN001
+        raise AssertionError(f"outbound request must not be sent: {req.full_url}")
+
+    monkeypatch.setattr(llm_provider, "build_registered_provider", _transport_must_not_be_built)
+    monkeypatch.setattr(llm_provider, "open_trusted_http", _outbound_must_not_open)
+
+    with pytest.raises(ProviderDisabledError) as exc_info:
+        generate_with_fallback(
+            LLMRequest(
+                task="refine_card_text",
+                prompt="prompt",
+                registered_provider=_local_registered_config(),
+            )
+        )
+    assert exc_info.value.metadata.provider_kind == "none"
+    assert exc_info.value.metadata.provider_name == "none"
+
+
+def test_registered_provider_still_dispatches_when_process_is_not_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression guard: the stop switch applies only to `none`. With the
+    process set to local, a registered local model still reaches its own
+    transport."""
+    from sui_sensemaking_api.llm import provider as llm_provider
+
+    monkeypatch.setattr(settings, "llm_provider", "local")
+    destinations: list[str] = []
+
+    def _fake_http(req, timeout_seconds):  # noqa: ANN001
+        destinations.append(req.full_url)
+        return _StubHTTPResponse(json.dumps({"text": '{"refinedText":"ok","reasoning":"ok"}'}))
+
+    monkeypatch.setattr(llm_provider, "open_trusted_http", _fake_http)
+
+    response = generate_with_fallback(
+        LLMRequest(
+            task="refine_card_text",
+            prompt="prompt",
+            registered_provider=_local_registered_config(),
+        )
+    )
+    assert destinations == ["http://127.0.0.1:11434/generate"]
+    assert response.metadata.provider_kind == "local"
 
 
 def test_generate_with_fallback_never_masks_validation_error(
@@ -791,6 +864,36 @@ def test_deepseek_settings_reject_invalid_thinking_mode(monkeypatch: pytest.Monk
 
     with pytest.raises(ValueError, match="SUI_DEEPSEEK_THINKING_MODE"):
         Settings()
+
+
+def test_deepseek_thinking_task_map_is_validated_and_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SUI_LLM_PROVIDER", "deepseek")
+    monkeypatch.setenv("SUI_DEEPSEEK_API_KEY", "sk-test-key")
+    monkeypatch.setenv("SUI_DEEPSEEK_THINKING_TASK_MAP", " check_narrative = ENABLED ,, re_layout=disabled")
+    assert Settings().deepseek_thinking_task_map == "check_narrative=enabled,re_layout=disabled"
+
+    for bad in ("check_narrative", "check_narrative=auto", "Bad-Task=enabled"):
+        monkeypatch.setenv("SUI_DEEPSEEK_THINKING_TASK_MAP", bad)
+        with pytest.raises(ValueError, match="SUI_DEEPSEEK_THINKING_TASK_MAP"):
+            Settings()
+
+
+def test_thinking_mode_resolution_per_task(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sui_sensemaking_api.llm.provider import resolve_thinking_mode_for_task
+
+    monkeypatch.setattr(settings, "deepseek_thinking_mode", "disabled")
+    monkeypatch.setattr(settings, "deepseek_thinking_task_map", "")
+    # Final-judgement tasks default to thinking; other tasks follow the global mode.
+    assert resolve_thinking_mode_for_task("check_narrative") == "enabled"
+    assert resolve_thinking_mode_for_task("detect_contradiction") == "enabled"
+    assert resolve_thinking_mode_for_task("suggest_document_title") == "disabled"
+    # An explicit per-task entry wins over both the default and the global mode.
+    monkeypatch.setattr(
+        settings, "deepseek_thinking_task_map", "check_narrative=disabled,suggest_document_title=enabled"
+    )
+    assert resolve_thinking_mode_for_task("check_narrative") == "disabled"
+    assert resolve_thinking_mode_for_task("suggest_document_title") == "enabled"
+    assert resolve_thinking_mode_for_task("detect_contradiction") == "enabled"
 
 
 def test_deepseek_auth_error_401(monkeypatch: pytest.MonkeyPatch) -> None:

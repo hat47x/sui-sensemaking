@@ -256,6 +256,60 @@ def _sample_merge_decision_record(
     }
 
 
+def _sample_payload_v1_with_representative_cue(doc_id: str) -> dict:
+    # DOMAIN-VISUAL-CUE-01 (schemas.md §19): Island.representativeCue must survive PUT -> GET.
+    # island-invalid-kind carries an out-of-enum kind. schemas.md §19.3 / §19.6 say only that
+    # cue is omitted; the island and the document are still accepted.
+    return {
+        "version": 1,
+        "id": doc_id,
+        "title": "roundtrip-v1-representative-cue",
+        "createdAt": "2026-07-29T00:00:00Z",
+        "updatedAt": "2026-07-29T00:00:00Z",
+        "transform": {"panX": 0, "panY": 0, "zoom": 1},
+        "cards": [
+            {"id": "card-1", "text": "alpha", "x": 12.5, "y": -9.0},
+            {"id": "card-2", "text": "beta", "x": 212.5, "y": 91.0},
+            {"id": "card-3", "text": "gamma", "x": 412.5, "y": 191.0},
+            {"id": "card-4", "text": "delta", "x": 612.5, "y": 291.0},
+        ],
+        "edges": [],
+        "islands": [
+            {
+                "id": "island-hand",
+                "cardIds": ["card-1"],
+                "representativeCue": {
+                    "kind": "hand_drawn",
+                    "cueId": "hand-cue-1",
+                    "altText": "hand drawn arrow",
+                    "imageRef": "idb-hand-1",
+                },
+            },
+            {
+                "id": "island-preset",
+                "cardIds": ["card-2"],
+                "representativeCue": {
+                    "kind": "preset_svg",
+                    "cueId": "place",
+                    "altText": "place",
+                    "imageRef": "stray-ref-dropped",
+                },
+            },
+            {
+                "id": "island-emoji",
+                "cardIds": ["card-3"],
+                "representativeCue": {"kind": "emoji", "cueId": "📍", "altText": "location"},
+            },
+            {
+                "id": "island-invalid-kind",
+                "cardIds": ["card-4"],
+                "title": "invalid cue island",
+                "representativeCue": {"kind": "external_url", "cueId": "x", "altText": "y"},
+            },
+        ],
+    }
+
+
 def _sample_payload_v1_with_relation_summaries(doc_id: str) -> dict:
     return {
         "version": 1,
@@ -469,6 +523,35 @@ def _assert_v1_merge_suggestion_decisions_roundtrip(client: TestClient) -> None:
     get_json = get_response.json()
     assert get_json["mergeSuggestionDecisions"][0]["id"] == "decision-1"
     assert get_json["mergeSuggestionDecisions"][0]["groupId"] == "heuristic-alpha-card-1-card-2"
+
+
+def _assert_v1_representative_cue_roundtrip(client: TestClient) -> None:
+    doc_id = "doc-roundtrip-v1-representative-cue"
+    payload = _sample_payload_v1_with_representative_cue(doc_id)
+    expected_cues = {
+        "island-hand": {
+            "kind": "hand_drawn",
+            "cueId": "hand-cue-1",
+            "altText": "hand drawn arrow",
+            "imageRef": "idb-hand-1",
+        },
+        # imageRef is meaningful only for hand_drawn / user_image (schemas.md §19.3).
+        "island-preset": {"kind": "preset_svg", "cueId": "place", "altText": "place"},
+        "island-emoji": {"kind": "emoji", "cueId": "📍", "altText": "location"},
+    }
+
+    put_response = client.put(f"/docs/{doc_id}", json=payload)
+    assert put_response.status_code == 200
+    get_response = client.get(f"/docs/{doc_id}")
+    assert get_response.status_code == 200
+
+    for response in (put_response, get_response):
+        islands_by_id = {island["id"]: island for island in response.json()["islands"]}
+        for island_id, cue in expected_cues.items():
+            assert islands_by_id[island_id]["representativeCue"] == cue
+        invalid_island = islands_by_id["island-invalid-kind"]
+        assert "representativeCue" not in invalid_island
+        assert invalid_island["title"] == "invalid cue island"
 
 
 def _assert_merge_decision_logs_contract_roundtrip(client: TestClient) -> None:
@@ -1083,6 +1166,15 @@ def test_docs_v1_merge_suggestion_decisions_roundtrip_sqlite(sqlite_client: Test
     _assert_v1_merge_suggestion_decisions_roundtrip(sqlite_client)
 
 
+def test_docs_v1_representative_cue_roundtrip_sqlite(sqlite_client: TestClient) -> None:
+    _assert_v1_representative_cue_roundtrip(sqlite_client)
+
+
+@pytest.mark.postgres
+def test_docs_v1_representative_cue_roundtrip_postgres(postgres_client: TestClient) -> None:
+    _assert_v1_representative_cue_roundtrip(postgres_client)
+
+
 def test_docs_merge_decision_logs_contract_roundtrip_sqlite(sqlite_client: TestClient) -> None:
     _assert_merge_decision_logs_contract_roundtrip(sqlite_client)
 
@@ -1346,6 +1438,41 @@ def test_docs_v1_hil_rs_contract_fields_reject_spoofed_reviewer_sqlite(
     )
     assert put_response.status_code == 403
     assert put_response.json()["detail"] == "reviewerRef must match authenticated identity"
+
+
+def _assert_v1_reproposal_rationale_roundtrip(client: TestClient, doc_id: str) -> None:
+    payload = _sample_payload_v1_with_hil_rs_contract_fields(
+        doc_id, reviewer_ref="reviewer:opaque-1"
+    )
+    diff_rationale = "crit-1の指摘を受けて、card-1だけを動かす再提案"
+    op_rationale = "card-1の位置だけを変え、近すぎる配置を解消する"
+    reproposal = payload["reproposalDiffs"][0]
+    reproposal["rationale"] = diff_rationale
+    reproposal["diffOps"][0]["rationale"] = op_rationale
+
+    put_response = client.put(
+        f"/docs/{doc_id}",
+        json=payload,
+        headers={"x-actor-ref": "reviewer:opaque-1"},
+    )
+    assert put_response.status_code == 200, put_response.text
+
+    get_response = client.get(f"/docs/{doc_id}")
+    assert get_response.status_code == 200
+    get_reproposal = get_response.json()["reproposalDiffs"][0]
+    assert get_reproposal["rationale"] == diff_rationale
+    assert get_reproposal["diffOps"][0]["rationale"] == op_rationale
+
+
+def test_docs_v1_reproposal_rationale_roundtrip_sqlite(sqlite_client: TestClient) -> None:
+    _assert_v1_reproposal_rationale_roundtrip(sqlite_client, "doc-roundtrip-v1-repropos-rationale")
+
+
+@pytest.mark.postgres
+def test_docs_v1_reproposal_rationale_roundtrip_postgres(postgres_client: TestClient) -> None:
+    _assert_v1_reproposal_rationale_roundtrip(
+        postgres_client, "doc-roundtrip-v1-repropos-rationale-pg"
+    )
 
 
 def test_docs_creation_records_lifecycle_and_creator(

@@ -114,6 +114,7 @@ export SUI_LLM_PROVIDER=none
 | `SUI_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek APIのベースURL。認証情報、クエリ、フラグメントを含まないHTTPS、またはループバックのHTTPだけを使えます。 |
 | `SUI_DEEPSEEK_MODEL` | `deepseek-v4-flash` | DeepSeek APIに渡す256文字以下のモデルID。空白、制御文字、バックスラッシュは使えません。 |
 | `SUI_DEEPSEEK_THINKING_MODE` | `disabled` | DeepSeek V4のthinkingモード（`disabled` か `enabled`）。主プロバイダのDeepSeekと、モデル登録経由のDeepSeekが送る `thinking.type` に反映します。ローカルと大規模LLMの汎用HTTPリクエストには影響しません。以前の既定である非thinkingの挙動を保つため、既定は `disabled` です。 |
+| `SUI_DEEPSEEK_THINKING_TASK_MAP` | 未設定 | タスクごとにthinkingモードを指定します（例: `check_narrative=enabled,suggest_document_title=disabled`）。未記載のタスクは `SUI_DEEPSEEK_THINKING_MODE` に従いますが、`check_narrative` と `detect_contradiction` は、未指定なら `enabled` で動きます。 |
 | `SUI_LLM_TASK_MODEL_MAP` | 未設定（空文字） | タスクごとのモデル割り当て（`task=model,...`）。割り当てのないタスクは既定のモデルを使います。 |
 | `SUI_LLM_HIGH_REASONING_MODEL` | 未設定 | 最終判断にあたるタスク（`check_narrative`、`detect_contradiction`）の既定モデル。未設定のときは、通常の既定モデルを使います。 |
 | `SUI_API_KEY` | 未設定 | 業務用APIを `X-API-Key` ヘッダーで保護します。`enterprise-production` では起動に必須です。`saas-multitenant` は、検証済みのJWTやCookieで本人を識別するため、このキーは起動に必須ではありません。`/healthz`、`/readyz`、`/version` は運用の死活確認用なので、このキーの対象外です。`/admin/*` もこのキーの対象外で、別の管理面の認可（`X-Admin-Api-Key` またはprovision権限）を使います。 |

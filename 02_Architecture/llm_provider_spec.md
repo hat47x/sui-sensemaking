@@ -71,6 +71,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 - `SUI_LLM_PROVIDER=external` は、`SUI_LLM_ESCALATION_ENABLED=true` かつ `SUI_LLM_LARGE_SCALE_OPT_IN=true` を必須とする。
 - `SUI_LLM_PROVIDER=deepseek` は `SUI_DEEPSEEK_API_KEY` を必須とし、未設定のときは起動を拒否する。
 - `SUI_DEEPSEEK_THINKING_MODE` は `disabled|enabled` を取る。既定の `disabled` は、旧 `deepseek-chat` のnon-thinkingの意味を維持する。
+- `SUI_DEEPSEEK_THINKING_TASK_MAP`（`task=disabled|enabled` のカンマ区切り）は、タスク別に `SUI_DEEPSEEK_THINKING_MODE` を上書きする。優先順は、このマップ、最終判断タスク（`check_narrative` / `detect_contradiction`）の既定 `enabled`、`SUI_DEEPSEEK_THINKING_MODE` の順である。タスクの種類ごとに管理者が個別に設定できる形は今後の課題である。
 
 ### 3.1 AI-MODEL-GOVERNANCE-03: モデルごとの動的dispatch（2026-08-27追記）
 
@@ -134,7 +135,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 - `provider_validation`は、フォールバックが設定済みかどうかに関係なく、`none`へ変換せず、そのまま`422`として返す。リクエストやレスポンスの契約違反を、プロバイダ不達の`503`に隠さない。既存のフォールバックの対象になり得るのは、タイムアウトと利用不可だけである。
 - `large-scale`（設定エイリアスの `external`/`large_scale` も、同じプロバイダを指す）が無効に設定されているときは、フォールバックしない。`ProviderRequestError.unavailable`（`503`）を返す。
 - 失敗したときも、`metadata.trace_id` を監査ログに残す（`ProviderError.to_contract()`）。
-- HTTPステータスの対応: `provider_timeout→504` / `provider_validation→422` / `provider_unavailable→503`（`ProviderDisabledError` も `503` で、`disabled_reason` が付く）。
+- HTTPステータスの対応: `provider_timeout→504` / `provider_validation→422` / `provider_request_too_large→413`（送信前に拒否し、文書は外部へ送らない。フォールバックしない） / `provider_unavailable→503`（`ProviderDisabledError` も `503` で、`disabled_reason` が付く）。
 
 ### 4.4 Phase-2（未配線・Pending）
 

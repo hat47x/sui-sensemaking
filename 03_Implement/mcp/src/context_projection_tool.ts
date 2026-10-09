@@ -20,6 +20,10 @@ export function registerContextProjectionTool(server: McpServer, documentClientC
     "get_context_projection",
     {
       title: "Get context projection",
+      // safeMode withholds card text only. Island titles (islands[].title) and the
+      // document title (documentMetadata.title) are returned regardless of safeMode.
+      // The description string below says "only structure and counts", which does
+      // not hold for those title fields.
       description:
         "Read-only, constraint-scoped, SafeMode-respecting projection of a sui-sensemaking document " +
         "(ADR-0054 stage 1). The output never includes a score, rank, confidence, or priority " +

@@ -38,6 +38,13 @@ MVPでは以下のいずれかで簡素に扱う。
 
 `If-Match` が無い場合はLWWとし、`If-Match` がある場合は保存済み `ETag` と一致したときだけ更新する。
 
+`saas-multitenant` プロファイルでは、`PUT /docs/{id}` を後勝ちにしない（`ADR-0092`）。
+
+- 更新は具体的な `If-Match` を必須とする。欠落、または `If-Match: *` は `428 document_precondition_required` で拒否する。`ETag` が一致しなければ `409` とする。
+- 作成は `If-None-Match: *` を必須とする。文書が既に存在すれば `409 document_already_exists` で上書きしない。`*` 以外は `400 document_precondition_invalid`。
+- `If-Match` と `If-None-Match` の同時指定は `400 document_precondition_conflict`。
+- single-tenant 系のプロファイル（`local-dev` / `evaluation` / `enterprise-production`）は、従来どおりLWWを維持する。
+
 ---
 
 ## 2. エンドポイント
@@ -875,6 +882,26 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 - 未認証。OpenAPIスキーマを返す。
 
 ---
+
+### 2.15 Agent資格情報（ADR-0093）
+
+外部のAI協働者（MCPなど）が、`saas-multitenant` で読み取り専用の投影を読むための資格情報である。agentはtenantのmembershipを持たない別種の主体で、Tenant Adminが登録した資格情報と、明示した文書への付与だけで読める。
+
+- **ヘッダー**: `Sui-Sensemaking-Agent-Credential: suiag_...`。通常の利用者の `Authorization` とは別に扱う。ヘッダーがあれば、そのヘッダーだけを認証として評価する。
+- **OAuthトークンによる認証（ADR-0094）**: 不透明な資格情報の代わりに、`Sui-Sensemaking-Agent-Bearer: Bearer <JWT>` でも認証できる。このJWTは、MCPサーバーがトークン交換（RFC 8693）で得た、backend宛ての短命のトークンである。backendは署名・発行者・audience・有効期限を自分で検証し（ゲスト受け入れと同じ `verify_configured_oidc_token` とIdP登録簿）、検証済みの `(identity_provider_id, sub)` を、Tenant Adminが結んだ対応付けから agent に引く。tenantはトークンのclaimではなく、対応付けの行から決める。MCP宛てのトークンは受け付けない（audienceが一致しない）。二つのヘッダーを同時に送ると `400 agent_credential_conflict`。以降の許可route・拒否・本文・監査・失効は、不透明な資格情報と同じである。
+- **tenantの決まり方**: トークンのハッシュから、サーバー側の行（資格情報）を引いて決める。リクエストのheader・query・body・pathで指定した値は使わない。
+- **通れるroute**: `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つだけ。`GET /docs` は付与された文書のmetadataだけを返す。判断ログ、類似候補など、読み取りでも本文由来の派生データを返す経路は `403 agent_route_not_enabled` で閉じる。
+- **拒否**: 不正、未知、失効、期限切れ、バージョン不一致は、区別せず `401 agent_credential_invalid` とする。付与外の文書、存在しない文書、他tenantの文書は、同じ `404 agent_document_not_granted` を返す。書き込み、export、archive は `403 agent_write_not_enabled`。
+- **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。
+- **監査**: eventの主体は `x-actor-ref` ではなく、検証済みの `agent:<agentId>` から求める。
+- **即時失効**: 状態・期限・付与は毎要求で確認する。キャッシュは持たない。
+- **登録・失効（Tenant Admin）**: `/tenant-admin/agent-credentials` で管理する。通常の利用者と同じ信頼済みSaaS sessionと `tenantSessionVersion` を要求し、tenant管理者向けのcapabilityを独立して確認する。
+  - `POST /tenant-admin/agent-credentials`（`agent.register`）: `{agentId, label, expiresAt, docIds}`。有効期限は、タイムゾーンつきで、未来かつ90日以内。付与する文書は1〜50件で、明示して列挙する。`201` で、`credential`（トークン平文）を**この応答でだけ**返す。`Cache-Control: no-store`。同じ `agentId` は、失効後も再登録できない（`409 agent_credential_exists`）。他tenantの文書と存在しない文書は区別せず `404`。
+  - `GET /tenant-admin/agent-credentials`（`agent.register` または `agent.revoke`）: 自tenantの資格情報と、有効な付与の `docIds`。トークンもそのハッシュも返さない。
+  - `POST /tenant-admin/agent-credentials/{agentId}/revoke`（`agent.revoke`）: 次の要求から効く。冪等で `204`。他tenantの `agentId` は `404`。
+  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`（`agent.register`）: `{identityProviderId, subject}` を agent に結ぶ。IdP登録簿に有効な行が無ければ `404`、すでに結ばれていれば `409`（どのtenantの agent かは示さない）。一覧の `oauthBindings` に出る。
+  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他tenantの対応付けは `404`。
+  - `DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`（`agent.revoke`）: その文書の付与だけを取り消す。`204`。
 
 ## 3. レスポンス例（概要）
 

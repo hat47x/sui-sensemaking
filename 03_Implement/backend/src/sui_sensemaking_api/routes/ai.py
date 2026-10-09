@@ -113,6 +113,7 @@ from sui_sensemaking_api.merge_suggestion_ir import (
 from sui_sensemaking_api.routes.docs import _authorize_request, get_document_row
 from sui_sensemaking_api.tenant_session_precondition import (
     require_tenant_scoped_api_precondition,
+    require_tenant_scoped_api_precondition_unless_agent,
 )
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -601,6 +602,7 @@ def _raise_llm_http_error(exc: ProviderDisabledError | ProviderRequestError) -> 
         "provider_timeout": 504,
         "provider_validation": 422,
         "provider_unavailable": 503,
+        "provider_request_too_large": 413,
     }
     raise HTTPException(
         status_code=status_map.get(exc.code, 503), detail=exc.to_contract()
@@ -630,6 +632,14 @@ def _validate_check_narrative_input(payload: CheckNarrativeRequest) -> None:
         raise HTTPException(status_code=422, detail="basedOnReadingOrder included unknown id")
 
 
+# Free-text (card / island text) is written as raw Unicode so the model sees the
+# words, not \uXXXX escapes. json.dumps' default ASCII escaping inflates Japanese
+# text roughly 2.7x in the prompt, which pushes check-narrative toward the 1 MiB
+# provider envelope limit much sooner. The JSON string quoting is kept.
+def _prompt_text(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
 def _build_narrative_check_prompt(payload: CheckNarrativeRequest) -> str:
     cards_by_id = {card.id: card for card in payload.doc.cards}
     islands_by_id = {island.id: island for island in payload.doc.islands}
@@ -640,12 +650,12 @@ def _build_narrative_check_prompt(payload: CheckNarrativeRequest) -> str:
         if item_id in islands_by_id:
             island = islands_by_id[item_id]
             reading_order_lines.append(
-                f'- {index}. island id="{island.id}", title={json.dumps(island.title or "")}, cardIds={json.dumps(island.cardIds)}'
+                f'- {index}. island id="{island.id}", title={_prompt_text(island.title or "")}, cardIds={json.dumps(island.cardIds)}'
             )
         elif item_id in cards_by_id:
             card = cards_by_id[item_id]
             reading_order_lines.append(
-                f'- {index}. card id="{card.id}", text={json.dumps(card.text)}'
+                f'- {index}. card id="{card.id}", text={_prompt_text(card.text)}'
             )
         else:
             reading_order_lines.append(f'- {index}. unknown id="{item_id}"')
@@ -657,10 +667,10 @@ def _build_narrative_check_prompt(payload: CheckNarrativeRequest) -> str:
         ]
         card_texts = [card.text for card in island_cards]
         island_lines.append(
-            f'- id="{island.id}", title={json.dumps(island.title or "")}, cardIds={json.dumps(island.cardIds)}, cardTexts={json.dumps(card_texts)}'
+            f'- id="{island.id}", title={_prompt_text(island.title or "")}, cardIds={json.dumps(island.cardIds)}, cardTexts={_prompt_text(card_texts)}'
         )
 
-    card_lines = [f'- id="{card.id}", text={json.dumps(card.text)}' for card in payload.doc.cards]
+    card_lines = [f'- id="{card.id}", text={_prompt_text(card.text)}' for card in payload.doc.cards]
 
     # AI-IR-CHECK-NARRATIVE-RELATIONS-01: the A-side diagram's explicit
     # causal/negate/mutual/equivalence/related edges are route-required
@@ -2387,7 +2397,7 @@ def record_external_proposal_decision(
 @router.get(
     "/proposals/status",
     response_model=ProposalStatusResponse,
-    dependencies=[Depends(require_tenant_scoped_api_precondition)],
+    dependencies=[Depends(require_tenant_scoped_api_precondition_unless_agent)],
 )
 def get_proposal_status(
     docId: str,

@@ -157,6 +157,23 @@ _FINAL_JUDGEMENT_TASKS = frozenset({
 })
 
 
+def resolve_thinking_mode_for_task(task: str) -> str:
+    """DeepSeek thinking mode for a task.
+
+    Priority: SUI_DEEPSEEK_THINKING_TASK_MAP > final_judgement default (enabled)
+    > SUI_DEEPSEEK_THINKING_MODE.
+    """
+    from sui_sensemaking_api.settings import settings
+
+    for pair in settings.deepseek_thinking_task_map.split(","):
+        name, _, mode = pair.partition("=")
+        if name.strip() == task and mode.strip():
+            return mode.strip()
+    if task in _FINAL_JUDGEMENT_TASKS:
+        return "enabled"
+    return settings.deepseek_thinking_mode
+
+
 def resolve_model_for_task(task: str, request: LLMRequest | None = None) -> str:
     """ADR-0065 / AI-ROUTE-01 (MMR-01/02/03/04): resolve the model for a task.
 
@@ -299,7 +316,12 @@ class ProviderDisabledError(ProviderError):
         return base
 
 
-ProviderErrorCode = Literal["provider_timeout", "provider_validation", "provider_unavailable"]
+ProviderErrorCode = Literal[
+    "provider_timeout",
+    "provider_validation",
+    "provider_unavailable",
+    "provider_request_too_large",
+]
 
 
 class ProviderRequestError(ProviderError):
@@ -332,6 +354,12 @@ class ProviderRequestError(ProviderError):
     @classmethod
     def validation(cls, message: str, metadata: LLMCallMetadata) -> "ProviderRequestError":
         return cls(message, metadata, code="provider_validation")
+
+    @classmethod
+    def request_too_large(cls, message: str, metadata: LLMCallMetadata) -> "ProviderRequestError":
+        # Raised before any transport: the document was not sent. Kept distinct from
+        # provider_validation so the UI does not blame the AI's response.
+        return cls(message, metadata, code="provider_request_too_large")
 
 
 def _now_utc_iso() -> str:
@@ -532,7 +560,7 @@ def _serialize_http_provider_request(
             metadata,
         ) from None
     if len(serialized) > MAX_LLM_PROVIDER_REQUEST_BYTES:
-        raise ProviderRequestError.validation(
+        raise ProviderRequestError.request_too_large(
             f"{provider_name} request exceeded the size limit",
             metadata,
         )
@@ -639,7 +667,7 @@ class DeepSeekProvider:
             api_key=settings.deepseek_api_key,
             provider_name=self.provider_name,
             provider_kind=self.provider_kind,
-            thinking_mode=settings.deepseek_thinking_mode,
+            thinking_mode=resolve_thinking_mode_for_task(req.task),
         )
 
 
@@ -694,7 +722,7 @@ class RegisteredDeepSeekProvider:
             api_key=self._api_key,
             provider_name=self.provider_name,
             provider_kind=self.provider_kind,
-            thinking_mode=settings.deepseek_thinking_mode,
+            thinking_mode=resolve_thinking_mode_for_task(req.task),
         )
 
 
@@ -896,7 +924,7 @@ def _generate_via_openai_chat(
     }
     serialized = json.dumps(payload, allow_nan=False, ensure_ascii=False).encode("utf-8")
     if len(serialized) > MAX_LLM_PROVIDER_REQUEST_BYTES:
-        raise ProviderRequestError.validation(
+        raise ProviderRequestError.request_too_large(
             f"{provider_name} request exceeded the size limit",
             metadata,
         )
@@ -1082,16 +1110,30 @@ def get_provider() -> LLMProvider:
     return _DEFAULT_REGISTRY.resolve(settings.llm_provider)
 
 
+def _llm_provider_stop_switch_engaged() -> bool:
+    """SUI_LLM_PROVIDER=none is an unconditional stop switch for LLM calls.
+
+    A registry-selected model must not reach its transport while the process
+    is set to `none`, even when that model's own providerKind is fully
+    configured. The contract is fixed in api.md (AI-MODEL-GOVERNANCE-03) and
+    llm_provider_spec.md (none is an unconditional kill switch).
+    """
+    return settings.llm_provider.strip().lower() == "none"
+
+
 def generate_with_fallback(
     req: LLMRequest,
     *,
     provider: LLMProvider | None = None,
 ) -> LLMResponse:
-    provider = provider or (
-        build_registered_provider(req.registered_provider)
-        if req.registered_provider is not None
-        else get_provider()
-    )
+    if provider is None:
+        if req.registered_provider is not None and not _llm_provider_stop_switch_engaged():
+            provider = build_registered_provider(req.registered_provider)
+        else:
+            # Under the stop switch this resolves to NoOpProvider, whose generate()
+            # raises ProviderDisabledError before any transport is built, any
+            # credential is resolved, or any request leaves the process.
+            provider = get_provider()
     # OPS-LLM-COST-01 (段階2): count every request that reaches a provider so an
     # operator can see external (large-scale) call volume; counting the attempt
     # (before any provider error) is what cost control needs. Token usage is
@@ -1101,7 +1143,7 @@ def generate_with_fallback(
     try:
         response = provider.generate(req)
     except ProviderRequestError as exc:
-        if exc.code == "provider_validation" or not settings.llm_fallback_to_none:
+        if exc.code in ("provider_validation", "provider_request_too_large") or not settings.llm_fallback_to_none:
             raise
         fallback_metadata = LLMCallMetadata(
             provider_kind="none",

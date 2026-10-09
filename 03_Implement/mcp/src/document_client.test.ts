@@ -1,3 +1,4 @@
+import { authHeaders } from "./auth_headers.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DocumentFetchError,
@@ -39,10 +40,88 @@ describe("loadDocumentClientConfigFromEnv", () => {
     },
   );
 
-  it("fails closed for the unfinished SaaS runtime profile", () => {
-    expect(() =>
-      loadDocumentClientConfigFromEnv({ SUI_RUNTIME_PROFILE: "saas-multitenant" }),
-    ).toThrow("tenant-bound MCP credentials");
+  describe("saas-multitenant (ADR-0093)", () => {
+    const saas = { SUI_RUNTIME_PROFILE: "saas-multitenant", SUI_MCP_AGENT_CREDENTIAL: "suiag_token" };
+
+    it("fails closed without a tenant-bound agent credential", () => {
+      expect(() => loadDocumentClientConfigFromEnv({ SUI_RUNTIME_PROFILE: "saas-multitenant" })).toThrow(
+        "SUI_MCP_AGENT_CREDENTIAL",
+      );
+      expect(() =>
+        loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_AGENT_CREDENTIAL: "not-an-agent-token" }),
+      ).toThrow("SUI_MCP_AGENT_CREDENTIAL");
+    });
+
+    describe("HTTP transport (ADR-0094)", () => {
+      const http = {
+        SUI_RUNTIME_PROFILE: "saas-multitenant",
+        SUI_MCP_TRANSPORT: "http",
+        SUI_MCP_TOKEN_EXCHANGE_ENDPOINT: "https://idp.example/token",
+        SUI_MCP_TOKEN_EXCHANGE_CLIENT_ID: "mcp-server",
+        SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET: "s3cret",
+        SUI_MCP_TOKEN_EXCHANGE_AUDIENCE: "sui-sensemaking-agents",
+      };
+
+      it("fails closed without the token exchange settings", () => {
+        expect(() =>
+          loadDocumentClientConfigFromEnv({ SUI_RUNTIME_PROFILE: "saas-multitenant", SUI_MCP_TRANSPORT: "http" }),
+        ).toThrow("SUI_MCP_TOKEN_EXCHANGE_*");
+      });
+
+      it("rejects a partial token exchange configuration", () => {
+        expect(() =>
+          loadDocumentClientConfigFromEnv({ ...http, SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET: "" }),
+        ).toThrow("must be set together");
+      });
+
+      it("does not combine a static agent credential with per-caller exchange", () => {
+        expect(() => loadDocumentClientConfigFromEnv({ ...http, SUI_MCP_AGENT_CREDENTIAL: "suiag_x" })).toThrow(
+          "belongs to the stdio transport",
+        );
+      });
+
+      it("loads the exchange settings and no static credential", () => {
+        const config = loadDocumentClientConfigFromEnv(http);
+
+        expect(config.agentCredential).toBeUndefined();
+        expect(config.tokenExchange).toEqual({
+          tokenEndpoint: "https://idp.example/token",
+          clientId: "mcp-server",
+          clientSecret: "s3cret",
+          audience: "sui-sensemaking-agents",
+        });
+      });
+    });
+
+    it("rejects an unknown transport", () => {
+      expect(() => loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_TRANSPORT: "ws" })).toThrow(
+        "Unknown SUI_MCP_TRANSPORT",
+      );
+    });
+
+    it("refuses a static API key, which does not prove a tenant", () => {
+      expect(() => loadDocumentClientConfigFromEnv({ ...saas, SUI_API_KEY: "static" })).toThrow(
+        "SUI_API_KEY must not be set",
+      );
+    });
+
+    it("sends the per-request bearer instead of any static credential", () => {
+      expect(authHeaders({ agentBearer: "exchanged", agentCredential: "suiag_x", apiKey: "k" })).toEqual({
+        "Sui-Sensemaking-Agent-Bearer": "Bearer exchanged",
+      });
+    });
+
+    it("carries only the agent credential, never an API key", () => {
+      const config = loadDocumentClientConfigFromEnv(saas);
+
+      expect(config).toEqual({ baseUrl: "http://127.0.0.1:8000", agentCredential: "suiag_token" });
+      expect(authHeaders(config)).toEqual({ "Sui-Sensemaking-Agent-Credential": "suiag_token" });
+    });
+  });
+
+  it("keeps the single-tenant profiles on the static API key", () => {
+    expect(authHeaders({ apiKey: "k" })).toEqual({ "X-API-Key": "k" });
+    expect(authHeaders({})).toEqual({});
   });
 
   it("rejects unknown runtime profiles", () => {

@@ -8,6 +8,7 @@ import type { HttpTransportConfig } from "./oauth_config.js";
 import type { DocumentClientConfig } from "./document_client.js";
 import { createServer } from "./server.js";
 import { createRemoteBearerTokenVerifier } from "./oauth_verifier.js";
+import { exchangeToken, TokenExchangeError } from "./token_exchange.js";
 
 // EXT-CONN-01 subslice C: read-only MCP over streamable HTTP, fronted by
 // OAuth 2.1 resource-server auth. THREAT_MODEL.md §6 covers the public-facing
@@ -25,6 +26,31 @@ export const MCP_READ_SCOPE = "read:context";
  */
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 60;
+
+/**
+ * ADR-0094: saas-multitenant では、検証済みの MCP 宛てトークンを交換し、backend 宛ての
+ * 短命のトークンを要求ごとの設定に載せる。交換できない要求は、backend を呼ばずに閉じる。
+ * MCP 宛てのトークンそのものは、backend へ送らない。
+ */
+async function documentClientConfigFor(
+  base: DocumentClientConfig,
+  req: express.Request,
+): Promise<DocumentClientConfig | null> {
+  if (!base.tokenExchange) return base;
+  const subjectToken = req.auth?.token;
+  if (!subjectToken) return null;
+  try {
+    const agentBearer = await exchangeToken(base.tokenExchange, subjectToken);
+    return { baseUrl: base.baseUrl, agentBearer };
+  } catch (error) {
+    if (!(error instanceof TokenExchangeError)) throw error;
+    return null;
+  }
+}
+
+function rejectExchangeFailure(res: express.Response): void {
+  res.status(502).json({ error: "token_exchange_failed" });
+}
 
 export function buildHttpApp(config: HttpTransportConfig, documentClientConfig: DocumentClientConfig): Express {
   const app = express();
@@ -80,7 +106,9 @@ export function buildHttpApp(config: HttpTransportConfig, documentClientConfig: 
   // reconnect). A remote client can then complete a full MCP session over
   // HTTP (initialize -> tools/list -> tools/call).
   app.post(MCP_PATH, requireAuth, async (req, res) => {
-    const server = createServer(documentClientConfig);
+    const requestConfig = await documentClientConfigFor(documentClientConfig, req);
+    if (!requestConfig) return rejectExchangeFailure(res);
+    const server = createServer(requestConfig);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
@@ -91,13 +119,17 @@ export function buildHttpApp(config: HttpTransportConfig, documentClientConfig: 
   // session to notify on or tear down -- still gated behind auth so an
   // unauthenticated caller learns nothing from the response shape either way.
   app.get(MCP_PATH, requireAuth, async (req, res) => {
-    const server = createServer(documentClientConfig);
+    const requestConfig = await documentClientConfigFor(documentClientConfig, req);
+    if (!requestConfig) return rejectExchangeFailure(res);
+    const server = createServer(requestConfig);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
     await transport.handleRequest(req, res);
   });
   app.delete(MCP_PATH, requireAuth, async (req, res) => {
-    const server = createServer(documentClientConfig);
+    const requestConfig = await documentClientConfigFor(documentClientConfig, req);
+    if (!requestConfig) return rejectExchangeFailure(res);
+    const server = createServer(requestConfig);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
     await transport.handleRequest(req, res);

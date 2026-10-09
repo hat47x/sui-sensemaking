@@ -24,6 +24,7 @@ TenantResolutionMethod = Literal[
     "verified_claim",
     "trusted_host_mapping",
     "guest_session",
+    "agent_credential",
 ]
 
 

@@ -59,6 +59,37 @@ def test_reproposal_diff_requires_before_and_after_for_each_diff_op() -> None:
         )
 
 
+def test_reproposal_diff_op_accepts_optional_rationale() -> None:
+    validated = ReproposalDiff(
+        schemaVersion="1.0.0",
+        proposalId="p4",
+        basedOnIteration=1,
+        traceKey="crit-4:p4",
+        diffOps=[
+            {
+                "opId": "op-with-rationale",
+                "opType": "relabel",
+                "targetRef": "card:c4",
+                "before": {"text": "old"},
+                "after": {"text": "new"},
+                "rationale": "表記を揃えるため",
+            },
+            {
+                "opId": "op-without-rationale",
+                "opType": "relabel",
+                "targetRef": "card:c5",
+                "before": {"text": "old"},
+                "after": {"text": "new"},
+            },
+        ],
+    )
+    assert validated.diffOps[0].rationale == "表記を揃えるため"
+    assert validated.diffOps[1].rationale is None
+    dumped_ops = validated.model_dump(mode="json")["diffOps"]
+    assert dumped_ops[0]["rationale"] == "表記を揃えるため"
+    assert "rationale" not in dumped_ops[1]
+
+
 def test_review_attribution_requires_review_fields_for_human_reviewed() -> None:
     with pytest.raises(ValidationError):
         ReviewAttribution(

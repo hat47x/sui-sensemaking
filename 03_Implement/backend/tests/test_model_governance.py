@@ -817,7 +817,11 @@ def test_registered_local_and_deepseek_models_dispatch_to_their_own_transports(
     """AI-MODEL-GOVERNANCE-03 AC-5: providerId selects transport per model."""
     monkeypatch.setattr(settings, "admin_api_key", _ADMIN_KEY)
     monkeypatch.setattr(settings, "api_key", _BUSINESS_KEY)
-    monkeypatch.setattr(settings, "llm_provider", "none")
+    # The process must not be `none` here: `none` is the stop switch and rejects
+    # every registry dispatch (see the stop-switch test below). `local` keeps the
+    # cross-kind case this test covers: the deepseek model runs although the
+    # process-wide SUI_LLM_PROVIDER is local.
+    monkeypatch.setattr(settings, "llm_provider", "local")
     monkeypatch.setattr(settings, "llm_fallback_to_none", False)
     monkeypatch.setenv("SUI_DEEPSEEK_API_KEY", "integration-secret")
 
@@ -934,6 +938,66 @@ def test_registered_local_and_deepseek_models_dispatch_to_their_own_transports(
             "Bearer integration-secret",
         ),
     ]
+
+
+def test_stop_switch_none_rejects_registered_model_without_outbound_request(
+    tmp_path, monkeypatch
+) -> None:
+    """SUI_LLM_PROVIDER=none is an unconditional stop switch (api.md
+    AI-MODEL-GOVERNANCE-03): a registered local model whose own configuration is
+    complete is refused with 503 by the generation route, and no outbound request
+    is opened."""
+    from sui_sensemaking_api.llm import provider as llm_provider
+
+    monkeypatch.setattr(settings, "admin_api_key", _ADMIN_KEY)
+    monkeypatch.setattr(settings, "api_key", _BUSINESS_KEY)
+    monkeypatch.setattr(settings, "llm_provider", "none")
+    monkeypatch.setattr(settings, "llm_fallback_to_none", False)
+
+    def _outbound_must_not_open(req, timeout_seconds):  # noqa: ANN001
+        raise AssertionError(f"outbound request must not be sent: {req.full_url}")
+
+    monkeypatch.setattr(llm_provider, "open_trusted_http", _outbound_must_not_open)
+
+    with _client(tmp_path) as (client, _session_local):
+        admin_headers = {"X-Admin-Api-Key": _ADMIN_KEY}
+        response = client.post(
+            "/admin/provision/models/providers",
+            json={
+                "id": "local-a",
+                "providerKind": "local",
+                "displayName": "Local A",
+                "baseUrl": "http://127.0.0.1:11434",
+            },
+            headers=admin_headers,
+        )
+        assert response.status_code == 201, response.text
+        response = client.post(
+            "/admin/provision/models",
+            json={
+                "id": "local-model",
+                "providerId": "local-a",
+                "displayName": "local-model",
+                "capabilities": "intermediate,generate",
+            },
+            headers=admin_headers,
+        )
+        assert response.status_code == 201, response.text
+
+        response = client.post(
+            "/ai/refine-card-text",
+            json={
+                "cardText": "alpha",
+                "textReviewed": True,
+                "model": "local-model",
+            },
+            headers={"X-API-Key": _BUSINESS_KEY},
+        )
+
+    assert response.status_code == 503, response.text
+    detail = response.json()["detail"]
+    assert detail["provider_kind"] == "none"
+    assert detail["disabled_reason"] == "provider_disabled_or_none_default"
 
 
 def test_provider_registration_rejects_unsafe_destination_and_unknown_kind(

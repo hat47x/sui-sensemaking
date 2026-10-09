@@ -34,6 +34,7 @@ from sui_sensemaking_api.routes.ai_relations import router as ai_relations_route
 from sui_sensemaking_api.routes.admin import router as admin_router
 from sui_sensemaking_api.routes.docs import router as docs_router
 from sui_sensemaking_api.routes.context import router as context_router
+from sui_sensemaking_api.routes.agent_credential_admin import router as agent_credential_admin_router
 from sui_sensemaking_api.routes.document_access_admin import (
     router as document_access_admin_router,
 )
@@ -232,12 +233,16 @@ if settings.runtime_profile == "saas-multitenant":
     app.state.saas_auth_session_hash_key = _saas_auth_session_hash_key
     app.state.guest_auth_session_store = _guest_auth_session_store
     app.state.guest_auth_session_hash_key = _saas_auth_session_hash_key
+    # ADR-0093: agent資格情報のハッシュは領域分離して同じ鍵を共有する。
+    app.state.agent_credential_hash_key = _saas_auth_session_hash_key
     app.state.guest_redeem_state_store = _guest_redeem_state_store
     # Domain separation in guest_redeem.py makes key reuse cryptographically distinct.
     app.state.guest_redeem_state_hash_key = _saas_auth_session_hash_key
     # R2c shares only the hardened provider/JWKS cache with member auth.  Guest
     # verification stops before user provisioning, tenant IdP trust and membership.
     _shared_jwks_store = JwksStore()
+    # ADR-0094: agent の交換後トークンも、同じ堅牢化済みのJWKS基盤で検証する。
+    app.state.agent_jwks_store = _shared_jwks_store
     app.state.guest_identity_verifier = DatabaseJwtGuestIdentityVerifier(
         session_factory=SessionLocal,
         jwks_store=_shared_jwks_store,
@@ -543,6 +548,7 @@ app.include_router(ai_router)
 app.include_router(ai_relations_router)
 app.include_router(context_router)
 app.include_router(document_access_admin_router)
+app.include_router(agent_credential_admin_router)
 app.include_router(inquiry_bundles_router)
 app.include_router(model_registry_router)
 app.include_router(session_router)
