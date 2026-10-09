@@ -172,6 +172,65 @@ def test_dispatcher_dedups_repeated_logical_operation() -> None:
     assert len(transport.events) == 1
 
 
+def test_dispatcher_logs_info_when_duplicate_is_suppressed(caplog) -> None:  # type: ignore[no-untyped-def]
+    # SEC-AUDIT-DUP-01: the silent drop of a repeat is visible in the log
+    # (identity fields only), while the dispatch result stays "duplicate".
+    dispatcher = AuditDispatcher(
+        enabled=True,
+        allow_in_safe_mode=True,
+        transport=RecordingTransport(),
+        queue_size=10,
+    )
+    key = ("export-audit", "tenant-a", "doc-2", "json")
+    _emit_event(dispatcher, key=key)
+    caplog.clear()
+
+    with caplog.at_level("INFO", logger="sui_sensemaking_api.audit"):
+        second = _emit_event(dispatcher, key=key)
+
+    assert second.reason == "duplicate"
+    suppressed = [
+        record for record in caplog.records
+        if record.getMessage() == "audit event suppressed as a duplicate within the dedup window"
+    ]
+    assert len(suppressed) == 1
+    assert suppressed[0].levelname == "INFO"
+    assert suppressed[0].eventType == "export"
+    assert suppressed[0].tenantId == "tenant-a"
+    assert suppressed[0].docId == "doc-2"
+    assert suppressed[0].dedupKind == "export-audit"
+    assert suppressed[0].transport == "recording"
+
+
+def test_dispatcher_does_not_log_suppression_for_normal_sends(caplog) -> None:  # type: ignore[no-untyped-def]
+    dispatcher = AuditDispatcher(
+        enabled=True,
+        allow_in_safe_mode=True,
+        transport=RecordingTransport(),
+        queue_size=10,
+    )
+    no_key_event = build_event(
+        event_type="export",
+        tenant_id="tenant-a",
+        doc_id="doc-2",
+        safe_mode=False,
+    )
+
+    with caplog.at_level("INFO", logger="sui_sensemaking_api.audit"):
+        first = _emit_event(dispatcher, key=("export-audit", "tenant-a", "doc-2", "json"))
+        distinct = _emit_event(dispatcher, key=("export-audit", "tenant-a", "doc-3", "json"))
+        dispatcher.emit(no_key_event)
+        dispatcher.emit(no_key_event)
+
+    assert first.sent is True
+    assert distinct.sent is True
+    suppressed = [
+        record for record in caplog.records
+        if "suppressed as a duplicate" in record.getMessage()
+    ]
+    assert suppressed == []
+
+
 def test_dispatcher_distinct_logical_operations_both_dispatch() -> None:
     transport = RecordingTransport()
     dispatcher = AuditDispatcher(

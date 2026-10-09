@@ -783,7 +783,11 @@ function sanitizeRepresentativeCue(cue: RepresentativeVisualCue): Representative
     kind: cue.kind,
     cueId: cue.cueId,
     altText: redact(cue.altText),
-    ...(cue.imageRef !== undefined ? { imageRef: cue.imageRef } : {}),
+    // schemas.md §19.3: imageRef is meaningful only for hand_drawn / user_image.
+    // SafeMode must not carry an asset pointer for any other kind.
+    ...(cue.imageRef !== undefined && (cue.kind === "hand_drawn" || cue.kind === "user_image")
+      ? { imageRef: cue.imageRef }
+      : {}),
   };
 }
 

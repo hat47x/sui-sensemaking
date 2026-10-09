@@ -228,6 +228,7 @@ import { resolveIslandDisplayTitle } from "./i18n/island_title";
 import { resolveViewLocale } from "./i18n/view_locale_resolution";
 import { resolvePublicPackIdFromSearch } from "./domain/policy/public_pack";
 import { createCancelableTaskRunner } from "./utils/compute_scheduler";
+import { createExportId } from "./utils/export_id";
 import { DiffWorkerClient } from "./worker/diff_client";
 import { DiagnosticsWorkerClient } from "./worker/diagnostics_client";
 import type { DiagnosticsProgressStage } from "./worker/diagnostics_protocol";
@@ -9377,18 +9378,22 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     agentTaskDesiredCount,
   ]);
 
-  const reportAgentTaskExportAudit = useCallback(() => {
+  // exportId identifies one export action (SEC-AUDIT-DUP-01). Each handler below
+  // creates its own id, so separate copy / .md / task.json exports of the same
+  // kind are each recorded instead of being merged by the backend dedup window.
+  const reportAgentTaskExportAudit = useCallback((exportId: string) => {
     if (!document) return;
     void runTenantScopedApiRequest(() => postExportAudit(
       document.id,
-      { safeMode, exportKind: "agent-task" },
+      { safeMode, exportKind: "agent-task", exportId },
       { tenantSessionContext: verifiedTenantSession },
     )).catch(() => {
-      // Fail-open by design (spec §3.4 / ADR-0049 D2): the backend audit
-      // dispatcher itself never blocks on send failure, and this call is
-      // reporting after the local export already completed -- there is
-      // nothing to roll back, so a network error here is silently ignored
-      // rather than surfaced as an export failure the user didn't cause.
+      // The local export already completed and there is nothing to roll back,
+      // so the export is not reported as failed. But a refused (for example
+      // safeMode=true, api.md 8.3) or unreachable audit call means no record
+      // was saved; say so instead of dropping it silently. This runs after the
+      // download/copy status message, so it replaces that message.
+      setStatusMessage(t("agent_task_export.audit_not_recorded"));
     });
   }, [document, runTenantScopedApiRequest, safeMode, verifiedTenantSession]);
 
@@ -9405,6 +9410,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   }, [runTenantScopedApiRequest, verifiedTenantSession]);
 
   const handleCopyAgentTaskSheet = useCallback(async () => {
+    const exportId = createExportId();
     const output = await runTenantScopedOptionalTask(buildCurrentAgentTaskSheet);
     if (!output) return;
     try {
@@ -9417,13 +9423,14 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       await navigator.clipboard.writeText(output.taskSheetMd);
       recordAgentTaskExport(output.correlation, appStorage.scope);
       setStatusMessage(t("agent_task_export.copied"));
-      reportAgentTaskExportAudit();
+      reportAgentTaskExportAudit(exportId);
     } catch {
       setStatusMessage(t("agent_task_export.copy_failed"));
     }
   }, [appStorage.scope, buildCurrentAgentTaskSheet, registerAgentTask, reportAgentTaskExportAudit, runTenantScopedOptionalTask]);
 
   const handleDownloadAgentTaskSheet = useCallback(async () => {
+    const exportId = createExportId();
     const output = await runTenantScopedOptionalTask(buildCurrentAgentTaskSheet);
     if (!output) return;
     try {
@@ -9435,10 +9442,11 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     downloadTextFile("task-sheet.md", "text/markdown", output.taskSheetMd);
     recordAgentTaskExport(output.correlation, appStorage.scope);
     setStatusMessage(t("agent_task_export.downloaded_md"));
-    reportAgentTaskExportAudit();
+    reportAgentTaskExportAudit(exportId);
   }, [appStorage.scope, buildCurrentAgentTaskSheet, registerAgentTask, reportAgentTaskExportAudit, runTenantScopedOptionalTask]);
 
   const handleDownloadAgentTaskJson = useCallback(async () => {
+    const exportId = createExportId();
     const output = await runTenantScopedOptionalTask(buildCurrentAgentTaskSheet);
     if (!output) return;
     try {
@@ -9450,7 +9458,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     downloadTextFile("task.json", "application/json", output.taskJson);
     recordAgentTaskExport(output.correlation, appStorage.scope);
     setStatusMessage(t("agent_task_export.downloaded_json"));
-    reportAgentTaskExportAudit();
+    reportAgentTaskExportAudit(exportId);
   }, [appStorage.scope, buildCurrentAgentTaskSheet, registerAgentTask, reportAgentTaskExportAudit, runTenantScopedOptionalTask]);
 
   // EXT-AGENT-02: parsing/reviewing a pasted response never touches the

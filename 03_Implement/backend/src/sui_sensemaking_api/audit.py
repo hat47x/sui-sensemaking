@@ -349,6 +349,20 @@ class AuditDispatcher:
             self._flush_queue()
             return AuditDispatchResult(sent=True, reason="queued_pending")
         if dedup_key is not None and self._is_recent_duplicate(dedup_key):
+            # SEC-AUDIT-DUP-01: a suppressed repeat is logged so that the
+            # silent drop is diagnosable. The response is unchanged. Only
+            # identity fields are logged; the bundle/equivalence hashes stay out.
+            logger.info(
+                "audit event suppressed as a duplicate within the dedup window",
+                extra={
+                    "eventType": event.eventType,
+                    "tenantId": event.tenantId,
+                    "docId": event.docId,
+                    "dedupKind": dedup_key[0] if dedup_key else None,
+                    "dedupWindowSeconds": self._dedup_window_seconds,
+                    "transport": self._transport.name,
+                },
+            )
             return AuditDispatchResult(sent=False, reason="duplicate")
 
         if self._queue:

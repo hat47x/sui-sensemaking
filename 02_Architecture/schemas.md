@@ -1576,8 +1576,10 @@ export type RepresentativeVisualCue = {
 
 ### 19.3 取り込み境界
 
-- インポート・検証（寛容・厳格の両モード）は `Island.representativeCue` の既知キー（`kind`/`cueId`/`altText`/`imageRef`）のみを受理する。`kind` が4値のいずれでもない、または `cueId`/`altText` が欠落・非文字列の場合は `representativeCue` フィールド自体を省略する（`Card.meta`/`Card.ka` の空値削除規約と同じ。DOMAIN-TRACE-01 §15.3 / DOMAIN-KA-01 §17.2に倣う）。
-- `imageRef` は `kind` が `hand_drawn`/`user_image` 以外のとき無視する（`preset_svg`/`emoji` に紛れ込んでも保持しない）。
+- インポート・検証は `Island.representativeCue` の既知キー（`kind`/`cueId`/`altText`/`imageRef`）のみを受理する。不正な cue の扱いは、寛容（lenient）モードと厳格（strict）モードで異なる。
+  - 寛容モード（`validate.ts` の取り込み）: `kind` が4値のいずれでもない、`cueId`/`altText` が欠落・非文字列、または `imageRef` が文字列でも `null` でもない場合は、`representativeCue` フィールド自体を省略する（`Card.meta`/`Card.ka` の空値削除規約と同じ。DOMAIN-TRACE-01 §15.3 / DOMAIN-KA-01 §17.2に倣う）。島の他のフィールドは保全する。既知キー以外のキーは取り除き、cue 自体は残す。
+  - 厳格モード（`validate_doc.ts` の `validateDocumentV1Strict`）: 寛容モードで省略される不正な cue、既知キー以外のキー、`imageRef: null` のいずれかを含む文書は、島単位で省略せず、文書全体を拒否する（fail-closed）。
+- `imageRef` の型は `string` と定める。`kind` が `hand_drawn`/`user_image` 以外のとき無視する（`preset_svg`/`emoji` に紛れ込んでも保持しない）。寛容モードは、無視する `imageRef` を取り除いて cue を残す。厳格モードは、この値を含む文書を拒否せず、検証の返り値となる文書からだけ取り除く。`imageRef: null` は、寛容モードでは `imageRef` なしとして cue を残す（`models.py` の `RepresentativeVisualCue` が `None` を受理するのと一致）。厳格モードでは拒否する。なお、検査バンドルの取り込み（`inquiry_bundle_io.ts`）と SafeMode 投影（`inquiry_bundle_safe_mode.ts`）は、この取り除きをまだ適用していない（未解決）。
 - 画像本体（IndexedDBエントリ）自体はDocumentV1 JSONの一部ではない。`hand_drawn` はバージョン固定・未知キー拒否・整数座標0〜20・最大512点・JSON UTF-8 4KB以下のベクター命令列だけを保存する。`user_image` は利用者が選んだ原本を保持せず、ブラウザ内で切り抜き・減彩した48×48 PNGの複製だけを保存する。PNG署名、IHDR寸法・方式・先頭位置、チャンク型・CRC、IDATの存在、IEND終端とブラウザでの画像デコードを再検証し、1件16KBを上限とする。文書にはいずれも不透明な`imageRef`だけを保持する。IndexedDBレコードはローカルスコープまたは`deployment + tenantId + principalId`のテナント保存先スコープで分離し、`scopeKey + imageRef` の複合キーで格納する。別スコープの同一`imageRef`は衝突せず、別スコープから画像本体を解決しない。旧v1ストアは初回接続時に同じ複合キー規則のv2ストアへ移行する。
 - レビューパックのインポートは `representative_visual_cue_assets.json` がある場合、文書ID、文書内の全`hand_drawn`/`user_image`の`imageRef`との完全一致、参照の種別とアセットの種別の一致、重複なし、既知キーだけ、手描き1件4KB・画像1件16KB・全体400件/2MB以下を先に検証する。`integrity.json` があるパックでは同ファイルが整合性対象に含まれていなければ拒否する。検証後、現在のブラウザ保存先スコープへ単一トランザクションで全件復元し、1件でも失敗すれば文書を取り込まない。
 - アセットファイルがないレビューパックや文書JSON単体では画像本体を復元できないため、宙に浮いた参照を残さず`hand_drawn`/`user_image`の`representativeCue`全体を取り除く。`preset_svg`等の自己完結した手掛かりは保持する。
@@ -1600,7 +1602,7 @@ export type RepresentativeVisualCue = {
 
 - 新フィールドは任意。旧データ（`representativeCue` 欠落）は従来挙動として解釈する。
 - `version: 1`（本書時点の唯一の文書契約。旧DocumentV1/V2区分は退役済み）のまま。破壊的変更なし。
-- 寛容/厳格の両検証モードで、`kind`/`cueId`/`altText`/`imageRef` のいずれかが不正な要素は `representativeCue` フィールド全体を省略し、島の他フィールドは保全する。
+- 寛容検証で、`kind`/`cueId`/`altText`/`imageRef` のいずれかが不正な要素は `representativeCue` フィールド全体を省略し、島の他フィールドは保全する。厳格検証では、同じ要素を含む文書全体を拒否する（§19.3）。
 
 ### 19.7 参照
 

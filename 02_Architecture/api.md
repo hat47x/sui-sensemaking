@@ -108,10 +108,11 @@ Document本体の標準CRUDとは別に、共有・コンテキスト操作の�
 
 **POST** `/docs/{doc_id}/export-audit`
 
-- リクエストボディ: `{ "safeMode": boolean, "exportKind": string }`
+- リクエストボディ: `{ "safeMode": boolean, "exportKind": string, "exportId"?: string }`
+- `exportId`（任意）: 書き出し1回ごとにクライアントが生成する不透明な識別子。8〜64文字の `[A-Za-z0-9_-]` とし、形式が合わなければ422とする。省略時は後述の重複抑止の対象にならない（古いクライアントの記録を落とさないため）。
 - レスポンス: `{ "status": "accepted" }`
 - 目的: エクスポート完了通知を監査連携アダプタへ委譲（監査送信失敗でも本体機能を阻害しない）
-- SEC-AUDIT-DUP-01: 同一論理操作（`tenant/doc/exportKind`）の重複POSTは、`SUI_AUDIT_DEDUP_WINDOW_SECONDS`（既定5秒）内で外部シンクへ1回しか送出されない（クライアント再送・二重クリックの重複集計を防止）。HTTP応答はいずれも `{ "status": "accepted" }` のまま。
+- SEC-AUDIT-DUP-01: 重複抑止の鍵は `tenant/doc/exportKind/exportId` とする。`exportId` を伴う同一の書き出しの重複POST（クライアント再送など）は、`SUI_AUDIT_DEDUP_WINDOW_SECONDS`（既定5秒）内で外部シンクへ1回しか送出されない。同じ `exportKind` でも `exportId` が異なる書き出しは、それぞれ記録する。`exportId` が無い場合は重複抑止を行わず、毎回記録する。二重クリックは書き出し操作そのものが2回発生するため、別々の `exportId` で2件記録される。HTTP応答はいずれも `{ "status": "accepted" }` のまま。
 - `safeMode` は呼び出し側の申告値であり、サーバは、この値が実際の書き出し状態と一致するかを検証しない。
 - 現行の扱い: `safeMode: false` は受理され、監査イベントの `safeMode` に `false` として記録される（監査の送出が無効な構成では、外部へは送られない）。`safeMode: true` は、既定の構成（`SUI_ACCESS_CONTROL_ADAPTER=noop`）で確認したところ、ローカルの SafeMode 判定により `403`（`Access denied: safe_mode`）で拒否され、監査イベントは作られない（2026-10-09 確認）。この組み合わせの扱いは、仕様として確定していない。
 
@@ -773,7 +774,8 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 **POST** `/docs/{doc_id}/export-audit`
 
 - 共有・書き出しイベント（exportKindを含む）を監査記録する。SafeMode適用後の書き出し境界を通過した場合のみ記録される（`safeMode` 申告値の扱いは§2.4を参照）。
-- エラー: 404（doc_id不存在）
+- `exportId`（任意）による重複抑止の扱いは §2.4 を参照する。
+- エラー: 404（doc_id不存在）、422（`exportId` の形式不正）
 
 **GET** `/docs/{doc_id}/similar-candidate-groups`
 
@@ -1041,7 +1043,7 @@ SafeMode/readOnly優先順
 ### 8.4 監査イベント連携点
 
 - `GET /docs/{doc_id}` でアクセス許可後に `eventType=view` を送信。
-- `POST /docs/{doc_id}/export-audit` でアクセス許可後に `eventType=export` を送信。
+- `POST /docs/{doc_id}/export-audit` でアクセス許可後に `eventType=export` を送信（重複抑止の鍵は §2.4 の `exportId` を含む）。
 - `POST /docs/{doc_id}/context-audit` でアクセス許可後に `eventType=query|bundle|proposal|apply` を送信。
 - 監査送信は、失敗しても処理を続ける既存のディスパッチャ方針を維持する（監査送信失敗で本体機能は停止しない）。
 - イベントエンベロープの`tenantId`は、認可・リポジトリと同じサーバが解決したTenantContextから設定する必須フィールドであり、自由形式メタデータやクライアント入力から補完しない。欠損、空値、前後空白、制御文字、256文字超のtenantIdではイベントを構築しない。
