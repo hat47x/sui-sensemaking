@@ -866,6 +866,36 @@ def test_deepseek_settings_reject_invalid_thinking_mode(monkeypatch: pytest.Monk
         Settings()
 
 
+def test_deepseek_thinking_task_map_is_validated_and_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SUI_LLM_PROVIDER", "deepseek")
+    monkeypatch.setenv("SUI_DEEPSEEK_API_KEY", "sk-test-key")
+    monkeypatch.setenv("SUI_DEEPSEEK_THINKING_TASK_MAP", " check_narrative = ENABLED ,, re_layout=disabled")
+    assert Settings().deepseek_thinking_task_map == "check_narrative=enabled,re_layout=disabled"
+
+    for bad in ("check_narrative", "check_narrative=auto", "Bad-Task=enabled"):
+        monkeypatch.setenv("SUI_DEEPSEEK_THINKING_TASK_MAP", bad)
+        with pytest.raises(ValueError, match="SUI_DEEPSEEK_THINKING_TASK_MAP"):
+            Settings()
+
+
+def test_thinking_mode_resolution_per_task(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sui_sensemaking_api.llm.provider import resolve_thinking_mode_for_task
+
+    monkeypatch.setattr(settings, "deepseek_thinking_mode", "disabled")
+    monkeypatch.setattr(settings, "deepseek_thinking_task_map", "")
+    # Final-judgement tasks default to thinking; other tasks follow the global mode.
+    assert resolve_thinking_mode_for_task("check_narrative") == "enabled"
+    assert resolve_thinking_mode_for_task("detect_contradiction") == "enabled"
+    assert resolve_thinking_mode_for_task("suggest_document_title") == "disabled"
+    # An explicit per-task entry wins over both the default and the global mode.
+    monkeypatch.setattr(
+        settings, "deepseek_thinking_task_map", "check_narrative=disabled,suggest_document_title=enabled"
+    )
+    assert resolve_thinking_mode_for_task("check_narrative") == "disabled"
+    assert resolve_thinking_mode_for_task("suggest_document_title") == "enabled"
+    assert resolve_thinking_mode_for_task("detect_contradiction") == "enabled"
+
+
 def test_deepseek_auth_error_401(monkeypatch: pytest.MonkeyPatch) -> None:
     original_key = settings.deepseek_api_key
     original_url = settings.deepseek_base_url

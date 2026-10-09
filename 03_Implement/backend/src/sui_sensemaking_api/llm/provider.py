@@ -157,6 +157,23 @@ _FINAL_JUDGEMENT_TASKS = frozenset({
 })
 
 
+def resolve_thinking_mode_for_task(task: str) -> str:
+    """DeepSeek thinking mode for a task.
+
+    Priority: SUI_DEEPSEEK_THINKING_TASK_MAP > final_judgement default (enabled)
+    > SUI_DEEPSEEK_THINKING_MODE.
+    """
+    from sui_sensemaking_api.settings import settings
+
+    for pair in settings.deepseek_thinking_task_map.split(","):
+        name, _, mode = pair.partition("=")
+        if name.strip() == task and mode.strip():
+            return mode.strip()
+    if task in _FINAL_JUDGEMENT_TASKS:
+        return "enabled"
+    return settings.deepseek_thinking_mode
+
+
 def resolve_model_for_task(task: str, request: LLMRequest | None = None) -> str:
     """ADR-0065 / AI-ROUTE-01 (MMR-01/02/03/04): resolve the model for a task.
 
@@ -650,7 +667,7 @@ class DeepSeekProvider:
             api_key=settings.deepseek_api_key,
             provider_name=self.provider_name,
             provider_kind=self.provider_kind,
-            thinking_mode=settings.deepseek_thinking_mode,
+            thinking_mode=resolve_thinking_mode_for_task(req.task),
         )
 
 
@@ -705,7 +722,7 @@ class RegisteredDeepSeekProvider:
             api_key=self._api_key,
             provider_name=self.provider_name,
             provider_kind=self.provider_kind,
-            thinking_mode=settings.deepseek_thinking_mode,
+            thinking_mode=resolve_thinking_mode_for_task(req.task),
         )
 
 

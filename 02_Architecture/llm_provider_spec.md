@@ -71,6 +71,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 - `SUI_LLM_PROVIDER=external` は、`SUI_LLM_ESCALATION_ENABLED=true` かつ `SUI_LLM_LARGE_SCALE_OPT_IN=true` を必須とする。
 - `SUI_LLM_PROVIDER=deepseek` は `SUI_DEEPSEEK_API_KEY` を必須とし、未設定のときは起動を拒否する。
 - `SUI_DEEPSEEK_THINKING_MODE` は `disabled|enabled` を取る。既定の `disabled` は、旧 `deepseek-chat` のnon-thinkingの意味を維持する。
+- `SUI_DEEPSEEK_THINKING_TASK_MAP`（`task=disabled|enabled` のカンマ区切り）は、タスク別に `SUI_DEEPSEEK_THINKING_MODE` を上書きする。優先順は、このマップ、最終判断タスク（`check_narrative` / `detect_contradiction`）の既定 `enabled`、`SUI_DEEPSEEK_THINKING_MODE` の順である。タスクの種類ごとに管理者が個別に設定できる形は今後の課題である。
 
 ### 3.1 AI-MODEL-GOVERNANCE-03: モデルごとの動的dispatch（2026-08-27追記）
 

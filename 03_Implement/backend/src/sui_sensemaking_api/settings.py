@@ -353,6 +353,14 @@ class Settings(BaseSettings):
         default="disabled",
         validation_alias="SUI_DEEPSEEK_THINKING_MODE",
     )
+    # Per-task DeepSeek thinking mode (comma-separated task=disabled|enabled).
+    # Tasks not listed use SUI_DEEPSEEK_THINKING_MODE, except final_judgement tasks
+    # (check_narrative / detect_contradiction), which default to enabled: at
+    # 300 cards a non-thinking run missed an omitted island in 3 of 6 trials.
+    deepseek_thinking_task_map: str = Field(
+        default="",
+        validation_alias="SUI_DEEPSEEK_THINKING_TASK_MAP",
+    )
     # AI-ROUTE-01 MMR-04: high-reasoning model for final_judgement tasks
     # (check_narrative, detect_contradiction).
     llm_high_reasoning_model: str | None = Field(
@@ -791,6 +799,24 @@ class Settings(BaseSettings):
                 "SUI_DEEPSEEK_THINKING_MODE must be one of disabled|enabled"
             )
         self.deepseek_thinking_mode = normalized_deepseek_thinking_mode
+        normalized_thinking_pairs: list[str] = []
+        for raw_pair in self.deepseek_thinking_task_map.split(","):
+            pair = raw_pair.strip()
+            if not pair:
+                continue
+            task, sep, mode = pair.partition("=")
+            task, mode = task.strip(), mode.strip().lower()
+            if (
+                not sep
+                or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", task)
+                or mode not in {"disabled", "enabled"}
+            ):
+                raise ValueError(
+                    "SUI_DEEPSEEK_THINKING_TASK_MAP must be comma-separated "
+                    "task=disabled|enabled pairs"
+                )
+            normalized_thinking_pairs.append(f"{task}={mode}")
+        self.deepseek_thinking_task_map = ",".join(normalized_thinking_pairs)
         self.large_scale_llm_allowlist = _normalize_llm_allowlist(
             self.large_scale_llm_allowlist
         )
