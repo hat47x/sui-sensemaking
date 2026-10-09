@@ -52,6 +52,10 @@ RLS_EXEMPT_TENANT_TABLES = {
     # resolution, principal/grant/document access returns to FORCE-RLS tables.
     "guest_auth_sessions": "pre-tenant guest authentication session lookup",
     "guest_redeem_states": "pre-tenant one-time guest invitation state lookup",
+    # ADR-0093: looked up by a keyed hash of the opaque agent credential before
+    # the tenant is known. It yields (tenant, agent, version) only; status,
+    # expiry and grants are re-read from the FORCE-RLS tables on every request.
+    "agent_credential_index": "pre-tenant agent credential lookup by keyed token hash",
 }
 
 
@@ -66,6 +70,8 @@ def _rls_protected_table_names() -> set[str]:
 
 def test_rls_scope_is_derived_from_every_tenant_scoped_model() -> None:
     assert _rls_protected_table_names() == {
+        "agent_credentials",
+        "agent_document_grants",
         "ai_generation_runs",
         "ai_proposal_decision_events",
         "ai_proposal_decision_states",
