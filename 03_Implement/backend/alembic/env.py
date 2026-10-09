@@ -14,6 +14,7 @@ from sui_sensemaking_api.database_support import (
 )
 from sui_sensemaking_api.models import Base
 from sui_sensemaking_api import guest_admission_models as _guest_admission_models  # noqa: E402,F401
+from sui_sensemaking_api import agent_credential_models as _agent_credential_models  # noqa: E402,F401
 from sui_sensemaking_api import guest_auth_session_models as _guest_auth_session_models  # noqa: E402,F401
 from sui_sensemaking_api import guest_redeem_state_models as _guest_redeem_state_models  # noqa: E402,F401
 from sui_sensemaking_api.persistence_shapes import install_portable_text_ddl_hook

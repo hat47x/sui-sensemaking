@@ -3,8 +3,9 @@
 // tokens, registers clients, or runs an authorization endpoint -- it validates
 // bearer tokens issued by an external, already-trusted authorization server
 // (e.g. the same IdP sui-sensemaking's own app auth delegates to, ADR-0020). This
-// config intentionally has no fields for client secrets, signing keys, or
-// token issuance: that surface does not exist in this process.
+// config intentionally has no fields for signing keys or
+// token issuance. (ADR-0094: the only secret this process may hold is its own
+// OAuth client secret for RFC 8693 token exchange -- see token_exchange.ts.)
 
 export type HttpTransportConfig = {
   host: string;

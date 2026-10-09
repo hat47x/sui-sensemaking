@@ -378,6 +378,56 @@ describe("deriveDocumentSafeModeProjection", () => {
     expect(safe.islands[2].representativeCue?.imageRef).toBe("idb-ref-c");
   });
 
+  it("keeps the structural merge method and narrative cross-check counts (policy: preserve)", () => {
+    const document: DocumentV1 = {
+      version: 1,
+      id: "doc-preserve-structural",
+      createdAt: "2026-10-10T00:00:00.000Z",
+      updatedAt: "2026-10-10T00:00:00.000Z",
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: [{ id: "c1", text: "SECRET_CARD_TEXT", x: 0, y: 0 }],
+      edges: [],
+      islands: [],
+      mergeSuggestionDecisions: [
+        {
+          id: "d1",
+          groupId: "g1",
+          decision: "accept",
+          decidedAt: "2026-10-10T00:00:00.000Z",
+          cardIds: ["c1"],
+          mergedTextDraft: "SECRET_DRAFT",
+          editedText: "SECRET_EDIT",
+          mergeMethod: "kernel_fusion",
+        },
+      ],
+      narratives: [
+        {
+          id: "n1",
+          title: "SECRET_TITLE",
+          text: "SECRET_NARRATIVE",
+          reviewed: true,
+          checks: [
+            {
+              id: "k1",
+              createdAt: "2026-10-10T00:00:00.000Z",
+              kind: "consistency",
+              issues: [],
+              counts: { bMissingInA: 2, aMissingInB: 1 },
+            },
+          ],
+        },
+      ],
+    };
+
+    const projected = deriveDocumentSafeModeProjection(document);
+    const serialized = JSON.stringify(projected);
+
+    expect(projected.mergeSuggestionDecisions?.[0]?.mergeMethod).toBe("kernel_fusion");
+    expect(projected.narratives?.[0]?.checks?.[0]?.counts).toEqual({ bMissingInA: 2, aMissingInB: 1 });
+    expect(serialized).not.toContain("SECRET_DRAFT");
+    expect(serialized).not.toContain("SECRET_NARRATIVE");
+  });
+
   it("redacts void title/detail while preserving structural fields (sensemaking_technique.md §4)", () => {
     const document: DocumentV1 = {
       version: 1,

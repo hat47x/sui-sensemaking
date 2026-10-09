@@ -4,6 +4,11 @@ export type Transform = {
   zoom: number;
 };
 
+/**
+ * `pending` は `held` と同じ意味の旧名称で、読み込み時に `held` へ正規化する。
+ * 既存の保存済み文書と書き出しを読めるように、型には残している。
+ * 新しく設定する値には使わない（`canonicalHoldState` を参照）。
+ */
 export type HoldState = "held" | "pending" | "shelved";
 
 // DOMAIN-TRACE-01 (schemas.md §15): non-subject trace metadata only.

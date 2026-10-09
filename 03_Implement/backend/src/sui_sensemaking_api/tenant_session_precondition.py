@@ -79,3 +79,20 @@ async def require_tenant_scoped_api_precondition(
         request=request,
         current_version=trusted_session.session.tenant_session_version,
     )
+
+
+async def require_tenant_scoped_api_precondition_unless_agent(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> None:
+    """agent資格情報を持つ読み取り専用routeだけで使う。ADR-0093。
+
+    agentは対話的なsession（tenantSessionVersion）を持たない。この関数は
+    session検査を省くだけで、認証はしない。handlerが ``_authorize_request`` で
+    資格情報・付与・tenantを必ず検証し、不正な資格情報は401で閉じる。
+    """
+    from sui_sensemaking_api.agent_credentials import request_has_agent_credential
+
+    if request_has_agent_credential(request):
+        return
+    await require_tenant_scoped_api_precondition(request, db)

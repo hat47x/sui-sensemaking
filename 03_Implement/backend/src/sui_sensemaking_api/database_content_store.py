@@ -230,6 +230,7 @@ class DatabaseDocumentContentStore:
         limit: int = 500,
         requesting_user_id: str | None = None,
         apply_visibility_filter: bool = False,
+        doc_ids: tuple[str, ...] | None = None,
     ) -> tuple[list[DocumentListItem], bool]:
         """List the tenant's document metadata (第2反復: キャンバス一覧の基礎).
 
@@ -258,6 +259,9 @@ class DatabaseDocumentContentStore:
         """
         apply_database_tenant_context(db=self._db, tenant=tenant)
         query = select(DocumentRow).where(DocumentRow.tenant_id == tenant.tenant_id)
+        if doc_ids is not None:
+            # ADR-0093: 付与された文書だけ。空の付与は空の一覧になる。
+            query = query.where(DocumentRow.id.in_(doc_ids))
         if apply_visibility_filter:
             query = query.outerjoin(
                 DocumentAccessMetadataRow,

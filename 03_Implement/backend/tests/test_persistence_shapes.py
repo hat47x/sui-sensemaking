@@ -2,6 +2,11 @@ from sqlalchemy import String, Text
 from sqlalchemy.dialects import mssql, mysql, oracle
 from sqlalchemy.schema import CreateTable
 
+from sui_sensemaking_api.agent_credential_models import (
+    AgentCredentialIndexRow,
+    AgentCredentialRow,
+    AgentDocumentGrantRow,
+)
 from sui_sensemaking_api.guest_admission_models import GuestDocumentGrantRow, GuestPrincipalRow
 from sui_sensemaking_api.guest_auth_session_models import GuestAuthSessionRow
 from sui_sensemaking_api.models import Base
@@ -159,6 +164,22 @@ def test_guest_auth_session_shapes_are_centrally_governed() -> None:
         "guest_auth_sessions.guest_principal_id": 128,
         "guest_auth_sessions.issuer": 512,
         "guest_auth_sessions.subject": 512,
+    }
+    for qualified_name, max_chars in expected.items():
+        assert PERSISTENT_TEXT_SPECS[qualified_name].proposed_max_chars == max_chars
+        table_name, column_name = qualified_name.split(".", 1)
+        assert Base.metadata.tables[table_name].columns[column_name].type.length == max_chars
+
+
+def test_agent_credential_shapes_are_centrally_governed() -> None:
+    for model in (AgentCredentialRow, AgentDocumentGrantRow, AgentCredentialIndexRow):
+        assert model.__table__.metadata is Base.metadata
+    expected = {
+        "agent_credentials.tenant_id": 128,
+        "agent_credentials.agent_id": 128,
+        "agent_credentials.created_by": 512,
+        "agent_document_grants.doc_id": 128,
+        "agent_credential_index.token_hash": 256,
     }
     for qualified_name, max_chars in expected.items():
         assert PERSISTENT_TEXT_SPECS[qualified_name].proposed_max_chars == max_chars

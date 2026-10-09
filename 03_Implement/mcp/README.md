@@ -99,7 +99,12 @@ cd 03_Implement/backend
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`, `evaluation`, `enterprise-production`を受理する。`saas-multitenant`はtenant-bound MCP credentialが未実装のため起動拒否する。 |
+| `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`, `evaluation`, `enterprise-production`を受理する。`saas-multitenant`は、stdio通信で、`SUI_MCP_AGENT_CREDENTIAL`を設定したときだけ受理する（`ADR-0093`）。HTTP通信では、`SUI_MCP_TOKEN_EXCHANGE_*`（下記）を必須とし、呼び出し元のトークンを要求ごとに交換して使う（`ADR-0094`）。 |
+| `SUI_MCP_AGENT_CREDENTIAL` | unset | `saas-multitenant`で必須。Tenant Adminが登録した、tenantと文書に束縛した資格情報（`suiag_`で始まる不透明なトークン）。`Sui-Sensemaking-Agent-Credential`ヘッダーで送る。この資格情報では、付与された文書の読み取りだけができる。`SUI_API_KEY`と同時には設定できない。値を設定ファイルやログへ書き込まない。 |
+| `SUI_MCP_TOKEN_EXCHANGE_ENDPOINT` | unset | `saas-multitenant` のHTTP通信で必須。IdPのトークンエンドポイント（RFC 8693）。https（loopbackのみhttp可）で、資格情報やフラグメントを含めない。 |
+| `SUI_MCP_TOKEN_EXCHANGE_CLIENT_ID` | unset | 同上。交換のためにIdPへ名乗る、このMCPサーバー自身のOAuthクライアントID。 |
+| `SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET` | unset | 同上。上のクライアントの秘密。設定ファイルやログへ書き込まない。このプロセスが持つ秘密は、これだけである（トークンの発行や登録はしない）。 |
+| `SUI_MCP_TOKEN_EXCHANGE_AUDIENCE` | unset | 同上。交換後のトークンの宛先（backend）。IdP登録簿の `audience` と一致させる。4つは、すべて同時に設定する。 |
 | `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | Backend base URL this process fetches `GET /docs/{id}` from. Not the frontend's browser-relative `SUI_FRONTEND_API_BASE` -- this process runs outside the frontend's nginx proxy and needs an absolute URL. |
 | `SUI_API_KEY` | unset | Sent as `X-API-Key` when the backend requires it. The browser client relies on same-origin proxying instead; this standalone process must send it itself. |
 

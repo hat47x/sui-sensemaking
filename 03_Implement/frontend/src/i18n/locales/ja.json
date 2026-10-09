@@ -1774,7 +1774,7 @@
   "side_panel.hold_state.held": "保留",
   "side_panel.hold_state.hint": "このカードの保留状態",
   "side_panel.hold_state.label": "保留状態",
-  "side_panel.hold_state.pending": "未決",
+  "side_panel.hold_state.pending": "保留",
   "side_panel.hold_state.shelved": "棚上げ",
   "side_panel.visual_cue.alt_text": "代替テキスト",
   "side_panel.visual_cue.description": "「{title}」を見つけ直すための補助です。表札や根拠を置き換えません。",

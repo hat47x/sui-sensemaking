@@ -1774,7 +1774,7 @@
   "side_panel.hold_state.held": "Held",
   "side_panel.hold_state.hint": "Hold state for this card",
   "side_panel.hold_state.label": "Hold state",
-  "side_panel.hold_state.pending": "Pending",
+  "side_panel.hold_state.pending": "Held",
   "side_panel.hold_state.shelved": "Shelved",
   "side_panel.visual_cue.alt_text": "Alt text",
   "side_panel.visual_cue.description": "A recognition aid for finding “{title}” again. It does not replace the placard or evidence.",
