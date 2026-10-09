@@ -277,6 +277,7 @@ describe("SafeMode AI request certification", () => {
       ["Reviewed card"],
       "Current title",
       undefined,
+      [{ textReviewed: true }],
       { tenantSessionContext },
     );
 
@@ -286,6 +287,51 @@ describe("SafeMode AI request certification", () => {
       cardTexts: ["Reviewed card"],
       textReviewed: true,
     });
+  });
+});
+
+describe("suggestDocumentTitle review declaration", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  async function declaredTextReviewed(
+    documentCards: ReadonlyArray<{ textReviewed?: boolean }> | undefined,
+  ): Promise<unknown> {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ candidates: [{ title: "Title" }] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await suggestDocumentTitle(
+      ["Island"],
+      ["Card"],
+      undefined,
+      undefined,
+      documentCards,
+      { tenantSessionContext },
+    );
+
+    const request = fetchMock.mock.calls[0]?.[1];
+    return (JSON.parse(String(request?.body)) as { textReviewed: unknown }).textReviewed;
+  }
+
+  it("declares unreviewed when a document card has not been human-reviewed", async () => {
+    expect(await declaredTextReviewed([{ textReviewed: true }, { textReviewed: false }])).toBe(false);
+  });
+
+  it("declares unreviewed when a document card has no review state", async () => {
+    expect(await declaredTextReviewed([{ textReviewed: true }, {}])).toBe(false);
+  });
+
+  it("declares reviewed only when every document card is reviewed", async () => {
+    expect(await declaredTextReviewed([{ textReviewed: true }, { textReviewed: true }])).toBe(true);
+  });
+
+  it("declares unreviewed when no document is loaded", async () => {
+    expect(await declaredTextReviewed(undefined)).toBe(false);
   });
 });
 

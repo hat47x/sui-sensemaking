@@ -670,11 +670,23 @@ export async function fetchAvailableModels(
   return (await response.json()) as AvailableModelsResponse;
 }
 
+/**
+ * 文書の全カードが人間レビュー済み（textReviewed === true）かを返す。
+ * 未レビューのカードが1つでもあれば false。文書が読み込まれていない（undefined）
+ * 場合も false にして、申告が誤って true になる経路を作らない。
+ */
+function allDocumentCardsReviewed(
+  documentCards: ReadonlyArray<Pick<Card, "textReviewed">> | undefined,
+): boolean {
+  return documentCards !== undefined && documentCards.every((card) => card.textReviewed === true);
+}
+
 export async function suggestDocumentTitle(
   islandTitles: string[],
   cardTexts: string[],
   currentTitle: string | undefined,
   model: string | undefined,
+  documentCards: ReadonlyArray<Pick<Card, "textReviewed">> | undefined,
   requestOptions: TenantScopedRequestOptions = {},
 ): Promise<SuggestDocumentTitleResponse> {
   const response = await fetch(`${API_BASE}/ai/suggest-document-title`, {
@@ -687,11 +699,11 @@ export async function suggestDocumentTitle(
       islandTitles,
       cardTexts,
       currentTitle: currentTitle ?? null,
-      // The App passes only human-reviewed title/card context. Carry that
-      // certification across the no-document SafeMode boundary explicitly;
-      // the backend defaults this field to false and otherwise rejects the
-      // request before any provider call.
-      textReviewed: true,
+      // The review declaration is derived from the document's real card state,
+      // never a constant. The backend defaults this field to false and rejects
+      // any request whose declaration is not true with 422
+      // (unreviewed_text_not_allowed) before any provider call.
+      textReviewed: allDocumentCardsReviewed(documentCards),
       model: model ?? null,
     }),
   });
