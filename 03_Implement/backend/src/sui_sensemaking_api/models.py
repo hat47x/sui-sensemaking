@@ -1409,6 +1409,7 @@ class ReproposalDiffOp(BaseModel):
     targetRef: str
     before: dict[str, object] | None
     after: dict[str, object] | None
+    rationale: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def validate_reversible_payload(self) -> "ReproposalDiffOp":
