@@ -155,6 +155,25 @@ describe("EpistemicHealthAlert", () => {
     expect(html).not.toContain("80%");
   });
 
+  it("does not raise a strong alert for a low-priority coverage gap alone", () => {
+    const input = projection();
+    input.health.level = "healthy";
+    input.health.resolutionCoverage = undefined;
+    input.health.coverage = {
+      areas: [
+        {
+          areaId: "minor-gap",
+          criticality: "low",
+          state: "gap",
+          reasons: ["COVERAGE_UNMAPPED"],
+        },
+      ],
+    };
+    input.reviewRequests = [];
+    const html = renderToStaticMarkup(createElement(EpistemicHealthAlert, { projection: input }));
+    expect(html).toBe("");
+  });
+
   it("renders nothing for normal health with no review queue", () => {
     const input = projection();
     input.health.level = "healthy";
