@@ -232,6 +232,8 @@ if settings.runtime_profile == "saas-multitenant":
     app.state.saas_auth_session_hash_key = _saas_auth_session_hash_key
     app.state.guest_auth_session_store = _guest_auth_session_store
     app.state.guest_auth_session_hash_key = _saas_auth_session_hash_key
+    # ADR-0093: agent資格情報のハッシュは領域分離して同じ鍵を共有する。
+    app.state.agent_credential_hash_key = _saas_auth_session_hash_key
     app.state.guest_redeem_state_store = _guest_redeem_state_store
     # Domain separation in guest_redeem.py makes key reuse cryptographically distinct.
     app.state.guest_redeem_state_hash_key = _saas_auth_session_hash_key

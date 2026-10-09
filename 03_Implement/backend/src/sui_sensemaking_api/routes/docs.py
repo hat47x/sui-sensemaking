@@ -31,6 +31,10 @@ from sui_sensemaking_api.database_content_store import (
     DatabaseAppendOnlyLogContentStore,
     DatabaseDocumentContentStore,
 )
+from sui_sensemaking_api.agent_credentials import (
+    AgentCredentialRepository,
+    resolve_agent_request,
+)
 from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.document_access_resource import (
     DocumentAccessResourceResolver,
@@ -195,6 +199,16 @@ def _validate_document_payload_with_a1_contract(document_payload: object) -> Doc
     return document
 
 
+# ADR-0093: agent資格情報が通れる (HTTPメソッド, route) の許可リスト。
+_AGENT_ALLOWED_ROUTES = frozenset(
+    {
+        ("GET", "/docs/{doc_id}"),
+        ("POST", "/docs/{doc_id}/context-audit"),
+        ("GET", "/ai/proposals/status"),
+    }
+)
+
+
 def _authorize_request(
     request: Request,
     db: Session,
@@ -269,6 +283,80 @@ def _authorize_request(
             access_request,
             AccessDecision(allow=True, read_only=True, reason="guest_document_grant"),
             tenant,
+        )
+
+    agent_principal = resolve_agent_request(request=request, db=db)
+    if agent_principal is not None:
+        # ADR-0093: 外部agentは、明示した文書の読み取りだけを許す。書き込み、
+        # export、share等は資格情報の有無によらず閉じる。
+        if action != "read":
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "agent_write_not_enabled",
+                    "message": "Agent credentials are read-only.",
+                },
+            )
+        # 読み取り（action=read）でも、投影のもとになる三つの経路に限る。判断ログや
+        # 類似候補など、本文由来の派生データを返す経路は、個別に検討するまで閉じる。
+        route_path = getattr(request.scope.get("route"), "path", None)
+        if (request.method, route_path) not in _AGENT_ALLOWED_ROUTES:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "agent_route_not_enabled",
+                    "message": "This route is not available to agent credentials.",
+                },
+            )
+        if not AgentCredentialRepository(db, tenant_id=agent_principal.tenant_id).can_read_document(
+            agent_id=agent_principal.agent_id,
+            doc_id=doc_id,
+        ):
+            # 付与外の既存文書は、存在しない・他tenantの文書と区別できない。
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "agent_document_not_granted",
+                    "message": "Document is not available.",
+                },
+            )
+        agent_tenant = TenantContext(
+            tenant_id=agent_principal.tenant_id,
+            membership_id=None,
+            resolved_by="agent_credential",
+        )
+        agent_resolver: DocumentAccessResourceResolver = getattr(
+            request.app.state,
+            "document_access_resource_resolver",
+            SingleTenantHeaderResourceResolver(),
+        )
+        agent_access_request = AccessRequest(
+            action=action,
+            safe_mode=safe_mode,
+            read_only=True,
+            auth=AuthContext(
+                actor_ref=f"agent:{agent_principal.agent_id}",
+                user_id=None,
+                provider="agent_credential",
+                external_uid=agent_principal.agent_id,
+                trace_id=request.headers.get("x-trace-id"),
+            ),
+            tenant=agent_tenant,
+            resource=agent_resolver.resolve(
+                db=db,
+                request=request,
+                tenant=agent_tenant,
+                action=action,
+                doc_id=doc_id,
+            ),
+        )
+        agent_boundary = apply_tenant_boundary_guard(agent_access_request, required=True)
+        if agent_boundary is not None:
+            enforce_access(agent_boundary, action=action)
+        return (
+            agent_access_request,
+            AccessDecision(allow=True, read_only=True, reason="agent_document_grant"),
+            agent_tenant,
         )
 
     tenant_scoped_session_required = tenant_session_precondition_required(request)
@@ -514,6 +602,27 @@ def _resolve_request_identity_and_tenant(
     return identity.user_id, tenant
 
 
+def _audit_actor_ref(request: Request, access_request: AccessRequest) -> str | None:
+    """監査eventの主体。agent資格情報では、header ではなく検証済みの agent を使う。"""
+    if access_request.auth.provider == "agent_credential":
+        return access_request.auth.actor_ref
+    return request.headers.get("x-actor-ref")
+
+
+def _withhold_unreviewed_card_text(payload: dict) -> None:
+    """textReviewed が true でないカードの本文を空にする（agent主体向け）。
+
+    島の題名・要約、関係の要約、ナラティブなど他の本文を含む項目は、この関数の対象外。
+    それらを閉じるまで、MCP の saas-multitenant 起動拒否は解除しない（ADR-0093）。
+    """
+    cards = payload.get("cards")
+    if not isinstance(cards, list):
+        return
+    for card in cards:
+        if isinstance(card, dict) and card.get("textReviewed") is not True:
+            card["text"] = ""
+
+
 @router.get("", response_model=list[DocumentListItem])
 def list_documents(
     request: Request,
@@ -550,6 +659,29 @@ def list_documents(
     `"{updated_at}:{id}"` cursor for the next page. The response stays a bare
     array, so existing clients are unaffected.
     """
+    agent_principal = resolve_agent_request(request=request, db=db)
+    if agent_principal is not None:
+        # ADR-0093: 付与された文書の metadata だけを返す。tenant全体は見せない。
+        agent_tenant = TenantContext(
+            tenant_id=agent_principal.tenant_id,
+            membership_id=None,
+            resolved_by="agent_credential",
+        )
+        granted = AgentCredentialRepository(
+            db, tenant_id=agent_principal.tenant_id
+        ).list_readable_document_ids(agent_id=agent_principal.agent_id)
+        granted_items, granted_has_more = DatabaseDocumentContentStore(db).list_documents(
+            tenant=agent_tenant,
+            created_by=created_by,
+            cursor=cursor,
+            limit=limit,
+            doc_ids=granted,
+        )
+        if granted_has_more and granted_items:
+            response.headers["X-Next-Cursor"] = (
+                f"{quote(granted_items[-1].updated_at)}:{granted_items[-1].id}"
+            )
+        return granted_items
     requesting_user_id, tenant = _resolve_request_identity_and_tenant(request=request, db=db)
     adapter = getattr(request.app.state, "access_control_adapter", None)
     adapter_is_real = adapter is not None and getattr(adapter, "name", None) != "noop"
@@ -631,6 +763,9 @@ def get_document(
     doc_row = stored_document.row
     response.headers["ETag"] = _format_etag(_compute_etag(doc_row.payload_json))
     payload = json.loads(stored_document.content.text)
+    if access_request.auth.provider == "agent_credential":
+        # ADR-0093: 外部agentには、人が確認していないカード本文を渡さない。
+        _withhold_unreviewed_card_text(payload)
 
     dispatcher = getattr(request.app.state, "audit_dispatcher", None)
     if dispatcher is not None:
@@ -640,7 +775,7 @@ def get_document(
                 tenant_id=tenant.tenant_id,
                 doc_id=doc_id,
                 safe_mode=True,
-                actor_ref=request.headers.get("x-actor-ref"),
+                actor_ref=_audit_actor_ref(request, access_request),
                 metadata={
                     "route": f"/docs/{doc_id}",
                     "method": "GET",
@@ -1029,7 +1164,7 @@ def post_context_audit(
                 tenant_id=tenant.tenant_id,
                 doc_id=doc_id,
                 safe_mode=payload.safeMode,
-                actor_ref=request.headers.get("x-actor-ref"),
+                actor_ref=_audit_actor_ref(request, access_request),
                 metadata={
                     "route": f"/docs/{doc_id}/context-audit",
                     "method": "POST",
@@ -1097,7 +1232,7 @@ def post_export_audit(
                 tenant_id=tenant.tenant_id,
                 doc_id=doc_id,
                 safe_mode=payload.safeMode,
-                actor_ref=request.headers.get("x-actor-ref"),
+                actor_ref=_audit_actor_ref(request, access_request),
                 metadata={
                     "route": f"/docs/{doc_id}/export-audit",
                     "method": "POST",
