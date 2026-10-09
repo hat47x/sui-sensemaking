@@ -149,6 +149,14 @@ export type EpistemicUiItem = {
   meaningFingerprint: string;
   reviewSubjectFingerprint: string;
   reviewLogSequence: number;
+  contentOrigin: string;
+  ingestedBy?: string;
+  metadataState: EpistemicMetadataState;
+  reviewBinding?: string;
+  contextCompatibility: EpistemicContextCompatibility;
+  freshness: EpistemicFreshness;
+  lifecycleState: string;
+  conflict: EpistemicConflict;
   state: EpistemicUiState;
   labelKey: EpistemicStateLabelKey;
   tone: "neutral" | "info" | "warning" | "danger";
@@ -163,6 +171,26 @@ export type EpistemicUiItem = {
   detailsRecommended: boolean;
   actions: EpistemicUiAction[];
   reasons: string[];
+};
+
+export type EpistemicInspectionSummary = {
+  assertionId: string;
+  source: "projection-summary";
+  state: EpistemicUiState;
+  confirmationState: EpistemicConfirmationState;
+  statementKind: string;
+  contentOrigin: string;
+  ingestedBy?: string;
+  metadataState: EpistemicMetadataState;
+  reviewBinding?: string;
+  targetBinding: EpistemicTargetBinding;
+  contextCompatibility: EpistemicContextCompatibility;
+  freshness: EpistemicFreshness;
+  lifecycleState: string;
+  conflict: EpistemicConflict;
+  inferredContextUsed: boolean;
+  reasons: string[];
+  onDemandDetailsRequired: Array<"target" | "context" | "evidence">;
 };
 
 export type EpistemicIntentBinding = {
@@ -504,6 +532,14 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
         meaningFingerprint: assessment.meaningFingerprint,
         reviewSubjectFingerprint: assessment.reviewSubjectFingerprint,
         reviewLogSequence: assessment.reviewLogSequence,
+        contentOrigin: assessment.contentOrigin,
+        ingestedBy: assessment.ingestedBy,
+        metadataState: assessment.metadataState,
+        reviewBinding: assessment.reviewBinding,
+        contextCompatibility: assessment.contextCompatibility,
+        freshness: assessment.freshness,
+        lifecycleState: assessment.lifecycleState,
+        conflict: assessment.conflict,
         state,
         ...presentation,
         ...confirmation,
@@ -520,6 +556,30 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
       };
     })
     .sort((left, right) => left.assertionId.localeCompare(right.assertionId));
+}
+
+export function buildEpistemicInspectionSummary(
+  item: EpistemicUiItem,
+): EpistemicInspectionSummary {
+  return {
+    assertionId: item.assertionId,
+    source: "projection-summary",
+    state: item.state,
+    confirmationState: item.confirmationState,
+    statementKind: item.statementKind,
+    contentOrigin: item.contentOrigin,
+    ingestedBy: item.ingestedBy,
+    metadataState: item.metadataState,
+    reviewBinding: item.reviewBinding,
+    targetBinding: item.targetBinding,
+    contextCompatibility: item.contextCompatibility,
+    freshness: item.freshness,
+    lifecycleState: item.lifecycleState,
+    conflict: item.conflict,
+    inferredContextUsed: item.inferredContextUsed,
+    reasons: unique(item.reasons),
+    onDemandDetailsRequired: ["target", "context", "evidence"],
+  };
 }
 
 function intentBinding(item: EpistemicUiItem): EpistemicIntentBinding {
@@ -658,6 +718,17 @@ export function buildEpistemicReviewQueue(
     }
     return left.id.localeCompare(right.id);
   });
+}
+
+export function buildEpistemicHealthAlertQueue(
+  projection: EpistemicProjectionInput,
+): EpistemicReviewQueueItem[] {
+  return buildEpistemicReviewQueue(projection).filter(
+    (item) =>
+      item.kind === "assertion-review"
+      || item.criticality === "high"
+      || item.criticality === "critical",
+  );
 }
 
 export function buildEpistemicHealthPresentation(

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBulkConfirmIntents,
+  buildEpistemicHealthAlertQueue,
   buildEpistemicHealthPresentation,
+  buildEpistemicInspectionSummary,
   buildEpistemicClassificationIntent,
   buildEpistemicReviewIntent,
   buildEpistemicReviewQueue,
@@ -215,6 +217,59 @@ describe("epistemic review UI model", () => {
     expect(item?.actions).toContain("mark-hypothesis");
   });
 
+  it("preserves independent TEI signals for details without collapsing them into the UI state", () => {
+    const input = projection();
+    const source = input.assessments.find((value) => value.assertionId === "confirmed");
+    if (!source) throw new Error("fixture item missing");
+    source.ingestedBy = "connector";
+    source.reviewBinding = "current";
+
+    const item = buildEpistemicUiItems(input).find((value) => value.assertionId === "confirmed");
+    expect(item).toMatchObject({
+      contentOrigin: "external",
+      ingestedBy: "connector",
+      metadataState: "complete",
+      reviewBinding: "current",
+      contextCompatibility: "compatible",
+      freshness: "current",
+      lifecycleState: "active",
+      conflict: "none",
+    });
+  });
+
+  it("builds inspect-details summary without inventing source details", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "reanchored",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const summary = buildEpistemicInspectionSummary(item);
+    expect(summary).toMatchObject({
+      assertionId: "reanchored",
+      source: "projection-summary",
+      state: "working-premise",
+      targetBinding: "reanchored",
+      contextCompatibility: "compatible",
+      metadataState: "complete",
+    });
+    expect(summary.onDemandDetailsRequired).toEqual(["target", "context", "evidence"]);
+    expect(summary).not.toHaveProperty("target");
+    expect(summary).not.toHaveProperty("context");
+    expect(summary).not.toHaveProperty("evidence");
+  });
+
+  it("keeps inspection reasons as projection-derived signals", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "partial",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const summary = buildEpistemicInspectionSummary(item);
+    expect(summary.reasons).toEqual(item.reasons);
+    expect(summary.metadataState).toBe("partial");
+    expect(summary.confirmationState).toBe("unknown");
+  });
+
   it("keeps confirmation separate from candidate use state", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "confirmed-hypothesis");
     expect(item).toMatchObject({
@@ -411,6 +466,34 @@ describe("epistemic review UI model", () => {
       reasons: ["COVERAGE_UNMAPPED"],
       reviewerCandidateIsAuthority: false,
     });
+  });
+
+  it("keeps low-priority coverage gaps out of the strong health alert queue", () => {
+    const input = projection();
+    input.reviewRequests = [];
+    input.health.coverage = {
+      areas: [
+        {
+          areaId: "minor-gap",
+          criticality: "low",
+          state: "gap",
+          reasons: ["COVERAGE_UNMAPPED"],
+        },
+        {
+          areaId: "critical-gap",
+          criticality: "critical",
+          state: "gap",
+          reasons: ["COVERAGE_UNMAPPED"],
+        },
+      ],
+    };
+
+    const fullQueue = buildEpistemicReviewQueue(input);
+    expect(fullQueue.some((item) => item.id === "coverage:minor-gap")).toBe(true);
+
+    const alertQueue = buildEpistemicHealthAlertQueue(input);
+    expect(alertQueue.some((item) => item.id === "coverage:minor-gap")).toBe(false);
+    expect(alertQueue.some((item) => item.id === "coverage:critical-gap")).toBe(true);
   });
 
   it("never claims project-wide health for a partial transport view", () => {
