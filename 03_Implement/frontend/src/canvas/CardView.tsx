@@ -25,6 +25,8 @@ type CardViewProps = {
   onMove: (cardId: string, deltaScreenX: number, deltaScreenY: number) => void;
   /** Opt-in: keep drag preview local, then emit one final delta on pointerup. */
   onCommitMove?: (cardId: string, deltaScreenX: number, deltaScreenY: number) => void;
+  /** World-canvas zoom applied outside the CardView; defaults to 1. */
+  dragPreviewZoom?: number;
   onSelect: (cardId: string, isShiftPressed: boolean) => void;
   isPickingEdgeTarget?: boolean;
   compactMode?: boolean;
@@ -99,6 +101,7 @@ function CardViewComponent({
   isActiveSearchMatch = false,
   onMove,
   onCommitMove,
+  dragPreviewZoom = 1,
   onSelect,
   isPickingEdgeTarget = false,
   isDeemphasized = false,
@@ -116,6 +119,7 @@ function CardViewComponent({
 }: CardViewProps) {
   const cardRootRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<CardDragState | null>(null);
+  const previewZoom = Number.isFinite(dragPreviewZoom) && dragPreviewZoom > 0 ? dragPreviewZoom : 1;
   const [isDragging, setIsDragging] = useState(false);
   const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 });
   const [isFocused, setIsFocused] = useState(false);
@@ -296,7 +300,7 @@ function CardViewComponent({
         top: card.y,
         // Only the opt-in path renders temporary movement outside DocumentV1.
         transform: onCommitMove && isDragging
-          ? `translate(${previewOffset.x}px, ${previewOffset.y}px)`
+          ? `translate(${previewOffset.x / previewZoom}px, ${previewOffset.y / previewZoom}px)`
           : undefined,
         width: markerMode ? 10 : 220,
         minHeight: markerMode ? 10 : compactMode ? 52 : 80,
