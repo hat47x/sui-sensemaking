@@ -36,7 +36,7 @@
 | `SUI_ALLOW_UNREVIEWED_AI_TEXT` | `false` | `false` または `true` | SEC-AI-SAFEMODE-01（ADR-0068 D1=C）の緩和ゲート。`true` のときのみ、AIリクエストの `allowUnreviewedText: true`（未レビュー本文の送出許可）が有効になる。既定 `false` は安全側で拒否（未レビュー本文は常に422で拒否）。 |
 | `SUI_ADMIN_API_KEY` | 未設定 | **必須** | ADR-0072 D3=A: `enterprise-production` / `saas-multitenant` では未設定なら `Settings()` 構築時に即時失敗する。`enterprise-production` は加えて `SUI_API_KEY` も必須（業務面の識別を前段プロキシのヘッダーに依存するため）。`saas-multitenant` の業務面は信頼済み認証エッジのJWTが担うため `SUI_API_KEY` は必須としない |
 | `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE` | `read_only` | `read_only` または `deny` | 障害時の安全側挙動を明示的に選べるようにするため。 |
-| `SUI_LLM_PROVIDER` | `none` | `none`（必要時のみオプトイン） | 外部共有の既定無効を維持するため。 |
+| `SUI_LLM_PROVIDER` | `none` | `none`（必要時のみオプトイン） | 外部共有の既定無効を維持するため。`none` は登録済みモデルへの呼び出しも止める無条件の停止スイッチなので、登録モデルを使う環境では `none` 以外の値（例: `deepseek`）を明示する。 |
 
 
 ## Profile selection criteria（運用判断基準）

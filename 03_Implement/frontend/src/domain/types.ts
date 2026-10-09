@@ -5,9 +5,10 @@ export type Transform = {
 };
 
 /**
- * `pending` は `held` と同じ意味の旧名称で、読み込み時に `held` へ正規化する。
- * 既存の保存済み文書と書き出しを読めるように、型には残している。
- * 新しく設定する値には使わない（`canonicalHoldState` を参照）。
+ * `pending` は `held` と同じ意味の旧名称で、独立の状態ではない（schemas.md §14.1）。
+ * 文書の取り込み検証（`validateDocument`）では `held` へ正規化する。ほかの経路は値を残すため、
+ * 表示と絞り込みでは `canonicalHoldState` で `held` として読む。
+ * 型に残しているのは旧値を受理するためであり、新しく設定する値には使わない。
  */
 export type HoldState = "held" | "pending" | "shelved";
 

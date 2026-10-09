@@ -118,7 +118,7 @@ export SUI_LLM_TASK_MODEL_MAP="generate_narrative=deepseek-v4-pro[1m]"
 
 | 環境変数 | 既定値 | 説明 |
 |---|---|---|
-| `SUI_LLM_PROVIDER` | `none` | `none` / `local` / `large-scale` |
+| `SUI_LLM_PROVIDER` | `none` | `none` / `local` / `large-scale` / `deepseek` |
 | `SUI_LOCAL_LLM_BASE_URL` | — | local プロバイダの `/generate` エンドポイント |
 | `SUI_LOCAL_LLM_MODEL` | — | モデル識別子（任意の文字列） |
 | `SUI_LLM_ESCALATION_ENABLED` | `false` | large-scale に必須 |
@@ -126,6 +126,8 @@ export SUI_LLM_TASK_MODEL_MAP="generate_narrative=deepseek-v4-pro[1m]"
 
 `SUI_LLM_PROVIDER=none`（既定）では、全AIエンドポイントが `503 provider_unavailable` を返します。
 これは安全な既定値であり、AIを使わない運用を妨げません。
+
+> **注意**: 登録済みモデル（モデル登録で作成したモデル）を使う環境では、`SUI_LLM_PROVIDER` を `none` のままにしないでください。`none` は登録済みモデルへの呼び出しも止める無条件の停止スイッチなので、`local` や `deepseek` などの値を明示する必要があります（`deepseek` を選ぶ場合は `SUI_DEEPSEEK_API_KEY` も必要です）。
 
 ## トラブルシューティング
 

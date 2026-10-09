@@ -307,6 +307,17 @@ A2の契約テストでは、次を機械判定する。
    - 両方があれば `mixed`、片方だけならその値、どちらもなければ `unknown` とする。
 7. **`meta` は、`LLMRequest.inputs` のトップレベルに含める**（§4.1を参照）。§7.1が `meta.safe_mode` を必須としている以上、`meta` がIRの外にあると、仕様が自己矛盾する。ir_version 1.0の§4のスキーマは、`meta` を列挙しないまま `additionalProperties: false` としており、実装できなかった。1.1で、これを是正する。
 
+### 2.5 横断的所属（`DocumentV1.affiliations`）は投影しない
+
+`DocumentV1.affiliations` は、カードと島の `(cardId, islandId)` の組であり、LLM投入IRへ投影しない。2026-10-09 に、次の経路を読んで確認した。
+
+1. `source_from_document` は `affiliations` を読まない。`IRSource` に、所属を表す欄はない。
+2. `llm_input_ir.py` のどこにも `affiliation` の参照はなく、`build_llm_input_ir` の出力に `affiliations` のキーは含まれない。
+3. `attention_candidates.build_attention_ir` は、`build_llm_input_ir` の出力を作ったあとに `ir["affiliations"]` を追加する。この拡張されたIRは、プロバイダを呼ばない `POST /ai/suggest-attention-candidates` と、人間が手元で読むための表示用スクリプト `scripts/review_cognitive_candidate_t2.py` でだけ使われ、LLMへは渡らない。
+4. attention の `sourceDigest` は `(cardId, islandId)` の組を含めて計算するが、応答にはハッシュ値だけを返す。
+
+したがって、Affiliation の ID の組は、外部LLMへの入力には乗らない。Affiliation をLLMの入力へ加える場合は、IRの契約（`ir_version`）の改版と、本節の改訂が必要になる。
+
 ---
 
 ## 3. LLMを使わない前処理（固定仕様）
