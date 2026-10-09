@@ -315,7 +315,8 @@ def test_local_provider_rejects_oversized_request_before_transport(
                     prompt="x" * MAX_LLM_PROVIDER_REQUEST_BYTES,
                 )
             )
-        assert exc_info.value.code == "provider_validation"
+        assert exc_info.value.code == "provider_request_too_large"
+        assert exc_info.value.to_contract()["code"] == "provider_request_too_large"
         assert "x" * 64 not in str(exc_info.value)
         assert transport_called is False
     finally:

@@ -601,6 +601,7 @@ def _raise_llm_http_error(exc: ProviderDisabledError | ProviderRequestError) -> 
         "provider_timeout": 504,
         "provider_validation": 422,
         "provider_unavailable": 503,
+        "provider_request_too_large": 413,
     }
     raise HTTPException(
         status_code=status_map.get(exc.code, 503), detail=exc.to_contract()
