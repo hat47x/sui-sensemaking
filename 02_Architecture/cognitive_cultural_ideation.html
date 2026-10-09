@@ -155,7 +155,9 @@
 
   <section id="depth-cases" class="panel">
     <h2>体系の操作を、検証できる単位へ深める</h2>
-    <p>2026-10-08時点で、利用者の実務での有用性は未確認である。150案を保ちながら、一次価値へ直接つながる3方向を4つの設計例で深める。操作が何を分け、何を変え、どこで不要になるかを掘り下げ、<a href="../01_Plans/cognitive_cultural_validation_plan.md">段階計画</a>へ返す。以下は全て架空の設計例であり、T2の観察結果ではない。</p>
+    <p>2026-10-08時点で、利用者の実務での有用性は未確認である。150案を保ちながら、一次価値へ直接つながる3方向を8つの設計例で深める。操作が何を分け、何を変え、どこで不要になるかを掘り下げ、<a href="../01_Plans/cognitive_cultural_validation_plan.md">段階計画</a>へ返す。以下は全て架空の設計例であり、T2の観察結果ではない。</p>
+    <p>追加した例5〜8では、表札の射程、発言の根拠、継承された条件、観察後の停止を扱う。墨家『小取』、MN 95、Deweyは比較のための追加参照であり、既存の23体系・150案の一覧とは分ける。異なる時代・伝統を一つの認知理論へ統合せず、似て見える操作の違いを対象へ返す。</p>
+    <nav aria-label="追加の深掘り例"><a href="#depth-label-scope">5 表札の射程</a><a href="#depth-statement-basis">6 発言の根拠</a><a href="#depth-inherited-context">7 継承された条件</a><a href="#depth-inquiry-stop">8 停止・再開</a></nav>
     <p class="note">表が画面に収まらない場合は、表の中を横へスクロールして読める。</p>
 
     <article id="depth-grounding" class="sample">
@@ -215,6 +217,63 @@
       <p><strong>新たに取り込める単位</strong>：問い、観察前の見込み、実際の応答、理解の差、再開条件の接続。既存の<code>FieldworkRequestV1</code>と<code>RoundHandoffV1</code>を接点として検討するが、型と部分実装の存在を、保存・再開・共有までの運用保証にしない。正本のL0 Planned境界を維持する。</p>
       <p><strong>反例・不要になる条件</strong>：両仮説が同じ結果を予想する観察、結果に合わせて予想を書き換える記録では増分を判断できない。通常の観察計画・再開メモで問いと結果をたどれるなら、新しい体系専用の進行管理は要らない。</p>
       <p><a href="#I097">I097</a>・<a href="#I125">I125</a>・<a href="#I149">I149</a>の深掘り。単に次の作業を決めることから、結果によって何を読み直すかを明示する方向へ進める。</p>
+    </article>
+    <article id="depth-label-scope" class="sample">
+      <h3>5. 似ている材料から、同じと言える範囲へ</h3>
+      <p><strong>原典で確認した区別</strong>：<a href="https://zh.wikisource.org/w/index.php?title=%E5%A2%A8%E5%AD%90/%E5%B0%8F%E5%8F%96&amp;oldid=2637047">『墨子』小取篇の公開転記</a>は、一部が同じでも全面的な同一へ進めず、結論が同じでも理由まで同じとは限らないと論じ、類推を延ばす限界を扱う。ニヤーヤの理由・例・適用への橋とは別の点検として参照する。ここから表札を見直す操作へ移す部分は本資料の設計上の借用である。</p>
+      <p><strong>架空の材料</strong>：D01「オンライン受付は夜にも使える」、D05「説明は読めたが、手続きが終わったか不安」、D06「家族が入力を手伝ったが、次の連絡は本人にしか届かない」を読む。説明「誰でもオンラインで相談が完了する」へまとめた場合を考える。</p>
+      <div class="table-wrap"><table><thead><tr><th>操作</th><th>読み直せる違い</th><th>保つべき残余</th></tr></thead><tbody>
+        <tr><td>同じと見た点を限定する</td><td>D01の利用可能な時間と、相談の完了は別である。受付・相談・連絡を同じ完了へ畳んだ箇所へ戻る。</td><td>D01だけでは全員の利用、相談結果、連絡の成立を確認できない。</td></tr>
+        <tr><td>説明に収まらない材料を並べる</td><td>D05は完了の受け取り、D06は支援と連絡の境界を問う。似た「オンライン利用」でも困り方が異なる。</td><td>同じ語を含むことを同じ原因へ変えない。実際の原因と支援範囲は未確認のままにする。</td></tr>
+        <tr><td>関係や緊張を表す表札も作る</td><td>「受付できることと、完了を確かめられることの隔たり」という候補なら、D01とD05の違いを読める。</td><td>D06が同じ構造に入るかは別に考える。すべてのカードを一つの説明に収めることを目標にしない。</td></tr>
+      </tbody></table></div>
+      <p><strong>SUIへ取り込む単位</strong>：表札・説明と人が選んだ元カードの読み取り専用比較。島の内外を支持・反証の区分にせず、島外の関連カードも原文確認へ使えるように検討する。配置、包含、複数の観点への所属、主張への支持は別の意味として保つ。</p>
+      <p><strong>反例・使わない条件</strong>：KJ法の表札は、全メンバーに同じ属性があるという断定だけを表すものではない。「異なる終わり方」のような関係の表札を、一枚の差で誤り扱いしない。通常の表札推敲で同じ射程を読めれば、それで足りる。自動の外れ値検出、少数カードの除去、分類の強制へは進めない。</p>
+      <p><a href="#I013">I013</a>・<a href="#I019">I019</a>・<a href="#I124">I124</a>へ再接続し、<a href="../01_Plans/cognitive_cultural_validation_plan.md#product-label-scope">追加範囲1</a>を先行させる。増分として見るのは、原文のどの違いを失っていたかと、その後の読みの変化である。</p>
+    </article>
+
+    <article id="depth-statement-basis" class="sample">
+      <h3>6. 筋の通った説明から、何にもとづく発言かへ</h3>
+      <p><strong>原典で確認した区別</strong>：<a href="https://www.dhammatalks.org/suttas/MN/MN95.html">Caṅkī Sutta（MN 95、Ṭhānissaro Bhikkhu訳）</a>では、確信、好み、伝承、類推による推考、考察した見解への同意が真にも偽にもなりうることと、自分の立つ根拠を述べることを区別している。ここで借りるのは発言の根拠を明らかにする操作であり、宗教的な覚りの段階を製品状態へ置き換えない。初期仏教のこの問答を、四句分別や中観の同一手順ともしない。</p>
+      <p><strong>架空の材料</strong>：Q01「完了画面を見たので、相談も終わったと思った」、Q02「担当から受付完了と聞いた」、Q03「Q02の説明をFAQへ再掲した」を置く。「三件が相談完了を確認した」とまとめる前に、見たもの、聞いた内容、再話、解釈を箇所ごとに読む。</p>
+      <div class="table-wrap"><table><thead><tr><th>別々に見る問い</th><th>この例でたどれること</th><th>結論へ足さないもの</th></tr></thead><tbody>
+        <tr><td>何を見聞きしたと書いてあるか</td><td>Q01は画面、Q02は担当の受付完了の説明へ戻る。</td><td>観察と記載されているだけで正確さを保証しない。場面・時点・対象の範囲を残す。</td></tr>
+        <tr><td>どこで今回の解釈へ移ったか</td><td>Q01の「相談も終わった」は画面からの読みである。受付完了から相談完了への橋を確認する。</td><td>もっともらしい説明や本人の確信を、独立した確認へ変えない。</td></tr>
+        <tr><td>どう伝わり、何が変わったか</td><td>Q03はQ02の再話と設定されている。isnād / matn由来の経路と内容の比較へ戻る。</td><td>複数回の掲載を複数の確認と数えない。経路が分かることを真偽へ変えない。</td></tr>
+      </tbody></table></div>
+      <p><strong>SUIへ取り込む単位</strong>：発言の原文・記された根拠・利用者の解釈・未確認条件を必要時に比べる短い問い。一枚に複数の要素が混ざることを認め、カード全体へ単一の「正しさ」を割り当てない。<code>claimType</code>やレビュー状態の自動昇格は行わない。</p>
+      <p><strong>反例・使わない条件</strong>：直接経験にも誤認はあり、伝承や推論にも適切な知見がある。観察を最上位とする信頼度ランキングは作らない。話者の誠実さや内面を推定せず、通常の引用確認で十分ならその操作へ戻す。</p>
+      <p><a href="#I049">I049</a>・<a href="#I121">I121</a>・<a href="#I122">I122</a>へ再接続し、<a href="../01_Plans/cognitive_cultural_validation_plan.md#product-statement-basis">追加範囲2</a>へ取り込む。MN 95の語彙を新しいカード種別や真理の認定状態にはしない。</p>
+    </article>
+
+    <article id="depth-inherited-context" class="sample">
+      <h3>7. 短い規定から、省略された条件と解釈の単位へ</h3>
+      <p><strong>文化資料で確認した違い</strong>：<a href="https://web.stanford.edu/~kiparsky/Papers/panini_hist_of_phon_handbook.pdf">KiparskyのPāṇini研究、§2.4〜2.5・§3.2</a>は、先行する表現・見出しからの継承と、規則の適用範囲・競合を扱う。<a href="https://scholarworks.iu.edu/iupjournals/index.php/jwp/article/view/922">Freschiほか（2017）の研究紹介・要旨</a>は、ミーマーンサーの解釈・言語・義務に関する原理を区別する。前者の適用関係と、後者の文意・規定の解釈を同じ操作へ縮約しない。</p>
+      <p><strong>架空の材料</strong>：見出しN0「試行期間中の補助資料」の下に、N1「初参加者へ背景資料を配る」、N2「個人体験を含む記録は配布対象から外す」、N3「翌期の運用は未定」とある。「参加者にはすべての記録を配る」という説明を比較対象にする。</p>
+      <div class="table-wrap"><table><thead><tr><th>分ける操作</th><th>元資料へ戻す確認</th><th>先に決めないこと</th></tr></thead><tbody>
+        <tr><td>継承された範囲を展開する</td><td>N0の試行期間・補助資料という範囲がN1〜N3のどこに掛かるかを読む。</td><td>単なる配置の近さだけで継承を確定しない。翌期まで同じ運用とも決めない。</td></tr>
+        <tr><td>規定の意味単位と補足を分ける</td><td>N1の対象は初参加者と背景資料である。「全員」「全記録」は原文か読み手の補足かを見る。</td><td>資料配布という目的から、追加の配布対象や許可を作らない。</td></tr>
+        <tr><td>重なった範囲だけを比較する</td><td>背景資料に個人体験が含まれるとき、N1とN2をどう合わせるかを元資料へ確認する。</td><td>同じ対象か不明なら競合と断定しない。後の文や狭い規則を無条件で優先しない。</td></tr>
+        <tr><td>対象が定める優先関係へ戻る</td><td>本当に重なる場合は、対象資料の明示条件や運用上の確認先を探す。</td><td>Pāṇiniの規則や後代の解釈を、そのまま配布方針の決定権へ移さない。</td></tr>
+      </tbody></table></div>
+      <p><strong>SUIへ取り込む単位</strong>：比較する案がどの原文・条件・解釈に依存するかを短く示す。元カードを共有した別構成を保ち、仮の見方を採用済みの所属へ変えない。保存は既存の根拠参照・Critique・人が採用するAffiliationから検討し、新しい規則言語は先に作らない。</p>
+      <p><strong>反例・使わない条件</strong>：<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/04c8e925/research/framework-candidates/profiles/panini-ashtadhyayi-rule-architecture.md">パーニニの研究profile</a>と<a href="https://github.com/hat47x/cultural-substrate-weaving/blob/04c8e925/research/framework-candidates/profiles/mimamsa-hermeneutics.md">ミーマーンサーの研究profile</a>は、通常の規則・要件レビューで操作が再現された範囲を記している。今回も強い通常の読解を比較に含める。学派ごとの文意理論、古典本文と注釈、対象の優先規則を混ぜず、体系の常設やruntime採用へは進めない。</p>
+      <p><a href="#I115">I115</a>・<a href="#I130">I130</a>・<a href="#I139">I139</a>へ再接続し、<a href="../01_Plans/cognitive_cultural_validation_plan.md#product-inherited-context">追加範囲3</a>へ取り込む。深掘りの成果は条件と解釈の区別であり、新しい権限や優先順位の規則ではない。</p>
+    </article>
+
+    <article id="depth-inquiry-stop" class="sample">
+      <h3>8. 回答を得たことから、何が分かり、どこで止めるかへ</h3>
+      <p><strong>追加の対照</strong>：<a href="https://www.gutenberg.org/files/37423/37423-h/37423-h.htm">Dewey『How We Think』（1910）第6章</a>の、困難の定位、仮の解、帰結の推考、追加観察という分析を、波航海術の事前モデルと現場への往復に対照する。前者は探究の分析、後者は特定の環境で習得される実践であり、普遍的な同一手順にはしない。著作の時代的な文化序列や宗教観を採用するものでもない。</p>
+      <p><strong>架空例の続き</strong>：例4のA「背景資料が不足」、B「問い返す経路がない」を残す。問い返したところ「資料を読まなかった。時間がなかった」という回答があったとする。回答は得たが、AとBのどちらが主要な説明かをその回答だけでは区別できない。</p>
+      <div class="table-wrap"><table><thead><tr><th>観察後の違い</th><th>残す判断</th><th>次へ送らない断定</th></tr></thead><tbody>
+        <tr><td>回答がない</td><td>回答を得られなかったことと、確認できなかった範囲を保つ。</td><td>資料が不要だった、経路が無効だった、という支持・反証へ変えない。</td></tr>
+        <tr><td>回答はあるが識別できない</td><td>時間という条件を原回答へ戻し、A・Bの予想との差を人が読み直す。</td><td><code>answered</code>を仮説確定や問題解決へ読み替えない。事後に予想を変更しない。</td></tr>
+        <tr><td>現時点で止める</td><td>次の材料では区別できない、負担が大きい、当面の仕事には十分など、停止理由と残る問いを書く。</td><td>停止を失敗、継続を成果として扱わない。未解決点を閉じない。</td></tr>
+        <tr><td>新しい条件で再開する</td><td>時間条件を確認できる材料など、再開の契機と元の問い・観察への戻り先を残す。</td><td>似た話題を見つけただけで自動再開せず、以前の条件が今も成立するとも決めない。</td></tr>
+      </tbody></table></div>
+      <p><strong>SUIへ取り込む単位</strong>：既存の問い・結果・理解の差・未解決点へ停止理由と再開条件を接続できるかを見る。<code>outcome.kind</code>の種別を追加せず、回答の有無と仮説への含意を区別する。新しい進行管理、継続を促す通知、AIによる停止決定は先行範囲へ加えない。</p>
+      <p><strong>反例・使わない条件</strong>：単純な次の作業だけが必要なら、競合仮説や停止条件の記述を強制しない。既存の観察計画・再開メモが問いと理由を保つなら追加機能は不要である。1件の回答から一般的な原因を確定せず、人が得た実務上の手応えと因果効果も分ける。</p>
+      <p><a href="#I097">I097</a>・<a href="#I125">I125</a>・<a href="#I149">I149</a>へ再接続し、<a href="../01_Plans/cognitive_cultural_validation_plan.md#product-inquiry-stop">追加範囲4</a>へ取り込む。理解を更新できなかった理由も、次回の読みに必要な成果として残す。</p>
     </article>
     <p class="warning">この架空例をもとに計画の範囲と受入条件を具体化できるが、有用性は例の整合性や資料の動作確認では確定しない。通常の方法、同等の問い、固有操作を実務で比べ、同じ摩擦と増分が再現した範囲から実装へ進める。</p>
   </section>
@@ -337,6 +396,7 @@
       <li>追加の公開資料：<a href="https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Rhetorica_ad_Herennium/3%2A.html">『ヘレンニウス宛弁論術』第3巻</a>の場所と内容の区別、<a href="https://www.newadvent.org/summa/1002.htm">『神学大全』第1部第2問</a>の異論・主応答・異論別返答、<a href="https://web.stanford.edu/~kiparsky/Papers/panini_hist_of_phon_handbook.pdf">KiparskyによるPāṇini研究</a>、<a href="https://www.jstage.jst.go.jp/article/aija/81/728/81_2317/_article">序破急五段と能舞台の研究</a>を参照先とした。これらからSUIの効果を推定しない。</li>
       <li>khipuは<a href="https://americanindian.si.edu/nk360/inka-water/ways-of-living/living">Smithsonianの教材</a>と<a href="https://github.com/khipulab/open-khipu-repository">Open Khipu Repository</a>、Ifáは<a href="https://ich.unesco.org/en/RL/ifa-divination-system-00146?RL=00146">UNESCOの公開紹介</a>、口承は<a href="https://www.unesco.org/archives/multimedia/document-4671">UNESCOのヴェーダ詠唱資料</a>を参照先とした。UNESCOの本文取得には一部制限があり、研究profileと取得できた紹介・検索抜粋の範囲で扱う。聖句、儀礼、専門的解釈の再現は行っていない。</li>
       <li>マヤ暦の公開ページは最初の取得がタイムアウトした。構造の記述はCSW dossierに依拠する。全23体系・実践の原典精読、系譜ごとの比較、実践者による確認は実施していない。I103〜I114は調査の入口として残す。場所法・口承・能の時間構造は参照範囲を一部具体化したが、機能としての有効性は未確認である。</li>
+      <li>追加の深掘り例5〜8（2026-10-08）：『墨子』小取篇はWikisourceの転記、MN 95は上記の英訳本文、Deweyは1910年版の電子本文の該当章を照合した。Chinese Text Projectの小取篇は取得できず、校訂・異本比較は実施していない。パーニニはKiparsky論文の範囲・競合の節、ミーマーンサーはCSW profileと研究紹介・要旨の範囲で確認した。追加profileの参照時HEADは<code>04c8e925</code>で、対象2ファイルにローカル差分はない。既存一覧の参照時点は変えず、資料ごとの解釈層とSUI向けの借用を区別する。追加参照を既存23体系の採用数へ加算しない。</li>
     </ul>
     <p>本資料で実施したのは、現行仕様・実装の一部確認、体系固有操作からの発散、体系の交差、架空資料への適用例、試行候補の具体化である。実際の認知増分、CPU性能、認知器の方式比較、T2利用、製品UIへの統合は未検証。</p>
   </section>
