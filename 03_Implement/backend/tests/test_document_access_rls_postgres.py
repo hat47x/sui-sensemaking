@@ -16,6 +16,11 @@ from sqlalchemy.orm import Session
 from sui_sensemaking_api.db import _normalize_database_url
 # These late-defined ORM modules must be imported explicitly so Base.metadata
 # is complete even when this contract test is run in isolation.
+from sui_sensemaking_api.agent_credential_models import (  # noqa: F401
+    AgentCredentialIndexRow,
+    AgentCredentialRow,
+    AgentDocumentGrantRow,
+)
 from sui_sensemaking_api.guest_admission_models import GuestDocumentGrantRow, GuestPrincipalRow  # noqa: F401
 from sui_sensemaking_api.guest_auth_session_models import GuestAuthSessionRow  # noqa: F401
 from sui_sensemaking_api.guest_redeem_state_models import GuestRedeemStateRow  # noqa: F401
