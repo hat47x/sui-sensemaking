@@ -51,9 +51,9 @@ Docker Composeの標準構成は、次の3つのサービスです。
 - `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE=read_only` または `deny`
 - 外部接続（LLM、監査ログ、`external_http`）を有効にするときは、接続先、タイムアウト、秘密情報の管理方法を確認し、記録に残します。
 
-### SaaSで複数のAPIサーバーを動かす場合
+### SaaSで複数のAPIの実行単位を動かす場合
 
-`saas-multitenant`では、BFFが管理する認証セッションの正本を、PostgreSQLの`saas_auth_sessions`で共有します。各行は、サーバー側でハッシュ化した認証セッションの識別子に対して、利用者（principal）、発行者（issuer）、認証の対象者（subject）、現在利用中のテナント、`tenantSessionVersion`、作成時刻、最終利用時刻、失効時刻を持ちます。APIサーバーを増やしても同じPostgreSQLを参照するので、同じ利用者の要求を常に同じサーバーで処理する仕組み（スティッキーセッション）に、正しさを依存させてはいけません。
+`saas-multitenant`では、BFFが管理する認証セッションの正本を、PostgreSQLの`saas_auth_sessions`で共有します。各行は、サーバー側でハッシュ化した認証セッションの識別子に対して、認証主体（principal）、発行者（issuer）、認証対象（subject）、現在利用中のテナント、`tenantSessionVersion`、作成時刻、最終利用時刻、失効時刻を持ちます。APIの実行単位（インスタンス）を増やしても同じPostgreSQLを参照するので、同じ利用者の要求を常に同じ実行単位で処理する仕組み（スティッキーセッション）に、正しさを依存させてはいけません。
 
 BFFのCookie経路では、次を運用の前提にします。
 
