@@ -906,9 +906,12 @@ export async function recordExternalAgentProposalDecision(
 // failure never blocks the export itself) -- but a network/HTTP error here
 // still surfaces to the caller so the UI can fall back to a status message
 // rather than silently pretending the audit call succeeded.
+// exportId (SEC-AUDIT-DUP-01): one id per export action. The backend suppresses
+// only a repeat of the same id, so the caller passes a fresh id per export and
+// reuses it only when resending that same export.
 export async function postExportAudit(
   docId: string,
-  options: { safeMode: boolean; exportKind: string },
+  options: { safeMode: boolean; exportKind: string; exportId: string },
   requestOptions: TenantScopedRequestOptions = {},
 ): Promise<void> {
   const response = await fetch(`${API_BASE}/docs/${docId}/export-audit`, {
@@ -917,7 +920,11 @@ export async function postExportAudit(
       "Content-Type": "application/json",
       ...tenantSessionPreconditionHeaders(requestOptions),
     },
-    body: JSON.stringify({ safeMode: options.safeMode, exportKind: options.exportKind }),
+    body: JSON.stringify({
+      safeMode: options.safeMode,
+      exportKind: options.exportKind,
+      exportId: options.exportId,
+    }),
   });
 
   if (!response.ok) {
