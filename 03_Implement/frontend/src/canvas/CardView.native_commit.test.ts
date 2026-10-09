@@ -59,13 +59,14 @@ describe("CardView opt-in drop-only native movement", () => {
     pointerCaptureDescriptors.clear();
   });
 
-  function renderCard(onMove = vi.fn(), onCommitMove?: (id: string, dx: number, dy: number) => void) {
+  function renderCard(onMove = vi.fn(), onCommitMove?: (id: string, dx: number, dy: number) => void, zoom = 1) {
     act(() => {
       root.render(createElement(CardView, {
         card: { id: "c1", text: "card", x: 10, y: 20 },
         isSelected: false,
         onMove,
         onCommitMove,
+        dragPreviewZoom: zoom,
         onSelect: vi.fn(),
       }));
     });
@@ -91,6 +92,18 @@ describe("CardView opt-in drop-only native movement", () => {
     expect(onCommitMove).toHaveBeenCalledWith("c1", 30, 12);
     expect(onMove).not.toHaveBeenCalled();
     expect(card.style.transform).toBe("");
+  });
+
+  it("compensates for Canvas zoom while preserving final screen delta", () => {
+    const onCommitMove = vi.fn();
+    const card = renderCard(vi.fn(), onCommitMove, 2);
+    pointer(card, "pointerdown", 10, 20);
+    pointer(card, "pointermove", 36, 30);
+    // Parent Canvas scales children by 2; child translates by half
+    // to follow the actual pointer displacement on screen.
+    expect(card.style.transform).toContain("translate(13px, 5px)");
+    pointer(card, "pointerup", 36, 30);
+    expect(onCommitMove).toHaveBeenCalledWith("c1", 26, 10);
   });
 
   it("pointercancel reverts preview without sending a commit", () => {
