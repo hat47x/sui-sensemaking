@@ -24,8 +24,12 @@ function pointer(target: HTMLElement, name: PointerTestEvent, x: number, y: numb
 describe("CardView opt-in drop-only native movement", () => {
   let container: HTMLDivElement;
   let root: Root;
+  const pointerCaptureDescriptors = new Map<string, PropertyDescriptor | undefined>();
 
   beforeEach(() => {
+    for (const key of ["setPointerCapture", "hasPointerCapture", "releasePointerCapture"]) {
+      pointerCaptureDescriptors.set(key, Object.getOwnPropertyDescriptor(HTMLElement.prototype, key));
+    }
     // happy-dom does not expose pointer capture on all element versions.
     Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
       configurable: true, value: vi.fn(),
@@ -45,8 +49,14 @@ describe("CardView opt-in drop-only native movement", () => {
     act(() => root.unmount());
     container.remove();
     for (const key of ["setPointerCapture", "hasPointerCapture", "releasePointerCapture"]) {
-      Reflect.deleteProperty(HTMLElement.prototype, key);
+      const descriptor = pointerCaptureDescriptors.get(key);
+      if (descriptor) {
+        Object.defineProperty(HTMLElement.prototype, key, descriptor);
+      } else {
+        Reflect.deleteProperty(HTMLElement.prototype, key);
+      }
     }
+    pointerCaptureDescriptors.clear();
   });
 
   function renderCard(onMove = vi.fn(), onCommitMove?: (id: string, dx: number, dy: number) => void) {
