@@ -20,6 +20,7 @@ from sui_sensemaking_api.routes.docs import (
     _resolve_request_tenant,
     _transition_lifecycle,
 )
+from sui_sensemaking_api.routes.agent_credential_admin import _authorize as _authorize_agent_credential_admin
 from sui_sensemaking_api.routes.document_access_admin import _authorize_document_policy_management
 from sui_sensemaking_api.routes.inquiry_bundles import _trusted_session as _inquiry_bundle_trusted_session
 from sui_sensemaking_api.routes.guest_session import GuestRedeemRequest, redeem_guest_session
@@ -196,6 +197,9 @@ _TENANT_SCOPED_BOUNDARY_CALLS = frozenset(
     {
         _authorize_request,
         _authorize_document_policy_management,
+        # ADR-0093: Tenant Admin の agent 資格情報管理。信頼済みSaaS sessionと
+        # tenantSessionVersion、capability を一か所で確認する。
+        _authorize_agent_credential_admin,
         _inquiry_bundle_trusted_session,
         # 第2反復: metadata-only / lifecycle routes resolve the tenant + session
         # precondition without a per-document read (no SafeMode/card decision
