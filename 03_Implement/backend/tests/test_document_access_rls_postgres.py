@@ -20,6 +20,7 @@ from sui_sensemaking_api.agent_credential_models import (  # noqa: F401
     AgentCredentialIndexRow,
     AgentCredentialRow,
     AgentDocumentGrantRow,
+    AgentOAuthBindingRow,
 )
 from sui_sensemaking_api.guest_admission_models import GuestDocumentGrantRow, GuestPrincipalRow  # noqa: F401
 from sui_sensemaking_api.guest_auth_session_models import GuestAuthSessionRow  # noqa: F401
@@ -61,6 +62,10 @@ RLS_EXEMPT_TENANT_TABLES = {
     # the tenant is known. It yields (tenant, agent, version) only; status,
     # expiry and grants are re-read from the FORCE-RLS tables on every request.
     "agent_credential_index": "pre-tenant agent credential lookup by keyed token hash",
+    # ADR-0094: looked up by a verified (identity provider, subject) pair after JWT
+    # verification and before the tenant is known. Status, expiry and grants are
+    # re-read from the FORCE-RLS tables on every request.
+    "agent_oauth_bindings": "pre-tenant agent lookup by verified OAuth principal",
 }
 
 

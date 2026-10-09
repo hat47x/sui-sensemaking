@@ -62,6 +62,13 @@ class AgentCredentialCreateRequest(BaseModel):
         return value
 
 
+class AgentOAuthPrincipal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    identityProviderId: str = Field(min_length=1, max_length=128)
+    subject: str = Field(min_length=1, max_length=512)
+
+
 class AgentCredentialSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -72,6 +79,7 @@ class AgentCredentialSummary(BaseModel):
     expiresAt: str
     revokedAt: str | None
     docIds: list[str]
+    oauthBindings: list[AgentOAuthPrincipal] = Field(default_factory=list)
 
 
 class AgentCredentialCreated(AgentCredentialSummary):
@@ -109,7 +117,11 @@ def _authorize(
     return trusted_session.identity, trusted_session.tenant
 
 
-def _summary(row, doc_ids: tuple[str, ...]) -> dict[str, object]:  # noqa: ANN001
+def _summary(
+    row,  # noqa: ANN001
+    doc_ids: tuple[str, ...],
+    bindings: tuple[tuple[str, str], ...] = (),
+) -> dict[str, object]:
     return {
         "agentId": row.agent_id,
         "label": row.label,
@@ -118,6 +130,10 @@ def _summary(row, doc_ids: tuple[str, ...]) -> dict[str, object]:  # noqa: ANN00
         "expiresAt": row.expires_at,
         "revokedAt": row.revoked_at,
         "docIds": list(doc_ids),
+        "oauthBindings": [
+            {"identityProviderId": provider_id, "subject": subject}
+            for provider_id, subject in bindings
+        ],
     }
 
 
@@ -166,7 +182,9 @@ def register_agent_credential(
         db.rollback()
         message = str(error)
         if "already exists" in message:
-            raise _error(status_code=409, code="agent_credential_exists", message=message) from error
+            raise _error(
+                status_code=409, code="agent_credential_exists", message=message
+            ) from error
         if "doc_id does not exist" in message:
             # 他tenantの文書と存在しない文書を区別しない。
             raise _error(
@@ -183,12 +201,14 @@ def register_agent_credential(
 
     logger.info(
         "agent credential registered",
-        extra={"tenantId": tenant.tenant_id, "agentId": payload.agentId, "docCount": len(payload.docIds)},
+        extra={
+            "tenantId": tenant.tenant_id,
+            "agentId": payload.agentId,
+            "docCount": len(payload.docIds),
+        },
     )
     response.headers["Cache-Control"] = "no-store"
-    created_row = next(
-        row for row, _ in repo.list_credentials() if row.agent_id == payload.agentId
-    )
+    created_row = next(row for row, _ in repo.list_credentials() if row.agent_id == payload.agentId)
     return AgentCredentialCreated(
         **_summary(created_row, tuple(payload.docIds)),
         credential=token,
@@ -209,7 +229,12 @@ def list_agent_credentials(
     response.headers["Cache-Control"] = "no-store"
     repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
     return AgentCredentialListResponse(
-        items=[AgentCredentialSummary(**_summary(row, ids)) for row, ids in repo.list_credentials()]
+        items=[
+            AgentCredentialSummary(
+                **_summary(row, ids, repo.list_oauth_bindings(agent_id=row.agent_id))
+            )
+            for row, ids in repo.list_credentials()
+        ]
     )
 
 
@@ -227,7 +252,9 @@ def revoke_agent_credential(
     except AgentCredentialError as error:
         db.rollback()
         raise _error(
-            status_code=404, code="agent_credential_not_found", message="Agent credential not found."
+            status_code=404,
+            code="agent_credential_not_found",
+            message="Agent credential not found.",
         ) from error
     logger.info(
         "agent credential revoked", extra={"tenantId": tenant.tenant_id, "agentId": agent_id}
@@ -245,13 +272,88 @@ def revoke_agent_document_grant(
     _, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
     repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
     try:
-        repo.revoke_document_grant(
-            agent_id=agent_id, doc_id=doc_id, now=datetime.now(timezone.utc)
-        )
+        repo.revoke_document_grant(agent_id=agent_id, doc_id=doc_id, now=datetime.now(timezone.utc))
         db.commit()
     except AgentCredentialError as error:
         db.rollback()
         raise _error(
             status_code=404, code="agent_grant_not_found", message="Agent grant not found."
+        ) from error
+    return Response(status_code=204)
+
+
+@router.post("/{agent_id}/oauth-bindings", status_code=201)
+def bind_agent_oauth_principal(
+    agent_id: str,
+    payload: AgentOAuthPrincipal,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> AgentOAuthPrincipal:
+    """ADR-0094: agent に、IdP登録簿のidと sub で表すOAuth主体を結ぶ。"""
+    identity, tenant = _authorize(request=request, db=db, any_of=(AGENT_REGISTER_CAPABILITY,))
+    repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
+    try:
+        repo.bind_oauth_principal(
+            agent_id=agent_id,
+            identity_provider_id=payload.identityProviderId,
+            subject=payload.subject,
+            created_by=identity.user_id or "unknown",
+            now=datetime.now(timezone.utc),
+        )
+        db.commit()
+    except AgentCredentialError as error:
+        db.rollback()
+        message = str(error)
+        if "already bound" in message:
+            raise _error(
+                status_code=409,
+                code="agent_oauth_principal_bound",
+                message="The OAuth principal is already bound.",
+            ) from error
+        if "identity provider does not exist" in message:
+            raise _error(
+                status_code=404,
+                code="identity_provider_not_found",
+                message="Identity provider not found.",
+            ) from error
+        raise _error(
+            status_code=404,
+            code="agent_credential_not_found",
+            message="Agent credential not found.",
+        ) from error
+    except IntegrityError as error:
+        db.rollback()
+        raise _error(
+            status_code=409,
+            code="agent_oauth_principal_bound",
+            message="The OAuth principal is already bound.",
+        ) from error
+    logger.info(
+        "agent oauth principal bound",
+        extra={"tenantId": tenant.tenant_id, "agentId": agent_id},
+    )
+    return payload
+
+
+@router.post("/{agent_id}/oauth-bindings/remove", status_code=204)
+def unbind_agent_oauth_principal(
+    agent_id: str,
+    payload: AgentOAuthPrincipal,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Response:
+    _, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
+    repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
+    try:
+        repo.unbind_oauth_principal(
+            agent_id=agent_id,
+            identity_provider_id=payload.identityProviderId,
+            subject=payload.subject,
+        )
+        db.commit()
+    except AgentCredentialError as error:
+        db.rollback()
+        raise _error(
+            status_code=404, code="agent_binding_not_found", message="Agent binding not found."
         ) from error
     return Response(status_code=204)

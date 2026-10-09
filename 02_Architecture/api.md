@@ -888,6 +888,7 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 外部のAI協働者（MCPなど）が、`saas-multitenant` で読み取り専用の投影を読むための資格情報である。agentはtenantのmembershipを持たない別種の主体で、Tenant Adminが登録した資格情報と、明示した文書への付与だけで読める。
 
 - **ヘッダー**: `Sui-Sensemaking-Agent-Credential: suiag_...`。通常の利用者の `Authorization` とは別に扱う。ヘッダーがあれば、そのヘッダーだけを認証として評価する。
+- **OAuthトークンによる認証（ADR-0094）**: 不透明な資格情報の代わりに、`Sui-Sensemaking-Agent-Bearer: Bearer <JWT>` でも認証できる。このJWTは、MCPサーバーがトークン交換（RFC 8693）で得た、backend宛ての短命のトークンである。backendは署名・発行者・audience・有効期限を自分で検証し（ゲスト受け入れと同じ `verify_configured_oidc_token` とIdP登録簿）、検証済みの `(identity_provider_id, sub)` を、Tenant Adminが結んだ対応付けから agent に引く。tenantはトークンのclaimではなく、対応付けの行から決める。MCP宛てのトークンは受け付けない（audienceが一致しない）。二つのヘッダーを同時に送ると `400 agent_credential_conflict`。以降の許可route・拒否・本文・監査・失効は、不透明な資格情報と同じである。
 - **tenantの決まり方**: トークンのハッシュから、サーバー側の行（資格情報）を引いて決める。リクエストのheader・query・body・pathで指定した値は使わない。
 - **通れるroute**: `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つだけ。`GET /docs` は付与された文書のmetadataだけを返す。判断ログ、類似候補など、読み取りでも本文由来の派生データを返す経路は `403 agent_route_not_enabled` で閉じる。
 - **拒否**: 不正、未知、失効、期限切れ、バージョン不一致は、区別せず `401 agent_credential_invalid` とする。付与外の文書、存在しない文書、他tenantの文書は、同じ `404 agent_document_not_granted` を返す。書き込み、export、archive は `403 agent_write_not_enabled`。
@@ -898,6 +899,8 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
   - `POST /tenant-admin/agent-credentials`（`agent.register`）: `{agentId, label, expiresAt, docIds}`。有効期限は、タイムゾーンつきで、未来かつ90日以内。付与する文書は1〜50件で、明示して列挙する。`201` で、`credential`（トークン平文）を**この応答でだけ**返す。`Cache-Control: no-store`。同じ `agentId` は、失効後も再登録できない（`409 agent_credential_exists`）。他tenantの文書と存在しない文書は区別せず `404`。
   - `GET /tenant-admin/agent-credentials`（`agent.register` または `agent.revoke`）: 自tenantの資格情報と、有効な付与の `docIds`。トークンもそのハッシュも返さない。
   - `POST /tenant-admin/agent-credentials/{agentId}/revoke`（`agent.revoke`）: 次の要求から効く。冪等で `204`。他tenantの `agentId` は `404`。
+  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`（`agent.register`）: `{identityProviderId, subject}` を agent に結ぶ。IdP登録簿に有効な行が無ければ `404`、すでに結ばれていれば `409`（どのtenantの agent かは示さない）。一覧の `oauthBindings` に出る。
+  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他tenantの対応付けは `404`。
   - `DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`（`agent.revoke`）: その文書の付与だけを取り消す。`204`。
 
 ## 3. レスポンス例（概要）

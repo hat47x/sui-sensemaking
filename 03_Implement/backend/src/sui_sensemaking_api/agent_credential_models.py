@@ -84,4 +84,35 @@ class AgentCredentialIndexRow(Base):
     credential_version: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class AgentOAuthBindingRow(Base):
+    """ADR-0094: 検証済みのOAuth主体 (IdP登録簿のid, sub) から agent を引く索引。
+
+    トークンを検証した後、tenantが確定する前に引くので、RLSを掛けない。決めるのは
+    (tenant, agent) だけで、状態・期限・付与は毎要求でRLS付きの表を引き直す。
+    """
+
+    __tablename__ = "agent_oauth_bindings"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "agent_id"],
+            ["agent_credentials.tenant_id", "agent_credentials.agent_id"],
+            name="fk_agent_oauth_bindings_credential",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["identity_provider_id"],
+            ["identity_providers.id"],
+            name="fk_agent_oauth_bindings_identity_provider",
+            ondelete="NO ACTION",
+        ),
+    )
+
+    identity_provider_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(Text, nullable=False)
+    agent_id: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 apply_persistent_text_shapes(Base.metadata)

@@ -18,7 +18,7 @@ def test_alembic_has_single_head() -> None:
     script = _script_directory()
     heads = script.get_heads()
 
-    assert heads == ["20261009_0036"], (
+    assert heads == ["20261009_0037"], (
         "alembic migration graph must stay linear to avoid stream-merge conflicts: "
         f"unexpected heads={heads}"
     )
@@ -44,8 +44,10 @@ def test_auth_identity_migration_is_in_mainline_history() -> None:
     assert "20260906_0034" in history_ids
     assert "20260907_0035" in history_ids
     assert "20261009_0036" in history_ids
+    assert "20261009_0037" in history_ids
     assert (
-        history_ids.index("20261009_0036")
+        history_ids.index("20261009_0037")
+        < history_ids.index("20261009_0036")
         < history_ids.index("20260907_0035")
         < history_ids.index("20260906_0034")
         < history_ids.index("20260906_0033")

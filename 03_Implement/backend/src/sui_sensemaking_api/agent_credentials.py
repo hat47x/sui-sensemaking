@@ -19,12 +19,17 @@ from sui_sensemaking_api.agent_credential_models import (
     AgentCredentialIndexRow,
     AgentCredentialRow,
     AgentDocumentGrantRow,
+    AgentOAuthBindingRow,
 )
 from sui_sensemaking_api.auth_session_hash import derive_session_key_hash
-from sui_sensemaking_api.models import DocumentRow
+from sui_sensemaking_api.models import DocumentRow, IdentityProviderRow
 from sui_sensemaking_api.tenant_db_guard import apply_database_tenant_id
+from sui_sensemaking_api.trusted_auth_edge import JwtIdentityError, verify_configured_oidc_token
 
 AGENT_CREDENTIAL_HEADER = "Sui-Sensemaking-Agent-Credential"
+# ADR-0094: トークン交換で得た、backend宛ての短命のOAuthトークン。
+AGENT_BEARER_HEADER = "Sui-Sensemaking-Agent-Bearer"
+_MAX_BEARER_LENGTH = 8192
 AGENT_TOKEN_PREFIX = "suiag_"
 _MAX_TOKEN_LENGTH = 256
 _HASH_DOMAIN = "agent-credential:"
@@ -175,6 +180,62 @@ class AgentCredentialRepository:
             grant.revoked_at = _aware_utc(now).isoformat()
             self._db.flush()
 
+    def bind_oauth_principal(
+        self,
+        *,
+        agent_id: str,
+        identity_provider_id: str,
+        subject: str,
+        created_by: str,
+        now: datetime,
+    ) -> None:
+        """検証済みのOAuth主体を agent に結ぶ。同じ主体は、全体で一つの agent にしか結べない。"""
+        self._scope()
+        agent = _required(agent_id, field="agent_id")
+        if self._db.get(AgentCredentialRow, (self._tenant_id, agent)) is None:
+            raise AgentCredentialError("agent_id does not exist")
+        provider_id = _required(identity_provider_id, field="identity_provider_id")
+        provider = self._db.get(IdentityProviderRow, provider_id)
+        if provider is None or provider.lifecycle_state != "active":
+            raise AgentCredentialError("identity provider does not exist")
+        key = (provider_id, _required(subject, field="subject"))
+        if self._db.get(AgentOAuthBindingRow, key) is not None:
+            raise AgentCredentialError("oauth principal is already bound")
+        self._db.add(
+            AgentOAuthBindingRow(
+                identity_provider_id=key[0],
+                subject=key[1],
+                tenant_id=self._tenant_id,
+                agent_id=agent,
+                created_by=_required(created_by, field="created_by"),
+                created_at=_aware_utc(now).isoformat(),
+            )
+        )
+        self._db.flush()
+
+    def unbind_oauth_principal(
+        self, *, agent_id: str, identity_provider_id: str, subject: str
+    ) -> None:
+        self._scope()
+        row = self._db.get(AgentOAuthBindingRow, (identity_provider_id, subject))
+        # 他tenantの対応付けは、存在しないものと区別しない。
+        if row is None or row.tenant_id != self._tenant_id or row.agent_id != agent_id:
+            raise AgentCredentialError("binding does not exist")
+        self._db.delete(row)
+        self._db.flush()
+
+    def list_oauth_bindings(self, *, agent_id: str) -> tuple[tuple[str, str], ...]:
+        self._scope()
+        return tuple(
+            (row.identity_provider_id, row.subject)
+            for row in self._db.scalars(
+                select(AgentOAuthBindingRow)
+                .where(AgentOAuthBindingRow.tenant_id == self._tenant_id)
+                .where(AgentOAuthBindingRow.agent_id == agent_id)
+                .order_by(AgentOAuthBindingRow.identity_provider_id, AgentOAuthBindingRow.subject)
+            ).all()
+        )
+
     def list_credentials(self) -> list[tuple[AgentCredentialRow, tuple[str, ...]]]:
         """tenantの資格情報と、有効な付与の docId。秘密（トークン・ハッシュ）は返さない。"""
         self._scope()
@@ -183,9 +244,7 @@ class AgentCredentialRepository:
             .where(AgentCredentialRow.tenant_id == self._tenant_id)
             .order_by(AgentCredentialRow.agent_id.asc())
         ).all()
-        return [
-            (row, self.list_readable_document_ids(agent_id=row.agent_id)) for row in rows
-        ]
+        return [(row, self.list_readable_document_ids(agent_id=row.agent_id)) for row in rows]
 
     def can_read_document(self, *, agent_id: str, doc_id: str) -> bool:
         self._scope()
@@ -215,42 +274,23 @@ def _invalid() -> HTTPException:
 
 
 def request_has_agent_credential(request: Request) -> bool:
-    return request.headers.get(AGENT_CREDENTIAL_HEADER) is not None
+    return (
+        request.headers.get(AGENT_CREDENTIAL_HEADER) is not None
+        or request.headers.get(AGENT_BEARER_HEADER) is not None
+    )
 
 
-def resolve_agent_request(*, request: Request, db: Session) -> AgentRequestPrincipal | None:
-    """header が無ければNone。あれば、不正・失効・期限切れは401で閉じる。
-
-    存在は決定的である。不正なagent資格情報を、通常の利用者の経路へ落とさない。
-    """
-    raw_token = request.headers.get(AGENT_CREDENTIAL_HEADER)
-    if raw_token is None:
-        return None
-    if (
-        not raw_token
-        or len(raw_token) > _MAX_TOKEN_LENGTH
-        or not raw_token.startswith(AGENT_TOKEN_PREFIX)
-    ):
-        raise _invalid()
-    hash_key = getattr(request.app.state, "agent_credential_hash_key", None)
-    if hash_key is None:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "code": "agent_credential_unavailable",
-                "message": "Agent credential verification is unavailable.",
-            },
-        )
-    index = db.get(AgentCredentialIndexRow, derive_agent_token_hash(raw_token, key=hash_key))
-    if index is None:
-        raise _invalid()
-    apply_database_tenant_id(db=db, tenant_id=index.tenant_id)
-    credential = db.get(AgentCredentialRow, (index.tenant_id, index.agent_id))
+def _active_principal(
+    *, db: Session, tenant_id: str, agent_id: str, expected_version: int | None
+) -> AgentRequestPrincipal:
+    """tenantを確定し、資格情報の状態・期限・版を、RLS付きの表で確認する。"""
+    apply_database_tenant_id(db=db, tenant_id=tenant_id)
+    credential = db.get(AgentCredentialRow, (tenant_id, agent_id))
     if (
         credential is None
         or credential.status != "active"
         or credential.revoked_at is not None
-        or credential.credential_version != index.credential_version
+        or (expected_version is not None and credential.credential_version != expected_version)
     ):
         raise _invalid()
     expiry = _parse_aware(credential.expires_at)
@@ -261,3 +301,86 @@ def resolve_agent_request(*, request: Request, db: Session) -> AgentRequestPrinc
         agent_id=credential.agent_id,
         credential_version=credential.credential_version,
     )
+
+
+def _resolve_opaque_credential(
+    *, request: Request, db: Session, raw_token: str
+) -> AgentRequestPrincipal:
+    if (
+        not raw_token
+        or len(raw_token) > _MAX_TOKEN_LENGTH
+        or not raw_token.startswith(AGENT_TOKEN_PREFIX)
+    ):
+        raise _invalid()
+    hash_key = getattr(request.app.state, "agent_credential_hash_key", None)
+    if hash_key is None:
+        raise _unavailable()
+    index = db.get(AgentCredentialIndexRow, derive_agent_token_hash(raw_token, key=hash_key))
+    if index is None:
+        raise _invalid()
+    return _active_principal(
+        db=db,
+        tenant_id=index.tenant_id,
+        agent_id=index.agent_id,
+        expected_version=index.credential_version,
+    )
+
+
+def _resolve_oauth_bearer(
+    *, request: Request, db: Session, raw_value: str
+) -> AgentRequestPrincipal:
+    """ADR-0094: 交換後のトークンを自分で検証し、(IdP登録簿のid, sub) から agent を引く。"""
+    token = raw_value.strip()
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+    if not token or len(token) > _MAX_BEARER_LENGTH:
+        raise _invalid()
+    jwks_store = getattr(request.app.state, "agent_jwks_store", None)
+    if jwks_store is None:
+        raise _unavailable()
+    try:
+        verified = verify_configured_oidc_token(db=db, token=token, jwks_store=jwks_store)
+    except JwtIdentityError as error:
+        if error.status_code == 503:
+            raise _unavailable() from None
+        raise _invalid() from None
+    binding = db.get(AgentOAuthBindingRow, (verified.provider.id, verified.subject))
+    if binding is None:
+        raise _invalid()
+    return _active_principal(
+        db=db, tenant_id=binding.tenant_id, agent_id=binding.agent_id, expected_version=None
+    )
+
+
+def _unavailable() -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail={
+            "code": "agent_credential_unavailable",
+            "message": "Agent credential verification is unavailable.",
+        },
+    )
+
+
+def resolve_agent_request(*, request: Request, db: Session) -> AgentRequestPrincipal | None:
+    """ヘッダーが無ければNone。あれば、不正・失効・期限切れは401で閉じる。
+
+    存在は決定的である。不正な資格情報を、通常の利用者の経路へ落とさない。
+    不透明な資格情報（ADR-0093）と交換後のOAuthトークン（ADR-0094）は、どちらか一方だけ。
+    """
+    raw_token = request.headers.get(AGENT_CREDENTIAL_HEADER)
+    raw_bearer = request.headers.get(AGENT_BEARER_HEADER)
+    if raw_token is None and raw_bearer is None:
+        return None
+    if raw_token is not None and raw_bearer is not None:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "agent_credential_conflict",
+                "message": "Send either an agent credential or an agent bearer, not both.",
+            },
+        )
+    if raw_token is not None:
+        return _resolve_opaque_credential(request=request, db=db, raw_token=raw_token)
+    assert raw_bearer is not None
+    return _resolve_oauth_bearer(request=request, db=db, raw_value=raw_bearer)

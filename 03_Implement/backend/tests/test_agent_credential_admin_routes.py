@@ -26,6 +26,7 @@ from sui_sensemaking_api.main import app
 from sui_sensemaking_api.models import (
     Base,
     DocumentRow,
+    IdentityProviderRow,
     TenantMembershipRow,
     TenantRow,
     UserRow,
@@ -141,6 +142,18 @@ def _seed(db: Session) -> None:
                 updated_at=TIMESTAMP,
             )
         )
+    db.add(
+        IdentityProviderRow(
+            id="idp-agents",
+            issuer="https://idp.invalid/realm",
+            audience="sui-sensemaking-agents",
+            lifecycle_state="active",
+            protocol="oidc",
+            jwks_uri="https://idp.invalid/realm/jwks",
+            created_at=TIMESTAMP,
+            updated_at=TIMESTAMP,
+        )
+    )
     for tenant_id, doc_id in (
         ("tenant-a", "shared-doc"),
         ("tenant-a", "a-second"),
@@ -357,3 +370,48 @@ def test_issuance_is_unavailable_without_a_hash_key(tmp_path) -> None:
         response = client.post(BASE, json=_body())
 
     assert response.status_code == 503
+
+
+def test_oauth_principals_are_bound_listed_and_removed_per_tenant(tmp_path) -> None:
+    principal = {"identityProviderId": "idp-agents", "subject": "agent-client-1"}
+    with _client(tmp_path) as (client, _, tenants, capabilities):
+        client.post(BASE, json=_body())
+        bound = client.post(f"{BASE}/agent-1/oauth-bindings", json=principal)
+        listed = client.get(BASE).json()["items"][0]["oauthBindings"]
+        duplicate = client.post(f"{BASE}/agent-1/oauth-bindings", json=principal)
+        tenants.tenant_id = "tenant-b"
+        other_tenant_remove = client.post(f"{BASE}/agent-1/oauth-bindings/remove", json=principal)
+        other_tenant_bind = client.post(f"{BASE}/agent-1/oauth-bindings", json=principal)
+        tenants.tenant_id = "tenant-a"
+        capabilities.capabilities = ("agent.register",)
+        remove_without_capability = client.post(
+            f"{BASE}/agent-1/oauth-bindings/remove", json=principal
+        )
+        capabilities.capabilities = ("agent.revoke",)
+        bind_without_capability = client.post(f"{BASE}/agent-1/oauth-bindings", json=principal)
+        removed = client.post(f"{BASE}/agent-1/oauth-bindings/remove", json=principal)
+        removed_again = client.post(f"{BASE}/agent-1/oauth-bindings/remove", json=principal)
+        capabilities.capabilities = ("agent.register", "agent.revoke")
+        after = client.get(BASE).json()["items"][0]["oauthBindings"]
+
+    assert bound.status_code == 201
+    assert listed == [principal]
+    assert duplicate.status_code == 409
+    assert other_tenant_remove.status_code == 404
+    assert other_tenant_bind.status_code == 404  # tenant-b には agent-1 が無い
+    assert remove_without_capability.status_code == 403
+    assert bind_without_capability.status_code == 403
+    assert removed.status_code == 204 and removed_again.status_code == 404
+    assert after == []
+
+
+def test_an_unknown_identity_provider_cannot_be_bound(tmp_path) -> None:
+    with _client(tmp_path) as (client, _, _, _):
+        client.post(BASE, json=_body())
+        response = client.post(
+            f"{BASE}/agent-1/oauth-bindings",
+            json={"identityProviderId": "no-such", "subject": "x"},
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "identity_provider_not_found"

@@ -241,6 +241,8 @@ if settings.runtime_profile == "saas-multitenant":
     # R2c shares only the hardened provider/JWKS cache with member auth.  Guest
     # verification stops before user provisioning, tenant IdP trust and membership.
     _shared_jwks_store = JwksStore()
+    # ADR-0094: agent の交換後トークンも、同じ堅牢化済みのJWKS基盤で検証する。
+    app.state.agent_jwks_store = _shared_jwks_store
     app.state.guest_identity_verifier = DatabaseJwtGuestIdentityVerifier(
         session_factory=SessionLocal,
         jwks_store=_shared_jwks_store,

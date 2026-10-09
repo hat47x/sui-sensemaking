@@ -47,7 +47,7 @@ CVI（不変条件）のうち、share/exportで未レビュー情報・秘密�
 
 ## 起動拒否を解除する条件（実装の解禁）
 
-下の条件が固定されるまで、`saas-multitenant` のMCP起動拒否を外さない。transportごとに解除する。stdio は、1〜8 と stdio の9を満たしたので解除した。HTTP は、9 が決まるまで拒否を維持する。状態を併記する。
+下の条件が固定されるまで、`saas-multitenant` のMCP起動拒否を外さない。transportごとに解除する。stdio は、1〜8 と stdio の9を満たしたので解除した。HTTP は、`ADR-0094` のトークン交換の設定があるときだけ許す。状態を併記する。
 
 | # | 条件 | 状態 |
 | --- | --- | --- |
@@ -59,7 +59,7 @@ CVI（不変条件）のうち、share/exportで未レビュー情報・秘密�
 | 6 | リクエストのheaderやqueryでtenantを指定しても、その値でDBスコープが決まらない | 固定済み |
 | 7 | 監査eventに `tenantId` と、検証済みのagentに由来する主体があり、本文・トークンがない | 固定済み |
 | 8 | トークン平文が、保存・ログ・エラー応答のどこにも現れない | 保存と応答は固定済み。ログは、ヘッダーを出力する箇所がコード上に無いことを確認した（試験は未整備） |
-| 9 | MCPのstdio transportが資格情報を渡し、HTTP transportの対応付けが決まる | stdio は実装済み（`SUI_MCP_AGENT_CREDENTIAL`）。HTTP は**未決**で、起動拒否を維持 |
+| 9 | MCPのstdio transportが資格情報を渡し、HTTP transportの対応付けが決まる | stdio は実装済み（`SUI_MCP_AGENT_CREDENTIAL`）。HTTP は `ADR-0094`（トークン交換）で決定・実装した |
 
 ## Consequences
 
