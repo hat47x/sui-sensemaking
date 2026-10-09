@@ -173,6 +173,26 @@ export type EpistemicUiItem = {
   reasons: string[];
 };
 
+export type EpistemicInspectionSummary = {
+  assertionId: string;
+  source: "projection-summary";
+  state: EpistemicUiState;
+  confirmationState: EpistemicConfirmationState;
+  statementKind: string;
+  contentOrigin: string;
+  ingestedBy?: string;
+  metadataState: EpistemicMetadataState;
+  reviewBinding?: string;
+  targetBinding: EpistemicTargetBinding;
+  contextCompatibility: EpistemicContextCompatibility;
+  freshness: EpistemicFreshness;
+  lifecycleState: string;
+  conflict: EpistemicConflict;
+  inferredContextUsed: boolean;
+  reasons: string[];
+  onDemandDetailsRequired: Array<"target" | "context" | "evidence">;
+};
+
 export type EpistemicIntentBinding = {
   assertionId: string;
   source: "human-ui";
@@ -536,6 +556,30 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
       };
     })
     .sort((left, right) => left.assertionId.localeCompare(right.assertionId));
+}
+
+export function buildEpistemicInspectionSummary(
+  item: EpistemicUiItem,
+): EpistemicInspectionSummary {
+  return {
+    assertionId: item.assertionId,
+    source: "projection-summary",
+    state: item.state,
+    confirmationState: item.confirmationState,
+    statementKind: item.statementKind,
+    contentOrigin: item.contentOrigin,
+    ingestedBy: item.ingestedBy,
+    metadataState: item.metadataState,
+    reviewBinding: item.reviewBinding,
+    targetBinding: item.targetBinding,
+    contextCompatibility: item.contextCompatibility,
+    freshness: item.freshness,
+    lifecycleState: item.lifecycleState,
+    conflict: item.conflict,
+    inferredContextUsed: item.inferredContextUsed,
+    reasons: unique(item.reasons),
+    onDemandDetailsRequired: ["target", "context", "evidence"],
+  };
 }
 
 function intentBinding(item: EpistemicUiItem): EpistemicIntentBinding {
