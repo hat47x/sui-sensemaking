@@ -874,6 +874,9 @@ function sanitizeNarrativeCheck(check: NarrativeCheck): NarrativeCheck {
     createdAt: check.createdAt,
     kind: check.kind,
     issues: check.issues.map(sanitizeNarrativeIssue),
+    ...(check.counts !== undefined
+      ? { counts: { bMissingInA: check.counts.bMissingInA, aMissingInB: check.counts.aMissingInB } }
+      : {}),
   };
 }
 
@@ -989,6 +992,7 @@ function sanitizeMergeDecision(entry: MergeSuggestionDecisionEntry): MergeSugges
     ...(entry.note !== undefined ? { note: redact(entry.note) } : {}),
     ...(entry.snapshotVersion !== undefined ? { snapshotVersion: redact(entry.snapshotVersion) } : {}),
     ...(entry.rationale !== undefined ? { rationale: redact(entry.rationale) } : {}),
+    ...(entry.mergeMethod !== undefined ? { mergeMethod: entry.mergeMethod } : {}),
     ...(entry.representativeCardId !== undefined
       ? { representativeCardId: entry.representativeCardId }
       : {}),
