@@ -66,6 +66,7 @@ CVI（不変条件）のうち、share/exportで未レビュー情報・秘密�
 - 共有SaaSでも、外部のAI協働者がレビュー済みの内容を読み取れるようになる。
 - 新しい表（`agent_credentials`、`agent_document_grants`、`agent_credential_index`）と、`api.md` の契約が必要になる。`ADR-0059` のImplementation gate 1（契約を先に反映）に従い、`api.md` を同時に更新した。トークンの索引表は、tenantが決まる前に引くため RLS を掛けない（`guest_auth_sessions` と同じ理由）。状態・期限・付与は、毎要求でRLS付きの表を引き直す。
 - ゲスト受け入れと同じ付与モデルを使うため、二つの主体（ゲスト、agent）で付与の検査を共通化する余地がある。共通化は本ADRの範囲外で、実装時に重複が確認できたときに検討する。
+- 登録・失効は `/tenant-admin/agent-credentials` で行う（`api.md` §2.15）。有効期限は90日以内とした。資格情報の更新（ローテーション）は、新しい `agentId` で登録し直し、古いものを失効させる運用とし、同じ `agentId` の再利用はしない。
 - 未解決: agentごとの要求回数の上限（rate limit）を、tenantとagentのどちらのキーにするか。Data Planeへ制限を足す時の規則として別に決める。
 
 ## Traceability

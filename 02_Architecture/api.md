@@ -894,7 +894,11 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 - **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。
 - **監査**: eventの主体は `x-actor-ref` ではなく、検証済みの `agent:<agentId>` から求める。
 - **即時失効**: 状態・期限・付与は毎要求で確認する。キャッシュは持たない。
-- **登録**: 資格情報の登録・失効のAPIは、この段階では提供しない（リポジトリ層の操作のみ）。トークン平文は登録時に一度だけ返し、保存しない。
+- **登録・失効（Tenant Admin）**: `/tenant-admin/agent-credentials` で管理する。通常の利用者と同じ信頼済みSaaS sessionと `tenantSessionVersion` を要求し、tenant管理者向けのcapabilityを独立して確認する。
+  - `POST /tenant-admin/agent-credentials`（`agent.register`）: `{agentId, label, expiresAt, docIds}`。有効期限は、タイムゾーンつきで、未来かつ90日以内。付与する文書は1〜50件で、明示して列挙する。`201` で、`credential`（トークン平文）を**この応答でだけ**返す。`Cache-Control: no-store`。同じ `agentId` は、失効後も再登録できない（`409 agent_credential_exists`）。他tenantの文書と存在しない文書は区別せず `404`。
+  - `GET /tenant-admin/agent-credentials`（`agent.register` または `agent.revoke`）: 自tenantの資格情報と、有効な付与の `docIds`。トークンもそのハッシュも返さない。
+  - `POST /tenant-admin/agent-credentials/{agentId}/revoke`（`agent.revoke`）: 次の要求から効く。冪等で `204`。他tenantの `agentId` は `404`。
+  - `DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`（`agent.revoke`）: その文書の付与だけを取り消す。`204`。
 
 ## 3. レスポンス例（概要）
 

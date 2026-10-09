@@ -175,6 +175,18 @@ class AgentCredentialRepository:
             grant.revoked_at = _aware_utc(now).isoformat()
             self._db.flush()
 
+    def list_credentials(self) -> list[tuple[AgentCredentialRow, tuple[str, ...]]]:
+        """tenantの資格情報と、有効な付与の docId。秘密（トークン・ハッシュ）は返さない。"""
+        self._scope()
+        rows = self._db.scalars(
+            select(AgentCredentialRow)
+            .where(AgentCredentialRow.tenant_id == self._tenant_id)
+            .order_by(AgentCredentialRow.agent_id.asc())
+        ).all()
+        return [
+            (row, self.list_readable_document_ids(agent_id=row.agent_id)) for row in rows
+        ]
+
     def can_read_document(self, *, agent_id: str, doc_id: str) -> bool:
         self._scope()
         grant = self._db.get(AgentDocumentGrantRow, (self._tenant_id, agent_id, doc_id))

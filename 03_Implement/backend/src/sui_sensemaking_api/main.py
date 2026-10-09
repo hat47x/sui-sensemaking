@@ -34,6 +34,7 @@ from sui_sensemaking_api.routes.ai_relations import router as ai_relations_route
 from sui_sensemaking_api.routes.admin import router as admin_router
 from sui_sensemaking_api.routes.docs import router as docs_router
 from sui_sensemaking_api.routes.context import router as context_router
+from sui_sensemaking_api.routes.agent_credential_admin import router as agent_credential_admin_router
 from sui_sensemaking_api.routes.document_access_admin import (
     router as document_access_admin_router,
 )
@@ -545,6 +546,7 @@ app.include_router(ai_router)
 app.include_router(ai_relations_router)
 app.include_router(context_router)
 app.include_router(document_access_admin_router)
+app.include_router(agent_credential_admin_router)
 app.include_router(inquiry_bundles_router)
 app.include_router(model_registry_router)
 app.include_router(session_router)
