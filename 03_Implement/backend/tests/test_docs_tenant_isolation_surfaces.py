@@ -252,3 +252,39 @@ def test_merge_decision_logs_are_scoped_to_the_active_tenant(tmp_path) -> None:
     assert b_created.status_code == 201
     assert [entry["decisionId"] for entry in a_view.json()] == ["d-a"]
     assert c_view.status_code == 404
+
+
+def test_imported_payload_cannot_carry_tenant_authority(tmp_path) -> None:
+    """ADR-0059 D10: an imported document is new input for the active tenant.
+
+    Tenant, membership and capability fields smuggled into the payload must be
+    neither honoured nor persisted, and must not touch another tenant's row.
+    """
+    smuggled = {
+        "tenantId": "tenant-b",
+        "membershipId": "membership-tenant-b",
+        "effectiveCapabilities": ["document.write", "document.export"],
+        "visibility": "Public",
+        "policyBindingId": "binding-from-another-deployment",
+    }
+    with _tenant_client(tmp_path) as (client, resolver, _):
+        resolver.tenant_id = "tenant-a"
+        imported = client.put(
+            "/docs/imported-doc",
+            json={**_payload(doc_id="imported-doc", title="Imported"), **smuggled},
+        )
+        assert imported.status_code == 200
+        returned = imported.json()
+
+        resolver.tenant_id = "tenant-b"
+        other_tenant_view = client.get("/docs/imported-doc")
+        other_tenant_list = client.get("/docs")
+
+        resolver.tenant_id = "tenant-a"
+        own_view = client.get("/docs/imported-doc")
+
+    assert other_tenant_view.status_code == 404
+    assert "imported-doc" not in [item["id"] for item in other_tenant_list.json()]
+    assert own_view.status_code == 200
+    for body in (returned, own_view.json()):
+        assert not (set(smuggled) & set(body))
