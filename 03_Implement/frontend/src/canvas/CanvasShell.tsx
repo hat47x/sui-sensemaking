@@ -1399,6 +1399,7 @@ export function CanvasShell({
               card={card}
               onMove={handleCardMove}
               onCommitMove={onCardMoveCommit ? handleCardCommit : undefined}
+              dragPreviewZoom={transform.zoom}
               isSelected={selectedCardIdSet.has(card.id)}
               onSelect={handleCardSelect}
               searchQuery={searchQuery}
