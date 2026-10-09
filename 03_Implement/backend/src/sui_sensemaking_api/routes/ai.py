@@ -32,6 +32,7 @@ from sui_sensemaking_api.llm_input_ir import (
 from sui_sensemaking_api.settings import settings
 from sui_sensemaking_api.tenant_context import TenantContext
 from sui_sensemaking_api.llm.provider import (
+    FINAL_JUDGEMENT_MAX_TOKENS,
     LLMRequest,
     ProviderDisabledError,
     ProviderRequestError,
@@ -2519,6 +2520,7 @@ def check_narrative(payload: CheckNarrativeRequest, request: Request, db: Sessio
             LLMRequest(
                 task="check_narrative",
                 prompt=_build_narrative_check_prompt(payload),
+                max_tokens=FINAL_JUDGEMENT_MAX_TOKENS,
                 model=model_id,
                 registered_provider=provider_config,
             )
@@ -3134,6 +3136,7 @@ def detect_contradiction(payload: DetectContradictionRequest, request: Request, 
             LLMRequest(
                 task="detect_contradiction",
                 prompt=_build_detect_contradiction_prompt(payload, ir),
+                max_tokens=FINAL_JUDGEMENT_MAX_TOKENS,
                 inputs=ir,
                 model=model_id,
                 registered_provider=provider_config,

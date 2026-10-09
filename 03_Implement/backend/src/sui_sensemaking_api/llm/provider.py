@@ -23,6 +23,11 @@ MAX_LLM_PROVIDER_REQUEST_BYTES = 1024 * 1024
 MAX_LLM_PROVIDER_RESPONSE_BYTES = 1024 * 1024
 MAX_LLM_TASK_LENGTH = 128
 MAX_LLM_OUTPUT_TOKENS = 32_768
+# Output budget for final-judgement tasks. They think by default (see
+# resolve_thinking_mode_for_task) and reasoning tokens count against max_tokens:
+# at 300 cards, 6 of 8 check_narrative calls hit the 2000-token default with an
+# empty reply (which the route rejects as invalid JSON).
+FINAL_JUDGEMENT_MAX_TOKENS = 16_000
 _LLM_TASK = re.compile(r"^[a-z][a-z0-9_-]{0,127}$")
 
 # OPS-LLM-COST-01 (段階2): in-process LLM call counter. Counts every request
