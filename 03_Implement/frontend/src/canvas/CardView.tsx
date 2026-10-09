@@ -9,6 +9,8 @@ type CardDragState = {
   pointerId: number;
   lastClientX: number;
   lastClientY: number;
+  startClientX: number;
+  startClientY: number;
   didMove: boolean;
 };
 
@@ -21,6 +23,8 @@ type CardViewProps = {
   isSearchMatch?: boolean;
   isActiveSearchMatch?: boolean;
   onMove: (cardId: string, deltaScreenX: number, deltaScreenY: number) => void;
+  /** Opt-in: keep drag preview local, then emit one final delta on pointerup. */
+  onCommitMove?: (cardId: string, deltaScreenX: number, deltaScreenY: number) => void;
   onSelect: (cardId: string, isShiftPressed: boolean) => void;
   isPickingEdgeTarget?: boolean;
   compactMode?: boolean;
@@ -94,6 +98,7 @@ function CardViewComponent({
   isSearchMatch = false,
   isActiveSearchMatch = false,
   onMove,
+  onCommitMove,
   onSelect,
   isPickingEdgeTarget = false,
   isDeemphasized = false,
@@ -112,6 +117,7 @@ function CardViewComponent({
   const cardRootRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<CardDragState | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 });
   const [isFocused, setIsFocused] = useState(false);
   const hasCritique = typeof card.critique === "string" && card.critique.trim().length > 0;
   const critiqueTagCount = card.critiqueTags?.length ?? 0;
@@ -147,6 +153,7 @@ function CardViewComponent({
   const clearDragState = (event: PointerEvent<HTMLDivElement>) => {
     dragRef.current = null;
     setIsDragging(false);
+    setPreviewOffset({ x: 0, y: 0 });
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -176,6 +183,8 @@ function CardViewComponent({
       pointerId: event.pointerId,
       lastClientX: event.clientX,
       lastClientY: event.clientY,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
       didMove: false,
     };
     setIsDragging(true);
@@ -205,7 +214,15 @@ function CardViewComponent({
       didMove: true,
     };
 
-    onMove(card.id, deltaScreenX, deltaScreenY);
+    if (onCommitMove) {
+      // This branch never mutates DocumentV1 during pointermove.
+      setPreviewOffset({
+        x: event.clientX - drag.startClientX,
+        y: event.clientY - drag.startClientY,
+      });
+    } else {
+      onMove(card.id, deltaScreenX, deltaScreenY);
+    }
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
@@ -218,6 +235,12 @@ function CardViewComponent({
 
     if (!drag.didMove) {
       onSelect(card.id, event.shiftKey);
+    } else if (onCommitMove) {
+      const dx = event.clientX - drag.startClientX;
+      const dy = event.clientY - drag.startClientY;
+      if (dx !== 0 || dy !== 0) {
+        onCommitMove(card.id, dx, dy);
+      }
     }
 
     clearDragState(event);
@@ -270,6 +293,10 @@ function CardViewComponent({
         WebkitUserSelect: isEditing ? "text" : "none",
         left: card.x,
         top: card.y,
+        // Only the opt-in path renders temporary movement outside DocumentV1.
+        transform: onCommitMove && isDragging
+          ? `translate(${previewOffset.x}px, ${previewOffset.y}px)`
+          : undefined,
         width: markerMode ? 10 : 220,
         minHeight: markerMode ? 10 : compactMode ? 52 : 80,
         padding: markerMode ? 0 : compactMode ? "8px 10px" : 12,
