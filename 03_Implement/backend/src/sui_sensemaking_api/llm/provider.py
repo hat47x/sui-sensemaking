@@ -299,7 +299,12 @@ class ProviderDisabledError(ProviderError):
         return base
 
 
-ProviderErrorCode = Literal["provider_timeout", "provider_validation", "provider_unavailable"]
+ProviderErrorCode = Literal[
+    "provider_timeout",
+    "provider_validation",
+    "provider_unavailable",
+    "provider_request_too_large",
+]
 
 
 class ProviderRequestError(ProviderError):
@@ -332,6 +337,12 @@ class ProviderRequestError(ProviderError):
     @classmethod
     def validation(cls, message: str, metadata: LLMCallMetadata) -> "ProviderRequestError":
         return cls(message, metadata, code="provider_validation")
+
+    @classmethod
+    def request_too_large(cls, message: str, metadata: LLMCallMetadata) -> "ProviderRequestError":
+        # Raised before any transport: the document was not sent. Kept distinct from
+        # provider_validation so the UI does not blame the AI's response.
+        return cls(message, metadata, code="provider_request_too_large")
 
 
 def _now_utc_iso() -> str:
@@ -532,7 +543,7 @@ def _serialize_http_provider_request(
             metadata,
         ) from None
     if len(serialized) > MAX_LLM_PROVIDER_REQUEST_BYTES:
-        raise ProviderRequestError.validation(
+        raise ProviderRequestError.request_too_large(
             f"{provider_name} request exceeded the size limit",
             metadata,
         )
@@ -896,7 +907,7 @@ def _generate_via_openai_chat(
     }
     serialized = json.dumps(payload, allow_nan=False, ensure_ascii=False).encode("utf-8")
     if len(serialized) > MAX_LLM_PROVIDER_REQUEST_BYTES:
-        raise ProviderRequestError.validation(
+        raise ProviderRequestError.request_too_large(
             f"{provider_name} request exceeded the size limit",
             metadata,
         )
@@ -1101,7 +1112,7 @@ def generate_with_fallback(
     try:
         response = provider.generate(req)
     except ProviderRequestError as exc:
-        if exc.code == "provider_validation" or not settings.llm_fallback_to_none:
+        if exc.code in ("provider_validation", "provider_request_too_large") or not settings.llm_fallback_to_none:
             raise
         fallback_metadata = LLMCallMetadata(
             provider_kind="none",

@@ -133,3 +133,25 @@ def test_ai_routes_map_provider_disabled_to_503_with_common_contract() -> None:
     finally:
         settings.api_key = original_api_key
         ai.generate_with_fallback = original_generate
+
+
+def test_ai_routes_map_provider_request_too_large_to_413_without_blaming_the_response() -> None:
+    original_api_key = settings.api_key
+    original_generate = ai.generate_with_fallback
+
+    def _raise_too_large(_):
+        raise ProviderRequestError.request_too_large("request exceeded the size limit", _metadata())
+
+    settings.api_key = None
+    ai.generate_with_fallback = _raise_too_large
+
+    try:
+        with TestClient(app) as client:
+            response = client.post("/ai/suggest-merges", json=_merge_payload())
+        assert response.status_code == 413
+        detail = response.json()["detail"]
+        assert detail["code"] == "provider_request_too_large"
+        assert detail["model_id"] == "model-a"
+    finally:
+        settings.api_key = original_api_key
+        ai.generate_with_fallback = original_generate

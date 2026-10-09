@@ -134,7 +134,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 - `provider_validation`は、フォールバックが設定済みかどうかに関係なく、`none`へ変換せず、そのまま`422`として返す。リクエストやレスポンスの契約違反を、プロバイダ不達の`503`に隠さない。既存のフォールバックの対象になり得るのは、タイムアウトと利用不可だけである。
 - `large-scale`（設定エイリアスの `external`/`large_scale` も、同じプロバイダを指す）が無効に設定されているときは、フォールバックしない。`ProviderRequestError.unavailable`（`503`）を返す。
 - 失敗したときも、`metadata.trace_id` を監査ログに残す（`ProviderError.to_contract()`）。
-- HTTPステータスの対応: `provider_timeout→504` / `provider_validation→422` / `provider_unavailable→503`（`ProviderDisabledError` も `503` で、`disabled_reason` が付く）。
+- HTTPステータスの対応: `provider_timeout→504` / `provider_validation→422` / `provider_request_too_large→413`（送信前に拒否し、文書は外部へ送らない。フォールバックしない） / `provider_unavailable→503`（`ProviderDisabledError` も `503` で、`disabled_reason` が付く）。
 
 ### 4.4 Phase-2（未配線・Pending）
 
