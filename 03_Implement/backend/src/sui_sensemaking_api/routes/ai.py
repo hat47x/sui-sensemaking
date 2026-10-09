@@ -630,6 +630,14 @@ def _validate_check_narrative_input(payload: CheckNarrativeRequest) -> None:
         raise HTTPException(status_code=422, detail="basedOnReadingOrder included unknown id")
 
 
+# Free-text (card / island text) is written as raw Unicode so the model sees the
+# words, not \uXXXX escapes. json.dumps' default ASCII escaping inflates Japanese
+# text roughly 2.7x in the prompt, which pushes check-narrative toward the 1 MiB
+# provider envelope limit much sooner. The JSON string quoting is kept.
+def _prompt_text(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
 def _build_narrative_check_prompt(payload: CheckNarrativeRequest) -> str:
     cards_by_id = {card.id: card for card in payload.doc.cards}
     islands_by_id = {island.id: island for island in payload.doc.islands}
@@ -640,12 +648,12 @@ def _build_narrative_check_prompt(payload: CheckNarrativeRequest) -> str:
         if item_id in islands_by_id:
             island = islands_by_id[item_id]
             reading_order_lines.append(
-                f'- {index}. island id="{island.id}", title={json.dumps(island.title or "")}, cardIds={json.dumps(island.cardIds)}'
+                f'- {index}. island id="{island.id}", title={_prompt_text(island.title or "")}, cardIds={json.dumps(island.cardIds)}'
             )
         elif item_id in cards_by_id:
             card = cards_by_id[item_id]
             reading_order_lines.append(
-                f'- {index}. card id="{card.id}", text={json.dumps(card.text)}'
+                f'- {index}. card id="{card.id}", text={_prompt_text(card.text)}'
             )
         else:
             reading_order_lines.append(f'- {index}. unknown id="{item_id}"')
@@ -657,10 +665,10 @@ def _build_narrative_check_prompt(payload: CheckNarrativeRequest) -> str:
         ]
         card_texts = [card.text for card in island_cards]
         island_lines.append(
-            f'- id="{island.id}", title={json.dumps(island.title or "")}, cardIds={json.dumps(island.cardIds)}, cardTexts={json.dumps(card_texts)}'
+            f'- id="{island.id}", title={_prompt_text(island.title or "")}, cardIds={json.dumps(island.cardIds)}, cardTexts={_prompt_text(card_texts)}'
         )
 
-    card_lines = [f'- id="{card.id}", text={json.dumps(card.text)}' for card in payload.doc.cards]
+    card_lines = [f'- id="{card.id}", text={_prompt_text(card.text)}' for card in payload.doc.cards]
 
     # AI-IR-CHECK-NARRATIVE-RELATIONS-01: the A-side diagram's explicit
     # causal/negate/mutual/equivalence/related edges are route-required

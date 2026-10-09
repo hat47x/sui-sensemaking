@@ -79,13 +79,20 @@ def test_check_narrative_prompt_tells_ab_check_to_use_relations_without_losing_e
 
     # Existing whole-diagram coverage remains present; adding relations is not
     # permission to shrink the card/island/read-order inputs yet.
-    # Card/island text is embedded via json.dumps, which ASCII-escapes
-    # non-ASCII text by default -- match that actual encoding rather than
-    # asserting on literal Japanese the prompt never contains verbatim.
+    # Card/island text is embedded as raw Unicode (ensure_ascii=False) so the
+    # model reads the words, not \\uXXXX escapes; see _prompt_text.
     assert '1. island id="i1"' in prompt
     assert '2. island id="i2"' in prompt
-    assert f'id="c1", text={json.dumps("需要が増えた")}' in prompt
-    assert f'id="c2", text={json.dumps("待ち時間が伸びた")}' in prompt
-    assert f'id="c3", text={json.dumps("別経路では待ち時間が縮んだ")}' in prompt
-    assert f'id="i1", title={json.dumps("需要と待ち時間")}' in prompt
-    assert f'id="i2", title={json.dumps("別経路")}' in prompt
+    assert f'id="c1", text={json.dumps("需要が増えた", ensure_ascii=False)}' in prompt
+    assert f'id="c2", text={json.dumps("待ち時間が伸びた", ensure_ascii=False)}' in prompt
+    assert f'id="c3", text={json.dumps("別経路では待ち時間が縮んだ", ensure_ascii=False)}' in prompt
+    assert f'id="i1", title={json.dumps("需要と待ち時間", ensure_ascii=False)}' in prompt
+    assert f'id="i2", title={json.dumps("別経路", ensure_ascii=False)}' in prompt
+
+
+def test_check_narrative_prompt_writes_japanese_text_without_unicode_escapes() -> None:
+    prompt = _build_narrative_check_prompt(_payload())
+
+    assert "需要が増えた" in prompt
+    assert "需要と待ち時間" in prompt
+    assert "\\u" not in prompt
