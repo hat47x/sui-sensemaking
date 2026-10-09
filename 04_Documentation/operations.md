@@ -10,11 +10,11 @@ Docker Composeの標準構成は、次の3つのサービスです。
 
 | サービス | 役割 |
 | --- | --- |
-| `web` | Reactのfrontendと、nginxによる中継 |
-| `api` | FastAPIのbackend |
+| `web` | Reactで作った画面と、nginxによる通信の中継 |
+| `api` | FastAPIによるサーバー側の処理 |
 | `db` | PostgreSQL |
 
-標準のURLは `http://localhost:8080` です。nginxは `/api/` をbackendへ転送します。`web` はloopback（`127.0.0.1`）にだけ公開されるため、このURLを開けるのは、起動したホスト自身だけです。別の端末やLANから使うときは、認証プロキシとTLSを備えた別の構成が必要です。
+標準のURLは `http://localhost:8080` です。nginxは`/api/`へのアクセスをサーバー側の処理へ転送します。`web`はループバックアドレス（`127.0.0.1`）でのみ公開されるため、このURLを開けるのは、起動したホスト自身だけです。別の端末やLANから使うときは、認証プロキシとTLSを備えた別の構成が必要です。
 
 ## 運用で見るもの
 
@@ -22,11 +22,11 @@ Docker Composeの標準構成は、次の3つのサービスです。
 
 1. 画面が開くか。
 2. APIが `/api/healthz` に応答するか（死活確認）。応答するのに動作がおかしいときは、`/api/readyz` でDBとスキーマを確認します。
-3. DBが正常（healthy）か。
+3. DBが正常な状態（healthy）か。
 4. 保存と再読み込みができるか。
 5. LLMや監査ログなど、外部接続を有効にした部分だけ、追加で確認します。
 
-最初からすべてのログを読む必要はありません。利用者に影響が出る入口から、順に確認します。
+最初からすべてのログを読む必要はありません。利用者が操作する画面から順に確認します。
 
 画面の入口は、次の状態を目安にします。起動直後に「作業を開始」パネルが表示され、新しい文書、サンプル、`document.json`、レビューパックの入口と、SafeModeの状態を確認できれば、利用者は次の操作を選べます。
 
@@ -38,7 +38,7 @@ Docker Composeの標準構成は、次の3つのサービスです。
 
 ## 実行プロファイルの選択
 
-運用手順を始める前に、対象環境のプロファイルを決めます。プロファイルの詳細は、GitHub上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。ここでは、運用での使い分けだけを示します。
+運用手順を実行する前に、対象環境で使う設定の組み合わせ（プロファイル）を決めます。プロファイルの詳細は、GitHub上の [runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md) を参照してください。ここでは、運用での使い分けだけを示します。
 
 - 開発での再現や不具合の切り分け: `local-dev`
 - Composeでの評価と受け入れ確認: `evaluation`
@@ -51,9 +51,9 @@ Docker Composeの標準構成は、次の3つのサービスです。
 - `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE=read_only` または `deny`
 - 外部接続（LLM、監査ログ、`external_http`）を有効にするときは、接続先、タイムアウト、秘密情報の管理方法を確認し、記録に残します。
 
-### SaaSで複数のAPIインスタンスを動かす場合
+### SaaSで複数のAPIサーバーを動かす場合
 
-`saas-multitenant` では、BFFの認証セッションの正本を、PostgreSQLの `saas_auth_sessions` で共有します。各行は、サーバー側でハッシュ化した認証セッションの識別子に対して、本人（principal）、発行者（issuer）、subject、アクティブなテナント、`tenantSessionVersion`、作成時刻、最終利用時刻、失効時刻を持ちます。APIインスタンスを増やしても同じPostgreSQLを参照するので、同じ利用者のリクエストが同じインスタンスに届くこと（スティッキーセッション）に、正しさを頼ってはいけません。
+`saas-multitenant`では、BFFが管理する認証セッションの正本を、PostgreSQLの`saas_auth_sessions`で共有します。各行は、サーバー側でハッシュ化した認証セッションの識別子に対して、利用者（principal）、発行者（issuer）、認証の対象者（subject）、現在利用中のテナント、`tenantSessionVersion`、作成時刻、最終利用時刻、失効時刻を持ちます。APIサーバーを増やしても同じPostgreSQLを参照するので、同じ利用者の要求を常に同じサーバーで処理する仕組み（スティッキーセッション）に、正しさを依存させてはいけません。
 
 BFFのCookie経路では、次を運用の前提にします。
 
@@ -64,7 +64,7 @@ BFFのCookie経路では、次を運用の前提にします。
 - 共有の認証テーブルのマイグレーションが済んでいない場合や、起動時にDBへ接続できない場合は、SaaSのAPIは起動を拒否します。稼働中にDBを失ったときも、セッションの解決やテナントの切り替えを、メモリ上の状態で代用せず、処理を続けず、失敗として扱います。
 - JWKSのキャッシュは、インスタンスごとに持って構いません。安全上の境界は共有しませんが、インスタンスが増えるほどブローカーへの取得回数が増えます。取得の失敗や集中が疑われるときは、ブローカー側の状態も確認します。
 
-#### Bearerトークンによる互換経路
+#### Bearerトークンを使う互換経路
 
 明示的なBearer認証情報を使う互換経路は、SPAからBFFのCookie経路への移行が終わるまで残ります。この経路では、次を別々の安全上の境界として扱います。
 
