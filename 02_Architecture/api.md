@@ -98,6 +98,7 @@ MVPの実装境界では、クライアントがIDを指定して **PUT** `/docs
 - リクエストボディ：`DocumentV1`は次のとおりです。
 - レスポンス：保存後の `DocumentV1`
 - 検証エラー：400
+- `reviewAttribution.reviewState` が `human_reviewed` のとき、サーバが検査するのは `reviewerRef` と認証主体（`actor_ref`）が一致することだけである。一致しないとき、または認証主体がないときは403を返す。`human_reviewed` という申告が人の実際の判断に基づくかは、サーバでは検証しない。
 
 ---
 
@@ -111,6 +112,8 @@ Document本体の標準CRUDとは別に、共有・コンテキスト操作の�
 - レスポンス: `{ "status": "accepted" }`
 - 目的: エクスポート完了通知を監査連携アダプタへ委譲（監査送信失敗でも本体機能を阻害しない）
 - SEC-AUDIT-DUP-01: 同一論理操作（`tenant/doc/exportKind`）の重複POSTは、`SUI_AUDIT_DEDUP_WINDOW_SECONDS`（既定5秒）内で外部シンクへ1回しか送出されない（クライアント再送・二重クリックの重複集計を防止）。HTTP応答はいずれも `{ "status": "accepted" }` のまま。
+- `safeMode` は呼び出し側の申告値であり、サーバは、この値が実際の書き出し状態と一致するかを検証しない。
+- 現行の扱い: `safeMode: false` は受理され、監査イベントの `safeMode` に `false` として記録される（監査の送出が無効な構成では、外部へは送られない）。`safeMode: true` は、既定の構成（`SUI_ACCESS_CONTROL_ADAPTER=noop`）で確認したところ、ローカルの SafeMode 判定により `403`（`Access denied: safe_mode`）で拒否され、監査イベントは作られない（2026-10-09 確認）。この組み合わせの扱いは、仕様として確定していない。
 
 **POST** `/docs/{doc_id}/context-audit`
 
@@ -750,10 +753,10 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 **POST** `/ai/suggest-document-title`
 
 - リクエスト: `SuggestDocumentTitleRequest`
-  - `islandTitles: string[]`: 島の表札一覧（最大50件）
+  - `islandTitles: string[]`: 島の表札一覧（最大50件）。審査状態はサーバでは検証せず、フロントエンドが `titleReviewed === true` の島の表札だけを送る。
   - `cardTexts: string[]`: レビュー済みカード本文（最大50件）
   - `currentTitle?: string`: 現在のタイトル
-  - `textReviewed?: boolean`: `cardTexts` が人間レビュー済みか（`SEC-AI-SAFEMODE-02`。**既定false = 安全側で拒否**。未指定・falseは422）
+  - `textReviewed?: boolean`: `cardTexts` が人間レビュー済みか（`SEC-AI-SAFEMODE-02`。**既定false = 安全側で拒否**。未指定・falseは **422 `unreviewed_text_not_allowed`** になる）。フロントエンド（`client.ts` の `allDocumentCardsReviewed`）は、`cardTexts` の抽出元である文書の全カード（`document.cards`）がすべて `textReviewed === true` のときだけ `true` を送る。フロントエンドは `allowUnreviewedText` を送らないため、1枚でも未レビューのカードがあれば、`cardTexts` を審査済みの本文だけに絞っていても422になる。カードが0件の文書では、全件条件が空真となり `true` が送られる。
   - `allowUnreviewedText?: boolean`: 未レビュー本文の送出許可（`SEC-AI-SAFEMODE-01`）
 - レスポンス: `SuggestDocumentTitleResponse`
   - `candidates: DocumentTitleCandidate[]`: タイトル候補（1〜3件）
@@ -769,7 +772,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 
 **POST** `/docs/{doc_id}/export-audit`
 
-- 共有・書き出しイベント（exportKindを含む）を監査記録する。SafeMode適用後の書き出し境界を通過した場合のみ記録される。
+- 共有・書き出しイベント（exportKindを含む）を監査記録する。SafeMode適用後の書き出し境界を通過した場合のみ記録される（`safeMode` 申告値の扱いは§2.4を参照）。
 - エラー: 404（doc_id不存在）
 
 **GET** `/docs/{doc_id}/similar-candidate-groups`
