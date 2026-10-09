@@ -128,15 +128,16 @@ def test_context_budget_separates_measurement_cap_from_production_output_reserve
     budget = result["context_budget"]
     assert budget["measurement_request_max_tokens"] == 1
     assert budget["current_production_output_reserve_tokens"] == 2_000
-    assert budget["output_reserve_source"] == "LLMRequest.default.max_tokens"
+    assert budget["output_reserve_source"].startswith("LLMRequest.default.max_tokens")
+    assert budget["production_output_reserve_tokens_by_task"]["check_narrative"] == 16_000
     assert budget["context_window_tokens"] is None
     assert budget["core_hard_context_fit"] is None
     assert budget["sufficient_headroom_policy"] is None
     check = budget["route_requirements"]["check-narrative"]
     assert check == {
         "provider_reported_input_tokens": 11_000,
-        "output_reserve_tokens": 2_000,
-        "minimum_context_tokens": 13_000,
+        "output_reserve_tokens": 16_000,
+        "minimum_context_tokens": 27_000,
         "remaining_context_tokens": None,
         "hard_context_fit": None,
     }
@@ -158,7 +159,7 @@ def test_context_window_option_reports_hard_fit_without_inventing_margin() -> No
     assert budget["route_requirements"]["suggest-layout-route-b"]["minimum_context_tokens"] == 10_000
     assert budget["route_requirements"]["suggest-layout-route-b"]["remaining_context_tokens"] == 0
     assert budget["route_requirements"]["suggest-layout-route-b"]["hard_context_fit"] is True
-    assert budget["route_requirements"]["check-narrative"]["remaining_context_tokens"] == -3_000
+    assert budget["route_requirements"]["check-narrative"]["remaining_context_tokens"] == -17_000
     assert budget["route_requirements"]["check-narrative"]["hard_context_fit"] is False
     assert budget["sufficient_headroom_policy"] is None
 

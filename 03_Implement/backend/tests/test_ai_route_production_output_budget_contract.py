@@ -61,11 +61,19 @@ def test_measured_production_tasks_share_the_analyzer_output_reserve_contract() 
         call = calls[0]
         assert _string_keyword(call, "task") == expected_task
 
-        # No route-specific max_tokens override is currently allowed here. If a
-        # route gains one, R39's single production output reserve is no longer a
-        # valid model of all measured routes and the analyzer must become
-        # route-specific before this regression is updated.
-        assert not any(keyword.arg == "max_tokens" for keyword in call.keywords), (
-            f"{function.__name__} now overrides max_tokens; update the provider "
-            "measurement analyzer to use the production route's actual reserve"
+        # A route may override max_tokens only when the analyzer declares that task's
+        # reserve. The override must be the named FINAL_JUDGEMENT_MAX_TOKENS constant
+        # and must equal the analyzer's reserve for that task (R39/R43 accounting).
+        max_tokens = [keyword.value for keyword in call.keywords if keyword.arg == "max_tokens"]
+        if not max_tokens:
+            assert (
+                analysis.PRODUCTION_OUTPUT_RESERVE_TOKENS_BY_TASK[expected_task]
+                == production_default
+            ), f"{function.__name__} uses the default cap; analyzer reserve must match it"
+            continue
+        assert len(max_tokens) == 1
+        assert isinstance(max_tokens[0], ast.Name)
+        assert max_tokens[0].id == "FINAL_JUDGEMENT_MAX_TOKENS", (
+            f"{function.__name__} overrides max_tokens with an undeclared value"
         )
+        assert analysis.PRODUCTION_OUTPUT_RESERVE_TOKENS_BY_TASK[expected_task] == ai.FINAL_JUDGEMENT_MAX_TOKENS

@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from sui_sensemaking_api.llm.provider import LLMRequest
+from sui_sensemaking_api.llm.provider import FINAL_JUDGEMENT_MAX_TOKENS, LLMRequest
 
 try:
     from scripts.measure_ai_route_provider_tokens import (
@@ -74,13 +74,36 @@ LAYOUT_C_ROUTES = tuple(
 )
 LAYOUT_C_REQUESTS = len(LAYOUT_C_ROUTES)
 MEASUREMENT_REQUEST_MAX_TOKENS = 1
-# The four measured production tasks currently rely on LLMRequest's default
-# output cap. Keep the comparison reserve derived from that source instead of
-# copying the literal 2000 into token-budget arithmetic. Measurement requests
-# deliberately use max_tokens=1 only to minimize external measurement cost.
-CURRENT_PRODUCTION_OUTPUT_RESERVE_TOKENS = LLMRequest(
+# Production output reserve per measured task. Three tasks use LLMRequest's default
+# cap; check_narrative declares FINAL_JUDGEMENT_MAX_TOKENS because its reasoning tokens
+# count against max_tokens. test_ai_route_production_output_budget_contract pins that
+# each route's LLMRequest uses exactly the constant listed here.
+# Measurement requests deliberately use max_tokens=1 only to minimize external cost.
+DEFAULT_PRODUCTION_OUTPUT_RESERVE_TOKENS = LLMRequest(
     task="context_budget_probe", prompt="probe"
 ).max_tokens
+PRODUCTION_OUTPUT_RESERVE_TOKENS_BY_TASK = {
+    "suggest_card_groups": DEFAULT_PRODUCTION_OUTPUT_RESERVE_TOKENS,
+    "re_layout": DEFAULT_PRODUCTION_OUTPUT_RESERVE_TOKENS,
+    "generate_narrative": DEFAULT_PRODUCTION_OUTPUT_RESERVE_TOKENS,
+    "check_narrative": FINAL_JUDGEMENT_MAX_TOKENS,
+}
+# Kept as the default-cap value for continuity with earlier reports.
+CURRENT_PRODUCTION_OUTPUT_RESERVE_TOKENS = DEFAULT_PRODUCTION_OUTPUT_RESERVE_TOKENS
+
+
+def production_task_for_route(name: str) -> str:
+    if name in CORE_ROUTE_TASKS:
+        return CORE_ROUTE_TASKS[name]
+    if name == GROUPS_A2_ROUTE:
+        return "suggest_card_groups"
+    if name.startswith(LAYOUT_C_PREFIX):
+        return "re_layout"
+    raise ValueError(f"unknown measured route: {name}")
+
+
+def output_reserve_for_route(name: str) -> int:
+    return PRODUCTION_OUTPUT_RESERVE_TOKENS_BY_TASK[production_task_for_route(name)]
 
 
 def _int_token(row: dict[str, Any]) -> int | None:
@@ -217,7 +240,8 @@ def _context_budget_summary(
     route_requirements: dict[str, dict[str, Any]] = {}
     for name in sorted(tokens):
         input_tokens = tokens[name]
-        minimum = input_tokens + CURRENT_PRODUCTION_OUTPUT_RESERVE_TOKENS
+        reserve = output_reserve_for_route(name)
+        minimum = input_tokens + reserve
         remaining = (
             None
             if context_window_tokens is None
@@ -225,7 +249,7 @@ def _context_budget_summary(
         )
         route_requirements[name] = {
             "provider_reported_input_tokens": input_tokens,
-            "output_reserve_tokens": CURRENT_PRODUCTION_OUTPUT_RESERVE_TOKENS,
+            "output_reserve_tokens": reserve,
             "minimum_context_tokens": minimum,
             "remaining_context_tokens": remaining,
             "hard_context_fit": None if remaining is None else remaining >= 0,
@@ -237,7 +261,7 @@ def _context_budget_summary(
         if name in route_requirements
     ]
     layout_c_minimum_context = (
-        max(layout_c_tokens) + CURRENT_PRODUCTION_OUTPUT_RESERVE_TOKENS
+        max(layout_c_tokens) + PRODUCTION_OUTPUT_RESERVE_TOKENS_BY_TASK["re_layout"]
         if len(layout_c_tokens) == LAYOUT_C_REQUESTS
         else None
     )
@@ -253,7 +277,12 @@ def _context_budget_summary(
         "current_production_output_reserve_tokens": (
             CURRENT_PRODUCTION_OUTPUT_RESERVE_TOKENS
         ),
-        "output_reserve_source": "LLMRequest.default.max_tokens",
+        "production_output_reserve_tokens_by_task": dict(
+            PRODUCTION_OUTPUT_RESERVE_TOKENS_BY_TASK
+        ),
+        "output_reserve_source": (
+            "LLMRequest.default.max_tokens; check_narrative uses FINAL_JUDGEMENT_MAX_TOKENS"
+        ),
         "context_window_tokens": context_window_tokens,
         "context_window_source": normalized_context_window_source,
         "context_window_source_kind": (
