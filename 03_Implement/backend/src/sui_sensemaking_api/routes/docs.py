@@ -666,6 +666,50 @@ def get_document(
     return _validate_document_payload_with_a1_contract(payload)
 
 
+def _document_precondition_error(*, status_code: int, code: str, message: str) -> HTTPException:
+    return HTTPException(status_code=status_code, detail={"code": code, "message": message})
+
+
+def _require_saas_document_precondition(
+    *,
+    if_match: str | None,
+    if_none_match: str | None,
+    document_exists: bool,
+) -> None:
+    if if_match is not None and if_none_match is not None:
+        raise _document_precondition_error(
+            status_code=400,
+            code="document_precondition_conflict",
+            message="If-Match and If-None-Match are mutually exclusive.",
+        )
+    if if_none_match is not None:
+        if if_none_match.strip() != "*":
+            raise _document_precondition_error(
+                status_code=400,
+                code="document_precondition_invalid",
+                message="If-None-Match must be '*' for create.",
+            )
+        if document_exists:
+            raise _document_precondition_error(
+                status_code=409,
+                code="document_already_exists",
+                message="Document already exists.",
+            )
+        return
+    if if_match is None:
+        raise _document_precondition_error(
+            status_code=428,
+            code="document_precondition_required",
+            message="If-Match (update) or If-None-Match: * (create) is required.",
+        )
+    if "*" in _parse_if_match(if_match):
+        raise _document_precondition_error(
+            status_code=428,
+            code="document_precondition_required",
+            message="A wildcard If-Match cannot bypass the revision check.",
+        )
+
+
 @router.put("/{doc_id}", response_model=DocumentPayload)
 def put_document(
     doc_id: str,
@@ -673,6 +717,7 @@ def put_document(
     request: Request,
     document_payload: object = Body(...),
     if_match: str | None = Header(default=None, alias="If-Match"),
+    if_none_match: str | None = Header(default=None, alias="If-None-Match"),
     x_read_only: str | None = Header(default=None, alias="X-Read-Only"),
     db: Session = Depends(get_db),
 ) -> DocumentPayload:
@@ -729,6 +774,16 @@ def put_document(
                 "code": "document_archived",
                 "message": "Document is archived and cannot be modified.",
             },
+        )
+
+    if tenant_session_precondition_required(request):
+        # ADR-0092: the shared SaaS profile never overwrites silently. An update
+        # carries a concrete If-Match revision; a create carries If-None-Match: *.
+        # The single-tenant profiles keep the documented last-write-wins path.
+        _require_saas_document_precondition(
+            if_match=if_match,
+            if_none_match=if_none_match,
+            document_exists=doc_row is not None,
         )
 
     if if_match is not None:

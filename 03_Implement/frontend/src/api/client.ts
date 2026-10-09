@@ -425,6 +425,10 @@ export async function putDocument(
   };
   if (ifMatch) {
     headers["If-Match"] = formatIfMatchHeader(ifMatch);
+  } else if (options.tenantSessionContext !== undefined) {
+    // ADR-0092: the shared SaaS profile accepts a revision-less PUT only as a
+    // create, which must never overwrite an existing document.
+    headers["If-None-Match"] = "*";
   }
 
   const response = await fetch(`${API_BASE}/docs/${docId}`, {

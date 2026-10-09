@@ -297,22 +297,89 @@ class TestSaasE2eTenantIsolation:
             assert resp_b.status_code == 200, f"body={resp_b.json()}"
             assert resp_b.json()["title"] == "Tenant B Document"
 
+    @staticmethod
+    def _put_payload(doc_id: str, title: str) -> dict:
+        return {
+            "version": 1, "id": doc_id, "title": title,
+            "createdAt": TIMESTAMP, "updatedAt": TIMESTAMP,
+            "transform": {"panX": 0, "panY": 0, "zoom": 1},
+            "cards": [], "edges": [], "islands": [],
+        }
+
+    def test_put_requires_a_revision_precondition(self, tmp_path) -> None:
+        """ADR-0092: the shared SaaS profile never overwrites silently."""
+        pk, jwk = _generate_rs256_key_pair()
+        with _saas_e2e_client(tmp_path, jwk, pk) as (client, persister):
+            headers = self._auth_headers(
+                _sign_jwt(private_key=pk, tenant_ref="org-123"),
+                self._session_version(persister),
+            )
+            payload = self._put_payload("shared-doc", "Silent overwrite")
+
+            missing = client.put("/docs/shared-doc", headers=headers, json=payload)
+            wildcard = client.put(
+                "/docs/shared-doc", headers={**headers, "If-Match": "*"}, json=payload
+            )
+            stale = client.put(
+                "/docs/shared-doc", headers={**headers, "If-Match": '"stale"'}, json=payload
+            )
+            unchanged = client.get("/docs/shared-doc", headers=headers)
+
+        assert missing.status_code == 428
+        assert missing.json()["detail"]["code"] == "document_precondition_required"
+        assert wildcard.status_code == 428
+        assert stale.status_code == 409
+        assert unchanged.json()["title"] == "Tenant A Document"
+
+    def test_create_uses_if_none_match_and_never_overwrites(self, tmp_path) -> None:
+        pk, jwk = _generate_rs256_key_pair()
+        with _saas_e2e_client(tmp_path, jwk, pk) as (client, persister):
+            headers = {
+                **self._auth_headers(
+                    _sign_jwt(private_key=pk, tenant_ref="org-123"),
+                    self._session_version(persister),
+                ),
+                "If-None-Match": "*",
+            }
+            created = client.put(
+                "/docs/brand-new-doc",
+                headers=headers,
+                json=self._put_payload("brand-new-doc", "Created"),
+            )
+            again = client.put(
+                "/docs/brand-new-doc",
+                headers=headers,
+                json=self._put_payload("brand-new-doc", "Created twice"),
+            )
+            existing = client.put(
+                "/docs/shared-doc",
+                headers=headers,
+                json=self._put_payload("shared-doc", "Overwrite by create"),
+            )
+
+        assert created.status_code == 200, f"body={created.json()}"
+        assert again.status_code == 409
+        assert again.json()["detail"]["code"] == "document_already_exists"
+        assert existing.status_code == 409
+
     def test_put_is_tenant_scoped(self, tmp_path) -> None:
         """AC-8: PUT updates only the resolved tenant's row."""
         pk, jwk = _generate_rs256_key_pair()
         with _saas_e2e_client(tmp_path, jwk, pk) as (client, persister):
             sv = self._session_version(persister)
             token_a = _sign_jwt(private_key=pk, tenant_ref="org-123")
-            updated = client.put(
+            current = client.get(
                 "/docs/shared-doc",
                 headers=self._auth_headers(token_a, sv),
-                json={
-                    "version": 1, "id": "shared-doc",
-                    "title": "Tenant A Updated",
-                    "createdAt": TIMESTAMP, "updatedAt": TIMESTAMP,
-                    "transform": {"panX": 0, "panY": 0, "zoom": 1},
-                    "cards": [], "edges": [], "islands": [],
+            )
+            assert current.status_code == 200, f"body={current.json()}"
+            updated = client.put(
+                "/docs/shared-doc",
+                headers={
+                    **self._auth_headers(token_a, sv),
+                    "If-Match": current.headers["ETag"],
                 },
+                json=self._put_payload("shared-doc", "Tenant A Updated"),
             )
             assert updated.status_code == 200, f"body={updated.json()}"
 
