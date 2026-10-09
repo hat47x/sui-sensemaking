@@ -38,6 +38,13 @@ MVPでは以下のいずれかで簡素に扱う。
 
 `If-Match` が無い場合はLWWとし、`If-Match` がある場合は保存済み `ETag` と一致したときだけ更新する。
 
+`saas-multitenant` プロファイルでは、`PUT /docs/{id}` を後勝ちにしない（`ADR-0092`）。
+
+- 更新は具体的な `If-Match` を必須とする。欠落、または `If-Match: *` は `428 document_precondition_required` で拒否する。`ETag` が一致しなければ `409` とする。
+- 作成は `If-None-Match: *` を必須とする。文書が既に存在すれば `409 document_already_exists` で上書きしない。`*` 以外は `400 document_precondition_invalid`。
+- `If-Match` と `If-None-Match` の同時指定は `400 document_precondition_conflict`。
+- single-tenant 系のプロファイル（`local-dev` / `evaluation` / `enterprise-production`）は、従来どおりLWWを維持する。
+
 ---
 
 ## 2. エンドポイント

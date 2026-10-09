@@ -126,6 +126,22 @@ describe("tenant-scoped document request precondition", () => {
     });
   });
 
+  it("creates a document with If-None-Match only inside a tenant session", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(JSON.stringify(createDocument()), { status: 200 }));
+
+    await putDocument("doc-1", createDocument(), undefined, { tenantSessionContext });
+    await putDocument("doc-1", createDocument());
+    await putDocument("doc-1", createDocument(), "etag-v1", { tenantSessionContext });
+
+    const headersOf = (index: number) => (fetchMock.mock.calls[index]?.[1] as RequestInit).headers as Record<string, string>;
+    expect(headersOf(0)["If-None-Match"]).toBe("*");
+    expect(headersOf(0)["If-Match"]).toBeUndefined();
+    expect(headersOf(1)["If-None-Match"]).toBeUndefined();
+    expect(headersOf(2)["If-Match"]).toBe('"etag-v1"');
+    expect(headersOf(2)["If-None-Match"]).toBeUndefined();
+  });
+
   it("attaches the version to every document-content AI mutation", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(JSON.stringify({
