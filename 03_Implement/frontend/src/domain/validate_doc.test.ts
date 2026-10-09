@@ -346,6 +346,73 @@ describe("validateDocumentV1Strict", () => {
     expect(missingAltText.ok).toBe(false);
   });
 
+  it("strict: drops a string imageRef on preset_svg / emoji from the returned document and keeps hand_drawn imageRef (DOMAIN-VISUAL-CUE-01, schemas.md §19.3)", () => {
+    const input = {
+      ...validDocument,
+      islands: [
+        {
+          id: "i_preset",
+          cardIds: ["c1"],
+          representativeCue: { kind: "preset_svg", cueId: "place", altText: "place", imageRef: "should-be-dropped" },
+        },
+        {
+          id: "i_emoji",
+          cardIds: ["c1"],
+          representativeCue: { kind: "emoji", cueId: "📍", altText: "location", imageRef: "should-be-dropped" },
+        },
+        {
+          id: "i_hand_drawn",
+          cardIds: ["c1"],
+          representativeCue: { kind: "hand_drawn", cueId: "cue-1", altText: "sketch", imageRef: "idb-key-1" },
+        },
+      ],
+    };
+
+    const result = validateDocumentV1Strict(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const byId = (id: string) => result.document.islands.find((island) => island.id === id);
+    expect(byId("i_preset")?.representativeCue).toEqual({ kind: "preset_svg", cueId: "place", altText: "place" });
+    expect(byId("i_preset")?.representativeCue).not.toHaveProperty("imageRef");
+    expect(byId("i_emoji")?.representativeCue).toEqual({ kind: "emoji", cueId: "📍", altText: "location" });
+    expect(byId("i_emoji")?.representativeCue).not.toHaveProperty("imageRef");
+    expect(byId("i_hand_drawn")?.representativeCue).toEqual({
+      kind: "hand_drawn",
+      cueId: "cue-1",
+      altText: "sketch",
+      imageRef: "idb-key-1",
+    });
+
+    // The caller's object is not mutated; the strip happens only on the returned copy.
+    const inputPreset = input.islands[0].representativeCue as Record<string, unknown>;
+    expect(inputPreset.imageRef).toBe("should-be-dropped");
+  });
+
+  it("strict: rejects the whole document for a non-string imageRef, including null, and for an unknown cue key", () => {
+    for (const cue of [
+      { kind: "hand_drawn", cueId: "cue-1", altText: "sketch", imageRef: 123 },
+      { kind: "preset_svg", cueId: "place", altText: "place", imageRef: ["idb-key-1"] },
+      { kind: "user_image", cueId: "cue-3", altText: "photo", imageRef: null },
+    ]) {
+      const result = validateDocumentV1Strict({
+        ...validDocument,
+        islands: [{ id: "i1", cardIds: ["c1"], representativeCue: cue }],
+      });
+      expect(result.ok, JSON.stringify(cue)).toBe(false);
+      if (result.ok) return;
+      expect(result.errors).toContain("islands[0].representativeCue.imageRef: must be a string when provided");
+    }
+
+    const unknownKey = validateDocumentV1Strict({
+      ...validDocument,
+      islands: [{ id: "i1", cardIds: ["c1"], representativeCue: { kind: "emoji", cueId: "📍", altText: "location", extra: 1 } }],
+    });
+    expect(unknownKey.ok).toBe(false);
+    if (unknownKey.ok) return;
+    expect(unknownKey.errors).toContain("islands[0].representativeCue: unknown field 'extra'");
+  });
+
   it("keeps shape compatibility for rect and polygon islands", () => {
     const result = validateDocumentV1Strict({
       ...validDocument,

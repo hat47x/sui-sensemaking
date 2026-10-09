@@ -351,6 +351,33 @@ describe("deriveInquirySafeModeBundle", () => {
 });
 
 describe("deriveDocumentSafeModeProjection", () => {
+  it("keeps imageRef only for hand_drawn / user_image cues (schemas.md §19.3)", () => {
+    const cue = (kind: "preset_svg" | "emoji" | "hand_drawn", id: string) => ({
+      kind,
+      cueId: id,
+      altText: "alt",
+      imageRef: "idb-ref-" + id,
+    });
+    const document: DocumentV1 = {
+      version: 1,
+      id: "doc-imageref-safe",
+      createdAt: "2026-08-14T00:00:00.000Z",
+      updatedAt: "2026-08-14T00:00:00.000Z",
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: [{ id: "c1", text: "t", x: 0, y: 0 }],
+      edges: [],
+      islands: [
+        { id: "i1", cardIds: ["c1"], representativeCue: cue("preset_svg", "a") },
+        { id: "i2", cardIds: ["c1"], representativeCue: cue("emoji", "b") },
+        { id: "i3", cardIds: ["c1"], representativeCue: cue("hand_drawn", "c") },
+      ],
+    } as DocumentV1;
+    const safe = deriveDocumentSafeModeProjection(document);
+    expect(safe.islands[0].representativeCue?.imageRef).toBeUndefined();
+    expect(safe.islands[1].representativeCue?.imageRef).toBeUndefined();
+    expect(safe.islands[2].representativeCue?.imageRef).toBe("idb-ref-c");
+  });
+
   it("keeps the structural merge method and narrative cross-check counts (policy: preserve)", () => {
     const document: DocumentV1 = {
       version: 1,
