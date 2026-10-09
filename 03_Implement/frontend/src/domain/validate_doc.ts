@@ -551,7 +551,10 @@ function validateIsland(item: unknown, index: number, errors: string[]): item is
   }
   if (item.representativeCue !== undefined) {
     // DOMAIN-VISUAL-CUE-01 (schemas.md §19.3): strict mode rejects unknown
-    // keys and out-of-enum kind outright (fail-closed contract enforcement).
+    // keys, out-of-enum kind, and a non-string imageRef (null included) by
+    // rejecting the whole document. A string imageRef on a kind other than
+    // hand_drawn/user_image is accepted here and removed from the returned
+    // document by withIgnoredImageRefsRemoved().
     if (!isRecord(item.representativeCue)) {
       errors.push(`${path}.representativeCue: must be an object when provided`);
       valid = false;
@@ -1321,6 +1324,32 @@ function validateNarrative(item: unknown, index: number, errors: string[]): item
   return valid;
 }
 
+// DOMAIN-VISUAL-CUE-01 (schemas.md §19.3): imageRef is meaningful only for
+// hand_drawn / user_image. Strict validation has already confirmed that any
+// imageRef present is a string, so a string on another kind is removed here
+// rather than carried into the returned document. Only the islands that need
+// a change are copied; the input object is never mutated.
+function withIgnoredImageRefsRemoved(document: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(document.islands)) {
+    return document;
+  }
+  let changed = false;
+  const islands = document.islands.map((island: unknown) => {
+    if (!isRecord(island) || !isRecord(island.representativeCue)) {
+      return island;
+    }
+    const cue = island.representativeCue;
+    if (cue.imageRef === undefined || cue.kind === "hand_drawn" || cue.kind === "user_image") {
+      return island;
+    }
+    const cueWithoutImageRef: Record<string, unknown> = { ...cue };
+    delete cueWithoutImageRef.imageRef;
+    changed = true;
+    return { ...island, representativeCue: cueWithoutImageRef };
+  });
+  return changed ? { ...document, islands } : document;
+}
+
 export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1StrictResult {
   const errors: string[] = [];
 
@@ -1632,7 +1661,7 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
     return { ok: false, errors };
   }
 
-  return { ok: true, document: value as DocumentV1 };
+  return { ok: true, document: withIgnoredImageRefsRemoved(value) as DocumentV1 };
 }
 
 // ---------------------------------------------------------------------------
