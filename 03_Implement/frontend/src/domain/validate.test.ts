@@ -36,7 +36,7 @@ describe("validateImportedDocument", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.document.cards[0]?.holdState).toBe("pending");
+    expect(result.document.cards[0]?.holdState).toBe("held");
   });
 
   it("keeps shelf entries and normalizes their cards as shelved", () => {

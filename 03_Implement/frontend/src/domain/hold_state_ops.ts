@@ -2,6 +2,13 @@ import type { Card, DocumentV1, HoldState } from "./types";
 
 export type HoldStateSelection = HoldState | "active";
 
+/** 旧名称の `pending` を `held` に読み替える。 */
+export function canonicalHoldState(state: HoldState): Exclude<HoldState, "pending">;
+export function canonicalHoldState(state: HoldState | undefined): Exclude<HoldState, "pending"> | undefined;
+export function canonicalHoldState(state: HoldState | undefined): Exclude<HoldState, "pending"> | undefined {
+  return state === "pending" ? "held" : state;
+}
+
 export function updateCardHoldState(
   cards: readonly Card[],
   cardId: string,

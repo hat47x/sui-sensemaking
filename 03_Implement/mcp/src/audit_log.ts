@@ -1,5 +1,6 @@
 import { canonicalizeJson } from "../../frontend/src/domain/patch/patch_fingerprint.js";
 import type { ContextProjectionConstraint } from "../../frontend/src/export/context_bundle_projection.js";
+import { authHeaders } from "./auth_headers.js";
 import type { DocumentClientConfig } from "./document_client.js";
 
 // EXT-CONN-01 subslice B, AC-3: every read gets a bundleHash/queryCanonicalHash
@@ -68,10 +69,7 @@ export async function emitContextAuditEvent(
   input: { docId: string; safeMode: boolean; queryCanonicalHash: string; bundleHash: string },
 ): Promise<void> {
   const url = `${config.baseUrl}/docs/${encodeURIComponent(input.docId)}/context-audit`;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (config.apiKey) {
-    headers["X-API-Key"] = config.apiKey;
-  }
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...authHeaders(config) };
   const body = {
     operation: "query",
     safeMode: input.safeMode,

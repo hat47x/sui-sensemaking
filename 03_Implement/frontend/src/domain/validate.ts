@@ -174,9 +174,11 @@ function parseCards(value: unknown): Card[] | null {
       critiqueTags: parseCritiqueTags(item.critiqueTags),
       textReviewed: typeof item.textReviewed === "boolean" ? item.textReviewed : undefined,
       holdState:
-        item.holdState === "held" || item.holdState === "pending" || item.holdState === "shelved"
-          ? item.holdState
-          : undefined,
+        item.holdState === "held" || item.holdState === "pending"
+          ? "held"
+          : item.holdState === "shelved"
+            ? "shelved"
+            : undefined,
       meta: parseCardMeta(item.meta),
       ka: parseCardKa(item.ka),
     });

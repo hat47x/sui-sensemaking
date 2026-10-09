@@ -113,6 +113,7 @@ from sui_sensemaking_api.merge_suggestion_ir import (
 from sui_sensemaking_api.routes.docs import _authorize_request, get_document_row
 from sui_sensemaking_api.tenant_session_precondition import (
     require_tenant_scoped_api_precondition,
+    require_tenant_scoped_api_precondition_unless_agent,
 )
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -2396,7 +2397,7 @@ def record_external_proposal_decision(
 @router.get(
     "/proposals/status",
     response_model=ProposalStatusResponse,
-    dependencies=[Depends(require_tenant_scoped_api_precondition)],
+    dependencies=[Depends(require_tenant_scoped_api_precondition_unless_agent)],
 )
 def get_proposal_status(
     docId: str,
