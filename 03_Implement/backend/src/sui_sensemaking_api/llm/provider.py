@@ -1093,16 +1093,30 @@ def get_provider() -> LLMProvider:
     return _DEFAULT_REGISTRY.resolve(settings.llm_provider)
 
 
+def _llm_provider_stop_switch_engaged() -> bool:
+    """SUI_LLM_PROVIDER=none is an unconditional stop switch for LLM calls.
+
+    A registry-selected model must not reach its transport while the process
+    is set to `none`, even when that model's own providerKind is fully
+    configured. The contract is fixed in api.md (AI-MODEL-GOVERNANCE-03) and
+    llm_provider_spec.md (none is an unconditional kill switch).
+    """
+    return settings.llm_provider.strip().lower() == "none"
+
+
 def generate_with_fallback(
     req: LLMRequest,
     *,
     provider: LLMProvider | None = None,
 ) -> LLMResponse:
-    provider = provider or (
-        build_registered_provider(req.registered_provider)
-        if req.registered_provider is not None
-        else get_provider()
-    )
+    if provider is None:
+        if req.registered_provider is not None and not _llm_provider_stop_switch_engaged():
+            provider = build_registered_provider(req.registered_provider)
+        else:
+            # Under the stop switch this resolves to NoOpProvider, whose generate()
+            # raises ProviderDisabledError before any transport is built, any
+            # credential is resolved, or any request leaves the process.
+            provider = get_provider()
     # OPS-LLM-COST-01 (段階2): count every request that reaches a provider so an
     # operator can see external (large-scale) call volume; counting the attempt
     # (before any provider error) is what cost control needs. Token usage is
