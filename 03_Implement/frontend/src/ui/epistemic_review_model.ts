@@ -149,6 +149,14 @@ export type EpistemicUiItem = {
   meaningFingerprint: string;
   reviewSubjectFingerprint: string;
   reviewLogSequence: number;
+  contentOrigin: string;
+  ingestedBy?: string;
+  metadataState: EpistemicMetadataState;
+  reviewBinding?: string;
+  contextCompatibility: EpistemicContextCompatibility;
+  freshness: EpistemicFreshness;
+  lifecycleState: string;
+  conflict: EpistemicConflict;
   state: EpistemicUiState;
   labelKey: EpistemicStateLabelKey;
   tone: "neutral" | "info" | "warning" | "danger";
@@ -504,6 +512,14 @@ export function buildEpistemicUiItems(projection: EpistemicProjectionInput): Epi
         meaningFingerprint: assessment.meaningFingerprint,
         reviewSubjectFingerprint: assessment.reviewSubjectFingerprint,
         reviewLogSequence: assessment.reviewLogSequence,
+        contentOrigin: assessment.contentOrigin,
+        ingestedBy: assessment.ingestedBy,
+        metadataState: assessment.metadataState,
+        reviewBinding: assessment.reviewBinding,
+        contextCompatibility: assessment.contextCompatibility,
+        freshness: assessment.freshness,
+        lifecycleState: assessment.lifecycleState,
+        conflict: assessment.conflict,
         state,
         ...presentation,
         ...confirmation,
@@ -658,6 +674,17 @@ export function buildEpistemicReviewQueue(
     }
     return left.id.localeCompare(right.id);
   });
+}
+
+export function buildEpistemicHealthAlertQueue(
+  projection: EpistemicProjectionInput,
+): EpistemicReviewQueueItem[] {
+  return buildEpistemicReviewQueue(projection).filter(
+    (item) =>
+      item.kind === "assertion-review"
+      || item.criticality === "high"
+      || item.criticality === "critical",
+  );
 }
 
 export function buildEpistemicHealthPresentation(
