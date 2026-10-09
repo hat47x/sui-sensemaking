@@ -1488,6 +1488,7 @@
   "agent_task_export.registration_failed": "タスクの相関情報を登録できなかったため、書き出しを中止しました。",
   "agent_task_export.downloaded_md": "タスクシートをダウンロードしました",
   "agent_task_export.downloaded_json": "task.json をダウンロードしました",
+  "agent_task_export.audit_not_recorded": "書き出しは完了しましたが、監査記録は残りませんでした。",
   "diagnostics_bundle.title": "サポート診断バンドル",
   "diagnostics_bundle.close": "閉じる",
   "diagnostics_bundle.intent_hint": "サポートへ共有できる診断情報だけをローカルで組み立てます。カード本文・文書ID・API key・token・生のUserAgentなどは含まれません。コピーまたはダウンロードの前に必ず内容を確認できます。自動送信は行いません。",

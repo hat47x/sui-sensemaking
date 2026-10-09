@@ -188,6 +188,26 @@ def test_post_export_audit_emits_export_event(tmp_path) -> None:
     assert event.metadata["authAgeBucket"] == "unknown"
 
 
+def test_post_export_audit_safe_mode_is_refused_and_not_recorded(tmp_path) -> None:
+    # api.md §8.3 rule 1 (safeMode=true の export は常に拒否) and §2.13 (export-audit は
+    # 書き出し境界を通過した場合のみ記録) together mean a declared safeMode=true export
+    # is refused with 403 and emits no audit event. Pinned so that changing this
+    # needs an explicit spec decision (see the ADR-0049 D2 vs §8.3 conflict).
+    spy = SpyAuditDispatcher()
+    with _sqlite_client(tmp_path) as client:
+        client.app.state.audit_dispatcher = spy
+        client.app.state.access_control_adapter = AllowAllAdapter()
+        response = client.post(
+            "/docs/doc-export/export-audit",
+            json={"safeMode": True, "exportKind": "agent-task"},
+            headers={"x-actor-ref": "user-2"},
+        )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Access denied: safe_mode"}
+    assert spy.events == []
+
+
 def test_export_audit_double_post_reaches_sink_once(tmp_path) -> None:
     # SEC-AUDIT-DUP-01: the route passes a logical dedup_key, so a client
     # retry / double-click of the identical export is not double-counted at

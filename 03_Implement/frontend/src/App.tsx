@@ -9384,11 +9384,12 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       { safeMode, exportKind: "agent-task" },
       { tenantSessionContext: verifiedTenantSession },
     )).catch(() => {
-      // Fail-open by design (spec §3.4 / ADR-0049 D2): the backend audit
-      // dispatcher itself never blocks on send failure, and this call is
-      // reporting after the local export already completed -- there is
-      // nothing to roll back, so a network error here is silently ignored
-      // rather than surfaced as an export failure the user didn't cause.
+      // The local export already completed and there is nothing to roll back,
+      // so the export is not reported as failed. But a refused (for example
+      // safeMode=true, api.md 8.3) or unreachable audit call means no record
+      // was saved; say so instead of dropping it silently. This runs after the
+      // download/copy status message, so it replaces that message.
+      setStatusMessage(t("agent_task_export.audit_not_recorded"));
     });
   }, [document, runTenantScopedApiRequest, safeMode, verifiedTenantSession]);
 

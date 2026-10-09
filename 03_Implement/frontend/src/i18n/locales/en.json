@@ -1486,6 +1486,7 @@
   "agent_task_export.registration_failed": "Export was stopped because the task correlation could not be registered.",
   "agent_task_export.downloaded_md": "Task sheet downloaded",
   "agent_task_export.downloaded_json": "task.json downloaded",
+  "agent_task_export.audit_not_recorded": "The export completed, but no audit record was saved.",
   "diagnostics_bundle.title": "Support diagnostics bundle",
   "diagnostics_bundle.close": "Close",
   "diagnostics_bundle.intent_hint": "Assembles only support-shareable diagnostic information, locally. Card text, document ID, API keys/tokens, and raw User-Agent are never included. You can always review the full content before copying or downloading. Nothing is sent automatically.",

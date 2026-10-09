@@ -126,6 +126,27 @@ describe("tenant-scoped document request precondition", () => {
     });
   });
 
+  it("rejects a refused export audit so the caller can report it instead of dropping it", async () => {
+    // The App reports a rejected export-audit as "export completed, no audit
+    // record saved". That relies on postExportAudit surfacing the 403 rather
+    // than resolving successfully.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Access denied: safe_mode" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const attempt = postExportAudit(
+      "doc-1",
+      { safeMode: true, exportKind: "agent-task" },
+      { tenantSessionContext },
+    );
+
+    await expect(attempt).rejects.toBeInstanceOf(ApiError);
+    await expect(attempt).rejects.toMatchObject({ status: 403 });
+  });
+
   it("creates a document with If-None-Match only inside a tenant session", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch")
       .mockImplementation(async () => new Response(JSON.stringify(createDocument()), { status: 200 }));
