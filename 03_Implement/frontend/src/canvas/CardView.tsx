@@ -233,6 +233,9 @@ function CardViewComponent({
 
     event.stopPropagation();
 
+    // Release the local preview first, even if a caller fails to commit.
+    clearDragState(event);
+
     if (!drag.didMove) {
       onSelect(card.id, event.shiftKey);
     } else if (onCommitMove) {
@@ -242,8 +245,6 @@ function CardViewComponent({
         onCommitMove(card.id, dx, dy);
       }
     }
-
-    clearDragState(event);
   };
 
   const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
