@@ -482,3 +482,28 @@ def test_registration_requires_an_explicit_existing_grant_and_a_future_expiry(en
                 doc_ids=("shared-doc",),
                 **common,
             )
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("post", "/ai/generate-narrative"),
+        ("post", "/ai/suggest-merges"),
+        ("post", "/ai/proposals/island-summary"),
+        ("post", "/ai/external-tasks/register"),
+        ("post", "/ai/refine-card-text"),
+        ("get", "/ai/available-models"),
+    ],
+)
+def test_agent_credentials_do_not_authenticate_other_routes_in_the_saas_profile(
+    env, method, path
+) -> None:
+    """agent の資格情報は、許可した4経路の外では、通常の利用者の認証として扱われない。"""
+    env["client"].app.state.runtime_profile = "saas-multitenant"
+    response = getattr(env["client"], method)(
+        path, headers=_h(env["token_a"]), **({"json": {}} if method == "post" else {})
+    )
+
+    # この試験用のappは SaaS の信頼済みsession基盤を持たないので、通常の利用者の経路は
+    # 503 で閉じる。agent のヘッダーでは認証が成立せず、200 にならないことを確かめる。
+    assert response.status_code in {401, 503}, response.text

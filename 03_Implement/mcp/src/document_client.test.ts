@@ -1,3 +1,4 @@
+import { authHeaders } from "./auth_headers.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DocumentFetchError,
@@ -39,10 +40,41 @@ describe("loadDocumentClientConfigFromEnv", () => {
     },
   );
 
-  it("fails closed for the unfinished SaaS runtime profile", () => {
-    expect(() =>
-      loadDocumentClientConfigFromEnv({ SUI_RUNTIME_PROFILE: "saas-multitenant" }),
-    ).toThrow("tenant-bound MCP credentials");
+  describe("saas-multitenant (ADR-0093)", () => {
+    const saas = { SUI_RUNTIME_PROFILE: "saas-multitenant", SUI_MCP_AGENT_CREDENTIAL: "suiag_token" };
+
+    it("fails closed without a tenant-bound agent credential", () => {
+      expect(() => loadDocumentClientConfigFromEnv({ SUI_RUNTIME_PROFILE: "saas-multitenant" })).toThrow(
+        "SUI_MCP_AGENT_CREDENTIAL",
+      );
+      expect(() =>
+        loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_AGENT_CREDENTIAL: "not-an-agent-token" }),
+      ).toThrow("SUI_MCP_AGENT_CREDENTIAL");
+    });
+
+    it("stays closed on the HTTP transport until OAuth tokens are mapped to agent credentials", () => {
+      expect(() => loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_TRANSPORT: "http" })).toThrow(
+        "only on the stdio transport",
+      );
+    });
+
+    it("refuses a static API key, which does not prove a tenant", () => {
+      expect(() => loadDocumentClientConfigFromEnv({ ...saas, SUI_API_KEY: "static" })).toThrow(
+        "SUI_API_KEY must not be set",
+      );
+    });
+
+    it("carries only the agent credential, never an API key", () => {
+      const config = loadDocumentClientConfigFromEnv(saas);
+
+      expect(config).toEqual({ baseUrl: "http://127.0.0.1:8000", agentCredential: "suiag_token" });
+      expect(authHeaders(config)).toEqual({ "Sui-Sensemaking-Agent-Credential": "suiag_token" });
+    });
+  });
+
+  it("keeps the single-tenant profiles on the static API key", () => {
+    expect(authHeaders({ apiKey: "k" })).toEqual({ "X-API-Key": "k" });
+    expect(authHeaders({})).toEqual({});
   });
 
   it("rejects unknown runtime profiles", () => {

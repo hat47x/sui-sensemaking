@@ -99,7 +99,8 @@ cd 03_Implement/backend
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`, `evaluation`, `enterprise-production`を受理する。`saas-multitenant`はtenant-bound MCP credentialが未実装のため起動拒否する。 |
+| `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`, `evaluation`, `enterprise-production`を受理する。`saas-multitenant`は、stdio通信で、`SUI_MCP_AGENT_CREDENTIAL`を設定したときだけ受理する（`ADR-0093`）。HTTP通信では、OAuthのトークンとagent資格情報の対応付けが決まるまで起動を拒否する。 |
+| `SUI_MCP_AGENT_CREDENTIAL` | unset | `saas-multitenant`で必須。Tenant Adminが登録した、tenantと文書に束縛した資格情報（`suiag_`で始まる不透明なトークン）。`Sui-Sensemaking-Agent-Credential`ヘッダーで送る。この資格情報では、付与された文書の読み取りだけができる。`SUI_API_KEY`と同時には設定できない。値を設定ファイルやログへ書き込まない。 |
 | `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | Backend base URL this process fetches `GET /docs/{id}` from. Not the frontend's browser-relative `SUI_FRONTEND_API_BASE` -- this process runs outside the frontend's nginx proxy and needs an absolute URL. |
 | `SUI_API_KEY` | unset | Sent as `X-API-Key` when the backend requires it. The browser client relies on same-origin proxying instead; this standalone process must send it itself. |
 
