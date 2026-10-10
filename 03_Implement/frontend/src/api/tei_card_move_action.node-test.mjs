@@ -137,6 +137,30 @@ test("normalizes Pydantic's polygon mirror but rejects divergent geometry", asyn
   assert.equal(damaged.state.applied, 0);
 });
 
+test("rejects a proposed move that changes unrelated state BEFORE remote dispatch", async () => {
+  const mutate = [
+    (doc) => { doc.cards[0].meta.source = "silently lost"; },
+    (doc) => { doc.cards[0].holdState = "shelved"; },
+    (doc) => { doc.cards[1].text = "replaced"; },
+    (doc) => { doc.cards.reverse(); },
+    (doc) => { doc.edges[0].type = "invented"; },
+    (doc) => { doc.reviewAttribution.reviewerRef = "someone else"; },
+    (doc) => { doc.affiliations = []; },
+    (doc) => { doc.islands[0].title = "new title"; },
+    (doc) => { doc.islands[1].cardIds.push("other"); },
+    (doc) => { doc.title = "covert change"; },
+  ];
+  for (const damage of mutate) {
+    const f = fixture();
+    const altered = structuredClone(f.next);
+    damage(altered);
+    await assert.rejects(f.run(f.origin, altered, "a"), isError("invalid_move_target"));
+    assert.equal(f.state.writes, 0);
+    assert.equal(f.state.reads, 0);
+    assert.equal(f.state.applied, 0);
+  }
+});
+
 test("no-change drag does not write or re-read", async () => {
   const f = fixture();
   assert.equal(await f.run(f.origin, f.origin.document, "a"), null);
