@@ -142,7 +142,10 @@ test("missing server ETag and unknown Card identity block sending", async () => 
 
 test("one in-flight Action per resource, cleared after confirmed commit", async () => {
   let release;
-  const f = fixture({ dispatch: () => new Promise((resolve) => { release = resolve; }) });
+  let firstPending = true;
+  const f = fixture({ dispatch: () => firstPending
+    ? (firstPending = false, new Promise((resolve) => { release = resolve; }))
+    : Promise.resolve("etag-r2") });
   const first = f.run(f.origin, f.next, "a");
   await assert.rejects(f.run(f.origin, f.next, "a"), isError("action_in_flight"));
   release("etag-r2");
