@@ -41,6 +41,7 @@ import { IslandView } from "./canvas/IslandView";
 import { getEdgesToRender } from "./domain/edge_aggregate";
 import { classifyAiProviderError, type AiProviderErrorKind } from "./domain/ai_provider_error";
 import { alignSelectedCards, distributeSelectedCards, snapValueToGrid } from "./domain/layout_ops";
+import { commitCardDrag } from "./domain/card_drag_commit";
 import type { AlignDirection, DistributeDirection } from "./domain/layout_ops";
 import { appendReadingOrderEntry, moveReadingOrderEntry, removeReadingOrderEntry } from "./domain/reading_order_ops";
 import {
@@ -2801,6 +2802,33 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       });
     },
     [document, isGridSnapEnabled, isReadOnly, isPreviewingSuggestion]
+  );
+
+  // Native drag bridge: CardView owns the transient preview. The application
+  // applies the final movement once, retaining the island-join and Undo rules.
+  // This remains SUI's local DocumentV1 edit; TEI runtime dispatch is separate.
+  const handleCardMoveCommit = useCallback(
+    (cardId: string, deltaWorldX: number, deltaWorldY: number) => {
+      if (!document || isReadOnly || isPreviewingSuggestion) {
+        return;
+      }
+      const nextDocument = commitCardDrag(document, {
+        cardId,
+        deltaWorldX,
+        deltaWorldY,
+        snapGridSize: isGridSnapEnabled ? GRID_SNAP_SIZE : undefined,
+        cardWidth: CARD_WIDTH,
+        cardHeight: CARD_HEIGHT,
+      });
+      if (nextDocument === document) {
+        return;
+      }
+      applyDocumentChange(nextDocument, t("app.status.edit.moved_card"), {
+        preserveSuggestionPreview: true,
+        preserveMergeSuggestions: true,
+      });
+    },
+    [document, isReadOnly, isPreviewingSuggestion, isGridSnapEnabled, applyDocumentChange]
   );
 
   const applyLayoutOperation = useCallback(
@@ -12642,6 +12670,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           <CanvasShell
             document={focusedVisibleDocument}
             onCardMove={handleCardMove}
+            onCardMoveCommit={handleCardMoveCommit}
             onTransformChange={handleTransformChange}
             onCameraChange={setCanvasCamera}
             cameraTransformRequest={cameraTransformRequest}
