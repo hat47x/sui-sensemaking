@@ -94,7 +94,6 @@ describe("tenant-scoped document request precondition", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", {
       headers: { "Sui-Sensemaking-Tenant-Session-Version": "session-v1" },
-      cache: "default",
     });
   });
 
@@ -306,7 +305,7 @@ describe("tenant-scoped document request precondition", () => {
 
     await getDocument("doc-1");
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", { headers: {}, cache: "default" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", { headers: {} });
   });
 
   it("rejects malformed session input before network access", async () => {
