@@ -11,6 +11,18 @@
 - `GET /docs/{doc_id}`
 - `PUT /docs/{doc_id}`
 
+## TEI Action用SUI Card移動コマンド（参照段階）
+
+`src/sui_sensemaking_api/card_move_command.py`は、SUIの`DocumentV1`と確定座標から**新しいDocumentスナップショット**を生成するアプリケーション所有の純粋処理です。対象Cardの存在・識別の一意性、有限座標、島への所属変更を検証し、Source、Hold、Edge、レビュー帰属などの無関係な情報を保持します。既存の非包含Affiliationと移動後の包含関係が競合する場合は、黙って来歴を削除せず拒否します。
+
+- `tests/test_card_move_command.py`：座標・矩形／多角形境界・島所属・来歴・負例の単体テスト。
+- `tests/test_docs_roundtrip.py::test_sui_card_move_command_with_existing_sqlite_document_cas`：このコマンドの結果を既存の`PUT /docs/{id}`へ`If-Match`付きで保存し、`GET`とETagを照合するSQLite参照テスト。
+- `../frontend/src/api/client.ts`の`getAuthoritativeDocument`：操作確定後の権威ある読み直しに`cache: "no-store"`を指定し、既存のセッション前提条件を引き継ぐ追加API。
+
+**今回の変更は新しいHTTP Actionルートを登録しません。** `PUT /docs/{id}`は現行どおり既存の認可、テナント、アーカイブ状態、レビュー帰属、ETag・Revision処理を担当します。純粋コマンドだけでは同時更新を防げないため、TEI HostとSUI保存側のアダプターが、**権威あるRevisionの原子的比較・SUIコマンド実行・保存**を一単位として保証する必要があります。TEI CoreにはSUI専用構造を持ち込みません。
+
+実Go Hostからの呼び出し、実セッション認可、ブラウザーでのCard移動、Undo/Redo接続は**未実施**です。追加したPythonテストとSUIフロントエンド全体のテストも未実行であり、単体テストの追加だけをPASSの証拠とはしません。実装時はPython側とTypeScript側のCard移動規則の差分をクロスランゲージfixtureで検証します。
+
 ## 永続化
 
 - テーブル: `documents(id TEXT PK, version INT, updated_at TEXT, payload_json TEXT)`
