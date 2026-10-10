@@ -37,6 +37,24 @@ SUIのPydantic保存は未指定の`Island.collapsed`を`false`として表現�
 
 `frontend/src/api/tei_card_move_action.integration.test.ts`は、SUI側ポート→同一オリジンAction POST→キャッシュ無効Document GET→同期所有状態反映を**モックHTTP応答**でつなぐテストです。**実サーバー／React／Go Hostは通っていません**。実行は`npm test -- src/api/tei_card_move_action.integration.test.ts`で行います。未保存のSUIローカル編集やセッションの変更がある場合、正式接続時の`isCurrent`は送信前から拒否する必要があります。
 
+### 送信前の変更範囲検査と手動検証の入口（2026-10-10）
+
+SUIの`createSuiCardMoveActionCommit`では、`dispatch`前に`isPureCardMove`を実行します。元Documentからの許容差分を**対象Cardのx/yと島への所属変更だけ**に限定し、他Card・島の属性／順序・未知Edge・Source・Hold・Affiliation・レビュー等の変更が混入した場合は`invalid_move_target`で**サーバーへ送信する前に拒否**します。これにより、サーバーは確定したが画面側では再読込差分を受理できない事例を事前に減らします。読込後の完全性照合も継続します。
+
+島の`summaryText`があるときにSUI Pydanticが`summaryReviewed=false`を補完する正規化にも対応し、`summaryReviewed=true`など意味のある差分は拒否します。正常／異常ケースをNodeテストに追加しました。
+
+手動検証の入口として`03_Implement/scripts/verify_native_action_boundary.sh`を追加しました。正確なPR headをクリーンなワークツリーにチェックアウトした後、リポジトリルートから次を実行できます（`pytest`、Node 22+、`npm`依存が構築済みであることが前提です）。
+
+```sh
+SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+# 任意：全Frontend Vitestと本番ビルドも追加
+SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+```
+
+Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
+
 ### 接続試験の実行（未実行）
 
 ```sh
