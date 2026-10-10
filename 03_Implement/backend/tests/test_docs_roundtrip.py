@@ -1096,6 +1096,62 @@ def _assert_etag_optimistic_locking(client: TestClient) -> None:
     assert second_etag != first_etag
 
 
+def test_sui_card_move_command_with_existing_sqlite_document_cas(sqlite_client: TestClient) -> None:
+    """SUI-owned command -> native PUT/GET CAS; NOT a TEI Go Host route."""
+    from sui_sensemaking_api.card_move_command import apply_card_move
+    from sui_sensemaking_api.models import DocumentV1
+
+    doc_id = "native-action-cas-probe"
+    initial = _sample_payload_v1_with_collapsed(doc_id)
+    initial["edges"][0]["type"] = "future-kind"
+    initial["cards"][0]["holdState"] = "held"
+    initial["cards"][0]["meta"] = {"source": "interview-1"}
+    initial["islands"][0].pop("placardCardId", None)
+    initial["islands"][1].pop("placardCardId", None)
+
+    first = sqlite_client.put(f"/docs/{doc_id}", json=initial)
+    assert first.status_code == 200, first.text
+    initial_etag = first.headers["ETag"]
+
+    before = sqlite_client.get(f"/docs/{doc_id}")
+    assert before.status_code == 200, before.text
+    assert before.headers["ETag"] == initial_etag
+
+    moved = apply_card_move(
+        DocumentV1.model_validate(before.json()),
+        card_id="card-1", x=212.5, y=91,
+    )
+    assert [island.cardIds for island in moved.islands] == [[], ["card-2", "card-1"]]
+
+    saved = sqlite_client.put(
+        f"/docs/{doc_id}", json=moved.model_dump(mode="json"),
+        headers={"If-Match": initial_etag},
+    )
+    assert saved.status_code == 200, saved.text
+    committed_etag = saved.headers["ETag"]
+    assert committed_etag != initial_etag
+
+    reloaded = sqlite_client.get(f"/docs/{doc_id}")
+    assert reloaded.status_code == 200, reloaded.text
+    assert reloaded.headers["ETag"] == committed_etag
+    assert reloaded.json()["cards"][0]["x"] == 212.5
+    assert reloaded.json()["cards"][0]["meta"]["source"] == "interview-1"
+    assert reloaded.json()["cards"][0]["holdState"] == "held"
+    assert reloaded.json()["edges"][0]["type"] == "future-kind"
+    assert [island["cardIds"] for island in reloaded.json()["islands"]] == [
+        [], ["card-2", "card-1"],
+    ]
+
+    # Repeating with the old revision cannot persist another mutation.
+    stale = sqlite_client.put(
+        f"/docs/{doc_id}", json=moved.model_dump(mode="json"),
+        headers={"If-Match": initial_etag},
+    )
+    assert stale.status_code == 409
+    unchanged = sqlite_client.get(f"/docs/{doc_id}")
+    assert unchanged.headers["ETag"] == committed_etag
+
+
 def test_docs_put_get_roundtrip_sqlite(sqlite_client: TestClient) -> None:
     _assert_put_get_roundtrip(sqlite_client)
 
