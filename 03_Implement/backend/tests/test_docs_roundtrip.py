@@ -1096,8 +1096,25 @@ def _assert_etag_optimistic_locking(client: TestClient) -> None:
     assert second_etag != first_etag
 
 
-def test_sui_native_action_v1_uses_authorized_store_and_cas(sqlite_client: TestClient) -> None:
-    """Real FastAPI SUI receiver + SQLite; Go TEI Host remains unconnected."""
+def test_sui_native_action_v1_is_inert_without_explicit_host_opt_in(
+    sqlite_client: TestClient,
+) -> None:
+    """New write route must not activate merely because the plugin was imported."""
+    response = sqlite_client.post(
+        "/docs/unconfigured-action/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={"protocolVersion": "1"},
+    )
+    assert response.status_code == 404, response.text
+    assert response.json() == {"protocolVersion": "1", "error": "action_denied"}
+
+
+def test_sui_native_action_v1_uses_authorized_store_and_cas(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Opted-in FastAPI SUI receiver + SQLite; Go TEI Host remains unconnected."""
+    # The default deployment is inert; this test enables only its own fixture.
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
     doc_id = "native-action-envelope-probe"
     initial = _sample_payload_v1_with_collapsed(doc_id)
     initial["edges"][0]["type"] = "future-edge-kind"
