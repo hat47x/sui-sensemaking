@@ -1285,6 +1285,50 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
     assert len(audit_events) == 1
 
 
+def test_sui_action_preserves_review_by_another_authorized_writer(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Moving a Card is not an assertion of the existing reviewer's identity."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-preserves-another-reviewer"
+    original = _sample_payload_v1_with_hil_rs_contract_fields(
+        doc_id, reviewer_ref="reviewer:original",
+    )
+    created = sqlite_client.put(
+        f"/docs/{doc_id}",
+        json=original,
+        headers={"x-actor-ref": "reviewer:original"},
+    )
+    assert created.status_code == 200, created.text
+    initial_revision = created.headers["ETag"].strip('"')
+
+    # This actor is not the original reviewer, but is an authorized writer.
+    moved = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={
+            "X-TEI-Action": "commit",
+            "x-actor-ref": "reviewer:other",
+        },
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": initial_revision,
+            "payload": {"cardId": "card-1", "x": 60.0, "y": 80.0},
+        },
+    )
+    assert moved.status_code == 200, moved.text
+    loaded = sqlite_client.get(f"/docs/{doc_id}")
+    assert loaded.status_code == 200, loaded.text
+    doc = loaded.json()
+    assert doc["cards"][0]["x"] == 60.0
+    assert doc["reviewAttribution"] == created.json()["reviewAttribution"]
+    assert doc["critiqueInputs"] == created.json()["critiqueInputs"]
+    assert doc["reproposalDiffs"] == created.json()["reproposalDiffs"]
+    assert loaded.headers["ETag"] == f'"{moved.json()["revision"]}"'
+
+
 def test_sui_action_audit_sink_failure_does_not_misreport_committed_write(
     sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
