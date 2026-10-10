@@ -118,6 +118,44 @@ function equivalentStoredDocument(expected: DocumentV1, actual: DocumentV1): boo
 }
 
 /**
+ * A Card-move action only authorizes coordinates and island membership.
+ * Validate that its locally proposed snapshot did not also change source,
+ * reviewer, unknown Edge kinds, other Cards, island metadata, or card order.
+ * Reject before dispatch, not after an irreversible remote commit.
+ */
+function isPureCardMove(before: DocumentV1, after: DocumentV1, cardId: string): boolean {
+  if (before.cards.length !== after.cards.length ||
+      before.islands.length !== after.islands.length) return false;
+  for (let i = 0; i < before.cards.length; i += 1) {
+    if (before.cards[i].id !== after.cards[i].id) return false;
+  }
+  const islandById = new Map(before.islands.map((island) => [island.id, island]));
+  if (islandById.size !== before.islands.length) return false;
+  for (const island of after.islands) {
+    const initial = islandById.get(island.id);
+    if (!initial || !Array.isArray(island.cardIds) ||
+        island.cardIds.some((id) => typeof id !== "string")) return false;
+    const withoutCard = island.cardIds.filter((id) => id !== cardId);
+    const initialWithoutCard = initial.cardIds.filter((id) => id !== cardId);
+    if (JSON.stringify(withoutCard) !== JSON.stringify(initialWithoutCard)) return false;
+  }
+  const originalCard = selectedCard(before, cardId);
+  if (!originalCard) return false;
+  // Reverse the *permitted* movement and compare everything else.
+  const restored: DocumentV1 = {
+    ...after,
+    cards: after.cards.map((card) =>
+      card.id === cardId ? { ...card, x: originalCard.x, y: originalCard.y } : card,
+    ),
+    islands: after.islands.map((island) => ({
+      ...island,
+      cardIds: [...islandById.get(island.id)!.cardIds],
+    })),
+  };
+  return equivalentStoredDocument(before, restored);
+}
+
+/**
  * SUI-owned adapter for a TEI resource-scoped Action commit. Native Canvas,
  * domain move calculation and Undo remain in SUI. No endpoint is activated by
  * importing this module; the host application must supply all four ports.
@@ -139,6 +177,11 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     const before = selectedCard(origin.document, cardId);
     const after = selectedCard(nextDocument, cardId);
     if (!before || !after || !Number.isFinite(after.x) || !Number.isFinite(after.y)) {
+      throw new SuiCardMoveActionError("invalid_move_target");
+    }
+    // No server mutation when the UI's proposed change is not exclusively
+    // this Card's coordinates and containment membership.
+    if (!isPureCardMove(origin.document, nextDocument, cardId)) {
       throw new SuiCardMoveActionError("invalid_move_target");
     }
     const originalMembership = membership(origin.document, cardId);
