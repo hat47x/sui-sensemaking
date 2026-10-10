@@ -397,10 +397,24 @@ export async function getDocument(
   docId: string,
   options: TenantScopedRequestOptions = {},
 ): Promise<DocumentWithEtag<Document>> {
+  return readDocumentWithCachePolicy(docId, options, "default");
+}
+
+/** Action confirmation must bypass browser caches to compare the saved ETag. */
+export async function getAuthoritativeDocument(
+  docId: string,
+  options: TenantScopedRequestOptions = {},
+): Promise<DocumentWithEtag<Document>> {
+  return readDocumentWithCachePolicy(docId, options, "no-store");
+}
+
+async function readDocumentWithCachePolicy(
+  docId: string,
+  options: TenantScopedRequestOptions,
+  cache: RequestCache,
+): Promise<DocumentWithEtag<Document>> {
   const headers = tenantSessionPreconditionHeaders(options);
-  const response = headers
-    ? await fetch(`${API_BASE}/docs/${docId}`, { headers })
-    : await fetch(`${API_BASE}/docs/${docId}`);
+  const response = await fetch(`${API_BASE}/docs/${docId}`, { headers, cache });
 
   if (!response.ok) {
     const errorDetail = await parseErrorDetail(response);
