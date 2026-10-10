@@ -1279,15 +1279,21 @@ def _commit_sui_card_move_action(
     if _compute_etag(stored.row.payload_json) != action.expectedRevision:
         raise _action_error(status_code=409, code="revision_conflict")
 
-    original = _validate_document_payload_with_a1_contract(
-        json.loads(stored.content.text)
-    )
+    try:
+        original = _validate_document_payload_with_a1_contract(
+            json.loads(stored.content.text)
+        )
+    except HTTPException as error:
+        # A stored snapshot that cannot pass the current SUI Document contract
+        # is a server state failure, not an authorization refusal or a
+        # malformed client move intent. Never try to "repair" it via Action.
+        raise _action_error(status_code=500, code="execution_failed") from error
     try:
         updated = apply_card_move(
             original, card_id=action.payload.cardId,
             x=action.payload.x, y=action.payload.y,
         )
-    except InvalidCardMove as error:
+    except (InvalidCardMove, ValidationError) as error:
         raise _action_error(status_code=400, code="invalid_payload") from error
 
     _validate_review_attribution_identity(document=updated, identity=access_request.auth)
