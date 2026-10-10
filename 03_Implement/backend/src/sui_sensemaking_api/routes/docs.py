@@ -1162,13 +1162,20 @@ async def post_sui_card_move_action(
             )
         except (UnicodeDecodeError, ValueError) as error:
             raise _action_error(status_code=400, code="invalid_action") from error
+        # Keep this call *directly on the registered route*. The backend's
+        # route coverage guard checks that every /docs endpoint invokes the
+        # shared tenant/resource authorization boundary, not an indirect helper.
+        access_request, _, tenant = _authorize_request(
+            request, db, action="write", doc_id=doc_id, safe_mode=True,
+            read_only=(x_read_only == "1" or (x_read_only or "").lower() == "true"),
+        )
         return _commit_sui_card_move_action(
             doc_id=doc_id,
             response=response,
-            request=request,
             action_payload=action_payload,
             x_tei_action=x_tei_action,
-            x_read_only=x_read_only,
+            access_request=access_request,
+            tenant=tenant,
             db=db,
         )
     except HTTPException as error:
@@ -1191,10 +1198,10 @@ def _commit_sui_card_move_action(
     *,
     doc_id: str,
     response: Response,
-    request: Request,
     action_payload: object,
     x_tei_action: str | None,
-    x_read_only: str | None,
+    access_request: AccessRequest,
+    tenant: TenantContext,
     db: Session,
 ) -> dict[str, str]:
     """SUI-owned application Action receiver; not the TEI Go runtime Host.
@@ -1213,16 +1220,8 @@ def _commit_sui_card_move_action(
     if action.resourceID != doc_id:
         raise _action_error(status_code=403, code="action_denied")
 
-    try:
-        access_request, _, tenant = _authorize_request(
-            request, db, action="write", doc_id=doc_id, safe_mode=True,
-            read_only=(x_read_only == "1" or (x_read_only or "").lower() == "true"),
-        )
-    except HTTPException as error:
-        # Preserve status, including 404 anti-enumeration and tenant precondition
-        # failures, without exposing internal authorization details.
-        raise _action_error(status_code=error.status_code, code="action_denied") from error
-
+    # Authenticated identity and scoped tenant are resolved by the public
+    # registered endpoint, not supplied in the client Action payload.
     store = DatabaseDocumentContentStore(db)
     stored = store.load(tenant=tenant, doc_id=doc_id)
     if stored is None:
