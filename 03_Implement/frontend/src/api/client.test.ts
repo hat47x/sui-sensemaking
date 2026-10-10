@@ -9,6 +9,7 @@ import {
   generateNarrative,
   fetchAvailableModels,
   getDocument,
+  getAuthoritativeDocument,
   getTenantSessionBootstrapPolicy,
   listDocuments,
   getTenantSessionContext,
@@ -92,6 +93,24 @@ describe("tenant-scoped document request precondition", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", {
       headers: { "Sui-Sensemaking-Tenant-Session-Version": "session-v1" },
+      cache: "default",
+    });
+  });
+
+  it("reads an authoritative Document without cache and preserves the verified session", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(createDocument()), {
+        status: 200,
+        headers: { "ETag": '"revision-r2"', "Content-Type": "application/json" },
+      }),
+    );
+
+    const fresh = await getAuthoritativeDocument("doc-1", { tenantSessionContext });
+    expect(fresh.etag).toBe("revision-r2");
+    expect(fresh.document.id).toBe("doc-1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", {
+      headers: { "Sui-Sensemaking-Tenant-Session-Version": "session-v1" },
+      cache: "no-store",
     });
   });
 
@@ -286,7 +305,7 @@ describe("tenant-scoped document request precondition", () => {
 
     await getDocument("doc-1");
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", { headers: {} });
+    expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", { headers: {}, cache: "default" });
   });
 
   it("rejects malformed session input before network access", async () => {
