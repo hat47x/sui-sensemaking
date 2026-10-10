@@ -1217,8 +1217,22 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
     assert read_only.status_code == 403, read_only.text
     assert read_only.json() == {"protocolVersion": "1", "error": "action_denied"}
 
+    # Capture application-owned audit events; rejected requests must never
+    # emit a committed-apply event.
+    audit_events = []
+    class ActionAuditProbe:
+        def emit(self, event):
+            audit_events.append(event)
+    monkeypatch.setattr(app.state, "audit_dispatcher", ActionAuditProbe(), raising=False)
+
     accepted = sqlite_client.post(endpoint, json=intent, headers=headers)
     assert accepted.status_code == 200, accepted.text
+    assert len(audit_events) == 1
+    assert audit_events[0].eventType == "apply"
+    assert audit_events[0].docId == doc_id
+    assert audit_events[0].metadata["actionId"] == "sui.move"
+    assert audit_events[0].metadata["result"] == "committed"
+    assert "interview-1" not in str(audit_events[0].metadata)
     assert accepted.json()["protocolVersion"] == "1"
     revision = accepted.json()["revision"]
     assert revision and revision != etag
@@ -1262,6 +1276,45 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
     )
     assert denied.status_code == 423
     assert denied.json() == {"protocolVersion": "1", "error": "action_denied"}
+    # Replays, malformed input, missing Cards and archived writes do not
+    # produce another successful-commit audit event.
+    assert len(audit_events) == 1
+
+
+def test_sui_action_audit_sink_failure_does_not_misreport_committed_write(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-audit-sink-failure"
+    initial = _sample_payload(doc_id)
+    seeded = sqlite_client.put(f"/docs/{doc_id}", json=initial)
+    assert seeded.status_code == 200, seeded.text
+    previous_revision = seeded.headers["ETag"].strip('"')
+
+    class BrokenAuditSink:
+        def emit(self, event):
+            raise RuntimeError("audit sink unavailable")
+
+    monkeypatch.setattr(app.state, "audit_dispatcher", BrokenAuditSink(), raising=False)
+    sent = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": previous_revision,
+            "payload": {"cardId": "card-1", "x": 25.0, "y": 30.0},
+        },
+    )
+    assert sent.status_code == 200, sent.text
+    revision = sent.json()["revision"]
+    assert revision != previous_revision
+    stored = sqlite_client.get(f"/docs/{doc_id}")
+    assert stored.status_code == 200
+    assert stored.headers["ETag"] == f'"{revision}"'
+    assert stored.json()["cards"][0]["x"] == 25.0
 
 
 def test_sui_card_move_command_with_existing_sqlite_document_cas(sqlite_client: TestClient) -> None:
