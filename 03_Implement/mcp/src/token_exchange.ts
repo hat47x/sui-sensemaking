@@ -9,6 +9,8 @@
 // 交換のために IdP へ名乗る自分自身のクライアント秘密だけで、トークンの内容は一切ログに
 // 出さない。
 
+import { InsecureEndpointError, requireSecureEndpoint } from "./transport_security.js";
+
 export type TokenExchangeConfig = {
   tokenEndpoint: string;
   clientId: string;
@@ -44,13 +46,11 @@ export function loadTokenExchangeConfigFromEnv(env: NodeJS.ProcessEnv = process.
       "SUI_MCP_TOKEN_EXCHANGE_ENDPOINT, _CLIENT_ID, _CLIENT_SECRET and _AUDIENCE must be set together.",
     );
   }
-  const endpoint = new URL(entries.tokenEndpoint as string);
-  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname);
-  if (endpoint.protocol !== "https:" && !(endpoint.protocol === "http:" && loopback)) {
-    throw new TokenExchangeError("SUI_MCP_TOKEN_EXCHANGE_ENDPOINT must be https (http only on loopback).");
-  }
-  if (endpoint.username || endpoint.password || endpoint.hash) {
-    throw new TokenExchangeError("SUI_MCP_TOKEN_EXCHANGE_ENDPOINT must not carry credentials or a fragment.");
+  try {
+    requireSecureEndpoint(entries.tokenEndpoint as string, "SUI_MCP_TOKEN_EXCHANGE_ENDPOINT");
+  } catch (error) {
+    if (error instanceof InsecureEndpointError) throw new TokenExchangeError(error.message);
+    throw error;
   }
   return entries as TokenExchangeConfig;
 }
@@ -94,19 +94,46 @@ export async function exchangeToken(
   if (!response.ok) {
     throw new TokenExchangeError(`Token exchange was rejected (HTTP ${response.status}).`);
   }
-  const text = await response.text();
-  if (text.length > MAX_RESPONSE_BYTES) {
-    throw new TokenExchangeError("Token exchange response is too large.");
-  }
+  const text = await readBounded(response);
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
     throw new TokenExchangeError("Token exchange response is not valid JSON.");
   }
-  const accessToken = (parsed as { access_token?: unknown }).access_token;
+  const accessToken =
+    typeof parsed === "object" && parsed !== null ? (parsed as { access_token?: unknown }).access_token : undefined;
   if (typeof accessToken !== "string" || accessToken.length === 0 || accessToken.length > MAX_TOKEN_LENGTH) {
     throw new TokenExchangeError("Token exchange response has no usable access_token.");
   }
   return accessToken;
+}
+
+/** 応答本文を、上限を超えた時点で読むのをやめて文字列にする。読み取りの失敗も正規化する。 */
+async function readBounded(response: Response): Promise<string> {
+  const declared = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new TokenExchangeError("Token exchange response is too large.");
+  }
+  try {
+    if (!response.body) return await response.text();
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_RESPONSE_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new TokenExchangeError("Token exchange response is too large.");
+      }
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks).toString("utf8");
+  } catch (error) {
+    if (error instanceof TokenExchangeError) throw error;
+    throw new TokenExchangeError("Token exchange response could not be read.");
+  }
 }

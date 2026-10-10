@@ -31,6 +31,7 @@ from sui_sensemaking_api.models import (
 from sui_sensemaking_api.trusted_auth_edge import (
     JwtIdentityError,
     JwtSaasIdentityContextResolver,
+    _verify_jwt,
 )
 
 TIMESTAMP = "2026-08-07T00:00:00Z"
@@ -509,6 +510,40 @@ class TestAudArraySupport:
             with pytest.raises(JwtIdentityError) as exc:
                 resolver.resolve(db=db, request=_request_with_token(token))
         assert exc.value.status_code == 401
+
+
+class TestExpectedAudienceIsChosenByTheCaller:
+    """呼び出し元が指定した audience だけを許す。トークン自身の aud を代わりに信用しない。"""
+
+    ISSUER = "https://broker.invalid/issuer"
+
+    def test_a_token_minted_for_another_audience_is_rejected(self, key_pair: tuple) -> None:
+        private_key, jwk = key_pair
+        token = _build_token(private_key=private_key, audience="https://mcp.invalid/mcp")
+
+        with pytest.raises(JwtIdentityError) as exc:
+            _verify_jwt(token, [jwk], self.ISSUER, "sui-sensemaking-agents")
+
+        assert exc.value.status_code == 401
+        assert exc.value.code == "invalid_audience"
+
+    def test_an_aud_array_is_accepted_only_when_it_contains_the_expected_audience(
+        self, key_pair: tuple
+    ) -> None:
+        private_key, jwk = key_pair
+        with_expected = _build_token_with_aud_array(
+            private_key, audience=["https://mcp.invalid/mcp", "sui-sensemaking-agents"]
+        )
+        without_expected = _build_token_with_aud_array(
+            private_key, audience=["https://mcp.invalid/mcp", "another-app"]
+        )
+
+        claims = _verify_jwt(with_expected, [jwk], self.ISSUER, "sui-sensemaking-agents")
+        with pytest.raises(JwtIdentityError) as exc:
+            _verify_jwt(without_expected, [jwk], self.ISSUER, "sui-sensemaking-agents")
+
+        assert claims["sub"] == "subject-1"
+        assert exc.value.code == "invalid_audience"
 
 
 # ---------------------------------------------------------------------------

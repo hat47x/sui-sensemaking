@@ -35,7 +35,7 @@ from sui_sensemaking_api.access_control import (
 )
 from sui_sensemaking_api.audit import build_event
 from sui_sensemaking_api.auth_assurance import build_auth_assurance_metadata
-from sui_sensemaking_api.auth_context import resolve_identity_context
+from sui_sensemaking_api.auth_context import ResolvedIdentity, resolve_identity_context
 from sui_sensemaking_api.content_store import ContentBlob
 from sui_sensemaking_api.database_content_store import (
     DatabaseAppendOnlyLogContentStore,
@@ -43,6 +43,7 @@ from sui_sensemaking_api.database_content_store import (
 )
 from sui_sensemaking_api.agent_credentials import (
     AgentCredentialRepository,
+    reject_mixed_credentials,
     resolve_agent_request,
 )
 from sui_sensemaking_api.db import get_db
@@ -228,6 +229,9 @@ def _authorize_request(
     safe_mode: bool,
     read_only: bool,
 ) -> tuple[AccessRequest, AccessDecision, TenantContext]:
+    # ADR-0093: 資格情報の系統は一つだけ。agentの資格情報と、ゲスト/メンバーの資格情報を
+    # 同時に送る要求は、どの主体として扱うかが曖昧になるので拒否する。
+    reject_mixed_credentials(request)
     guest_session = resolve_guest_request_session(request=request)
     if guest_session is not None:
         # ADR-0080 D3: the guest principal itself conveys zero document
@@ -393,6 +397,37 @@ def _authorize_request(
             user_id=identity.user_id,
             claim=identity.verified_tenant_claim,
         )
+    return authorize_resolved_member_document(
+        request,
+        db,
+        action=action,
+        doc_id=doc_id,
+        safe_mode=safe_mode,
+        read_only=read_only,
+        identity=identity,
+        tenant=tenant,
+        tenant_scoped_session_required=tenant_scoped_session_required,
+    )
+
+
+def authorize_resolved_member_document(
+    request: Request,
+    db: Session,
+    *,
+    action: AccessAction,
+    doc_id: str,
+    safe_mode: bool,
+    read_only: bool,
+    identity: ResolvedIdentity,
+    tenant: TenantContext,
+    tenant_scoped_session_required: bool,
+) -> tuple[AccessRequest, AccessDecision, TenantContext]:
+    """確定した利用者（member）の、文書に対する判定。
+
+    資格情報の系統（guest / agent / member）の振り分けは、呼び出し側で済ませておく。
+    ADR-0093 の管理APIは、登録者の読み取り可否を、要求に同乗した agent 資格情報に
+    関係なく、この判定で確かめる（agent の主体で判定させないため）。
+    """
     resource_resolver: DocumentAccessResourceResolver = getattr(
         request.app.state,
         "document_access_resource_resolver",
@@ -773,7 +808,10 @@ def list_documents(
                 f"{quote(granted_items[-1].updated_at)}:{granted_items[-1].id}"
             )
         # 文書の題名は、確認済みかどうかを持たない本文なので、agentへは返さない。
-        return [item.model_copy(update={"title": None}) for item in granted_items]
+        # created_by は内部のユーザーIDなので、membershipを持たない外部主体には返さない。
+        return [
+            item.model_copy(update={"title": None, "created_by": None}) for item in granted_items
+        ]
     requesting_user_id, tenant = _resolve_request_identity_and_tenant(request=request, db=db)
     adapter = getattr(request.app.state, "access_control_adapter", None)
     adapter_is_real = adapter is not None and getattr(adapter, "name", None) != "noop"
@@ -857,11 +895,14 @@ def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     doc_row = stored_document.row
-    response.headers["ETag"] = _format_etag(_compute_etag(doc_row.payload_json))
     payload = json.loads(stored_document.content.text)
     if access_request.auth.provider == "agent_credential":
         # ADR-0093: 外部agentには、許可した構造項目と、人が確認した本文だけを渡す。
+        # ETag は返さない。保存された全文のハッシュは、伏せた項目の変更や内容の一致を
+        # 示す手掛かりになる。agent は書き込めないので、条件付き更新にも使わない。
         payload = _agent_document_view(payload)
+    else:
+        response.headers["ETag"] = _format_etag(_compute_etag(doc_row.payload_json))
 
     dispatcher = getattr(request.app.state, "audit_dispatcher", None)
     if dispatcher is not None:
@@ -1214,6 +1255,21 @@ def post_context_audit(
         read_only=(x_read_only == "1" or (x_read_only or "").lower() == "true"),
     )
 
+    is_agent = access_request.auth.provider == "agent_credential"
+    if is_agent and (
+        payload.operation != "query"
+        or payload.command != "context-query"
+        or payload.channel != "mcp"
+    ):
+        # agent は読み取り専用。提案・適用の監査や、他のchannelを名乗る記録は作れない。
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "agent_audit_operation_not_enabled",
+                "message": "Agent credentials may record only MCP context queries.",
+            },
+        )
+
     if payload.queryHash is not None and payload.queryHash != payload.equivalenceKey:
         raise _ce4_validation_error(
             "query_hash_mismatch", "queryHash must equal equivalenceKey for CE4 equivalence checks"
@@ -1249,7 +1305,9 @@ def post_context_audit(
             "operation_command_mismatch",
             f"command '{payload.command}' is invalid for operation '{payload.operation}'",
         )
-    if settings.ce4_audit_require_all_events:
+    if settings.ce4_audit_require_all_events and not is_agent:
+        # 完全性の追跡は、人間の経路の提案→適用の連鎖のためのもの。agent の読み取り監査は
+        # この追跡に加えない（別主体の event で、他の主体の検査を満たさせない）。
         _record_ce4_event_and_validate_completeness(
             tenant_id=tenant.tenant_id,
             doc_id=doc_id,

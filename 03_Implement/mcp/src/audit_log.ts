@@ -83,7 +83,7 @@ export async function emitContextAuditEvent(
     schemaVersion: CE4_AUDIT_SCHEMA_VERSION,
   };
   try {
-    const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+    const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), redirect: "error" });
     if (!response.ok) {
       process.stderr.write(
         `${JSON.stringify({

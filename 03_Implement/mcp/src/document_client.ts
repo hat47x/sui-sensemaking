@@ -1,6 +1,7 @@
 import type { DocumentV1 } from "../../frontend/src/domain/types.js";
 import { authHeaders } from "./auth_headers.js";
 import { loadTokenExchangeConfigFromEnv, type TokenExchangeConfig } from "./token_exchange.js";
+import { requireSecureEndpoint } from "./transport_security.js";
 
 export { AGENT_CREDENTIAL_HEADER, authHeaders } from "./auth_headers.js";
 
@@ -71,6 +72,8 @@ export function loadDocumentClientConfigFromEnv(env: NodeJS.ProcessEnv = process
   const baseUrl = rawBaseUrl && rawBaseUrl.length > 0 ? rawBaseUrl : "http://127.0.0.1:8000";
   const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
   if (runtimeProfile === "saas-multitenant") {
+    // 資格情報（agent 資格情報、交換後のトークン）を平文で送らない。
+    requireSecureEndpoint(normalizedBaseUrl, "SUI_MCP_API_BASE_URL");
     if ((env.SUI_MCP_TRANSPORT?.trim() || "stdio").toLowerCase() === "http") {
       return { baseUrl: normalizedBaseUrl, tokenExchange: loadTokenExchangeConfigFromEnv(env) };
     }
@@ -98,7 +101,7 @@ export async function fetchDocument(config: DocumentClientConfig, docId: string)
   const url = `${config.baseUrl}/docs/${encodeURIComponent(docId)}`;
   const headers: Record<string, string> = authHeaders(config);
 
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, { headers, redirect: "error" });
 
   if (response.status === 404) {
     throw new DocumentNotFoundError(docId);
@@ -130,7 +133,7 @@ export async function fetchDocumentMetadata(
   const headers: Record<string, string> = authHeaders(config);
 
   try {
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, redirect: "error" });
     if (!response.ok) {
       return null; // metadata is advisory — the content fetch remains authoritative
     }
@@ -163,7 +166,7 @@ export async function fetchProposalStatus(
   const url = `${config.baseUrl}/ai/proposals/status?docId=${encodeURIComponent(docId)}`;
   const headers: Record<string, string> = authHeaders(config);
 
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, { headers, redirect: "error" });
   if (!response.ok) {
     throw new DocumentFetchError(docId, response.status);
   }

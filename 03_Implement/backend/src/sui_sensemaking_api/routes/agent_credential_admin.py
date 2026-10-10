@@ -22,6 +22,7 @@ from sui_sensemaking_api.agent_credentials import (
 )
 from sui_sensemaking_api.auth_context import ResolvedIdentity
 from sui_sensemaking_api.db import get_db
+from sui_sensemaking_api.routes.docs import authorize_resolved_member_document
 from sui_sensemaking_api.saas_request_context import resolve_trusted_saas_request_session
 from sui_sensemaking_api.tenant_context import TenantContext
 from sui_sensemaking_api.tenant_session_precondition import (
@@ -56,7 +57,10 @@ class AgentCredentialCreateRequest(BaseModel):
 
     @field_validator("docIds")
     @classmethod
-    def _doc_ids_are_unique(cls, value: list[str]) -> list[str]:
+    def _doc_ids_are_canonical_and_unique(cls, value: list[str]) -> list[str]:
+        # 保存する値と照合する値を一致させるため、整形せず、空白付きは拒否する。
+        if any(not item or item != item.strip() for item in value):
+            raise ValueError("docIds must not be empty or carry surrounding whitespace")
         if len(set(value)) != len(value):
             raise ValueError("docIds must not repeat")
         return value
@@ -67,6 +71,13 @@ class AgentOAuthPrincipal(BaseModel):
 
     identityProviderId: str = Field(min_length=1, max_length=128)
     subject: str = Field(min_length=1, max_length=512)
+
+    @field_validator("identityProviderId", "subject")
+    @classmethod
+    def _no_surrounding_whitespace(cls, value: str) -> str:
+        if value != value.strip():
+            raise ValueError("value must not carry surrounding whitespace")
+        return value
 
 
 class AgentCredentialSummary(BaseModel):
@@ -115,6 +126,42 @@ def _authorize(
             message="Agent credential management capability is required.",
         )
     return trusted_session.identity, trusted_session.tenant
+
+
+def _require_registrant_can_read(
+    *,
+    request: Request,
+    db: Session,
+    identity: ResolvedIdentity,
+    tenant: TenantContext,
+    doc_ids: list[str],
+) -> None:
+    """付与できるのは、登録者自身が読める文書だけにする。
+
+    ``agent.register`` は、文書の中身を読む権限ではない（ADR-0059 D9）。判定の主体は、
+    管理APIが信頼できる形で確定した登録者（identity / tenant）で、要求に同乗した agent
+    資格情報では決めない。読めない理由は、存在しない・他tenantの文書と区別しない。
+    """
+    for doc_id in doc_ids:
+        try:
+            authorize_resolved_member_document(
+                request,
+                db,
+                action="read",
+                doc_id=doc_id,
+                safe_mode=True,
+                read_only=True,
+                identity=identity,
+                tenant=tenant,
+                # 管理APIは、信頼できる saas session でしか開かない（_authorize）。
+                tenant_scoped_session_required=True,
+            )
+        except HTTPException as error:
+            if error.status_code in (401, 403, 404):
+                raise _error(
+                    status_code=404, code="document_not_found", message="Document not found."
+                ) from error
+            raise
 
 
 def _summary(
@@ -166,6 +213,9 @@ def register_agent_credential(
             code="agent_credential_expiry_invalid",
             message=f"expiresAt must be in the future and within {MAX_CREDENTIAL_LIFETIME.days} days.",
         )
+    _require_registrant_can_read(
+        request=request, db=db, identity=identity, tenant=tenant, doc_ids=payload.docIds
+    )
     repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
     try:
         token = repo.register(

@@ -22,9 +22,18 @@ from sui_sensemaking_api.agent_credential_models import (
     AgentOAuthBindingRow,
 )
 from sui_sensemaking_api.auth_session_hash import derive_session_key_hash
-from sui_sensemaking_api.models import DocumentRow, IdentityProviderRow
+from sui_sensemaking_api.models import (
+    DocumentRow,
+    IdentityProviderRow,
+    TenantIdentityProviderRow,
+    TenantRow,
+)
 from sui_sensemaking_api.tenant_db_guard import apply_database_tenant_id
-from sui_sensemaking_api.trusted_auth_edge import JwtIdentityError, verify_configured_oidc_token
+from sui_sensemaking_api.trusted_auth_edge import (
+    JwtIdentityError,
+    resolve_tenant_from_verified_token,
+    verify_oidc_token_for_audience,
+)
 
 AGENT_CREDENTIAL_HEADER = "Sui-Sensemaking-Agent-Credential"
 # ADR-0094: トークン交換で得た、backend宛ての短命のOAuthトークン。
@@ -51,6 +60,17 @@ def _required(value: str, *, field: str) -> str:
     if not normalized:
         raise AgentCredentialError(f"{field} must be non-empty")
     return normalized
+
+
+def _identifier(value: str, *, field: str) -> str:
+    """照合キーになる値。整形して保存せず、前後に空白があれば拒否する。
+
+    保存時だけ空白を落とすと、保存した値と、要求で照合する生の値がずれて、重複検査や
+    付与の判定をすり抜ける。
+    """
+    if not value or value != value.strip():
+        raise AgentCredentialError(f"{field} must be non-empty without surrounding whitespace")
+    return value
 
 
 def _parse_aware(value: str) -> datetime | None:
@@ -98,7 +118,7 @@ class AgentCredentialRepository:
         """資格情報を作り、生トークンを一度だけ返す。保存するのはハッシュだけ。"""
         self._scope()
         current = _aware_utc(now)
-        agent = _required(agent_id, field="agent_id")
+        agent = _identifier(agent_id, field="agent_id")
         expiry = _parse_aware(expires_at)
         if expiry is None or expiry <= current:
             raise AgentCredentialError("expires_at must be a future aware timestamp")
@@ -136,7 +156,7 @@ class AgentCredentialRepository:
         return raw_token
 
     def _grant(self, *, agent_id: str, doc_id: str, granted_by: str, granted_at: str) -> None:
-        document_id = _required(doc_id, field="doc_id")
+        document_id = _identifier(doc_id, field="doc_id")
         if self._db.get(DocumentRow, (self._tenant_id, document_id)) is None:
             raise AgentCredentialError("doc_id does not exist in this tenant")
         self._db.add(
@@ -154,7 +174,7 @@ class AgentCredentialRepository:
     def revoke_credential(self, *, agent_id: str, now: datetime) -> None:
         self._scope()
         row = self._db.get(
-            AgentCredentialRow, (self._tenant_id, _required(agent_id, field="agent_id"))
+            AgentCredentialRow, (self._tenant_id, _identifier(agent_id, field="agent_id"))
         )
         if row is None:
             raise AgentCredentialError("agent_id does not exist")
@@ -170,8 +190,8 @@ class AgentCredentialRepository:
             AgentDocumentGrantRow,
             (
                 self._tenant_id,
-                _required(agent_id, field="agent_id"),
-                _required(doc_id, field="doc_id"),
+                _identifier(agent_id, field="agent_id"),
+                _identifier(doc_id, field="doc_id"),
             ),
         )
         if grant is None:
@@ -189,23 +209,35 @@ class AgentCredentialRepository:
         created_by: str,
         now: datetime,
     ) -> None:
-        """検証済みのOAuth主体を agent に結ぶ。同じ主体は、全体で一つの agent にしか結べない。"""
+        """検証済みのOAuth主体を agent に結ぶ。
+
+        結べるのは、このtenantが ``tenant_identity_providers`` で信頼しているIdPだけ。
+        キーに tenant_id を含むので、別のtenantが同じ (IdP, sub) を結んでいても、
+        互いに見えず、競合も存在の手掛かりも生じない。
+        """
         self._scope()
-        agent = _required(agent_id, field="agent_id")
+        agent = _identifier(agent_id, field="agent_id")
         if self._db.get(AgentCredentialRow, (self._tenant_id, agent)) is None:
             raise AgentCredentialError("agent_id does not exist")
-        provider_id = _required(identity_provider_id, field="identity_provider_id")
+        provider_id = _identifier(identity_provider_id, field="identity_provider_id")
         provider = self._db.get(IdentityProviderRow, provider_id)
-        if provider is None or provider.lifecycle_state != "active":
+        trusted = self._db.get(TenantIdentityProviderRow, (self._tenant_id, provider_id))
+        if (
+            provider is None
+            or provider.lifecycle_state != "active"
+            or trusted is None
+            or trusted.lifecycle_state != "active"
+        ):
+            # 存在しないIdPと、このtenantが信頼していないIdPを区別しない。
             raise AgentCredentialError("identity provider does not exist")
-        key = (provider_id, _required(subject, field="subject"))
+        key = (self._tenant_id, provider_id, _identifier(subject, field="subject"))
         if self._db.get(AgentOAuthBindingRow, key) is not None:
             raise AgentCredentialError("oauth principal is already bound")
         self._db.add(
             AgentOAuthBindingRow(
-                identity_provider_id=key[0],
-                subject=key[1],
-                tenant_id=self._tenant_id,
+                tenant_id=key[0],
+                identity_provider_id=key[1],
+                subject=key[2],
                 agent_id=agent,
                 created_by=_required(created_by, field="created_by"),
                 created_at=_aware_utc(now).isoformat(),
@@ -217,9 +249,15 @@ class AgentCredentialRepository:
         self, *, agent_id: str, identity_provider_id: str, subject: str
     ) -> None:
         self._scope()
-        row = self._db.get(AgentOAuthBindingRow, (identity_provider_id, subject))
-        # 他tenantの対応付けは、存在しないものと区別しない。
-        if row is None or row.tenant_id != self._tenant_id or row.agent_id != agent_id:
+        row = self._db.get(
+            AgentOAuthBindingRow,
+            (
+                self._tenant_id,
+                _identifier(identity_provider_id, field="identity_provider_id"),
+                _identifier(subject, field="subject"),
+            ),
+        )
+        if row is None or row.agent_id != _identifier(agent_id, field="agent_id"):
             raise AgentCredentialError("binding does not exist")
         self._db.delete(row)
         self._db.flush()
@@ -273,6 +311,26 @@ def _invalid() -> HTTPException:
     )
 
 
+_MEMBER_CREDENTIAL_COOKIES = ("Sui-Sensemaking-Auth-Session", "Sui-Sensemaking-Guest-Session")
+_MEMBER_CREDENTIAL_HEADERS = ("X-Sui-Sensemaking-Authorization",)
+
+
+def reject_mixed_credentials(request: Request) -> None:
+    """agent の資格情報と、ゲスト/メンバーの資格情報を同時に送る要求を 400 で拒否する。"""
+    if not request_has_agent_credential(request):
+        return
+    if any(request.cookies.get(name) is not None for name in _MEMBER_CREDENTIAL_COOKIES) or any(
+        request.headers.get(name) is not None for name in _MEMBER_CREDENTIAL_HEADERS
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "agent_credential_conflict",
+                "message": "Send exactly one credential family per request.",
+            },
+        )
+
+
 def request_has_agent_credential(request: Request) -> bool:
     return (
         request.headers.get(AGENT_CREDENTIAL_HEADER) is not None
@@ -285,6 +343,10 @@ def _active_principal(
 ) -> AgentRequestPrincipal:
     """tenantを確定し、資格情報の状態・期限・版を、RLS付きの表で確認する。"""
     apply_database_tenant_id(db=db, tenant_id=tenant_id)
+    tenant = db.get(TenantRow, tenant_id)
+    if tenant is None or tenant.lifecycle_state != "active":
+        # 停止・無効化したtenantのagentは、資格情報の期限を待たずに止まる。
+        raise _invalid()
     credential = db.get(AgentCredentialRow, (tenant_id, agent_id))
     if (
         credential is None
@@ -329,22 +391,36 @@ def _resolve_opaque_credential(
 def _resolve_oauth_bearer(
     *, request: Request, db: Session, raw_value: str
 ) -> AgentRequestPrincipal:
-    """ADR-0094: 交換後のトークンを自分で検証し、(IdP登録簿のid, sub) から agent を引く。"""
+    """ADR-0094: 交換後のトークンを自分で検証し、対応付けから agent を引く。
+
+    1. 発行者は既存の単一のIdP行で解決し、audience は設定値 (SUI_AGENT_OAUTH_AUDIENCE) に固定する。
+       メンバーのログイン用・ゲスト用・MCP宛てのトークンは、audience が違うので通らない。
+    2. トークンの tenant claim を ``tenant_identity_providers`` で tenant に確定する（claimは
+       要求であって権限ではない）。IdP自身が証明した tenant の対応付けだけを引く。
+    3. 状態・期限は、tenantが確定した後、RLS付きの表で毎要求引き直す。
+    """
     token = raw_value.strip()
     if token.lower().startswith("bearer "):
         token = token[7:].strip()
     if not token or len(token) > _MAX_BEARER_LENGTH:
         raise _invalid()
     jwks_store = getattr(request.app.state, "agent_jwks_store", None)
-    if jwks_store is None:
+    audience = getattr(request.app.state, "agent_oauth_audience", None)
+    if jwks_store is None or not audience:
         raise _unavailable()
     try:
-        verified = verify_configured_oidc_token(db=db, token=token, jwks_store=jwks_store)
+        verified = verify_oidc_token_for_audience(
+            db=db, token=token, jwks_store=jwks_store, audience=audience
+        )
+        tenant_claim = resolve_tenant_from_verified_token(db=db, verified=verified)
     except JwtIdentityError as error:
         if error.status_code == 503:
             raise _unavailable() from None
         raise _invalid() from None
-    binding = db.get(AgentOAuthBindingRow, (verified.provider.id, verified.subject))
+    binding = db.get(
+        AgentOAuthBindingRow,
+        (tenant_claim.tenant_id, verified.provider.id, verified.subject),
+    )
     if binding is None:
         raise _invalid()
     return _active_principal(

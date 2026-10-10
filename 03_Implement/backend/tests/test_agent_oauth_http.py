@@ -1,7 +1,9 @@
 """ADR-0094: トークン交換で得たOAuthトークンによる agent の認証。
 
-backend が交換後のトークンを自分で検証し、(IdP登録簿のid, sub) から agent を引く。
-tenant は対応付けの行から決まり、トークンの claim や MCP の申告では決まらない。
+backend が交換後のトークンを自分で検証し、(tenant, IdP登録簿のid, sub) から agent を引く。
+audience は設定値 (SUI_AGENT_OAUTH_AUDIENCE) に固定する。tenant はトークンの tenant claim を
+``tenant_identity_providers`` の対応で確定し（claim は要求であって権限ではない）、MCP の申告
+では決まらない。
 """
 
 from __future__ import annotations
@@ -30,9 +32,16 @@ from sui_sensemaking_api.agent_credentials import (
 )
 from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.jwks_store import JwksStore
-from sui_sensemaking_api.models import Base, DocumentRow, IdentityProviderRow, TenantRow
+from sui_sensemaking_api.models import (
+    Base,
+    DocumentRow,
+    IdentityProviderRow,
+    TenantIdentityProviderRow,
+    TenantRow,
+)
 from sui_sensemaking_api.routes.ai import router as ai_router
 from sui_sensemaking_api.routes.docs import router as docs_router
+from sui_sensemaking_api.settings import settings
 
 TIMESTAMP = "2026-10-09T00:00:00+00:00"
 HASH_KEY = b"agent-oauth-test-key-0123456789ab"
@@ -41,6 +50,7 @@ AGENT_AUDIENCE = "sui-sensemaking-agents"  # backend 宛て。MCP 宛てのaudie
 MCP_AUDIENCE = "https://mcp.invalid/mcp"
 KID = "agent-oauth-key"
 PROVIDER_ID = "idp-agents"
+TENANT_REFS = {"tenant-a": "org-a", "tenant-b": "org-b"}  # IdP側のtenant claimの値
 
 
 def _keypair() -> tuple[rsa.RSAPrivateKey, dict[str, object]]:
@@ -68,19 +78,23 @@ def _token(
     audience: str = AGENT_AUDIENCE,
     issuer: str = ISSUER,
     expired: bool = False,
+    tenant_ref: str | None = "org-a",
 ) -> str:
     now = int(time.time())
+    claims: dict[str, object] = {
+        "iss": issuer,
+        "aud": audience,
+        "sub": subject,
+        "iat": now - 60,
+        "exp": now - 3600 if expired else now + 300,
+        "jti": str(uuid4()),
+        # 交換を行った MCP サーバー自身のクライアント。同定には使わない。
+        "azp": "mcp-server",
+    }
+    if tenant_ref is not None:
+        claims[settings.tenant_claim_name] = tenant_ref
     return jwt.encode(
-        {
-            "iss": issuer,
-            "aud": audience,
-            "sub": subject,
-            "iat": now - 60,
-            "exp": now - 3600 if expired else now + 300,
-            "jti": str(uuid4()),
-            # 交換を行った MCP サーバー自身のクライアント。同定には使わない。
-            "azp": "mcp-server",
-        },
+        claims,
         key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
@@ -144,6 +158,17 @@ def env(tmp_path) -> Iterator[dict]:
                 # MCP 宛てのaudienceは、agent の経路では登録しない（パススルーさせない）。
             ]
         )
+        for tenant_id, ref in TENANT_REFS.items():
+            db.add(
+                TenantIdentityProviderRow(
+                    tenant_id=tenant_id,
+                    identity_provider_id=PROVIDER_ID,
+                    external_tenant_ref=ref,
+                    lifecycle_state="active",
+                    created_at=TIMESTAMP,
+                    updated_at=TIMESTAMP,
+                )
+            )
         for tenant_id, doc_id in (
             ("tenant-a", "shared-doc"),
             ("tenant-a", "a-ungranted"),
@@ -188,6 +213,7 @@ def env(tmp_path) -> Iterator[dict]:
     app.include_router(docs_router)
     app.include_router(ai_router)
     app.state.agent_credential_hash_key = HASH_KEY
+    app.state.agent_oauth_audience = AGENT_AUDIENCE
     app.state.agent_jwks_store = JwksStore()
     app.state.access_control_adapter = None
     app.state.audit_dispatcher = None
@@ -210,7 +236,10 @@ def _bearer(token: str) -> dict[str, str]:
 def test_a_bound_oauth_principal_reads_only_its_granted_documents(env) -> None:
     client, key = env["client"], env["key"]
     a = client.get("/docs/shared-doc", headers=_bearer(_token(key, subject="agent-client-1")))
-    b = client.get("/docs/shared-doc", headers=_bearer(_token(key, subject="agent-client-2")))
+    b = client.get(
+        "/docs/shared-doc",
+        headers=_bearer(_token(key, subject="agent-client-2", tenant_ref="org-b")),
+    )
     ungranted = client.get("/docs/a-ungranted", headers=_bearer(_token(key)))
     listed = client.get("/docs", headers=_bearer(_token(key)))
 
@@ -226,33 +255,60 @@ def test_unreviewed_text_is_withheld_on_the_oauth_path_too(env) -> None:
     assert "SECRET" not in json.dumps(body)
 
 
-def test_the_tenant_comes_from_the_binding_not_from_the_token(env) -> None:
-    """tenant-b 用のクライアントのトークンに tenant-a を名乗る claim を足しても、tenant-b のまま。"""
+def test_the_tenant_is_the_one_the_idp_attests_not_one_the_caller_names(env) -> None:
+    """tenant-b 用のクライアントが tenant-a を名乗る claim で来ても、tenant-a の文書は読めない。"""
     client, key = env["client"], env["key"]
-    now = int(time.time())
-    forged = jwt.encode(
-        {
-            "iss": ISSUER,
-            "aud": AGENT_AUDIENCE,
-            "sub": "agent-client-2",
-            "iat": now - 60,
-            "exp": now + 300,
-            "tenant_id": "tenant-a",
-            "tenant_ref": "tenant-a",
-        },
-        key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        ).decode(),
-        algorithm="RS256",
-        headers={"kid": KID},
-    )
-    own = client.get("/docs/shared-doc", headers=_bearer(forged))
-    other = client.get("/docs/a-ungranted", headers=_bearer(forged))
+    claiming_a = _token(key, subject="agent-client-2", tenant_ref="org-a")
+    claiming_b = _token(key, subject="agent-client-2", tenant_ref="org-b")
 
-    assert own.status_code == 200
-    assert other.status_code == 404
+    assert client.get("/docs/shared-doc", headers=_bearer(claiming_a)).status_code == 401
+    assert client.get("/docs/a-ungranted", headers=_bearer(claiming_a)).status_code == 401
+    assert client.get("/docs/shared-doc", headers=_bearer(claiming_b)).status_code == 200
+    assert client.get("/docs/a-ungranted", headers=_bearer(claiming_b)).status_code == 404
+
+
+def test_the_same_subject_can_be_bound_in_two_tenants_without_seeing_each_other(env) -> None:
+    """(tenant, IdP, sub) がキー。他tenantが先に結んでいても、競合も存在の手掛かりも生じない。"""
+    now = datetime.now(timezone.utc)
+    with env["factory"]() as db:
+        # tenant-b が、tenant-a のクライアントと同じ sub を、自分の agent に結ぶ。
+        AgentCredentialRepository(db, tenant_id="tenant-b").bind_oauth_principal(
+            agent_id="agent-b",
+            identity_provider_id=PROVIDER_ID,
+            subject="agent-client-1",
+            created_by="admin",
+            now=now,
+        )
+        db.commit()
+    client, key = env["client"], env["key"]
+    a = client.get(
+        "/docs", headers=_bearer(_token(key, subject="agent-client-1", tenant_ref="org-a"))
+    )
+    b = client.get(
+        "/docs", headers=_bearer(_token(key, subject="agent-client-1", tenant_ref="org-b"))
+    )
+
+    assert a.status_code == 200 and b.status_code == 200
+    # どちらのtenantでも、そのtenantの agent の付与だけが見える（互いのtenantの文書は混ざらない）。
+    assert [item["id"] for item in a.json()] == ["shared-doc"]
+    assert [item["id"] for item in b.json()] == ["shared-doc"]
+
+
+def test_a_token_without_a_tenant_claim_is_rejected(env) -> None:
+    response = env["client"].get(
+        "/docs/shared-doc", headers=_bearer(_token(env["key"], tenant_ref=None))
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "agent_credential_invalid"
+
+
+def test_the_oauth_path_is_unavailable_without_a_configured_audience(env) -> None:
+    env["app"].state.agent_oauth_audience = None
+    response = env["client"].get("/docs/shared-doc", headers=_bearer(_token(env["key"])))
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "agent_credential_unavailable"
 
 
 @pytest.mark.parametrize(
@@ -327,24 +383,34 @@ def _document_payload() -> dict:
     return json.loads(_document("shared-doc", "x"))
 
 
-def test_a_principal_can_be_bound_to_only_one_agent(env) -> None:
+def test_a_principal_can_be_bound_to_only_one_agent_within_a_tenant(env) -> None:
     from sui_sensemaking_api.agent_credentials import AgentCredentialError
 
+    now = datetime.now(timezone.utc)
     with env["factory"]() as db:
-        repo = AgentCredentialRepository(db, tenant_id="tenant-b")
-        with pytest.raises(AgentCredentialError):
+        repo = AgentCredentialRepository(db, tenant_id="tenant-a")
+        repo.register(
+            agent_id="agent-a2",
+            label="second",
+            created_by="admin",
+            expires_at=(now + timedelta(days=7)).isoformat(),
+            doc_ids=("shared-doc",),
+            hash_key=HASH_KEY,
+            now=now,
+        )
+        with pytest.raises(AgentCredentialError, match="already bound"):
             repo.bind_oauth_principal(
-                agent_id="agent-b",
+                agent_id="agent-a2",
                 identity_provider_id=PROVIDER_ID,
-                subject="agent-client-1",  # tenant-a が結んでいる
+                subject="agent-client-1",  # 同じtenantの agent-a が結んでいる
                 created_by="admin",
-                now=datetime.now(timezone.utc),
+                now=now,
             )
-        with pytest.raises(AgentCredentialError):
+        with pytest.raises(AgentCredentialError, match="identity provider does not exist"):
             repo.bind_oauth_principal(
-                agent_id="agent-b",
+                agent_id="agent-a2",
                 identity_provider_id="no-such-provider",
                 subject="x",
                 created_by="admin",
-                now=datetime.now(timezone.utc),
+                now=now,
             )

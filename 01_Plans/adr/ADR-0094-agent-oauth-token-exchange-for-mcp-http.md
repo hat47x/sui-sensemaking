@@ -48,3 +48,12 @@ CVI（不変条件）のうち、share/exportで未レビュー情報・秘密�
 ## Traceability
 
 - Related: `ADR-0054`、`ADR-0063`（D8）、`ADR-0080`、`ADR-0093`
+
+## 実装後の訂正（レビュー反映）
+
+Decision の 1 と 2 のうち、次の点を改めた。対応付けの考え方（交換後のトークンの `sub` で agent を同定し、tenant はトークンの claim ではなく対応付けの行から決める）は変えていない。
+
+- **audience は設定で固定する。** backend が交換後のトークンに求める audience は、設定 `SUI_AGENT_OAUTH_AUDIENCE` で与える（`runtime_parameter_registry.md` 参照）。未設定なら、OAuth の経路は閉じる。「新しい設定項目は増やさない」としていた前提は、この理由で誤りだった。トークン自身の `aud` の値から一致するものを選ぶ回避は行わない。呼び出し側が指定した audience を、トークンの申告で無効にさせないため。
+- **tenant は IdP が証明したものだけで確定する。** トークンの tenant claim（`SUI_TENANT_CLAIM_NAME`）を、`tenant_identity_providers` で tenant に写した行だけを使う。agent の対応付けは `(tenant, IdP, sub)` で一意とする。他の tenant が同じ `(IdP, sub)` を結んでも、互いに見えず、競合も存在の手掛かりも生じない。
+- **対応付けは、tenant が信頼する IdP にだけ結べる。** Tenant Admin が agent を結べるのは、その tenant が `tenant_identity_providers` で信頼している IdP の行に限る。信頼していない IdP と存在しない IdP は、同じ `404` で閉じる。
+- **メンバーのログインとの分離は、audience の分離に依る。** 同じ IdP の行をメンバーのログインと共有しても、audience が固定されるので、メンバーのトークンが agent として通ることはない。ただし、この分離は IdP が audience を正しく分けて発行することを前提にする。この前提は、導入時に実 IdP で確かめる（未解決。このADRの時点では、署名したテスト用のトークンでの確認にとどまる）。

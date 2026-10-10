@@ -73,3 +73,15 @@ CVI（不変条件）のうち、share/exportで未レビュー情報・秘密�
 
 - Related: `ADR-0054`、`ADR-0059`（D6・D9・D10）、`ADR-0063`（D8）、`ADR-0068`、`ADR-0080`、`ADR-0081`
 - Derived-from: TEI側の `plan/design/SUI_MIGRATION_EXTENSION_AND_SPLIT_DESIGN_2026-10.md` 付録A（MCP経路の所見）
+
+## 実装後の訂正（レビュー反映）
+
+実装のレビューで、次の境界を明示した。決定の方向は変えていない。
+
+- **登録は、登録者が読める文書だけに付与する。** `agent.register` は文書の中身を読む権限ではない（`ADR-0059` D9）。登録時、付与する文書ごとに、登録者本人の identity と tenant で読み取りの判定（PDP・分類・tenant境界）を通す。通らない文書は、存在しない文書と同じ `404 document_not_found` で閉じ、何も作らない。判定の主体は、要求に同乗した agent 資格情報ではなく、管理APIが確定した登録者である。
+- **ハッシュ鍵は専用にする。** 不透明な資格情報のハッシュ鍵は、セッション用の `SUI_SAAS_AUTH_SESSION_HASH_KEY` と分けた `SUI_AGENT_CREDENTIAL_HASH_KEY` とする。鍵を更新しても、互いの資格情報が失効しないようにするため。未設定なら、発行は `503` で閉じる。
+- **資格情報の系統を混ぜない。** agent の資格情報（不透明・OAuth）と、利用者の資格情報（cookie・ヘッダー）を同じ要求で送ると、`400 agent_credential_conflict` で閉じる。どの主体として扱うかを曖昧にしないため。
+- **agent への応答は共有キャッシュに残さない。** agent の応答は `Cache-Control: private, no-store` とし、資格情報のヘッダーで `Vary` を付ける。ETag は返さない。保存された全文のハッシュは、伏せた項目の変更や内容の一致を示す手掛かりになるため。`created_by`（内部のユーザーID）も返さない。
+- **agent の監査は読み取りの記録だけ。** agent が送れる context-audit は、MCP の `context-query` だけとする。提案・適用の監査は作れない。CE-4 の完全性の追跡は、人間の経路の提案→適用の連鎖のためのものなので、agent の読み取り監査はそこに加えない。
+
+**この訂正が保証しないこと。** agent 経由の監査イベントが、既定の監査設定で記録されない経路があるかは、導入時に確かめる（未解決）。ログに資格情報が出ないことは、`03_Implement/backend/tests/test_agent_credential_log_hygiene.py` で検査する。これは試験の範囲の保証であり、本番の監視基盤の出力までは確かめない。

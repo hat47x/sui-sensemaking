@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from sui_sensemaking_api.access_control import AuthContext
+from sui_sensemaking_api.access_control import AccessDecision, AccessRequest, AuthContext
 from sui_sensemaking_api.agent_credential_models import (
     AgentCredentialIndexRow,
     AgentCredentialRow,
@@ -27,6 +27,7 @@ from sui_sensemaking_api.models import (
     Base,
     DocumentRow,
     IdentityProviderRow,
+    TenantIdentityProviderRow,
     TenantMembershipRow,
     TenantRow,
     UserRow,
@@ -86,6 +87,17 @@ class MutableCapabilityResolver:
         self, *, db: Session, principal_id: str, tenant: TenantContext
     ) -> CapabilitySnapshot:  # noqa: ARG002
         return CapabilitySnapshot(effective_capabilities=self.capabilities, capability_version="v1")
+
+
+class ReadPolicyAdapter:
+    """登録者の文書読み取り判定。``restricted-doc`` だけを拒否する。"""
+
+    name = "test-read-policy"
+
+    def authorize(self, request: AccessRequest) -> AccessDecision:
+        if request.resource is not None and request.resource.doc_id == "restricted-doc":
+            return AccessDecision(allow=False, reason="restricted")
+        return AccessDecision(allow=True)
 
 
 class StaticTenantSessionPersister:
@@ -154,9 +166,20 @@ def _seed(db: Session) -> None:
             updated_at=TIMESTAMP,
         )
     )
+    db.add(
+        TenantIdentityProviderRow(
+            tenant_id="tenant-a",
+            identity_provider_id="idp-agents",
+            external_tenant_ref="org-a",
+            lifecycle_state="active",
+            created_at=TIMESTAMP,
+            updated_at=TIMESTAMP,
+        )
+    )
     for tenant_id, doc_id in (
         ("tenant-a", "shared-doc"),
         ("tenant-a", "a-second"),
+        ("tenant-a", "restricted-doc"),
         ("tenant-b", "shared-doc"),
         ("tenant-b", "b-only"),
     ):
@@ -194,17 +217,22 @@ def _client(
     tenant_resolver = MutableTenantResolver()
     capability_resolver = MutableCapabilityResolver()
     app.dependency_overrides[get_db] = _get_test_db
+    previous_runtime_profile = getattr(app.state, "runtime_profile", None)
     try:
         with TestClient(app) as client:
+            # 登録者の文書読み取り判定は、tenant-session必須の経路（saas-multitenant）で行う。
+            client.app.state.runtime_profile = "saas-multitenant"
+            client.headers["Sui-Sensemaking-Tenant-Session-Version"] = "session-v1"
             client.app.state.saas_identity_context_resolver = StaticIdentityResolver()
             client.app.state.tenant_context_resolver = tenant_resolver
             client.app.state.tenant_capability_resolver = capability_resolver
             client.app.state.active_tenant_session_persister = StaticTenantSessionPersister()
             client.app.state.agent_credential_hash_key = HASH_KEY
-            client.app.state.access_control_adapter = None
+            client.app.state.access_control_adapter = ReadPolicyAdapter()
             yield client, factory, tenant_resolver, capability_resolver
     finally:
         app.dependency_overrides.clear()
+        app.state.runtime_profile = previous_runtime_profile
         app.state.saas_identity_context_resolver = None
         app.state.tenant_capability_resolver = None
         app.state.active_tenant_session_persister = None
@@ -294,6 +322,22 @@ def test_a_document_of_another_tenant_cannot_be_granted(tmp_path) -> None:
     assert listed.json() == {"items": []}
 
 
+def test_a_document_the_registrant_cannot_read_cannot_be_granted(tmp_path) -> None:
+    # agent.register は文書を読む権限ではない。登録者自身が読めない文書への付与は、
+    # 存在しない文書と同じ404で閉じ、何も作らない（ADR-0059 D9）。
+    with _client(tmp_path) as (client, factory, _, _):
+        denied = client.post(BASE, json=_body(docIds=["shared-doc", "restricted-doc"]))
+        missing = client.post(BASE, json=_body(docIds=["no-such-doc"]))
+        listed = client.get(BASE)
+        with factory() as db:
+            index_rows = db.scalars(select(AgentCredentialIndexRow)).all()
+
+    assert denied.status_code == 404 and missing.status_code == 404
+    assert denied.json()["detail"] == missing.json()["detail"]
+    assert listed.json() == {"items": []}
+    assert index_rows == []
+
+
 def test_revocation_applies_to_the_next_agent_request_and_is_idempotent(tmp_path) -> None:
     with _client(tmp_path) as (client, _, _, _):
         token = client.post(BASE, json=_body(docIds=["shared-doc", "a-second"])).json()[
@@ -339,6 +383,9 @@ def test_expiry_must_be_future_bounded_and_timezone_aware(tmp_path, expires_at) 
     [
         {"docIds": []},
         {"docIds": ["shared-doc", "shared-doc"]},
+        {"docIds": [" shared-doc"]},
+        {"docIds": ["shared-doc "]},
+        {"docIds": [""]},
         {"agentId": "bad id/with space"},
         {"label": ""},
         {"unexpected": "field"},
@@ -403,6 +450,39 @@ def test_oauth_principals_are_bound_listed_and_removed_per_tenant(tmp_path) -> N
     assert bind_without_capability.status_code == 403
     assert removed.status_code == 204 and removed_again.status_code == 404
     assert after == []
+
+
+@pytest.mark.parametrize(
+    "principal",
+    [
+        {"identityProviderId": "idp-agents", "subject": " agent-client-1"},
+        {"identityProviderId": "idp-agents", "subject": "agent-client-1 "},
+        {"identityProviderId": " idp-agents", "subject": "agent-client-1"},
+    ],
+)
+def test_oauth_principals_with_surrounding_whitespace_are_rejected(tmp_path, principal) -> None:
+    with _client(tmp_path) as (client, _, _, _):
+        client.post(BASE, json=_body())
+        response = client.post(f"{BASE}/agent-1/oauth-bindings", json=principal)
+        listed = client.get(BASE).json()["items"][0]["oauthBindings"]
+
+    assert response.status_code == 422
+    assert listed == []
+
+
+def test_an_identity_provider_the_tenant_does_not_trust_cannot_be_bound(tmp_path) -> None:
+    # IdPは登録簿にあっても、このtenantが tenant_identity_providers で信頼していなければ、
+    # 存在しないIdPと同じ応答で結べない（他tenantのIdPを自分のagentに結ぶ先取りを防ぐ）。
+    with _client(tmp_path) as (client, _, tenants, _):
+        tenants.tenant_id = "tenant-b"
+        client.post(BASE, json=_body(docIds=["shared-doc"]))
+        response = client.post(
+            f"{BASE}/agent-1/oauth-bindings",
+            json={"identityProviderId": "idp-agents", "subject": "agent-client-1"},
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "identity_provider_not_found"
 
 
 def test_an_unknown_identity_provider_cannot_be_bound(tmp_path) -> None:

@@ -91,8 +91,13 @@ async def require_tenant_scoped_api_precondition_unless_agent(
     session検査を省くだけで、認証はしない。handlerが ``_authorize_request`` で
     資格情報・付与・tenantを必ず検証し、不正な資格情報は401で閉じる。
     """
-    from sui_sensemaking_api.agent_credentials import request_has_agent_credential
+    from sui_sensemaking_api.agent_credentials import (
+        reject_mixed_credentials,
+        request_has_agent_credential,
+    )
 
     if request_has_agent_credential(request):
+        # ゲスト/メンバーの資格情報と同乗させて、session検査だけを外させない。
+        reject_mixed_credentials(request)
         return
     await require_tenant_scoped_api_precondition(request, db)

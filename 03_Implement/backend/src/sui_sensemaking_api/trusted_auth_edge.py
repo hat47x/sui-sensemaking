@@ -198,8 +198,9 @@ def _verify_jwt(
 ) -> dict[str, object]:
     """Verify a JWT token against the given JWK set and expected issuer/audience.
 
-    For tokens with aud as an array (OIDC), each audience value is tried
-    until one matches the expected provider audience.
+    A token whose ``aud`` is an array is accepted only when it contains exactly the
+    expected audience. The expected audience is always chosen by the caller, never taken
+    from the token.
 
     Raises JwtIdentityError on any verification failure.
     """
@@ -236,8 +237,11 @@ def _verify_jwt(
             leeway=_JWT_CLOCK_SKEW_SECONDS,
         )
     except jwt.InvalidAudienceError:
-        # OIDC compliance: if aud is an array, try each value.
-        pass
+        # PyJWT already accepts an ``aud`` array that contains the expected audience, so a
+        # failure here means the token was not issued for this audience. Never fall back to
+        # the token's own ``aud`` values: that turns the caller's pinned audience into a
+        # no-op (a token minted for any audience would verify).
+        raise JwtIdentityError(status_code=401, code="invalid_audience") from None
     except jwt.ExpiredSignatureError:
         raise JwtIdentityError(status_code=401, code="token_expired") from None
     except jwt.InvalidIssuerError:
@@ -246,53 +250,6 @@ def _verify_jwt(
         raise JwtIdentityError(status_code=401, code="invalid_signature") from None
     except jwt.PyJWTError:
         raise JwtIdentityError(status_code=401, code="invalid_token") from None
-
-    # If direct audience match failed, peek at the aud claim and try each value.
-    try:
-        claims_unverified = jwt.decode(
-            token,
-            options={"verify_signature": False},
-            algorithms=list(_jwt_algorithms()),
-        )
-    except jwt.PyJWTError:
-        raise JwtIdentityError(status_code=401, code="invalid_token") from None
-
-    aud_values = _normalize_audience(claims_unverified.get("aud"))
-    if not aud_values:
-        raise JwtIdentityError(status_code=401, code="invalid_audience") from None
-
-    last_error = None
-    for aud in aud_values:
-        try:
-            return jwt.decode(
-                token,
-                key=signing_key,
-                algorithms=list(_jwt_algorithms()),
-                issuer=issuer,
-                audience=aud,
-                options={
-                    "require": ["exp", "iss", "aud", "sub", "iat"],
-                    "verify_signature": True,
-                    "verify_exp": True,
-                    "verify_iss": True,
-                    "verify_aud": True,
-                    "verify_iat": True,
-                },
-                leeway=_JWT_CLOCK_SKEW_SECONDS,
-            )
-        except jwt.InvalidAudienceError as exc:
-            last_error = exc
-            continue
-        except jwt.ExpiredSignatureError:
-            raise JwtIdentityError(status_code=401, code="token_expired") from None
-        except jwt.InvalidIssuerError:
-            raise JwtIdentityError(status_code=401, code="invalid_issuer") from None
-        except jwt.InvalidSignatureError:
-            raise JwtIdentityError(status_code=401, code="invalid_signature") from None
-        except jwt.PyJWTError:
-            raise JwtIdentityError(status_code=401, code="invalid_token") from None
-
-    raise JwtIdentityError(status_code=401, code="invalid_audience") from last_error
 
 
 def _jwks_keys_for_provider(
@@ -377,6 +334,63 @@ def verify_configured_oidc_token(
     return VerifiedOidcToken(provider=provider, claims=verified, subject=subject)
 
 
+def verify_oidc_token_for_audience(
+    *,
+    db: Session,
+    token: str,
+    jwks_store: JwksStore,
+    audience: str,
+) -> VerifiedOidcToken:
+    """Verify a token from a registered issuer, requiring one exact, caller-chosen audience.
+
+    ADR-0094: unlike ``verify_configured_oidc_token`` this does not look for an
+    ``identity_providers`` row matching the token's own ``aud``. The issuer is
+    resolved to its single active row (the same row member login uses), and the
+    audience is pinned by the caller. A token minted for any other audience
+    (member login, guest, the MCP resource) therefore cannot pass, and no second
+    row for the same issuer is needed (which would make the cookie session
+    resolution ambiguous).
+    """
+    try:
+        claims_unverified: dict[str, object] = jwt.decode(
+            token,
+            options={"verify_signature": False},
+            algorithms=list(_jwt_algorithms()),
+        )
+    except jwt.PyJWTError:
+        raise JwtIdentityError(status_code=401, code="invalid_token") from None
+    issuer = claims_unverified.get("iss")
+    if not isinstance(issuer, str) or not issuer:
+        raise JwtIdentityError(status_code=401, code="invalid_token")
+
+    providers = (
+        db.query(IdentityProviderRow)
+        .filter(
+            IdentityProviderRow.issuer == issuer,
+            IdentityProviderRow.lifecycle_state == "active",
+            IdentityProviderRow.protocol.in_({"oidc"}),
+        )
+        .all()
+    )
+    if not providers:
+        raise JwtIdentityError(status_code=401, code="unknown_provider")
+    if len(providers) != 1:
+        # An ambiguous issuer is a deployment-configuration error, not a per-request decision.
+        raise JwtIdentityError(status_code=503, code="configuration_error")
+    provider = providers[0]
+
+    verified = _verify_jwt(
+        token,
+        _jwks_keys_for_provider(jwks_store=jwks_store, provider=provider),
+        issuer,
+        audience,
+    )
+    subject = verified.get("sub")
+    if not isinstance(subject, str) or not subject:
+        raise JwtIdentityError(status_code=401, code="invalid_token")
+    return VerifiedOidcToken(provider=provider, claims=verified, subject=subject)
+
+
 def _resolve_subject_to_user_id(db: Session, provider_id: str, subject: str) -> str | None:
     """Map (identity_provider_id, subject) → user_id via user_identities."""
     from sui_sensemaking_api.models import UserIdentityRow
@@ -436,6 +450,23 @@ def _resolve_tenant_claim(
         issuer=provider.issuer,
         audience=provider.audience,
         subject=subject,
+    )
+
+
+def resolve_tenant_from_verified_token(
+    *, db: Session, verified: VerifiedOidcToken
+) -> VerifiedTenantClaim:
+    """Map a verified token's tenant claim to a tenant through ``tenant_identity_providers``.
+
+    The claim is a request, not an authority (ADR-0063 D8): it only counts when the
+    server-side mapping for this provider names a tenant. ADR-0094 uses this so an
+    agent binding is honoured only for the tenant the IdP itself attests.
+    """
+    return _resolve_tenant_claim(
+        db=db,
+        verified_claims=verified.claims,
+        provider=verified.provider,
+        subject=verified.subject,
     )
 
 

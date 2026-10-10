@@ -85,10 +85,13 @@ class AgentCredentialIndexRow(Base):
 
 
 class AgentOAuthBindingRow(Base):
-    """ADR-0094: 検証済みのOAuth主体 (IdP登録簿のid, sub) から agent を引く索引。
+    """ADR-0094: 検証済みのOAuth主体を agent に結ぶ対応付け。
 
-    トークンを検証した後、tenantが確定する前に引くので、RLSを掛けない。決めるのは
-    (tenant, agent) だけで、状態・期限・付与は毎要求でRLS付きの表を引き直す。
+    キーに tenant_id を含める。同じ (IdP, sub) を別のtenantが結んでも互いに見えず、
+    先取りによる妨害や存在の oracle にならない。実行時は、トークンの tenant claim を
+    ``tenant_identity_providers`` 経由で確定した tenant の行だけを引く。
+    トークンの検証後、agentの状態を引く前に参照するので RLS は掛けないが、決めるのは
+    agent_id だけで、状態・期限・付与は毎要求でRLS付きの表を引き直す。
     """
 
     __tablename__ = "agent_oauth_bindings"
@@ -107,9 +110,9 @@ class AgentOAuthBindingRow(Base):
         ),
     )
 
+    tenant_id: Mapped[str] = mapped_column(Text, primary_key=True)
     identity_provider_id: Mapped[str] = mapped_column(Text, primary_key=True)
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
-    tenant_id: Mapped[str] = mapped_column(Text, nullable=False)
     agent_id: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)

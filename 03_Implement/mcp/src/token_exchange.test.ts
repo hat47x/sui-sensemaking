@@ -40,8 +40,40 @@ describe("exchangeToken", () => {
     ["an empty access_token", respond({ access_token: "" })],
     ["an oversized access_token", respond({ access_token: "x".repeat(9000) })],
     ["an oversized response", respond("x".repeat(70_000))],
+    ["a JSON null", respond("null")],
+    ["a JSON array", respond("[]")],
+    ["a JSON string", respond('"token"')],
   ])("fails closed on %s", async (_label, fetchImpl) => {
     await expect(exchangeToken(CONFIG, "subject-token", fetchImpl)).rejects.toBeInstanceOf(TokenExchangeError);
+  });
+
+  it("stops reading once the body exceeds the limit instead of buffering it all", async () => {
+    let pulls = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        controller.enqueue(new Uint8Array(16 * 1024));
+        if (pulls > 1000) controller.close();
+      },
+    });
+    const fetchImpl = vi.fn(async () => new Response(stream, { status: 200 })) as unknown as typeof fetch;
+
+    await expect(exchangeToken(CONFIG, "subject-token", fetchImpl)).rejects.toBeInstanceOf(TokenExchangeError);
+    expect(pulls).toBeLessThan(20);
+  });
+
+  it("normalizes a body that fails while being read", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.error(new Error("socket hang up with subject-token"));
+      },
+    });
+    const fetchImpl = vi.fn(async () => new Response(stream, { status: 200 })) as unknown as typeof fetch;
+
+    const error = await exchangeToken(CONFIG, "subject-token", fetchImpl).catch((e: unknown) => e as Error);
+
+    expect(error).toBeInstanceOf(TokenExchangeError);
+    expect((error as Error).message).not.toContain("subject-token");
   });
 
   it("fails closed when the request itself fails, without leaking tokens in the message", async () => {
@@ -73,6 +105,12 @@ describe("loadTokenExchangeConfigFromEnv", () => {
     expect(() => loadTokenExchangeConfigFromEnv({ ...full, SUI_MCP_TOKEN_EXCHANGE_AUDIENCE: undefined })).toThrow(
       "must be set together",
     );
+  });
+
+  it("reports a malformed endpoint as a configuration error, not a TypeError", () => {
+    expect(() =>
+      loadTokenExchangeConfigFromEnv({ ...full, SUI_MCP_TOKEN_EXCHANGE_ENDPOINT: "not a url" }),
+    ).toThrow(TokenExchangeError);
   });
 
   it("requires https except on loopback, and no embedded credentials", () => {

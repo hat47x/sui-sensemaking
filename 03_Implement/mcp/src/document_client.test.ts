@@ -93,6 +93,19 @@ describe("loadDocumentClientConfigFromEnv", () => {
       });
     });
 
+    it("sends credentials only to an https backend (http only on loopback)", () => {
+      expect(() =>
+        loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_API_BASE_URL: "http://sui.example" }),
+      ).toThrow("SUI_MCP_API_BASE_URL must be https");
+      expect(() =>
+        loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_API_BASE_URL: "https://user:pw@sui.example" }),
+      ).toThrow("credentials");
+      expect(
+        loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_API_BASE_URL: "https://sui.example/" }).baseUrl,
+      ).toBe("https://sui.example");
+      expect(loadDocumentClientConfigFromEnv(saas).baseUrl).toBe("http://127.0.0.1:8000");
+    });
+
     it("rejects an unknown transport", () => {
       expect(() => loadDocumentClientConfigFromEnv({ ...saas, SUI_MCP_TRANSPORT: "ws" })).toThrow(
         "Unknown SUI_MCP_TRANSPORT",
@@ -142,7 +155,7 @@ describe("fetchDocument", () => {
 
     await fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1");
 
-    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc1", { headers: {} });
+    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc1", { headers: {}, redirect: "error" });
   });
 
   it("sends X-API-Key when configured (the browser client never does; this is a separate process)", async () => {
@@ -153,6 +166,7 @@ describe("fetchDocument", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc1", {
       headers: { "X-API-Key": "secret-key" },
+      redirect: "error",
     });
   });
 
@@ -162,7 +176,7 @@ describe("fetchDocument", () => {
 
     await fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc with space");
 
-    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc%20with%20space", { headers: {} });
+    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc%20with%20space", { headers: {}, redirect: "error" });
   });
 
   it("throws DocumentNotFoundError on 404", async () => {
@@ -200,7 +214,7 @@ describe("fetchDocumentMetadata", () => {
 
     const metadata = await fetchDocumentMetadata({ baseUrl: "http://127.0.0.1:8000" }, "doc1");
 
-    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs", { headers: {} });
+    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs", { headers: {}, redirect: "error" });
     expect(metadata).toEqual(list[0]);
   });
 

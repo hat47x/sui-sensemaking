@@ -536,6 +536,23 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="SUI_SAAS_AUTH_SESSION_HASH_KEY",
     )
+    # ADR-0093: keyed HMAC-SHA256 key for hashing opaque agent credentials before
+    # they are stored. Deliberately NOT the session key above, so rotating one never
+    # invalidates the other. 64 lowercase hex chars. Unset => agent credentials are
+    # unavailable (fail closed). Rotating it invalidates every issued credential.
+    agent_credential_hash_key: str | None = Field(
+        default=None,
+        validation_alias="SUI_AGENT_CREDENTIAL_HASH_KEY",
+    )
+    # ADR-0094: the audience that exchanged (RFC 8693) agent tokens must carry. It is
+    # NOT an identity_providers row: the issuer is resolved from the existing single
+    # row per issuer, and this exact audience is then required, so member-login and
+    # guest tokens (other audiences) can never authenticate as agents. Unset => the
+    # OAuth bearer path is unavailable (fail closed).
+    agent_oauth_audience: str | None = Field(
+        default=None,
+        validation_alias="SUI_AGENT_OAUTH_AUDIENCE",
+    )
     app_revision: str = Field(
         # OPS-OBSERV-01 AC-4: build revision surfaced by /version and attached to
         # structured log records so diagnostics bundles become addressable
@@ -969,6 +986,19 @@ class Settings(BaseSettings):
             value=self.saas_auth_session_hash_key,
             value_key="SUI_SAAS_AUTH_SESSION_HASH_KEY",
         )
+        _validate_hex_key(
+            value=self.agent_credential_hash_key,
+            value_key="SUI_AGENT_CREDENTIAL_HASH_KEY",
+        )
+        if self.agent_oauth_audience is not None and (
+            not self.agent_oauth_audience
+            or self.agent_oauth_audience != self.agent_oauth_audience.strip()
+            or len(self.agent_oauth_audience) > 255
+        ):
+            raise ValueError(
+                "SUI_AGENT_OAUTH_AUDIENCE must be a non-empty value of at most 255 characters "
+                "without surrounding whitespace"
+            )
 
         normalized_reviewer_ref_adapter = self.reviewer_ref_resolver_adapter.strip().lower()
         if normalized_reviewer_ref_adapter not in {"user_id", "sso_subject"}:

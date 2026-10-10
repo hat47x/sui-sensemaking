@@ -233,8 +233,15 @@ if settings.runtime_profile == "saas-multitenant":
     app.state.saas_auth_session_hash_key = _saas_auth_session_hash_key
     app.state.guest_auth_session_store = _guest_auth_session_store
     app.state.guest_auth_session_hash_key = _saas_auth_session_hash_key
-    # ADR-0093: agent資格情報のハッシュは領域分離して同じ鍵を共有する。
-    app.state.agent_credential_hash_key = _saas_auth_session_hash_key
+    # ADR-0093: agent資格情報のハッシュ鍵は、セッション用の鍵とは別にする（鍵の更新が
+    # 互いを無効にしないため）。未設定なら、agent資格情報の経路は使えない（安全側）。
+    app.state.agent_credential_hash_key = (
+        bytes.fromhex(settings.agent_credential_hash_key)
+        if settings.agent_credential_hash_key
+        else None
+    )
+    # ADR-0094: 交換後のagentトークンが持つべき audience。未設定ならOAuth経路は使えない。
+    app.state.agent_oauth_audience = settings.agent_oauth_audience
     app.state.guest_redeem_state_store = _guest_redeem_state_store
     # Domain separation in guest_redeem.py makes key reuse cryptographically distinct.
     app.state.guest_redeem_state_hash_key = _saas_auth_session_hash_key
@@ -361,6 +368,13 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
+    # ADR-0093: agent の応答は、同じURLでもtenantごとに内容が違う（tenantはヘッダーの
+    # 資格情報で決まる）。共有キャッシュに保持させない。
+    from sui_sensemaking_api.agent_credentials import request_has_agent_credential
+
+    if request_has_agent_credential(request):
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["Vary"] = "Sui-Sensemaking-Agent-Credential, Sui-Sensemaking-Agent-Bearer"
     return response
 
 
