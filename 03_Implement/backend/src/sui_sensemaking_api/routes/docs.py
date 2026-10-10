@@ -19,7 +19,7 @@ from fastapi import (
     Response,
     status,
 )
-from pydantic import BaseModel, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -34,6 +34,7 @@ from sui_sensemaking_api.access_control import (
     resolve_access_decision,
 )
 from sui_sensemaking_api.audit import build_event
+from sui_sensemaking_api.card_move_command import InvalidCardMove, apply_card_move
 from sui_sensemaking_api.auth_assurance import build_auth_assurance_metadata
 from sui_sensemaking_api.auth_context import ResolvedIdentity, resolve_identity_context
 from sui_sensemaking_api.content_store import ContentBlob
@@ -1085,6 +1086,113 @@ def put_document(
         raise HTTPException(status_code=409, detail="Document changed concurrently") from error
     response.headers["ETag"] = _format_etag(_compute_etag(payload_json))
     return document
+
+
+class _CardMovePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    cardId: str = Field(min_length=1)
+    x: float = Field(allow_inf_nan=False)
+    y: float = Field(allow_inf_nan=False)
+
+
+class _SuiCardMoveActionIntent(BaseModel):
+    """Application-owned decoding of the generic TEI Action v1 envelope."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+    protocolVersion: Literal["1"]
+    applicationID: Literal["sui"]
+    resourceID: str = Field(min_length=1)
+    actionID: Literal["sui.move"]
+    expectedRevision: str = Field(pattern=r"^[0-9a-f]{64}$")
+    payload: _CardMovePayload
+
+
+def _action_error(*, status_code: int, code: str) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={"protocolVersion": "1", "error": code},
+    )
+
+
+@router.post("/{doc_id}/action-commit")
+def post_sui_card_move_action(
+    doc_id: str,
+    response: Response,
+    request: Request,
+    action_payload: object = Body(...),
+    x_tei_action: str | None = Header(default=None, alias="X-TEI-Action"),
+    x_read_only: str | None = Header(default=None, alias="X-Read-Only"),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """SUI-owned application Action receiver; not the TEI Go runtime Host.
+
+    Use the existing per-document authorization and the same SQL transaction,
+    revision-head CAS and DocumentContentStore as PUT /docs/{doc_id}.
+    The route exists only as a reference adapter until actual TEI Host routing,
+    authenticated sessions and exact-head tests are verified.
+    """
+    if x_tei_action != "commit":
+        raise _action_error(status_code=400, code="invalid_action")
+    try:
+        action = _SuiCardMoveActionIntent.model_validate(action_payload)
+    except ValidationError as error:
+        raise _action_error(status_code=400, code="invalid_action") from error
+    if action.resourceID != doc_id:
+        raise _action_error(status_code=403, code="action_denied")
+
+    try:
+        access_request, _, tenant = _authorize_request(
+            request, db, action="write", doc_id=doc_id, safe_mode=True,
+            read_only=(x_read_only == "1" or (x_read_only or "").lower() == "true"),
+        )
+    except HTTPException as error:
+        # Preserve status, including 404 anti-enumeration and tenant precondition
+        # failures, without exposing internal authorization details.
+        raise _action_error(status_code=error.status_code, code="action_denied") from error
+
+    store = DatabaseDocumentContentStore(db)
+    stored = store.load(tenant=tenant, doc_id=doc_id)
+    if stored is None:
+        raise _action_error(status_code=409, code="revision_conflict")
+    if stored.row.lifecycle_state == "archived":
+        raise _action_error(status_code=423, code="action_denied")
+    if _compute_etag(stored.row.payload_json) != action.expectedRevision:
+        raise _action_error(status_code=409, code="revision_conflict")
+
+    original = _validate_document_payload_with_a1_contract(
+        json.loads(stored.content.text)
+    )
+    try:
+        updated = apply_card_move(
+            original, card_id=action.payload.cardId,
+            x=action.payload.x, y=action.payload.y,
+        )
+    except InvalidCardMove as error:
+        raise _action_error(status_code=400, code="invalid_payload") from error
+
+    _validate_review_attribution_identity(document=updated, identity=access_request.auth)
+    if len(updated.cards) > settings.max_document_cards:
+        raise _action_error(status_code=413, code="invalid_payload")
+    payload_json = updated.model_dump_json()
+    if len(payload_json.encode("utf-8")) > settings.max_document_bytes:
+        raise _action_error(status_code=413, code="invalid_payload")
+
+    try:
+        store.save(
+            tenant=tenant,
+            doc_id=doc_id,
+            version=updated.version,
+            updated_at=updated.updatedAt.isoformat(),
+            content=ContentBlob.from_text(payload_json),
+            created_by=access_request.auth.user_id,
+        )
+        db.commit()
+    except (IntegrityError, RevisionHeadConflict) as error:
+        db.rollback()
+        raise _action_error(status_code=409, code="revision_conflict") from error
+
+    revision = _compute_etag(payload_json)
+    response.headers["ETag"] = _format_etag(revision)
+    return {"protocolVersion": "1", "revision": revision}
 
 
 class ExportAuditPayload(BaseModel):
