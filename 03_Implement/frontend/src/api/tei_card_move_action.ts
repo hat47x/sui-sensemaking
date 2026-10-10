@@ -140,8 +140,11 @@ function isPureCardMove(before: DocumentV1, after: DocumentV1, cardId: string): 
       before.cards.length !== after.cards.length ||
       before.islands.length !== after.islands.length) return false;
   for (let i = 0; i < before.cards.length; i += 1) {
-    if (before.cards[i].id !== after.cards[i].id) return false;
+    if (!before.cards[i] || !after.cards[i] ||
+        before.cards[i].id !== after.cards[i].id) return false;
   }
+  if (before.islands.some((island) => !island || !Array.isArray(island.cardIds)) ||
+      after.islands.some((island) => !island || !Array.isArray(island.cardIds))) return false;
   const islandById = new Map(before.islands.map((island) => [island.id, island]));
   if (islandById.size !== before.islands.length) return false;
   for (const island of after.islands) {
@@ -244,7 +247,16 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
           JSON.stringify(membership(readback.document, cardId)) !== JSON.stringify(nextMembership)) {
         throw new SuiCardMoveActionError("readback_move_mismatch", committedRevision);
       }
-      if (!equivalentStoredDocument(nextDocument, readback.document)) {
+      // Even a server success with the expected ETag can carry a malformed
+      // document. Preserve committedRevision in *every* post-commit error:
+      // consumers must reconcile, not retry the irreversible mutation.
+      let readbackMatches = false;
+      try {
+        readbackMatches = equivalentStoredDocument(nextDocument, readback.document);
+      } catch {
+        throw new SuiCardMoveActionError("invalid_readback", committedRevision);
+      }
+      if (!readbackMatches) {
         throw new SuiCardMoveActionError("readback_document_mismatch", committedRevision);
       }
       if (!current(ports, origin)) {
