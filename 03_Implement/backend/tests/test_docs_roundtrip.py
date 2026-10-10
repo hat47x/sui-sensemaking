@@ -1297,7 +1297,10 @@ def test_sui_action_audit_sink_failure_does_not_misreport_committed_write(
 
     class BrokenAuditSink:
         def emit(self, event):
-            raise RuntimeError("audit sink unavailable")
+            # Only Action apply emission is broken; the subsequent ordinary
+            # GET still emits its separate view event through the fixture.
+            if event.eventType == "apply":
+                raise RuntimeError("audit sink unavailable")
 
     monkeypatch.setattr(app.state, "audit_dispatcher", BrokenAuditSink(), raising=False)
     sent = sqlite_client.post(
