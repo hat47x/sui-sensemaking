@@ -106,9 +106,11 @@ test("accepts Pydantic's documented Island defaults and geometry mirrors", async
       return { document: doc, etag: "etag-r2" };
     },
   });
-  const expected = structuredClone(f.next);
-  expected.islands[1].shape = { kind: "rect" };
-  assert.equal(await f.run(f.origin, expected, "a"), "etag-r2");
+  // Geometry must already belong to the drag origin: a move alone cannot
+  // silently introduce or replace an Island's shape.
+  f.origin.document.islands[1].shape = { kind: "rect" };
+  f.next.islands[1].shape = { kind: "rect" };
+  assert.equal(await f.run(f.origin, f.next, "a"), "etag-r2");
 });
 
 test("normalizes Pydantic's polygon mirror but rejects divergent geometry", async () => {
@@ -121,6 +123,7 @@ test("normalizes Pydantic's polygon mirror but rejects divergent geometry", asyn
     return { document: doc, etag: "etag-r2" };
   };
   const f = fixture({ readDocument });
+  f.origin.document.islands[1].shape = structuredClone(expected.islands[1].shape);
   assert.equal(await f.run(f.origin, expected, "a"), "etag-r2");
 
   const damaged = fixture({
@@ -130,6 +133,7 @@ test("normalizes Pydantic's polygon mirror but rejects divergent geometry", asyn
       return doc;
     },
   });
+  damaged.origin.document.islands[1].shape = structuredClone(expected.islands[1].shape);
   await assert.rejects(
     damaged.run(damaged.origin, expected, "a"),
     isError("readback_document_mismatch", "etag-r2"),
