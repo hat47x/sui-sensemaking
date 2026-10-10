@@ -41,7 +41,7 @@ import { IslandView } from "./canvas/IslandView";
 import { getEdgesToRender } from "./domain/edge_aggregate";
 import { classifyAiProviderError, type AiProviderErrorKind } from "./domain/ai_provider_error";
 import { alignSelectedCards, distributeSelectedCards, snapValueToGrid } from "./domain/layout_ops";
-import { commitCardDrag } from "./domain/card_drag_commit";
+import { commitCardDrag, isCardDragOriginCurrent } from "./domain/card_drag_commit";
 import type { AlignDirection, DistributeDirection } from "./domain/layout_ops";
 import { appendReadingOrderEntry, moveReadingOrderEntry, removeReadingOrderEntry } from "./domain/reading_order_ops";
 import {
@@ -2822,7 +2822,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   const handleCardMoveCommit = useCallback(
     (cardId: string, deltaWorldX: number, deltaWorldY: number, origin?: unknown) => {
       if (!document || isReadOnly || isPreviewingSuggestion ||
-        !isRecord(origin) || origin.document !== document || origin.etag !== docEtag) {
+        !isCardDragOriginCurrent(origin, document, docEtag)) {
         return;
       }
       const nextDocument = commitCardDrag(document, {
