@@ -165,6 +165,37 @@ test("rejects a proposed move that changes unrelated state BEFORE remote dispatc
   }
 });
 
+test("Pydantic default summaryReviewed=false is not an unrelated edit", async () => {
+  const f = fixture({
+    readDocument: async () => {
+      const doc = moved(source());
+      doc.islands[0].summaryText = "Observed";
+      doc.islands[0].summaryReviewed = false;
+      return { document: doc, etag: "etag-r2" };
+    },
+  });
+  f.origin.document.islands[0].summaryText = "Observed";
+  f.next.islands[0].summaryText = "Observed";
+  assert.equal(await f.run(f.origin, f.next, "a"), "etag-r2");
+});
+
+test("an actual change to summary review cannot hide behind default normalization", async () => {
+  const f = fixture({
+    readDocument: async () => {
+      const doc = moved(source());
+      doc.islands[0].summaryText = "Observed";
+      doc.islands[0].summaryReviewed = true;
+      return { document: doc, etag: "etag-r2" };
+    },
+  });
+  f.origin.document.islands[0].summaryText = "Observed";
+  f.next.islands[0].summaryText = "Observed";
+  await assert.rejects(
+    f.run(f.origin, f.next, "a"),
+    isError("readback_document_mismatch", "etag-r2"),
+  );
+});
+
 test("no-change drag does not write or re-read", async () => {
   const f = fixture();
   assert.equal(await f.run(f.origin, f.origin.document, "a"), null);
