@@ -15,7 +15,7 @@
 
 `src/sui_sensemaking_api/card_move_command.py`は、SUIの`DocumentV1`と確定座標から**新しいDocumentスナップショット**を生成するアプリケーション所有の純粋処理です。対象Cardの存在・識別の一意性、有限座標、島への所属変更を検証し、Source、Hold、Edge、レビュー帰属などの無関係な情報を保持します。既存の非包含Affiliationと移動後の包含関係が競合する場合は、黙って来歴を削除せず拒否します。
 
-- `tests/test_card_move_command.py`：座標・矩形／多角形境界・島所属・来歴・負例の単体テスト。
+- `tests/test_card_move_command.py`：座標・矩形／多角形境界・島所属・来歴・負例の単体テスト。`../frontend/src/domain/fixtures/card_move_parity_v1.json`は、TypeScriptの`card_drag_commit.test.ts`とPythonが共用するケース表です。グリッド吸着はSUI UIが計算するため、Pythonには吸着後の最終座標を入力します。
 - `tests/test_docs_roundtrip.py::test_sui_card_move_command_with_existing_sqlite_document_cas`：このコマンドの結果を既存の`PUT /docs/{id}`へ`If-Match`付きで保存し、`GET`とETagを照合するSQLite参照テスト。
 - `../frontend/src/api/client.ts`の`getAuthoritativeDocument`：操作確定後の権威ある読み直しに`cache: "no-store"`を指定し、既存のセッション前提条件を引き継ぐ追加API。
 
