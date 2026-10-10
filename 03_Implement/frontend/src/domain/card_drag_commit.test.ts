@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { commitCardDrag, isCardDragOriginCurrent } from "./card_drag_commit";
+import parity from "./fixtures/card_move_parity_v1.json";
 import type { DocumentV1 } from "./types";
 
 const baseDocument = (): DocumentV1 => ({
@@ -89,5 +90,28 @@ describe("native card drag commit", () => {
     expect(after.islands).toBe(before.islands);
     expect(after.edges).toBe(before.edges);
     expect(after.cards[0].x).toBe(5);
+  });
+});
+
+describe("SUI Card movement cross-runtime fixture (TypeScript side)", () => {
+  it("matches the shared layout, membership and provenance expectations", () => {
+    for (const scenario of parity.cases) {
+      const document = structuredClone(parity.document) as DocumentV1;
+      if ("newIslandPolygon" in scenario && scenario.newIslandPolygon) {
+        document.islands[1].shape = { kind: "polygon", points: scenario.newIslandPolygon };
+      }
+      const actual = commitCardDrag(document, {
+        cardId: "a",
+        deltaWorldX: scenario.deltaWorldX,
+        deltaWorldY: scenario.deltaWorldY,
+        snapGridSize: "snapGridSize" in scenario ? scenario.snapGridSize : undefined,
+      });
+      expect(actual.cards[0]).toMatchObject({ x: scenario.expectedX, y: scenario.expectedY });
+      expect(actual.islands.map((island) => island.cardIds)).toEqual(scenario.expectedIslands);
+      expect(actual.cards[0].meta).toEqual(document.cards[0].meta);
+      expect(actual.cards[0].holdState).toBe(document.cards[0].holdState);
+      expect(actual.edges).toEqual(document.edges);
+      expect(actual.affiliations).toEqual(document.affiliations);
+    }
   });
 });
