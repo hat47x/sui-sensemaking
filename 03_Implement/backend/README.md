@@ -55,6 +55,18 @@ SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
 
 Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
 
+### 修復済み重大不具合：受信EnvelopeのRevision欠落と関数重複
+
+`routes/docs.py`の以前の差分で、`_SuiCardMoveActionIntent.expectedRevision`が欠落し、さらにActionルートの実装が重複した状態になっていたことを確認しました。壊れた状態へ追記する方式は採用せず、重複のないコミット`d952d97`の`docs.py`を基点に、既存Origin/CAS検証、監査、レビュー帰属保護を再適用しました。現在のファイルでは`_SuiCardMoveActionIntent`、`post_sui_card_move_action`、`_commit_sui_card_move_action`、`expectedRevision`の定義はそれぞれ一つです。
+
+`03_Implement/scripts/verify_native_action_boundary.sh`の先頭で、Pythonの`compileall`、`ast.parse`によるActionの必須フィールド・関数定義の唯一性、TypeScript主要エントリの署名重複を先行チェックします。これらが通らなければSQLite等の重い検証を開始しません。**スクリプトはまだ実行していません**。APIはデフォルト無効のままです。
+
+### レビュー帰属とCard移動の責任境界
+
+SUIの通常`PUT /docs/{id}`は、新しい人間レビュー申告に対して`reviewerRef`が実行者本人と一致することを必須とします。一方、Card移動Actionは既存のDocumentから`reviewAttribution`を**一切変更せず継承する操作**であり、過去のReviewer本人でなければ動かせないという制約は適切ではありません。そこでActionでの再レビュー本人照合を除外し、`updated.reviewAttribution == original.reviewAttribution`を明示検査しました。これによって、別の認可済み編集者による移動を可能にしつつ、レビュー記録の偽造・差し替えを拒否します。
+
+SQLite結合テスト`test_sui_action_preserves_review_by_another_authorized_writer`を追加し、元Reviewerで保存された`human_reviewed`文書を別Actorが移動しても、reviewAttribution・critiqueInputs・reproposalDiffsが保たれることを確認する仕様を記述しました。従来のPUTで他人のReviewerを申告すると403になる検証は維持しています。**新規テストの実行は未了**です。
+
 ### 強いRevision・SUI-owned監査（2026-10-11追補）
 
 SUIの通常`getDocument`は既存互換性のため弱いETagの正規化を許容します。一方、Action後の`getAuthoritativeDocument`は**ダブルクォート付き64桁SHA-256形式の強いETag**を必須とし、弱いETag（`W/"..."`）、未設定、未引用、非正規値を`invalid_authoritative_etag`で拒否します。通信は同一オリジン・認証情報明示・リダイレクト拒否・`no-store`を強制します。Actionのリクエストと応答のRevisionも**長さ64と非16進文字不在**を別々に確認し、JavaScriptの`# sui-sensemakingバックエンド（フェーズ1 MVP）
