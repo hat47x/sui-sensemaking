@@ -1277,9 +1277,11 @@ export async function unarchiveDocument(
  * separately from the character pattern.
  */
 function isStrongSuiRevision(value: unknown): value is string {
+  // Exact-length digest with *no* non-hexadecimal characters. This rejects
+  // even a 63-hex + final newline input (the JavaScript $ anchor pitfall).
   return typeof value === "string" &&
     value.length === 64 &&
-    // Use an unanchored forbidden-character pattern: '
+    !/[^0-9a-f]/.test(value);
 }
 
 function formatIfMatchHeader(etag: string): string {
