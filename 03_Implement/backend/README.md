@@ -55,6 +55,71 @@ SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
 
 Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
 
+### 強いRevision・SUI-owned監査（2026-10-11追補）
+
+SUIの通常`getDocument`は既存互換性のため弱いETagの正規化を許容します。一方、Action後の`getAuthoritativeDocument`は**ダブルクォート付き64桁SHA-256形式の強いETag**を必須とし、弱いETag（`W/"..."`）、未設定、未引用、非正規値を`invalid_authoritative_etag`で拒否します。通信は同一オリジン・認証情報明示・リダイレクト拒否・`no-store`を強制します。Actionのリクエストと応答のRevisionも**長さ64と非16進文字不在**を別々に確認し、JavaScriptの`# sui-sensemakingバックエンド（フェーズ1 MVP）
+
+
+> 環境変数と実行パラメータの定義元は `02_Architecture/runtime_parameter_registry.md` です。本書には必要最小限だけを書きます。追加や改名のときは、先にその文書を更新してください。
+
+現在の実装は、`DocumentV1` のスナップショットの保存と読み込みを提供します。
+
+## API
+
+- `GET /healthz`
+- `GET /docs/{doc_id}`
+- `PUT /docs/{doc_id}`
+
+## TEI Action用SUI Card移動コマンド（参照段階）
+
+`src/sui_sensemaking_api/card_move_command.py`は、SUIの`DocumentV1`と確定座標から**新しいDocumentスナップショット**を生成するアプリケーション所有の純粋処理です。対象Cardの存在・識別の一意性、有限座標、島への所属変更を検証し、Source、Hold、Edge、レビュー帰属などの無関係な情報を保持します。既存の非包含Affiliationと移動後の包含関係が競合する場合は、黙って来歴を削除せず拒否します。
+
+- `tests/test_card_move_command.py`：座標・矩形／多角形境界・島所属・来歴・負例の単体テスト。`../frontend/src/domain/fixtures/card_move_parity_v1.json`は、TypeScriptの`card_drag_commit.test.ts`とPythonが共用するケース表です。グリッド吸着はSUI UIが計算するため、Pythonには吸着後の最終座標を入力します。
+- `tests/test_docs_roundtrip.py::test_sui_card_move_command_with_existing_sqlite_document_cas`：このコマンドの結果を既存の`PUT /docs/{id}`へ`If-Match`付きで保存し、`GET`とETagを照合するSQLite参照テスト。
+- `../frontend/src/api/client.ts`の`getAuthoritativeDocument`：操作確定後の権威ある読み直しに`cache: "no-store"`を指定し、既存のセッション前提条件を引き継ぐ追加API。
+
+今回の変更では**SUI所有のAction受付口** `POST /docs/{doc_id}/action-commit`も追加しました。**標準状態では無効**であり、`request.app.state.sui_native_action_v1_enabled is True`を明示的に成立させない限り、HTTP 404のActionエラーとして更新を拒否します。このオプトイン条件は現在テスト環境でのみ与えており、未検証の通常配備で新しい書込み面が有効にならないようにしています。この受付口はTEI Go Hostではなく、v1の要求エンベロープ（`protocolVersion`、`applicationID`、`resourceID`、`actionID`、`expectedRevision`、`payload`）を検証し、`X-TEI-Action: commit`と`Content-Type: application/json`を必須とします。`sui.move`の`cardId/x/y`だけを許し、対象DocumentとRevisionを照合します。ブラウザーの確定処理は`commitSuiCardMoveAction`を通じて同一オリジン・既存認証／CSRF／テナントヘッダー付きで送信できます。
+
+この受付口は既存の`_authorize_request(... action="write", safe_mode=True)`と`DatabaseDocumentContentStore`を呼び出し、アーカイブ済み文書・Reviewer帰属・Card数・本文サイズの制限を再利用します。既存のRevision Headの条件付き更新が競合すれば全DBトランザクションをrollbackし、`409 revision_conflict`を返します。成功時は`{"protocolVersion":"1","revision":"<ETag>"}`、失敗時は`{"protocolVersion":"1","error":"..."}`を返し、FastAPIの`detail`ラッパーはAction応答へ混在させません。要求JSONの上限64KiB、重複キー、未知キー、他Application ID、非有限座標を拒否します。リクエスト本文は、JSON Middlewareでもバッファー保持前に上限を適用します。
+
+**このSUIアプリケーション固有の受付口を、TEIの汎用Go Hostと混同しないでください。** TEI Host→SUI保存経路の正式な連結、Host側の認可/セッション伝播、監査、原子的なReact Undo取り込みはまだ行っていません。本番のCanvas操作は依然として既存ローカル確定を使用します。
+
+`PUT /docs/{id}`は現行どおり既存の認可、テナント、アーカイブ状態、レビュー帰属、ETag・Revision処理を担当します。純粋コマンドだけでは同時更新を防げないため、TEI HostとSUI保存側のアダプターが、**権威あるRevisionの原子的比較・SUIコマンド実行・保存**を一単位として保証する必要があります。TEI CoreにはSUI専用構造を持ち込みません。
+
+実Go Hostからの呼び出し、実セッション認可のエンドツーエンド実証、ブラウザーでのCard移動、Undo/Redo接続は**未実施**です。追加したPython／Vitest／SQLiteテストとSUIフロントエンド全体のテストも未実行であり、テストコードの追加だけをPASSの証拠とはしません。共通fixtureによるPythonとTypeScriptの比較テストを追加しましたが、実行と差分評価が必要です。
+
+### ブラウザ確定の同期的適用と現状の制限
+
+`frontend/src/api/tei_card_move_action.ts`は、サーバー確定応答・no-store再読込・SUI所有Document全体の照合後、**同期boolean**を返す`applyConfirmed`に限って反映完了とみなします。`Promise<boolean>`は原子的な状態反映を証明しないため、旧来の非同期ポート契約を廃止しました。フロントエンドでReactの`setState`を呼んで直後に`true`を返すだけでは、原子的な適用を保証できません。アプリが所有するDocument参照／ETag／未保存変更状態を同期的にガードしてから、履歴・dirty・Undo/Redoへ一貫して反映する仕組みが必要です。
+
+SUIのPydantic保存は未指定の`Island.collapsed`を`false`として表現し、既存の`shape`／`geometry`の片方からもう一方を正規化します。Document全体照合はこの既知の差だけを正規化し、Source、Hold、Edge、レビュー帰属、Affiliation等を比較対象から除外しません。バックエンドが自動更新する`updatedAt`とオプションの`null`／未指定も正規化します。
+
+`frontend/src/api/tei_card_move_action.integration.test.ts`は、SUI側ポート→同一オリジンAction POST→キャッシュ無効Document GET→同期所有状態反映を**モックHTTP応答**でつなぐテストです。**実サーバー／React／Go Hostは通っていません**。実行は`npm test -- src/api/tei_card_move_action.integration.test.ts`で行います。未保存のSUIローカル編集やセッションの変更がある場合、正式接続時の`isCurrent`は送信前から拒否する必要があります。
+
+### 送信前の変更範囲検査と手動検証の入口（2026-10-10）
+
+SUIの`createSuiCardMoveActionCommit`では、`dispatch`前に`isPureCardMove`を実行します。元Documentからの許容差分を**対象Cardのx/yと島への所属変更だけ**に限定し、他Card・島の属性／順序・未知Edge・Source・Hold・Affiliation・レビュー等の変更が混入した場合は`invalid_move_target`で**サーバーへ送信する前に拒否**します。これにより、サーバーは確定したが画面側では再読込差分を受理できない事例を事前に減らします。読込後の完全性照合も継続します。
+
+島の`summaryText`があるときにSUI Pydanticが`summaryReviewed=false`を補完する正規化にも対応し、`summaryReviewed=true`など意味のある差分は拒否します。正常／異常ケースをNodeテストに追加しました。
+
+手動検証の入口として`03_Implement/scripts/verify_native_action_boundary.sh`を追加しました。正確なPR headをクリーンなワークツリーにチェックアウトした後、リポジトリルートから次を実行できます（`pytest`、Node 22+、`npm`依存が構築済みであることが前提です）。
+
+```sh
+SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+# 任意：全Frontend Vitestと本番ビルドも追加
+SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+```
+
+Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
+
+が末尾改行の直前へ一致する問題（63桁+改行でも全長64）を防ぎます。弱いETag・短いもの・改行境界を検査するフロントエンドテストを追加しました。
+
+Action受付側では、**DBコミットの成功後にSUI既存の`AuditDispatcher`へ`apply`イベントを送信**します。Tenant ID、Document ID、既存の検証済みActor、Action識別子、結果を記録し、Card本文、Source本文、ユーザー指定権限を監査メタデータへ複製しません。Revision競合やその他拒否では成功イベントを送信しません。監査機構は既存方針どおりfail-openであり、外部監査先の障害がコミット済みActionのHTTP成功を500へ変えないようにしています。テストでは成功イベント1件・再送0件・監査失敗後も保存済みRevisionを確認します。
+
+**制限:** SUI監査の外部送信は既存のfail-open方針であり、配送成功が永続保証されるものではありません。Actionの法定監査・完全な永続的outbox・Actor付き生成履歴が必要な構成では、別途保証を追加するまで本番利用不可です。テストは追加済みですが、実Python/SQLite/Node/Vitest/TypeScript/Goによる最新PR headの検証は未完了です。
+
 ### サーバーActionの追加境界確認（2026-10-11）
 
 SUI所有のAction受付口に、**Cookie有無と独立した、明示されたOriginの同一オリジン検証**を追加しました。Originが提示された場合、信頼されたリクエストのScheme/Hostと一致しない値は`403 request_origin_denied`です。Originがない非ブラウザー経路はTEI Go参照契約と同様に許容しますが、その場合も既存の認証／認可を必須とします。BFF Cookieがある場合には、従来どおりグローバル`BffCsrfProtectionMiddleware`がOriginとセッションに紐づくCSRFヘッダーを別途検証します。`X-TEI-Action: commit`がない要求も403、非JSON Content-Typeは`415 unsupported_content_type`とし、Go参照プロファイルのHTTPエラーコードに合わせました。悪意あるOriginの負例テストを追加しています。
