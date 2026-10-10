@@ -443,15 +443,10 @@ describe("epistemic review UI model", () => {
     );
     if (!item) throw new Error("fixture item missing");
 
-    const missingDrift = detailResultFor(item) as TeiEpistemicDetailResult & {
-      drift: TeiEpistemicDetailResult["drift"] | null;
-    };
-    missingDrift.drift = null;
+    const missingDrift = detailResultFor(item);
+    (missingDrift as unknown as { drift: unknown }).drift = null;
     expect(() =>
-      resolveEpistemicDetailForInspection(
-        item,
-        missingDrift as unknown as TeiEpistemicDetailResult,
-      ),
+      resolveEpistemicDetailForInspection(item, missingDrift),
     ).toThrow("epistemic detail drift must be an object");
 
     const invalidLimits = detailResultFor(item);
