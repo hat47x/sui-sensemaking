@@ -1114,12 +1114,28 @@ def _action_error(*, status_code: int, code: str) -> HTTPException:
     )
 
 
+_MAX_SUI_ACTION_BODY_BYTES = 64 * 1024
+
+
+def _reject_duplicate_action_fields(pairs: list[tuple[str, object]]) -> dict:
+    """Python's default JSON decoder silently accepts ambiguous duplicate keys."""
+    values: dict[str, object] = {}
+    for key, value in pairs:
+        if key in values:
+            raise ValueError("duplicate Action field")
+        values[key] = value
+    return values
+
+
+def _invalid_action_constant(value: str) -> None:
+    raise ValueError("nonstandard JSON number")
+
+
 @router.post("/{doc_id}/action-commit")
-def post_sui_card_move_action(
+async def post_sui_card_move_action(
     doc_id: str,
     response: Response,
     request: Request,
-    action_payload: object = Body(...),
     x_tei_action: str | None = Header(default=None, alias="X-TEI-Action"),
     x_read_only: str | None = Header(default=None, alias="X-Read-Only"),
     db: Session = Depends(get_db),
@@ -1127,6 +1143,25 @@ def post_sui_card_move_action(
     """Public v1 envelope; exceptions must NOT be nested under FastAPI detail."""
     response.headers["Cache-Control"] = "no-store"
     try:
+        if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
+            raise _action_error(status_code=415, code="invalid_action")
+        # The outer Action protocol is bounded and duplicates must be rejected
+        # before JSON is flattened into a Python dict, including nested payloads.
+        chunks: list[bytes] = []
+        body_bytes = 0
+        async for chunk in request.stream():
+            body_bytes += len(chunk)
+            if body_bytes > _MAX_SUI_ACTION_BODY_BYTES:
+                raise _action_error(status_code=413, code="invalid_action")
+            chunks.append(chunk)
+        try:
+            action_payload = json.loads(
+                b"".join(chunks).decode("utf-8"),
+                object_pairs_hook=_reject_duplicate_action_fields,
+                parse_constant=_invalid_action_constant,
+            )
+        except (UnicodeDecodeError, ValueError) as error:
+            raise _action_error(status_code=400, code="invalid_action") from error
         return _commit_sui_card_move_action(
             doc_id=doc_id,
             response=response,
