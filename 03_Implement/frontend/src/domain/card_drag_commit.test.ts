@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commitCardDrag } from "./card_drag_commit";
+import { commitCardDrag, isCardDragOriginCurrent } from "./card_drag_commit";
 import type { DocumentV1 } from "./types";
 
 const baseDocument = (): DocumentV1 => ({
@@ -26,6 +26,16 @@ const baseDocument = (): DocumentV1 => ({
 });
 
 describe("native card drag commit", () => {
+  it("refuses stale or missing pointerdown document/revision origins", () => {
+    const document = baseDocument();
+    const origin = { document, etag: "W/1" };
+    expect(isCardDragOriginCurrent(origin, document, "W/1")).toBe(true);
+    expect(isCardDragOriginCurrent(origin, document, "W/2")).toBe(false);
+    expect(isCardDragOriginCurrent(origin, { ...document }, "W/1")).toBe(false);
+    expect(isCardDragOriginCurrent(null, document, "W/1")).toBe(false);
+    expect(isCardDragOriginCurrent({}, document, "W/1")).toBe(false);
+  });
+
   it("updates card position and island membership in one immutable document", () => {
     const before = baseDocument();
     const after = commitCardDrag(before, { cardId: "a", deltaWorldX: 400, deltaWorldY: 0 });
