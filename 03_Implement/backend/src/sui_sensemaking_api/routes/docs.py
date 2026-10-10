@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from hashlib import sha256
 from datetime import datetime, timezone
 from threading import Lock
@@ -1131,6 +1131,40 @@ def _invalid_action_constant(value: str) -> None:
     raise ValueError("nonstandard JSON number")
 
 
+def _native_action_same_origin(request: Request) -> bool:
+    """Conform to the TEI v1 transport's explicit-origin policy.
+
+    An absent Origin is permitted for trusted non-browser callers (like TEI's
+    reference Go transport), but a supplied Origin must match the effective
+    scheme and Host. This is separate from the global BFF-cookie CSRF guard.
+    Reverse proxies must normalize trusted scheme/host; never trust arbitrary
+    X-Forwarded-* headers here.
+    """
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    host = request.headers.get("host")
+    if not origin or not host or len(origin) > 2048 or len(host) > 255 or (
+        origin != origin.strip() or host != host.strip()
+    ):
+        return False
+    try:
+        parsed = urlsplit(origin)
+        parsed.port  # Reject malformed bracketed ports.
+    except ValueError:
+        return False
+    return (
+        parsed.scheme in ("http", "https")
+        and parsed.netloc.lower() == host.lower()
+        and parsed.scheme == request.url.scheme
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.path == ""
+        and not parsed.query
+        and not parsed.fragment
+    )
+
+
 @router.post("/{doc_id}/action-commit", response_model=None)
 async def post_sui_card_move_action(
     doc_id: str,
@@ -1148,8 +1182,10 @@ async def post_sui_card_move_action(
         # *after* supplying verified session/authority and integration tests.
         if getattr(request.app.state, "sui_native_action_v1_enabled", False) is not True:
             raise _action_error(status_code=404, code="action_denied")
+        if x_tei_action != "commit" or not _native_action_same_origin(request):
+            raise _action_error(status_code=403, code="request_origin_denied")
         if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
-            raise _action_error(status_code=415, code="invalid_action")
+            raise _action_error(status_code=415, code="unsupported_content_type")
         # The outer Action protocol is bounded and duplicates must be rejected
         # before JSON is flattened into a Python dict, including nested payloads.
         chunks: list[bytes] = []
