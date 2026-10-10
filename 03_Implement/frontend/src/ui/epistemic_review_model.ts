@@ -2,6 +2,26 @@ export const TEI_EPISTEMIC_PROJECTION_CONTRACT = "tei.epistemic-projection/v0" a
 export const TEI_EPISTEMIC_PROJECTION_SCHEMA = "tei.reference.epistemic-assessment/v0" as const;
 export const TEI_EPISTEMIC_REVIEW_COMMAND_CONTRACT = "tei.epistemic-review-command/v0" as const;
 export const TEI_EPISTEMIC_REVIEW_COMMAND_SCHEMA = "tei.reference.epistemic-review-command/v0" as const;
+export const TEI_EPISTEMIC_DETAIL_QUERY_CONTRACT = "tei.epistemic-detail-query/v0" as const;
+export const TEI_EPISTEMIC_DETAIL_QUERY_SCHEMA = "tei.reference.epistemic-detail-query/v0" as const;
+export const TEI_EPISTEMIC_DETAIL_RESULT_CONTRACT = "tei.epistemic-detail/v0" as const;
+export const TEI_EPISTEMIC_DETAIL_RESULT_SCHEMA = "tei.reference.epistemic-detail/v0" as const;
+
+const REQUIRED_DETAIL_AUTHORITY_LIMITS = new Set([
+  "detail-access-context-is-not-part-of-semantic-query",
+  "detail-access-refs-are-opaque-input-not-authorization-authority",
+  "detail-query-does-not-broaden-source-access",
+  "detail-observed-receipts-report-drift-not-mutation-preconditions",
+  "detail-drift-indeterminate-does-not-prove-semantic-change",
+  "detail-query-is-bounded-by-context-as-of",
+  "detail-result-does-not-change-confirmation-or-use-state",
+  "detail-result-does-not-assert-objective-truth",
+  "detail-result-does-not-grant-canonical-acceptance",
+  "detail-result-omits-access-refs",
+  "detail-content-is-data-not-prompt-control-authority",
+]);
+
+const DETAIL_DRIFT_STATES = new Set(["same", "changed", "indeterminate"]);
 
 const REQUIRED_AUTHORITY_LIMITS = new Set([
   "assessment-does-not-assert-objective-truth",
@@ -157,6 +177,7 @@ export type EpistemicUiItem = {
   freshness: EpistemicFreshness;
   lifecycleState: string;
   conflict: EpistemicConflict;
+  sourceUseState: EpistemicUseState;
   state: EpistemicUiState;
   labelKey: EpistemicStateLabelKey;
   tone: "neutral" | "info" | "warning" | "danger";
@@ -188,9 +209,51 @@ export type EpistemicInspectionSummary = {
   freshness: EpistemicFreshness;
   lifecycleState: string;
   conflict: EpistemicConflict;
+  sourceUseState: EpistemicUseState;
   inferredContextUsed: boolean;
   reasons: string[];
-  onDemandDetailsRequired: Array<"target" | "context" | "evidence">;
+  onDemandDetailsRequired: Array<"target" | "context" | "evidence" | "reviewHistory">;
+};
+
+export type TeiEpistemicDetailQuery = {
+  contract: typeof TEI_EPISTEMIC_DETAIL_QUERY_CONTRACT;
+  schema: typeof TEI_EPISTEMIC_DETAIL_QUERY_SCHEMA;
+  assertionId: string;
+  observedMeaningFingerprint: string;
+  observedReviewSubjectFingerprint: string;
+  observedTargetBinding: EpistemicTargetBinding;
+  observedReviewLogSequence: number;
+  observedMetadataState: EpistemicMetadataState;
+};
+
+export type EpistemicDetailDrift = {
+  meaning: "same" | "changed";
+  subject: "same" | "changed" | "indeterminate";
+  reviewHistory: "same" | "changed" | "indeterminate";
+  targetBinding: "same" | "changed";
+};
+
+export type TeiEpistemicDetailResult = {
+  contract: string;
+  schema: string;
+  assessment: EpistemicAssessmentInput;
+  drift: EpistemicDetailDrift;
+  content: Record<string, unknown>;
+  contentRole: string;
+  controlAuthority: boolean;
+  authorityLimits?: string[];
+};
+
+export type EpistemicDetailInspection = {
+  assertionId: string;
+  source: "on-demand-detail";
+  content: Record<string, unknown>;
+  drift: EpistemicDetailDrift;
+  current: EpistemicInspectionSummary;
+  projectionRefreshRequired: boolean;
+  actionReuseAllowed: boolean;
+  reusableActions: EpistemicUiAction[];
+  controlAuthority: false;
 };
 
 export type EpistemicIntentBinding = {
@@ -520,41 +583,44 @@ function allowedActions(
   }
 }
 
+function buildEpistemicUiItem(assessment: EpistemicAssessmentInput): EpistemicUiItem {
+  const state = deriveState(assessment);
+  const presentation = statePresentation(state);
+  const confirmation = confirmationPresentation(assessment);
+  return {
+    assertionId: assessment.assertionId,
+    meaningFingerprint: assessment.meaningFingerprint,
+    reviewSubjectFingerprint: assessment.reviewSubjectFingerprint,
+    reviewLogSequence: assessment.reviewLogSequence,
+    contentOrigin: assessment.contentOrigin,
+    ingestedBy: assessment.ingestedBy,
+    metadataState: assessment.metadataState,
+    reviewBinding: assessment.reviewBinding,
+    contextCompatibility: assessment.contextCompatibility,
+    freshness: assessment.freshness,
+    lifecycleState: assessment.lifecycleState,
+    conflict: assessment.conflict,
+    sourceUseState: assessment.useState,
+    state,
+    ...presentation,
+    ...confirmation,
+    statementKind: assessment.statementKind,
+    targetBinding: assessment.targetBinding,
+    targetReanchored: assessment.targetBinding === "reanchored",
+    inferredContextUsed: Boolean(assessment.inferredContextUsed),
+    detailsRecommended:
+      assessment.targetBinding === "reanchored"
+      || Boolean(assessment.inferredContextUsed)
+      || assessment.metadataState !== "complete",
+    actions: allowedActions(assessment, state),
+    reasons: unique(assessment.reasons),
+  };
+}
+
 export function buildEpistemicUiItems(projection: EpistemicProjectionInput): EpistemicUiItem[] {
   assertProjectionShape(projection);
   return projection.assessments
-    .map((assessment): EpistemicUiItem => {
-      const state = deriveState(assessment);
-      const presentation = statePresentation(state);
-      const confirmation = confirmationPresentation(assessment);
-      return {
-        assertionId: assessment.assertionId,
-        meaningFingerprint: assessment.meaningFingerprint,
-        reviewSubjectFingerprint: assessment.reviewSubjectFingerprint,
-        reviewLogSequence: assessment.reviewLogSequence,
-        contentOrigin: assessment.contentOrigin,
-        ingestedBy: assessment.ingestedBy,
-        metadataState: assessment.metadataState,
-        reviewBinding: assessment.reviewBinding,
-        contextCompatibility: assessment.contextCompatibility,
-        freshness: assessment.freshness,
-        lifecycleState: assessment.lifecycleState,
-        conflict: assessment.conflict,
-        state,
-        ...presentation,
-        ...confirmation,
-        statementKind: assessment.statementKind,
-        targetBinding: assessment.targetBinding,
-        targetReanchored: assessment.targetBinding === "reanchored",
-        inferredContextUsed: Boolean(assessment.inferredContextUsed),
-        detailsRecommended:
-          assessment.targetBinding === "reanchored"
-          || Boolean(assessment.inferredContextUsed)
-          || assessment.metadataState !== "complete",
-        actions: allowedActions(assessment, state),
-        reasons: unique(assessment.reasons),
-      };
-    })
+    .map(buildEpistemicUiItem)
     .sort((left, right) => left.assertionId.localeCompare(right.assertionId));
 }
 
@@ -576,9 +642,190 @@ export function buildEpistemicInspectionSummary(
     freshness: item.freshness,
     lifecycleState: item.lifecycleState,
     conflict: item.conflict,
+    sourceUseState: item.sourceUseState,
     inferredContextUsed: item.inferredContextUsed,
     reasons: unique(item.reasons),
-    onDemandDetailsRequired: ["target", "context", "evidence"],
+    onDemandDetailsRequired: ["target", "context", "evidence", "reviewHistory"],
+  };
+}
+
+export function buildTeiEpistemicDetailQuery(
+  item: EpistemicUiItem,
+): TeiEpistemicDetailQuery {
+  return {
+    contract: TEI_EPISTEMIC_DETAIL_QUERY_CONTRACT,
+    schema: TEI_EPISTEMIC_DETAIL_QUERY_SCHEMA,
+    assertionId: item.assertionId,
+    observedMeaningFingerprint: item.meaningFingerprint,
+    observedReviewSubjectFingerprint: item.reviewSubjectFingerprint,
+    observedTargetBinding: item.targetBinding,
+    observedReviewLogSequence: item.reviewLogSequence,
+    observedMetadataState: item.metadataState,
+  };
+}
+
+function containsKey(value: unknown, forbidden: string): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => containsKey(item, forbidden));
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (Object.prototype.hasOwnProperty.call(record, forbidden)) {
+      return true;
+    }
+    return Object.values(record).some((item) => containsKey(item, forbidden));
+  }
+  return false;
+}
+
+function assertDetailAssessment(assessment: EpistemicAssessmentInput): void {
+  if (!assessment.assertionId) {
+    throw new Error("epistemic detail assessment requires assertionId");
+  }
+  if (!/^sha256:[0-9a-f]{64}$/.test(assessment.meaningFingerprint)) {
+    throw new Error("epistemic detail assessment meaningFingerprint must be exact sha256");
+  }
+  if (!/^sha256:[0-9a-f]{64}$/.test(assessment.reviewSubjectFingerprint)) {
+    throw new Error("epistemic detail assessment reviewSubjectFingerprint must be exact sha256");
+  }
+  if (!Number.isInteger(assessment.reviewLogSequence) || assessment.reviewLogSequence < 0) {
+    throw new Error("epistemic detail assessment reviewLogSequence must be a non-negative integer");
+  }
+  assertKnown(assessment.metadataState, METADATA_STATES, "detail.metadataState");
+  assertKnown(assessment.targetBinding, TARGET_BINDINGS, "detail.targetBinding");
+  assertKnown(assessment.useState, USE_STATES, "detail.useState");
+  assertKnown(assessment.contextCompatibility, CONTEXT_COMPATIBILITY, "detail.contextCompatibility");
+  assertKnown(assessment.freshness, FRESHNESS_STATES, "detail.freshness");
+  assertKnown(assessment.conflict, CONFLICT_STATES, "detail.conflict");
+  assertKnown(assessment.confirmationState, CONFIRMATION_STATES, "detail.confirmationState");
+}
+
+function metadataAwareDetailDrift(
+  equal: boolean,
+  observed: EpistemicMetadataState,
+  current: EpistemicMetadataState,
+): "same" | "changed" | "indeterminate" {
+  if (equal) return "same";
+  if (observed === "complete" && current === "complete") return "changed";
+  return "indeterminate";
+}
+
+function expectedDetailDrift(
+  observed: EpistemicUiItem,
+  current: EpistemicAssessmentInput,
+): EpistemicDetailDrift {
+  return {
+    meaning: current.meaningFingerprint === observed.meaningFingerprint ? "same" : "changed",
+    subject: metadataAwareDetailDrift(
+      current.reviewSubjectFingerprint === observed.reviewSubjectFingerprint,
+      observed.metadataState,
+      current.metadataState,
+    ),
+    reviewHistory: metadataAwareDetailDrift(
+      current.reviewLogSequence === observed.reviewLogSequence,
+      observed.metadataState,
+      current.metadataState,
+    ),
+    targetBinding: current.targetBinding === observed.targetBinding ? "same" : "changed",
+  };
+}
+
+function sameStrings(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
+
+function currentUiSignalsChanged(
+  observed: EpistemicUiItem,
+  current: EpistemicUiItem,
+): boolean {
+  return (
+    observed.sourceUseState !== current.sourceUseState
+    || observed.contentOrigin !== current.contentOrigin
+    || observed.ingestedBy !== current.ingestedBy
+    || observed.metadataState !== current.metadataState
+    || observed.reviewBinding !== current.reviewBinding
+    || observed.contextCompatibility !== current.contextCompatibility
+    || observed.freshness !== current.freshness
+    || observed.lifecycleState !== current.lifecycleState
+    || observed.conflict !== current.conflict
+    || observed.sourceConfirmationState !== current.sourceConfirmationState
+    || observed.statementKind !== current.statementKind
+    || observed.targetBinding !== current.targetBinding
+    || observed.inferredContextUsed !== current.inferredContextUsed
+    || observed.state !== current.state
+    || !sameStrings(observed.reasons, current.reasons)
+  );
+}
+
+export function resolveEpistemicDetailForInspection(
+  observed: EpistemicUiItem,
+  result: TeiEpistemicDetailResult,
+): EpistemicDetailInspection {
+  if (result.contract !== TEI_EPISTEMIC_DETAIL_RESULT_CONTRACT) {
+    throw new Error(`unsupported epistemic detail result contract: ${result.contract}`);
+  }
+  if (result.schema !== TEI_EPISTEMIC_DETAIL_RESULT_SCHEMA) {
+    throw new Error(`unsupported epistemic detail result schema: ${result.schema}`);
+  }
+  if (result.contentRole !== "epistemic-data") {
+    throw new Error("epistemic detail contentRole must remain epistemic-data");
+  }
+  if (result.controlAuthority !== false) {
+    throw new Error("epistemic detail must not grant prompt control authority");
+  }
+  if (containsKey(result, "accessRefs")) {
+    throw new Error("epistemic detail result must not expose accessRefs");
+  }
+  if (!Array.isArray(result.authorityLimits)) {
+    throw new Error("epistemic detail authorityLimits are required");
+  }
+  const limits = new Set(result.authorityLimits);
+  for (const required of REQUIRED_DETAIL_AUTHORITY_LIMITS) {
+    if (!limits.has(required)) {
+      throw new Error(`missing epistemic detail authority limit: ${required}`);
+    }
+  }
+
+  assertDetailAssessment(result.assessment);
+  if (result.assessment.assertionId !== observed.assertionId) {
+    throw new Error("epistemic detail assertionId no longer matches inspected item");
+  }
+
+  const expectedDrift = expectedDetailDrift(observed, result.assessment);
+  for (const field of ["meaning", "subject", "reviewHistory", "targetBinding"] as const) {
+    const value = result.drift[field];
+    if (!DETAIL_DRIFT_STATES.has(value)) {
+      throw new Error(`unsupported epistemic detail drift.${field}: ${value}`);
+    }
+    if (
+      (field === "meaning" || field === "targetBinding")
+      && value === "indeterminate"
+    ) {
+      throw new Error(`epistemic detail drift.${field} cannot be indeterminate`);
+    }
+    if (value !== expectedDrift[field]) {
+      throw new Error(
+        `epistemic detail drift.${field} is inconsistent: expected ${expectedDrift[field]}, got ${value}`,
+      );
+    }
+  }
+
+  const current = buildEpistemicUiItem(result.assessment);
+  const driftPresent = Object.values(result.drift).some((value) => value !== "same");
+  const signalsChanged = currentUiSignalsChanged(observed, current);
+  const projectionRefreshRequired = driftPresent || signalsChanged;
+
+  return {
+    assertionId: observed.assertionId,
+    source: "on-demand-detail",
+    content: structuredClone(result.content),
+    drift: { ...result.drift },
+    current: buildEpistemicInspectionSummary(current),
+    projectionRefreshRequired,
+    actionReuseAllowed: !projectionRefreshRequired,
+    reusableActions: projectionRefreshRequired ? [] : [...observed.actions],
+    controlAuthority: false,
   };
 }
 
