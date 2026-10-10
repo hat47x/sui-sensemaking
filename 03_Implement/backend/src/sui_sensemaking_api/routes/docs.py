@@ -1131,7 +1131,7 @@ def _invalid_action_constant(value: str) -> None:
     raise ValueError("nonstandard JSON number")
 
 
-@router.post("/{doc_id}/action-commit")
+@router.post("/{doc_id}/action-commit", response_model=None)
 async def post_sui_card_move_action(
     doc_id: str,
     response: Response,
