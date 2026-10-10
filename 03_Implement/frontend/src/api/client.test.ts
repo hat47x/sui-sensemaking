@@ -122,7 +122,7 @@ describe("tenant-scoped document request precondition", () => {
     const revision = "b".repeat(64);
     for (const etag of [
       null, `W/"${revision}"`, revision, '"revision-r2"',
-      `"${revision.toUpperCase()}"`, `"${revision}"\n`,
+      `"${revision.toUpperCase()}"`, `"${revision}"suffix`,
     ]) {
       const headers = etag === null ? {} : { ETag: etag };
       const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
