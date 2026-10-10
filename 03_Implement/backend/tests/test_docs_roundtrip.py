@@ -1134,6 +1134,44 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(sqlite_client: TestC
         assert resp.json()["error"] in ("invalid_action", "action_denied")
     assert sqlite_client.post(endpoint, json=intent).status_code == 400
 
+    # Python's default decoder is last-key-wins. This boundary instead
+    # rejects duplicate keys at every nesting level before Pydantic runs.
+    serialized = __import__("json").dumps(intent, separators=(",", ":"))
+    duplicate_outer = serialized.replace(
+        '"applicationID":"sui",', '"applicationID":"sui","applicationID":"sui",',
+    )
+    duplicate_nested = serialized.replace(
+        '"x":212.5,', '"x":212.5,"x":212.5,',
+    )
+    for body in (duplicate_outer, duplicate_nested):
+        malformed = sqlite_client.post(
+            endpoint, content=body,
+            headers={**headers, "Content-Type": "application/json"},
+        )
+        assert malformed.status_code == 400, malformed.text
+        assert malformed.json() == {"protocolVersion": "1", "error": "invalid_action"}
+
+    oversized = sqlite_client.post(
+        endpoint,
+        content=serialized + (" " * 65536),
+        headers={**headers, "Content-Type": "application/json"},
+    )
+    assert oversized.status_code == 413, oversized.text
+    assert oversized.json() == {"protocolVersion": "1", "error": "invalid_action"}
+
+    bad_media = sqlite_client.post(
+        endpoint, content=serialized,
+        headers={**headers, "Content-Type": "text/plain"},
+    )
+    assert bad_media.status_code == 415
+    assert bad_media.json() == {"protocolVersion": "1", "error": "invalid_action"}
+
+    read_only = sqlite_client.post(
+        endpoint, json=intent, headers={**headers, "X-Read-Only": "1"},
+    )
+    assert read_only.status_code == 403, read_only.text
+    assert read_only.json() == {"protocolVersion": "1", "error": "action_denied"}
+
     accepted = sqlite_client.post(endpoint, json=intent, headers=headers)
     assert accepted.status_code == 200, accepted.text
     assert accepted.json()["protocolVersion"] == "1"
