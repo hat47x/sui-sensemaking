@@ -20,6 +20,7 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -1122,6 +1123,44 @@ def post_sui_card_move_action(
     x_tei_action: str | None = Header(default=None, alias="X-TEI-Action"),
     x_read_only: str | None = Header(default=None, alias="X-Read-Only"),
     db: Session = Depends(get_db),
+) -> dict[str, str] | JSONResponse:
+    """Public v1 envelope; exceptions must NOT be nested under FastAPI detail."""
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return _commit_sui_card_move_action(
+            doc_id=doc_id,
+            response=response,
+            request=request,
+            action_payload=action_payload,
+            x_tei_action=x_tei_action,
+            x_read_only=x_read_only,
+            db=db,
+        )
+    except HTTPException as error:
+        # The standard browser dispatcher expects the error envelope at root.
+        # Preserve 404 tenant anti-enumeration, 423 archived, 409 conflict etc.
+        code = (
+            error.detail.get("error")
+            if isinstance(error.detail, dict)
+            and error.detail.get("protocolVersion") == "1"
+            else "action_denied"
+        )
+        return JSONResponse(
+            status_code=error.status_code,
+            headers={"Cache-Control": "no-store"},
+            content={"protocolVersion": "1", "error": code},
+        )
+
+
+def _commit_sui_card_move_action(
+    *,
+    doc_id: str,
+    response: Response,
+    request: Request,
+    action_payload: object,
+    x_tei_action: str | None,
+    x_read_only: str | None,
+    db: Session,
 ) -> dict[str, str]:
     """SUI-owned application Action receiver; not the TEI Go runtime Host.
 
