@@ -664,6 +664,10 @@ export function buildTeiEpistemicDetailQuery(
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function containsKey(value: unknown, forbidden: string): boolean {
   if (Array.isArray(value)) {
     return value.some((item) => containsKey(item, forbidden));
@@ -681,6 +685,21 @@ function containsKey(value: unknown, forbidden: string): boolean {
 function assertDetailAssessment(assessment: EpistemicAssessmentInput): void {
   if (!assessment.assertionId) {
     throw new Error("epistemic detail assessment requires assertionId");
+  }
+  for (const [field, value] of [
+    ["contentOrigin", assessment.contentOrigin],
+    ["statementKind", assessment.statementKind],
+    ["lifecycleState", assessment.lifecycleState],
+  ] as const) {
+    if (typeof value !== "string" || value.length === 0) {
+      throw new Error(`epistemic detail assessment.${field} must be a non-empty string`);
+    }
+  }
+  if (assessment.ingestedBy !== undefined && assessment.ingestedBy.length === 0) {
+    throw new Error("epistemic detail assessment.ingestedBy must be non-empty when present");
+  }
+  if (assessment.reviewBinding !== undefined && assessment.reviewBinding.length === 0) {
+    throw new Error("epistemic detail assessment.reviewBinding must be non-empty when present");
   }
   if (!/^sha256:[0-9a-f]{64}$/.test(assessment.meaningFingerprint)) {
     throw new Error("epistemic detail assessment meaningFingerprint must be exact sha256");
@@ -780,11 +799,24 @@ export function resolveEpistemicDetailForInspection(
   if (!Array.isArray(result.authorityLimits)) {
     throw new Error("epistemic detail authorityLimits are required");
   }
+  if (!result.authorityLimits.every((value) => typeof value === "string")) {
+    throw new Error("epistemic detail authorityLimits must contain strings");
+  }
   const limits = new Set(result.authorityLimits);
   for (const required of REQUIRED_DETAIL_AUTHORITY_LIMITS) {
     if (!limits.has(required)) {
       throw new Error(`missing epistemic detail authority limit: ${required}`);
     }
+  }
+
+  if (!isRecord(result.assessment)) {
+    throw new Error("epistemic detail assessment must be an object");
+  }
+  if (!isRecord(result.drift)) {
+    throw new Error("epistemic detail drift must be an object");
+  }
+  if (!isRecord(result.content)) {
+    throw new Error("epistemic detail content must be an object");
   }
 
   assertDetailAssessment(result.assessment);
