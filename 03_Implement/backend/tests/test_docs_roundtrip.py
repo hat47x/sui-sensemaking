@@ -1149,7 +1149,32 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
         assert resp.status_code in (400, 403), resp.text
         assert resp.json()["protocolVersion"] == "1"
         assert resp.json()["error"] in ("invalid_action", "action_denied")
-    assert sqlite_client.post(endpoint, json=intent).status_code == 400
+    missing_action_header = sqlite_client.post(endpoint, json=intent)
+    assert missing_action_header.status_code == 403
+    assert missing_action_header.json() == {
+        "protocolVersion": "1", "error": "request_origin_denied",
+    }
+
+    # Browser-supplied Origin must match the trusted Host/scheme. This check
+    # is independent of whether a session cookie was supplied for BFF CSRF.
+    for origin in ("https://attacker.example", "null", "http://testserver",
+                   "http://testserver/other", "http://testserver@evil.test"):
+        denied_origin = sqlite_client.post(
+            endpoint, json=intent, headers={**headers, "Origin": origin},
+        )
+        assert denied_origin.status_code == 403, denied_origin.text
+        assert denied_origin.json() == {
+            "protocolVersion": "1", "error": "request_origin_denied",
+        }
+
+    # No implied CORS trust: a matching explicit Origin is acceptable.
+    allowed_origin = sqlite_client.post(
+        endpoint,
+        json={**intent, "applicationID": "inventory"},
+        headers={**headers, "Origin": "http://testserver"},
+    )
+    assert allowed_origin.status_code == 400
+    assert allowed_origin.json() == {"protocolVersion": "1", "error": "invalid_action"}
 
     # Python's default decoder is last-key-wins. This boundary instead
     # rejects duplicate keys at every nesting level before Pydantic runs.
@@ -1181,7 +1206,9 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
         headers={**headers, "Content-Type": "text/plain"},
     )
     assert bad_media.status_code == 415
-    assert bad_media.json() == {"protocolVersion": "1", "error": "invalid_action"}
+    assert bad_media.json() == {
+        "protocolVersion": "1", "error": "unsupported_content_type",
+    }
 
     read_only = sqlite_client.post(
         endpoint, json=intent, headers={**headers, "X-Read-Only": "1"},
