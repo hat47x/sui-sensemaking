@@ -93,6 +93,50 @@ test("accepts null-vs-missing optional fields and backend-owned updatedAt", asyn
   assert.equal(f.state.applied, 1);
 });
 
+test("accepts Pydantic's documented Island defaults and geometry mirrors", async () => {
+  const f = fixture({
+    readDocument: async () => {
+      const doc = moved(source());
+      // Island.collapsed is explicit in Pydantic output, unlike many
+      // legitimate preexisting browser Documents.
+      doc.islands.forEach((island) => { island.collapsed = false; });
+      // SUI's Island.normalize_geometry_shape creates the missing mirror.
+      doc.islands[1].geometry = { type: "rect" };
+      doc.islands[1].shape = { kind: "rect" };
+      return { document: doc, etag: "etag-r2" };
+    },
+  });
+  const expected = structuredClone(f.next);
+  expected.islands[1].shape = { kind: "rect" };
+  assert.equal(await f.run(f.origin, expected, "a"), "etag-r2");
+});
+
+test("normalizes Pydantic's polygon mirror but rejects divergent geometry", async () => {
+  const polygon = [{ x: 100, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 100 }];
+  const expected = moved(source());
+  expected.islands[1].shape = { kind: "polygon", points: polygon };
+  const readDocument = async () => {
+    const doc = structuredClone(expected);
+    doc.islands[1].geometry = { type: "polygon", points: structuredClone(polygon) };
+    return { document: doc, etag: "etag-r2" };
+  };
+  const f = fixture({ readDocument });
+  assert.equal(await f.run(f.origin, expected, "a"), "etag-r2");
+
+  const damaged = fixture({
+    readDocument: async () => {
+      const doc = await readDocument();
+      doc.document.islands[1].geometry.points[0].x += 1;
+      return doc;
+    },
+  });
+  await assert.rejects(
+    damaged.run(damaged.origin, expected, "a"),
+    isError("readback_document_mismatch", "etag-r2"),
+  );
+  assert.equal(damaged.state.applied, 0);
+});
+
 test("no-change drag does not write or re-read", async () => {
   const f = fixture();
   assert.equal(await f.run(f.origin, f.origin.document, "a"), null);
