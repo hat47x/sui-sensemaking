@@ -1103,7 +1103,11 @@ class _SuiCardMoveActionIntent(BaseModel):
     applicationID: Literal["sui"]
     resourceID: str = Field(min_length=1)
     actionID: Literal["sui.move"]
-    # Require exact length as well as syntax: Python '
+    # Python's regex '$' can match before the final newline.
+    # Require exactly 64 characters as well as a full lowercase hex digest.
+    expectedRevision: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
     payload: _CardMovePayload
 
 
