@@ -43,12 +43,19 @@ export class SuiCardMoveActionError extends Error {
 }
 
 function selectedCard(document: DocumentV1, id: string) {
-  const matching = document.cards.filter((card) => card.id === id);
+  if (!Array.isArray(document.cards)) return null;
+  const matching = document.cards.filter((card) => card && card.id === id);
   return matching.length === 1 ? matching[0] : null;
 }
 
-function membership(document: DocumentV1, cardId: string): string[] {
-  return document.islands.filter((island) => island.cardIds.includes(cardId)).map((island) => island.id).sort();
+function membership(document: DocumentV1, cardId: string): string[] | null {
+  if (!Array.isArray(document.islands)) return null;
+  const members: string[] = [];
+  for (const island of document.islands) {
+    if (!island || typeof island.id !== "string" || !Array.isArray(island.cardIds)) return null;
+    if (island.cardIds.includes(cardId)) members.push(island.id);
+  }
+  return members.sort();
 }
 
 function current(ports: SuiCardMoveActionPorts, origin: SuiCardMoveOrigin) {
@@ -83,8 +90,11 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     if (!before || !after || !Number.isFinite(after.x) || !Number.isFinite(after.y)) {
       throw new SuiCardMoveActionError("invalid_move_target");
     }
+    const originalMembership = membership(origin.document, cardId);
+    const nextMembership = membership(nextDocument, cardId);
+    if (!originalMembership || !nextMembership) throw new SuiCardMoveActionError("invalid_move_target");
     if (before.x === after.x && before.y === after.y &&
-        membership(origin.document, cardId).join("\u0000") === membership(nextDocument, cardId).join("\u0000")) {
+        JSON.stringify(originalMembership) === JSON.stringify(nextMembership)) {
       return null;
     }
     const resourceKey = JSON.stringify(["sui", origin.document.id]);
@@ -122,7 +132,7 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
       }
       const committedCard = selectedCard(readback.document, cardId);
       if (!committedCard || committedCard.x !== after.x || committedCard.y !== after.y ||
-          membership(readback.document, cardId).join("\u0000") !== membership(nextDocument, cardId).join("\u0000")) {
+          JSON.stringify(membership(readback.document, cardId)) !== JSON.stringify(nextMembership)) {
         throw new SuiCardMoveActionError("readback_move_mismatch", committedRevision);
       }
       if (!current(ports, origin)) {
