@@ -23,7 +23,9 @@
 
 この受付口は既存の`_authorize_request(... action="write", safe_mode=True)`と`DatabaseDocumentContentStore`を呼び出し、アーカイブ済み文書・Reviewer帰属・Card数・本文サイズの制限を再利用します。既存のRevision Headの条件付き更新が競合すれば全DBトランザクションをrollbackし、`409 revision_conflict`を返します。成功時は`{"protocolVersion":"1","revision":"<ETag>"}`、失敗時は`{"protocolVersion":"1","error":"..."}`を返し、FastAPIの`detail`ラッパーはAction応答へ混在させません。要求JSONの上限64KiB、重複キー、未知キー、他Application ID、非有限座標を拒否します。リクエスト本文は、JSON Middlewareでもバッファー保持前に上限を適用します。
 
-**このSUIアプリケーション固有の受付口を、TEIの汎用Go Hostと混同しないでください。** TEI Host→SUI保存経路の正式な連結、Host側の認可/セッション伝播、監査、原子的なReact Undo取り込みはまだ行っていません。本番のCanvas操作は依然として既存ローカル確定を使用します。 `PUT /docs/{id}`は現行どおり既存の認可、テナント、アーカイブ状態、レビュー帰属、ETag・Revision処理を担当します。純粋コマンドだけでは同時更新を防げないため、TEI HostとSUI保存側のアダプターが、**権威あるRevisionの原子的比較・SUIコマンド実行・保存**を一単位として保証する必要があります。TEI CoreにはSUI専用構造を持ち込みません。
+**このSUIアプリケーション固有の受付口を、TEIの汎用Go Hostと混同しないでください。** TEI Host→SUI保存経路の正式な連結、Host側の認可/セッション伝播、監査、原子的なReact Undo取り込みはまだ行っていません。本番のCanvas操作は依然として既存ローカル確定を使用します。
+
+`PUT /docs/{id}`は現行どおり既存の認可、テナント、アーカイブ状態、レビュー帰属、ETag・Revision処理を担当します。純粋コマンドだけでは同時更新を防げないため、TEI HostとSUI保存側のアダプターが、**権威あるRevisionの原子的比較・SUIコマンド実行・保存**を一単位として保証する必要があります。TEI CoreにはSUI専用構造を持ち込みません。
 
 実Go Hostからの呼び出し、実セッション認可のエンドツーエンド実証、ブラウザーでのCard移動、Undo/Redo接続は**未実施**です。追加したPython／Vitest／SQLiteテストとSUIフロントエンド全体のテストも未実行であり、テストコードの追加だけをPASSの証拠とはしません。共通fixtureによるPythonとTypeScriptの比較テストを追加しましたが、実行と差分評価が必要です。
 
@@ -31,7 +33,8 @@
 
 ```sh
 cd 03_Implement/backend
-pytest -q tests/test_card_move_command.py tests/test_request_body_safety.py tests/test_docs_roundtrip.py -k 'card_move or native_action or body_size'
+pytest -q tests/test_card_move_command.py tests/test_request_body_safety.py tests/test_docs_roundtrip.py -k 'card_move or native_action or cross_runtime_parity'
+pytest -q tests/test_tenant_session_precondition.py
 cd ../frontend
 npm run typecheck
 npm test -- src/api/client.test.ts src/domain/card_drag_commit.test.ts
