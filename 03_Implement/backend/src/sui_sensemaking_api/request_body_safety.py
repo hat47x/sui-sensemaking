@@ -7,6 +7,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 MAX_JSON_BODY_NESTING_DEPTH = 64
+# SUI-owned Action v1 receiver is intentionally smaller than Document PUT.
+MAX_NATIVE_ACTION_JSON_BYTES = 64 * 1024
 
 
 def _is_json_content_type(scope: Scope) -> bool:
@@ -60,6 +62,13 @@ class JsonRequestBodySafetyMiddleware:
         scanner = _JsonNestingScanner()
         replay_messages: list[Message] = []
         nesting_too_deep = False
+        action_too_large = False
+        action_bytes = 0
+        action_body_limit = (
+            scope.get("method") == "POST"
+            and scope.get("path", "").startswith("/docs/")
+            and scope.get("path", "").endswith("/action-commit")
+        )
 
         while True:
             message = await receive()
@@ -69,14 +78,30 @@ class JsonRequestBodySafetyMiddleware:
                 replay_messages.append(message)
                 continue
 
-            if not nesting_too_deep:
-                replay_messages.append(message)
-                if not scanner.feed(message.get("body", b"")):
-                    nesting_too_deep = True
-                    replay_messages.clear()
+            if not nesting_too_deep and not action_too_large:
+                chunk = message.get("body", b"")
+                if action_body_limit:
+                    action_bytes += len(chunk)
+                    if action_bytes > MAX_NATIVE_ACTION_JSON_BYTES:
+                        action_too_large = True
+                        replay_messages.clear()
+                if not action_too_large:
+                    replay_messages.append(message)
+                    if not scanner.feed(chunk):
+                        nesting_too_deep = True
+                        replay_messages.clear()
 
             if not message.get("more_body", False):
                 break
+
+        if action_too_large:
+            response = JSONResponse(
+                status_code=413,
+                content={"protocolVersion": "1", "error": "invalid_action"},
+                headers={"Cache-Control": "no-store"},
+            )
+            await response(scope, receive, send)
+            return
 
         if nesting_too_deep:
             response = JSONResponse(
