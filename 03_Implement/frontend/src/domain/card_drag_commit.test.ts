@@ -96,7 +96,7 @@ describe("native card drag commit", () => {
 describe("SUI Card movement cross-runtime fixture (TypeScript side)", () => {
   it("matches the shared layout, membership and provenance expectations", () => {
     for (const scenario of parity.cases) {
-      const document = structuredClone(parity.document) as DocumentV1;
+      const document = structuredClone(parity.document) as unknown as DocumentV1;
       if ("newIslandPolygon" in scenario && scenario.newIslandPolygon) {
         document.islands[1].shape = { kind: "polygon", points: scenario.newIslandPolygon };
       }
