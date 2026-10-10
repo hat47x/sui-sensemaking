@@ -12,6 +12,8 @@ type CardDragState = {
   startClientX: number;
   startClientY: number;
   didMove: boolean;
+  /** Opaque, start-time revision context supplied by the application. */
+  commitOrigin?: unknown;
 };
 
 type CardViewProps = {
@@ -23,8 +25,10 @@ type CardViewProps = {
   isSearchMatch?: boolean;
   isActiveSearchMatch?: boolean;
   onMove: (cardId: string, deltaScreenX: number, deltaScreenY: number) => void;
+  /** Application snapshot captured on pointerdown, never from the drop payload. */
+  onBeginMove?: (cardId: string) => unknown;
   /** Opt-in: keep drag preview local, then emit one final delta on pointerup. */
-  onCommitMove?: (cardId: string, deltaScreenX: number, deltaScreenY: number) => void;
+  onCommitMove?: (cardId: string, deltaScreenX: number, deltaScreenY: number, origin?: unknown) => void;
   /** World-canvas zoom applied outside the CardView; defaults to 1. */
   dragPreviewZoom?: number;
   onSelect: (cardId: string, isShiftPressed: boolean) => void;
@@ -100,6 +104,7 @@ function CardViewComponent({
   isSearchMatch = false,
   isActiveSearchMatch = false,
   onMove,
+  onBeginMove,
   onCommitMove,
   dragPreviewZoom = 1,
   onSelect,
@@ -190,6 +195,7 @@ function CardViewComponent({
       startClientX: event.clientX,
       startClientY: event.clientY,
       didMove: false,
+      commitOrigin: onCommitMove ? onBeginMove?.(card.id) : undefined,
     };
     setIsDragging(true);
 
@@ -246,7 +252,7 @@ function CardViewComponent({
       const dx = event.clientX - drag.startClientX;
       const dy = event.clientY - drag.startClientY;
       if (dx !== 0 || dy !== 0) {
-        onCommitMove(card.id, dx, dy);
+        onCommitMove(card.id, dx, dy, drag.commitOrigin);
       }
     }
   };
