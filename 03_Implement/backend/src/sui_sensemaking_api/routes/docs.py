@@ -1165,10 +1165,17 @@ async def post_sui_card_move_action(
         # Keep this call *directly on the registered route*. The backend's
         # route coverage guard checks that every /docs endpoint invokes the
         # shared tenant/resource authorization boundary, not an indirect helper.
+        requested_read_only = x_read_only == "1" or (x_read_only or "").lower() == "true"
         access_request, _, tenant = _authorize_request(
             request, db, action="write", doc_id=doc_id, safe_mode=True,
-            read_only=(x_read_only == "1" or (x_read_only or "").lower() == "true"),
+            read_only=requested_read_only,
         )
+        # In single-tenant profiles the optional access-control adapter can be
+        # absent and _authorize_request grants a normal write. A caller's
+        # explicit read-only mode must still block mutation, independently of
+        # any authorization adapter installed for this deployment.
+        if requested_read_only:
+            raise _action_error(status_code=403, code="action_denied")
         return _commit_sui_card_move_action(
             doc_id=doc_id,
             response=response,
