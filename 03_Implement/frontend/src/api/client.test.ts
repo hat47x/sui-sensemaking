@@ -418,11 +418,25 @@ describe("SUI application-owned Action v1 HTTP transport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects invalid revisions without network access", async () => {
+  it("rejects invalid and newline-terminated revisions without network access", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
-    await expect(commitSuiCardMoveAction({ ...intent(), expectedRevision: "*" }))
-      .rejects.toBeInstanceOf(TypeError);
+    for (const expectedRevision of ["*", "a".repeat(64) + "\\n"]) {
+      await expect(commitSuiCardMoveAction({ ...intent(), expectedRevision }))
+        .rejects.toBeInstanceOf(TypeError);
+    }
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a newline-terminated success revision as an invalid response", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({
+        protocolVersion: "1",
+        revision: "b".repeat(64) + "\\n",
+      }), { status: 200 }),
+    );
+    await expect(commitSuiCardMoveAction(intent()))
+      .rejects.toMatchObject({ code: "invalid_action_response" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
