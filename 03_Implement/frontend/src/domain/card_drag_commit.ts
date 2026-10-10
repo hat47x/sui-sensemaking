@@ -3,6 +3,25 @@ import { moveCardToIsland } from "./island_edge_aggregate";
 import { snapValueToGrid } from "./layout_ops";
 import type { DocumentV1 } from "./types";
 
+/** The UI holds this optimistic guard from pointerdown until pointerup. */
+export type CardDragOrigin = {
+  document: DocumentV1;
+  etag: string | null;
+};
+
+/** Reject a stale or untrusted drag origin without modifying any document. */
+export function isCardDragOriginCurrent(
+  origin: unknown,
+  document: DocumentV1,
+  etag: string | null
+): origin is CardDragOrigin {
+  if (!origin || typeof origin !== "object") {
+    return false;
+  }
+  const candidate = origin as Partial<CardDragOrigin>;
+  return candidate.document === document && candidate.etag === etag;
+}
+
 export type CardDragCommit = {
   cardId: string;
   deltaWorldX: number;
