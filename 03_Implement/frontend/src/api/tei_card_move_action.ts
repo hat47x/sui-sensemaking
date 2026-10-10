@@ -67,6 +67,33 @@ function current(ports: SuiCardMoveActionPorts, origin: SuiCardMoveOrigin) {
 }
 
 /**
+ * Compare the application document rather than only x/y and island cardIds.
+ * A successful HTTP revision does not prove that the server retained source,
+ * Hold, review, unknown Edge types, affiliations, or unrelated Card changes.
+ *
+ * Object key ordering and optional null-vs-undefined are not persisted
+ * semantic differences in DocumentV1; array order and all concrete values are.
+ */
+function equivalentStoredDocument(expected: DocumentV1, actual: DocumentV1): boolean {
+  const stable = (value: unknown): string => {
+    if (Array.isArray(value)) {
+      return `[${value.map((entry) => stable(entry)).join(",")}]`;
+    }
+    if (value && typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+      const entries = Object.keys(obj).filter((key) => obj[key] !== undefined && obj[key] !== null);
+      entries.sort();
+      return `{${entries.map((key) => `${JSON.stringify(key)}:${stable(obj[key])}`).join(",")}}`;
+    }
+    return JSON.stringify(value) ?? "null";
+  };
+  // The backend owns the updatedAt timestamp of a committed Document.
+  // All other document fields must be equal to SUI's native move outcome.
+  return stable({ ...expected, updatedAt: null }) ===
+    stable({ ...actual, updatedAt: null });
+}
+
+/**
  * SUI-owned adapter for a TEI resource-scoped Action commit. Native Canvas,
  * domain move calculation and Undo remain in SUI. No endpoint is activated by
  * importing this module; the host application must supply all four ports.
@@ -136,6 +163,9 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
       if (!committedCard || committedCard.x !== after.x || committedCard.y !== after.y ||
           JSON.stringify(membership(readback.document, cardId)) !== JSON.stringify(nextMembership)) {
         throw new SuiCardMoveActionError("readback_move_mismatch", committedRevision);
+      }
+      if (!equivalentStoredDocument(nextDocument, readback.document)) {
+        throw new SuiCardMoveActionError("readback_document_mismatch", committedRevision);
       }
       if (!current(ports, origin)) {
         throw new SuiCardMoveActionError("local_state_changed", committedRevision);
