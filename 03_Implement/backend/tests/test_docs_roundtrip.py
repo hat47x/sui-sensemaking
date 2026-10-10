@@ -1096,6 +1096,91 @@ def _assert_etag_optimistic_locking(client: TestClient) -> None:
     assert second_etag != first_etag
 
 
+def test_sui_native_action_v1_uses_authorized_store_and_cas(sqlite_client: TestClient) -> None:
+    """Real FastAPI SUI receiver + SQLite; Go TEI Host remains unconnected."""
+    doc_id = "native-action-envelope-probe"
+    initial = _sample_payload_v1_with_collapsed(doc_id)
+    initial["edges"][0]["type"] = "future-edge-kind"
+    initial["cards"][0]["meta"] = {"source": "interview-1"}
+    initial["cards"][0]["holdState"] = "held"
+    initial["islands"][0].pop("placardCardId", None)
+    initial["islands"][1].pop("placardCardId", None)
+    seeded = sqlite_client.put(f"/docs/{doc_id}", json=initial)
+    assert seeded.status_code == 200, seeded.text
+    etag = seeded.headers["ETag"].strip('"')
+
+    intent = {
+        "protocolVersion": "1",
+        "applicationID": "sui",
+        "resourceID": doc_id,
+        "actionID": "sui.move",
+        "expectedRevision": etag,
+        "payload": {"cardId": "card-1", "x": 212.5, "y": 91},
+    }
+    endpoint = f"/docs/{doc_id}/action-commit"
+    headers = {"X-TEI-Action": "commit"}
+
+    # Strict outer envelope; unknown fields and wrong application rejected.
+    for rejected in (
+        {**intent, "applicationID": "inventory"},
+        {**intent, "resourceID": "other"},
+        {**intent, "authority": "caller-asserted"},
+        {**intent, "payload": {**intent["payload"], "admin": True}},
+        {**intent, "payload": {"cardId": "card-1", "x": "212.5", "y": 91}},
+    ):
+        resp = sqlite_client.post(endpoint, json=rejected, headers=headers)
+        assert resp.status_code in (400, 403), resp.text
+        assert resp.json()["protocolVersion"] == "1"
+        assert resp.json()["error"] in ("invalid_action", "action_denied")
+    assert sqlite_client.post(endpoint, json=intent).status_code == 400
+
+    accepted = sqlite_client.post(endpoint, json=intent, headers=headers)
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["protocolVersion"] == "1"
+    revision = accepted.json()["revision"]
+    assert revision and revision != etag
+    assert accepted.headers["ETag"] == f'"{revision}"'
+    assert accepted.headers["Cache-Control"] == "no-store"
+
+    stored = sqlite_client.get(f"/docs/{doc_id}")
+    assert stored.status_code == 200, stored.text
+    assert stored.headers["ETag"] == f'"{revision}"'
+    doc = stored.json()
+    assert [island["cardIds"] for island in doc["islands"]] == [
+        [], ["card-2", "card-1"],
+    ]
+    assert doc["cards"][0]["x"] == 212.5
+    assert doc["cards"][0]["y"] == 91
+    assert doc["cards"][0]["meta"]["source"] == "interview-1"
+    assert doc["cards"][0]["holdState"] == "held"
+    assert doc["edges"][0]["type"] == "future-edge-kind"
+
+    # A previously acknowledged Action is NOT repeated with its stale ETag.
+    conflict = sqlite_client.post(endpoint, json=intent, headers=headers)
+    assert conflict.status_code == 409, conflict.text
+    assert conflict.json() == {"protocolVersion": "1", "error": "revision_conflict"}
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
+    invalid = sqlite_client.post(
+        endpoint,
+        json={**intent, "expectedRevision": revision, "payload": {
+            "cardId": "missing", "x": 1, "y": 2,
+        }},
+        headers=headers,
+    )
+    assert invalid.status_code == 400
+    assert invalid.json() == {"protocolVersion": "1", "error": "invalid_payload"}
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
+    archived = sqlite_client.post(f"/docs/{doc_id}/archive")
+    assert archived.status_code == 204, archived.text
+    denied = sqlite_client.post(
+        endpoint, json={**intent, "expectedRevision": revision}, headers=headers,
+    )
+    assert denied.status_code == 423
+    assert denied.json() == {"protocolVersion": "1", "error": "action_denied"}
+
+
 def test_sui_card_move_command_with_existing_sqlite_document_cas(sqlite_client: TestClient) -> None:
     """SUI-owned command -> native PUT/GET CAS; NOT a TEI Go Host route."""
     from sui_sensemaking_api.card_move_command import apply_card_move
