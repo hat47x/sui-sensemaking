@@ -55,6 +55,18 @@ SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
 
 Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
 
+### サーバーActionの追加境界確認（2026-10-11）
+
+SUI所有のAction受付口に、**Cookie有無と独立した、明示されたOriginの同一オリジン検証**を追加しました。Originが提示された場合、信頼されたリクエストのScheme/Hostと一致しない値は`403 request_origin_denied`です。Originがない非ブラウザー経路はTEI Go参照契約と同様に許容しますが、その場合も既存の認証／認可を必須とします。BFF Cookieがある場合には、従来どおりグローバル`BffCsrfProtectionMiddleware`がOriginとセッションに紐づくCSRFヘッダーを別途検証します。`X-TEI-Action: commit`がない要求も403、非JSON Content-Typeは`415 unsupported_content_type`とし、Go参照プロファイルのHTTPエラーコードに合わせました。悪意あるOriginの負例テストを追加しています。
+
+保存済みDocumentが現行Document検証を満たさない場合は、クライアントの権限不足と混同せず`500 execution_failed`として拒否します。ドメイン変換が検証違反で失敗した場合は`400 invalid_payload`です。どちらも保存を行いません。
+
+### 保存後のUndo履歴を扱う準備（本番React接続は未完了）
+
+`frontend/src/domain/confirmed_card_move_state.ts`に、SUI既存の`DocumentHistory`（past/present/future）とETag、dirty状態の意味論を引き継ぐ**純粋な計画関数**`planConfirmedCardMoveState`を追加しました。未保存変更・ReadOnly・保存処理中・セッション失効・ドラッグ中・Document参照／ETag不一致を拒否し、受け付けた場合は「新しいサーバーRevisionを保存済みとして設定しつつ、移動前DocumentをUndo履歴に残す」状態を計算します。Undoはサーバー操作の取消しではなく、新しいローカル編集として保存し直す必要があります。SUIの履歴上限50とRedo破棄を維持し、入力Documentは複製します。
+
+`frontend/src/domain/confirmed_card_move_state.test.ts`には正常系・原点差替え・Dirty/ReadOnly/Session/保存中・履歴制限・Undo保持のテストを追加。Github上のファイルをV8で型注釈除去して簡易実行した限定検査では**5/5ケース・29 assertions PASS**を確認しましたが、これは正式なVitest・TypeScript型検査ではありません。計画関数単体ではReactの複数Stateの原子的な更新を保証しないため、**本番App.tsxへの接続は引き続き見送ります**。SUI `runTenantScopedApiRequest`とDocument参照・ETag・dirtyの単一所有境界が整うまで、実Action受付口もデフォルト無効です。
+
 ### 接続試験の実行（未実行）
 
 ```sh
