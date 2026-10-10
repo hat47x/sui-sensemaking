@@ -1143,6 +1143,11 @@ async def post_sui_card_move_action(
     """Public v1 envelope; exceptions must NOT be nested under FastAPI detail."""
     response.headers["Cache-Control"] = "no-store"
     try:
+        # Never expose a new mutation surface in ordinary SUI deployments.
+        # The future TEI Host integration must explicitly enable this receiver
+        # *after* supplying verified session/authority and integration tests.
+        if getattr(request.app.state, "sui_native_action_v1_enabled", False) is not True:
+            raise _action_error(status_code=404, code="action_denied")
         if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
             raise _action_error(status_code=415, code="invalid_action")
         # The outer Action protocol is bounded and duplicates must be rejected
