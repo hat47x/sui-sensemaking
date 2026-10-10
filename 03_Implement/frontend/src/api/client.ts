@@ -418,9 +418,12 @@ export async function getAuthoritativeDocument(
   options: TenantScopedRequestOptions = {},
 ): Promise<DocumentWithEtag<Document>> {
   const headers = tenantSessionPreconditionHeaders(options);
-  const response = await fetch(`${API_BASE}/docs/${docId}`, {
+  const response = await fetch(`${API_BASE}/docs/${encodeURIComponent(docId)}`, {
     headers,
     cache: "no-store",
+    mode: "same-origin",
+    credentials: "same-origin",
+    redirect: "error",
   });
 
   if (!response.ok) {
@@ -428,9 +431,19 @@ export async function getAuthoritativeDocument(
     throw new ApiError(response.status, errorDetail.message, { code: errorDetail.code, disabledReason: errorDetail.disabledReason });
   }
 
+  // Conditional Action commits require a strong server-issued revision.
+  // The ordinary document GET deliberately tolerates weak/legacy ETags,
+  // but a weak validator is never safe evidence of an exact CAS revision.
+  const etagHeader = response.headers.get("ETag");
+  const strongMatch = etagHeader?.match(/^"([0-9a-f]{64})"$/);
+  if (!strongMatch) {
+    throw new ApiError(response.status, "invalid_authoritative_etag", {
+      code: "invalid_authoritative_etag",
+    });
+  }
   return {
     document: normalizeDocument(parseDocumentResponse(await response.text())),
-    etag: normalizeEtag(response.headers.get("ETag")),
+    etag: strongMatch[1],
   };
 }
 
