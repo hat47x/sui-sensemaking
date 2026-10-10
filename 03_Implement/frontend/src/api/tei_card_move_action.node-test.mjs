@@ -58,6 +58,42 @@ test("uses v1 SUI Action envelope and restores authoritative Document and ETag",
   assert.equal(f.state.result.etag, "etag-r2");
 });
 
+test("malformed post-commit document preserves the acknowledged revision", async () => {
+  const f = fixture({
+    readDocument: async () => {
+      const doc = moved(source());
+      // The readback port is an integration boundary and cannot be trusted
+      // to always return a well-formed DocumentV1 at runtime.
+      Object.defineProperty(doc.cards[1], "text", {
+        enumerable: true,
+        get() { throw Error("invalid server document"); },
+      });
+      return { document: doc, etag: "etag-r2" };
+    },
+  });
+  await assert.rejects(
+    f.run(f.origin, f.next, "a"),
+    isError("invalid_readback", "etag-r2"),
+  );
+  assert.equal(f.state.writes, 1);
+  assert.equal(f.state.applied, 0);
+});
+
+test("malformed local snapshot is rejected before any network write", async () => {
+  for (const modify of [
+    (doc) => { doc.cards[0] = null; },
+    (doc) => { doc.islands[0] = null; },
+    (doc) => { doc.islands[0].cardIds = null; },
+    (doc) => { doc.cards = null; },
+  ]) {
+    const f = fixture();
+    const invalid = structuredClone(f.next);
+    modify(invalid);
+    await assert.rejects(f.run(f.origin, invalid, "a"), isError("invalid_move_target"));
+    assert.equal(f.state.writes, 0);
+  }
+});
+
 test("refuses successful-revision readback that silently drops provenance", async () => {
   for (const damage of [
     (doc) => { doc.edges[0].type = "related"; },
