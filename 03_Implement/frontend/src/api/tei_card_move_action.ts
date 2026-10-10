@@ -111,7 +111,17 @@ function equivalentStoredDocument(expected: DocumentV1, actual: DocumentV1): boo
             ? { kind: "rect" as const }
             : undefined
       );
-      return { ...island, collapsed: island.collapsed ?? false, geometry, shape };
+      return {
+        ...island,
+        collapsed: island.collapsed ?? false,
+        // Pydantic's Island.ensure_summary_review_default inserts false
+        // when a preexisting summary has no explicit review decision.
+        summaryReviewed: island.summaryText != null
+          ? island.summaryReviewed ?? false
+          : island.summaryReviewed,
+        geometry,
+        shape,
+      };
     }),
   });
   return stable(persisted(expected)) === stable(persisted(actual));
