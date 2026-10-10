@@ -1219,6 +1219,7 @@ async def post_sui_card_move_action(
             raise _action_error(status_code=403, code="action_denied")
         return _commit_sui_card_move_action(
             doc_id=doc_id,
+            request=request,
             response=response,
             action_payload=action_payload,
             x_tei_action=x_tei_action,
@@ -1245,6 +1246,7 @@ async def post_sui_card_move_action(
 def _commit_sui_card_move_action(
     *,
     doc_id: str,
+    request: Request,
     response: Response,
     action_payload: object,
     x_tei_action: str | None,
@@ -1319,6 +1321,32 @@ def _commit_sui_card_move_action(
 
     revision = _compute_etag(payload_json)
     response.headers["ETag"] = _format_etag(revision)
+
+    # The SUI application, not TEI Core, records the outcome of its own
+    # document mutation. SUI's existing audit dispatcher is fail-open; any
+    # failure *after* db.commit must not turn a committed Action into a 500
+    # that might invite a duplicate attempt. Never include Card text,
+    # document contents, or a raw user-supplied authority claim.
+    dispatcher = getattr(request.app.state, "audit_dispatcher", None)
+    if dispatcher is not None:
+        try:
+            dispatcher.emit(
+                build_event(
+                    event_type="apply",
+                    tenant_id=tenant.tenant_id,
+                    doc_id=doc_id,
+                    safe_mode=True,
+                    actor_ref=_audit_actor_ref(request, access_request),
+                    metadata={
+                        "actionId": "sui.move",
+                        "method": "POST",
+                        "route": "/docs/{doc_id}/action-commit",
+                        "result": "committed",
+                    },
+                )
+            )
+        except Exception:
+            logger.exception("Native SUI Action audit emission failed after commit")
     return {"protocolVersion": "1", "revision": revision}
 
 
