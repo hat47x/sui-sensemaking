@@ -134,7 +134,10 @@ function equivalentStoredDocument(expected: DocumentV1, actual: DocumentV1): boo
  * Reject before dispatch, not after an irreversible remote commit.
  */
 function isPureCardMove(before: DocumentV1, after: DocumentV1, cardId: string): boolean {
-  if (before.cards.length !== after.cards.length ||
+  // Do not dereference partially loaded or untrusted local snapshots.
+  if (!Array.isArray(before.cards) || !Array.isArray(after.cards) ||
+      !Array.isArray(before.islands) || !Array.isArray(after.islands) ||
+      before.cards.length !== after.cards.length ||
       before.islands.length !== after.islands.length) return false;
   for (let i = 0; i < before.cards.length; i += 1) {
     if (before.cards[i].id !== after.cards[i].id) return false;
