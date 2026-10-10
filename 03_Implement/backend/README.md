@@ -19,7 +19,7 @@
 - `tests/test_docs_roundtrip.py::test_sui_card_move_command_with_existing_sqlite_document_cas`：このコマンドの結果を既存の`PUT /docs/{id}`へ`If-Match`付きで保存し、`GET`とETagを照合するSQLite参照テスト。
 - `../frontend/src/api/client.ts`の`getAuthoritativeDocument`：操作確定後の権威ある読み直しに`cache: "no-store"`を指定し、既存のセッション前提条件を引き継ぐ追加API。
 
-今回の変更では**SUI所有のAction受付口** `POST /docs/{doc_id}/action-commit`も追加しました。この受付口はTEI Go Hostではなく、v1の要求エンベロープ（`protocolVersion`、`applicationID`、`resourceID`、`actionID`、`expectedRevision`、`payload`）を検証し、`X-TEI-Action: commit`と`Content-Type: application/json`を必須とします。`sui.move`の`cardId/x/y`だけを許し、対象DocumentとRevisionを照合します。ブラウザーの確定処理は`commitSuiCardMoveAction`を通じて同一オリジン・既存認証／CSRF／テナントヘッダー付きで送信できます。
+今回の変更では**SUI所有のAction受付口** `POST /docs/{doc_id}/action-commit`も追加しました。**標準状態では無効**であり、`request.app.state.sui_native_action_v1_enabled is True`を明示的に成立させない限り、HTTP 404のActionエラーとして更新を拒否します。このオプトイン条件は現在テスト環境でのみ与えており、未検証の通常配備で新しい書込み面が有効にならないようにしています。この受付口はTEI Go Hostではなく、v1の要求エンベロープ（`protocolVersion`、`applicationID`、`resourceID`、`actionID`、`expectedRevision`、`payload`）を検証し、`X-TEI-Action: commit`と`Content-Type: application/json`を必須とします。`sui.move`の`cardId/x/y`だけを許し、対象DocumentとRevisionを照合します。ブラウザーの確定処理は`commitSuiCardMoveAction`を通じて同一オリジン・既存認証／CSRF／テナントヘッダー付きで送信できます。
 
 この受付口は既存の`_authorize_request(... action="write", safe_mode=True)`と`DatabaseDocumentContentStore`を呼び出し、アーカイブ済み文書・Reviewer帰属・Card数・本文サイズの制限を再利用します。既存のRevision Headの条件付き更新が競合すれば全DBトランザクションをrollbackし、`409 revision_conflict`を返します。成功時は`{"protocolVersion":"1","revision":"<ETag>"}`、失敗時は`{"protocolVersion":"1","error":"..."}`を返し、FastAPIの`detail`ラッパーはAction応答へ混在させません。要求JSONの上限64KiB、重複キー、未知キー、他Application ID、非有限座標を拒否します。リクエスト本文は、JSON Middlewareでもバッファー保持前に上限を適用します。
 
