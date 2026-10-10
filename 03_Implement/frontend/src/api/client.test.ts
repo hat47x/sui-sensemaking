@@ -420,7 +420,7 @@ describe("SUI application-owned Action v1 HTTP transport", () => {
 
   it("rejects invalid and newline-terminated revisions without network access", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
-    for (const expectedRevision of ["*", "a".repeat(64) + "\n"]) {
+    for (const expectedRevision of ["*", "a".repeat(64) + "\n", "a".repeat(63) + "\n"]) {
       await expect(commitSuiCardMoveAction({ ...intent(), expectedRevision }))
         .rejects.toBeInstanceOf(TypeError);
     }
@@ -431,7 +431,7 @@ describe("SUI application-owned Action v1 HTTP transport", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({
         protocolVersion: "1",
-        revision: "b".repeat(64) + "\n",
+        revision: "b".repeat(63) + "\n",
       }), { status: 200 }),
     );
     await expect(commitSuiCardMoveAction(intent()))
