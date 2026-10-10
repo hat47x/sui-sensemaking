@@ -102,8 +102,10 @@ export type CameraTransformRequest = {
 type CanvasShellProps = {
   document: DocumentV1;
   onCardMove: (cardId: string, deltaWorldX: number, deltaWorldY: number) => void;
+  /** Capture the source document/revision on pointerdown. */
+  onCardMoveBegin?: (cardId: string) => unknown;
   /** Opt-in drop-only commit callback; drag preview remains local to CardView. */
-  onCardMoveCommit?: (cardId: string, deltaWorldX: number, deltaWorldY: number) => void;
+  onCardMoveCommit?: (cardId: string, deltaWorldX: number, deltaWorldY: number, origin?: unknown) => void;
   selectedCardIds: string[];
   onCardSelect: (cardId: string, isShiftPressed: boolean) => void;
   onCanvasBackgroundClick: () => void;
@@ -271,6 +273,7 @@ function shouldUseSpacePan(eventTarget: EventTarget | null, viewport: HTMLElemen
 export function CanvasShell({
   document,
   onCardMove,
+  onCardMoveBegin,
   onCardMoveCommit,
   selectedCardIds,
   onCardSelect,
@@ -1052,9 +1055,9 @@ export function CanvasShell({
   );
 
   const handleCardCommit = useCallback(
-    (cardId: string, deltaScreenX: number, deltaScreenY: number) => {
+    (cardId: string, deltaScreenX: number, deltaScreenY: number, origin?: unknown) => {
       const currentZoom = transformRef.current.zoom;
-      onCardMoveCommit?.(cardId, deltaScreenX / currentZoom, deltaScreenY / currentZoom);
+      onCardMoveCommit?.(cardId, deltaScreenX / currentZoom, deltaScreenY / currentZoom, origin);
     },
     [onCardMoveCommit]
   );
@@ -1398,6 +1401,7 @@ export function CanvasShell({
               key={card.id}
               card={card}
               onMove={handleCardMove}
+              onBeginMove={onCardMoveCommit ? onCardMoveBegin : undefined}
               onCommitMove={onCardMoveCommit ? handleCardCommit : undefined}
               dragPreviewZoom={transform.zoom}
               isSelected={selectedCardIdSet.has(card.id)}
