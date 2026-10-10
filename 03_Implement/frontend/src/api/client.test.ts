@@ -97,21 +97,42 @@ describe("tenant-scoped document request precondition", () => {
     });
   });
 
-  it("reads an authoritative Document without cache and preserves the verified session", async () => {
+  it("reads an authoritative Document with a strong ETag, no cache and verified session", async () => {
+    const revision = "b".repeat(64);
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify(createDocument()), {
         status: 200,
-        headers: { "ETag": '"revision-r2"', "Content-Type": "application/json" },
+        headers: { "ETag": `"${revision}"`, "Content-Type": "application/json" },
       }),
     );
 
     const fresh = await getAuthoritativeDocument("doc-1", { tenantSessionContext });
-    expect(fresh.etag).toBe("revision-r2");
+    expect(fresh.etag).toBe(revision);
     expect(fresh.document.id).toBe("doc-1");
     expect(fetchMock).toHaveBeenCalledWith("/api/docs/doc-1", {
       headers: { "Sui-Sensemaking-Tenant-Session-Version": "session-v1" },
       cache: "no-store",
+      mode: "same-origin",
+      credentials: "same-origin",
+      redirect: "error",
     });
+  });
+
+  it("rejects missing, weak, malformed or forged authoritative ETags", async () => {
+    const revision = "b".repeat(64);
+    for (const etag of [
+      null, `W/"${revision}"`, revision, '"revision-r2"',
+      `"${revision.toUpperCase()}"`, `"${revision}"\n`,
+    ]) {
+      const headers = etag === null ? {} : { ETag: etag };
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(createDocument()), { status: 200, headers }),
+      );
+      await expect(getAuthoritativeDocument("doc-1"))
+        .rejects.toMatchObject({ code: "invalid_authoritative_etag" });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      fetchMock.mockRestore();
+    }
   });
 
   it("attaches the version alongside write and audit content headers", async () => {
