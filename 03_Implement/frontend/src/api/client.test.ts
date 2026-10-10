@@ -10,6 +10,7 @@ import {
   fetchAvailableModels,
   getDocument,
   getAuthoritativeDocument,
+  commitSuiCardMoveAction,
   getTenantSessionBootstrapPolicy,
   listDocuments,
   getTenantSessionContext,
@@ -317,6 +318,90 @@ describe("tenant-scoped document request precondition", () => {
         tenantSessionVersion: "stale version",
       },
     })).rejects.toBeInstanceOf(InvalidTenantSessionContextError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("SUI application-owned Action v1 HTTP transport", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const intent = () => ({
+    protocolVersion: "1" as const,
+    applicationID: "sui" as const,
+    resourceID: "doc-1",
+    actionID: "sui.move" as const,
+    expectedRevision: "a".repeat(64),
+    payload: { cardId: "c1", x: 100, y: 200 },
+  });
+
+  it("sends an authenticated same-origin Action and requires an exact revision", async () => {
+    const nextRevision = "b".repeat(64);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ protocolVersion: "1", revision: nextRevision }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      }),
+    );
+    expect(await commitSuiCardMoveAction(intent(), { tenantSessionContext })).toBe(nextRevision);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/docs/doc-1/action-commit");
+    expect(options).toMatchObject({
+      method: "POST",
+      mode: "same-origin",
+      credentials: "same-origin",
+      redirect: "error",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "X-TEI-Action": "commit",
+        "Sui-Sensemaking-Tenant-Session-Version": "session-v1",
+      },
+    });
+    expect(JSON.parse(String(options?.body))).toEqual(intent());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves conflict and denied error codes without local fallback or retries", async () => {
+    for (const [status, code] of [[409, "revision_conflict"], [403, "action_denied"]] as const) {
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ protocolVersion: "1", error: code }), { status }),
+      );
+      await expect(commitSuiCardMoveAction(intent(), { tenantSessionContext }))
+        .rejects.toMatchObject({ status, code });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("rejects ambiguous success and responses shaped as a FastAPI detail envelope", async () => {
+    for (const body of [
+      { protocolVersion: "1", revision: "" },
+      { protocolVersion: "1", revision: "r2" },
+      { protocolVersion: "1", revision: "b".repeat(64), error: "action_denied" },
+      { detail: { protocolVersion: "1", revision: "b".repeat(64) } },
+    ]) {
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(body), { status: 200 }),
+      );
+      await expect(commitSuiCardMoveAction(intent())).rejects.toMatchObject({
+        code: "invalid_action_response",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("keeps a lost acknowledgement ambiguous instead of issuing a second write", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("connection reset"));
+    await expect(commitSuiCardMoveAction(intent())).rejects.toThrow("connection reset");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects invalid revisions without network access", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    await expect(commitSuiCardMoveAction({ ...intent(), expectedRevision: "*" }))
+      .rejects.toBeInstanceOf(TypeError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
