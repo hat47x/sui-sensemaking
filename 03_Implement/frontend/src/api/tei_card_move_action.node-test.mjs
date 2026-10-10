@@ -12,7 +12,8 @@ const source = () => ({
   islands: [{ id: "old", cardIds: ["a"] }, { id: "new", cardIds: ["b"] }],
   edges: [{ id: "e", fromId: "a", toId: "b", type: "future-kind" }],
   reviewAttribution: { schemaVersion: "1.0.0", reviewerRef: "human:1" },
-  affiliations: [{ id: "aff", cardId: "a", islandId: "old" }],
+  // Non-containment affiliation must not duplicate visual containment.
+  affiliations: [{ id: "aff", cardId: "b", islandId: "old" }],
 });
 const moved = (document) => {
   const next = structuredClone(document);
@@ -30,7 +31,7 @@ function fixture(overrides = {}) {
     dispatch: async (value) => { writes++; intent = value; return "etag-r2"; },
     readDocument: async () => { reads++; return { document: structuredClone(next), etag: "etag-r2" }; },
     isCurrent: () => current,
-    applyConfirmed: async (value) => { applied++; result = value; return true; },
+    applyConfirmed: (value) => { applied++; result = value; return true; },
     ...overrides,
   };
   const run = createSuiCardMoveActionCommit(ports);
@@ -175,6 +176,33 @@ test("local change during network request rejects UI replacement", async () => {
 test("a no-op snapshot application cannot pretend successful UI confirmation", async () => {
   const f = fixture({ applyConfirmed: async () => undefined });
   await assert.rejects(f.run(f.origin, f.next, "a"), isError("snapshot_not_applied", "etag-r2"));
+});
+
+test("an asynchronous applyConfirmed cannot acknowledge a local mutation", async () => {
+  let lateResolve;
+  const f = fixture({
+    applyConfirmed: () => new Promise((resolve) => { lateResolve = resolve; }),
+  });
+  await assert.rejects(
+    f.run(f.origin, f.next, "a"),
+    isError("snapshot_not_applied", "etag-r2"),
+  );
+  // Even if the stale application eventually claims success, this protocol
+  // must not await it or mark the resulting state as safely acknowledged.
+  lateResolve(true);
+});
+
+test("synchronous owner guard can refuse a changed state at the last boundary", async () => {
+  let current = true;
+  const f = fixture({
+    isCurrent: () => current,
+    applyConfirmed: () => { current = false; return false; },
+  });
+  await assert.rejects(
+    f.run(f.origin, f.next, "a"),
+    isError("snapshot_not_applied", "etag-r2"),
+  );
+  assert.equal(f.state.applied, 0);
 });
 
 test("missing server ETag and unknown Card identity block sending", async () => {
