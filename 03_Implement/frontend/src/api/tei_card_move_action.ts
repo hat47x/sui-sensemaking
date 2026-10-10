@@ -87,10 +87,18 @@ function equivalentStoredDocument(expected: DocumentV1, actual: DocumentV1): boo
     }
     return JSON.stringify(value) ?? "null";
   };
-  // The backend owns the updatedAt timestamp of a committed Document.
-  // All other document fields must be equal to SUI's native move outcome.
-  return stable({ ...expected, updatedAt: null }) ===
-    stable({ ...actual, updatedAt: null });
+  // Pydantic materializes Island.collapsed=false even when an old browser
+  // Document omitted it. This is a documented schema default, not a change.
+  // Do not drop/normalize source, review or structural data.
+  const persisted = (document: DocumentV1) => ({
+    ...document,
+    updatedAt: null, // backend-controlled timestamp
+    islands: document.islands.map((island) => ({
+      ...island,
+      collapsed: island.collapsed ?? false,
+    })),
+  });
+  return stable(persisted(expected)) === stable(persisted(actual));
 }
 
 /**
