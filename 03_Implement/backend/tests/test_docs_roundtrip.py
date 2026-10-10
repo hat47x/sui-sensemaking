@@ -1141,6 +1141,7 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
     for rejected in (
         {**intent, "applicationID": "inventory"},
         {**intent, "resourceID": "other"},
+        {**intent, "expectedRevision": etag + "\n"},
         {**intent, "authority": "caller-asserted"},
         {**intent, "payload": {**intent["payload"], "admin": True}},
         {**intent, "payload": {"cardId": "card-1", "x": "212.5", "y": 91}},
