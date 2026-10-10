@@ -37,7 +37,8 @@ echo "== Client transport, Canvas domain parity and port integration =="
 npm test -- \
   src/api/client.test.ts \
   src/api/tei_card_move_action.integration.test.ts \
-  src/domain/card_drag_commit.test.ts
+  src/domain/card_drag_commit.test.ts \
+  src/domain/confirmed_card_move_state.test.ts
 
 echo "== Node native Action adapter =="
 node --experimental-strip-types --test src/api/tei_card_move_action.node-test.mjs
