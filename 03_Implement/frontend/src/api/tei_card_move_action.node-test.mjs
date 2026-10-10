@@ -65,6 +65,15 @@ test("no-change drag does not write or re-read", async () => {
   assert.equal(f.state.applied, 0);
 });
 
+test("membership-only change without card movement is invalid", async () => {
+  const f = fixture();
+  const altered = structuredClone(f.origin.document);
+  altered.islands[0].cardIds = [];
+  altered.islands[1].cardIds.push("a");
+  await assert.rejects(f.run(f.origin, altered, "a"), isError("invalid_move_target"));
+  assert.equal(f.state.writes, 0);
+});
+
 test("a stale local origin blocks the Action before sending", async () => {
   const f = fixture(); f.setCurrent(false);
   await assert.rejects(f.run(f.origin, f.next, "a"), isError("local_state_changed"));
