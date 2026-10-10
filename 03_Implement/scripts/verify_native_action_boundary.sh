@@ -22,6 +22,40 @@ echo "SUI Action manual verification: revision=$head_sha"
 echo "This does not exercise a live TEI Go Host or React Canvas."
 
 cd "$root/03_Implement/backend"
+echo "== Syntax and critical Action-envelope structural invariants =="
+python -m compileall -q src/sui_sensemaking_api/routes/docs.py \
+  src/sui_sensemaking_api/card_move_command.py \
+  tests/test_docs_roundtrip.py
+python - <<'PY'
+import ast
+from collections import Counter
+from pathlib import Path
+
+path = Path("src/sui_sensemaking_api/routes/docs.py")
+tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+top = Counter(node.name for node in tree.body if isinstance(
+    node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+))
+for name in ("_SuiCardMoveActionIntent", "post_sui_card_move_action",
+             "_commit_sui_card_move_action", "_native_action_same_origin"):
+    assert top[name] == 1, f"{name} must be defined exactly once, got {top[name]}"
+envelope = next(node for node in tree.body if isinstance(node, ast.ClassDef)
+                and node.name == "_SuiCardMoveActionIntent")
+fields = Counter(node.target.id for node in envelope.body if isinstance(node, ast.AnnAssign)
+                 and isinstance(node.target, ast.Name))
+for name in ("protocolVersion", "applicationID", "resourceID", "actionID",
+             "expectedRevision", "payload"):
+    assert fields[name] == 1, f"Action envelope field {name} is missing/duplicated"
+
+client = Path("../frontend/src/api/client.ts").read_text(encoding="utf-8")
+for signature in ("function isStrongSuiRevision(", "function formatIfMatchHeader(",
+                  "export async function getAuthoritativeDocument(",
+                  "export async function commitSuiCardMoveAction(",
+                  "export async function putDocument("):
+    assert client.count(signature) == 1, f"{signature} is missing/duplicated"
+print("PASS: Action envelope fields, route definitions, client function signatures")
+PY
+
 echo "== Python command, SQLite persistence, middleware and route authorization tests =="
 python -m pytest -q \
   tests/test_card_move_command.py \
