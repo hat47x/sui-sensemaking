@@ -437,6 +437,33 @@ describe("epistemic review UI model", () => {
     expect(inspection.actionReuseAllowed).toBe(false);
   });
 
+  it("rejects malformed detail payload objects before UI projection", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const missingDrift = detailResultFor(item) as TeiEpistemicDetailResult & {
+      drift: TeiEpistemicDetailResult["drift"] | null;
+    };
+    missingDrift.drift = null;
+    expect(() =>
+      resolveEpistemicDetailForInspection(
+        item,
+        missingDrift as unknown as TeiEpistemicDetailResult,
+      ),
+    ).toThrow("epistemic detail drift must be an object");
+
+    const invalidLimits = detailResultFor(item);
+    invalidLimits.authorityLimits = [
+      ...(invalidLimits.authorityLimits ?? []),
+      42 as unknown as string,
+    ];
+    expect(() => resolveEpistemicDetailForInspection(item, invalidLimits)).toThrow(
+      "authorityLimits must contain strings",
+    );
+  });
+
   it("rejects detail drift that contradicts the current assessment", () => {
     const item = buildEpistemicUiItems(projection()).find(
       (value) => value.assertionId === "confirmed",
