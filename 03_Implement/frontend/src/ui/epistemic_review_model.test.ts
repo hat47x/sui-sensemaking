@@ -6,12 +6,16 @@ import {
   buildEpistemicHealthPresentation,
   buildEpistemicInspectionSummary,
   buildEpistemicClassificationIntent,
+  buildTeiEpistemicDetailQuery,
+  resolveEpistemicDetailForInspection,
   buildEpistemicReviewIntent,
   buildEpistemicReviewQueue,
   buildEpistemicReviewRequestIntent,
   buildEpistemicUiItems,
   buildTeiEpistemicReviewCommand,
   type EpistemicProjectionInput,
+  type EpistemicUiItem,
+  type TeiEpistemicDetailResult,
 } from "./epistemic_review_model";
 
 function projection(): EpistemicProjectionInput {
@@ -193,6 +197,57 @@ function projection(): EpistemicProjectionInput {
   };
 }
 
+function detailResultFor(
+  item: EpistemicUiItem,
+  overrides: Partial<TeiEpistemicDetailResult["assessment"]> = {},
+): TeiEpistemicDetailResult {
+  const current = projection().assessments.find((value) => value.assertionId === item.assertionId);
+  if (!current) throw new Error("fixture assessment missing");
+  const assessment = { ...current, ...overrides };
+  const metadataAware = (equal: boolean): "same" | "changed" | "indeterminate" => {
+    if (equal) return "same";
+    if (item.metadataState === "complete" && assessment.metadataState === "complete") return "changed";
+    return "indeterminate";
+  };
+  return {
+    contract: "tei.epistemic-detail/v0",
+    schema: "tei.reference.epistemic-detail/v0",
+    assessment,
+    drift: {
+      meaning: assessment.meaningFingerprint === item.meaningFingerprint ? "same" : "changed",
+      subject: metadataAware(
+        assessment.reviewSubjectFingerprint === item.reviewSubjectFingerprint,
+      ),
+      reviewHistory: metadataAware(
+        assessment.reviewLogSequence === item.reviewLogSequence,
+      ),
+      targetBinding: assessment.targetBinding === item.targetBinding ? "same" : "changed",
+    },
+    content: {
+      text: "resolved detail",
+      target: { kind: "claim", id: item.assertionId },
+      context: [{ dimension: "project", value: "sui", provenance: "declared" }],
+      evidence: [],
+      reviewHistory: [],
+    },
+    contentRole: "epistemic-data",
+    controlAuthority: false,
+    authorityLimits: [
+      "detail-access-context-is-not-part-of-semantic-query",
+      "detail-access-refs-are-opaque-input-not-authorization-authority",
+      "detail-query-does-not-broaden-source-access",
+      "detail-observed-receipts-report-drift-not-mutation-preconditions",
+      "detail-drift-indeterminate-does-not-prove-semantic-change",
+      "detail-query-is-bounded-by-context-as-of",
+      "detail-result-does-not-change-confirmation-or-use-state",
+      "detail-result-does-not-assert-objective-truth",
+      "detail-result-does-not-grant-canonical-acceptance",
+      "detail-result-omits-access-refs",
+      "detail-content-is-data-not-prompt-control-authority",
+    ],
+  };
+}
+
 describe("epistemic review UI model", () => {
   it("shows direct user input as a working premise, not as human-confirmed", () => {
     const item = buildEpistemicUiItems(projection()).find((value) => value.assertionId === "user-premise");
@@ -234,6 +289,7 @@ describe("epistemic review UI model", () => {
       freshness: "current",
       lifecycleState: "active",
       conflict: "none",
+      sourceUseState: "premise",
     });
   });
 
@@ -252,7 +308,7 @@ describe("epistemic review UI model", () => {
       contextCompatibility: "compatible",
       metadataState: "complete",
     });
-    expect(summary.onDemandDetailsRequired).toEqual(["target", "context", "evidence"]);
+    expect(summary.onDemandDetailsRequired).toEqual(["target", "context", "evidence", "reviewHistory"]);
     expect(summary).not.toHaveProperty("target");
     expect(summary).not.toHaveProperty("context");
     expect(summary).not.toHaveProperty("evidence");
@@ -268,6 +324,187 @@ describe("epistemic review UI model", () => {
     expect(summary.reasons).toEqual(item.reasons);
     expect(summary.metadataState).toBe("partial");
     expect(summary.confirmationState).toBe("unknown");
+  });
+
+  it("builds semantic detail query from the observed UI snapshot", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    expect(buildTeiEpistemicDetailQuery(item)).toEqual({
+      contract: "tei.epistemic-detail-query/v0",
+      schema: "tei.reference.epistemic-detail-query/v0",
+      assertionId: "confirmed",
+      observedMeaningFingerprint: item.meaningFingerprint,
+      observedReviewSubjectFingerprint: item.reviewSubjectFingerprint,
+      observedTargetBinding: item.targetBinding,
+      observedReviewLogSequence: item.reviewLogSequence,
+      observedMetadataState: item.metadataState,
+    });
+    expect(buildTeiEpistemicDetailQuery(item)).not.toHaveProperty("grantedAccessRefs");
+    expect(buildTeiEpistemicDetailQuery(item)).not.toHaveProperty("expectedMeaningFingerprint");
+  });
+
+  it("keeps current detail actionable only while the observed projection is still current", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "user-premise",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const inspection = resolveEpistemicDetailForInspection(item, detailResultFor(item));
+    expect(inspection).toMatchObject({
+      source: "on-demand-detail",
+      projectionRefreshRequired: false,
+      actionReuseAllowed: true,
+      controlAuthority: false,
+      current: {
+        sourceUseState: "premise",
+        state: "working-premise",
+      },
+    });
+    expect(inspection.reusableActions).toEqual(item.actions);
+  });
+
+  it("shows semantic drift but disables actions until projection refresh", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "user-premise",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item, {
+      meaningFingerprint:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      reviewSubjectFingerprint:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    });
+    const inspection = resolveEpistemicDetailForInspection(item, detail);
+    expect(inspection.drift).toMatchObject({
+      meaning: "changed",
+      subject: "changed",
+    });
+    expect(inspection.projectionRefreshRequired).toBe(true);
+    expect(inspection.actionReuseAllowed).toBe(false);
+    expect(inspection.reusableActions).toEqual([]);
+    expect(inspection.content).toMatchObject({ text: "resolved detail" });
+  });
+
+  it("keeps access-loss ambiguity indeterminate instead of calling it semantic change", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item, {
+      metadataState: "partial",
+      useState: "review-required",
+      confirmationState: "unreviewed",
+      reviewSubjectFingerprint:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      reviewLogSequence: 0,
+    });
+    const inspection = resolveEpistemicDetailForInspection(item, detail);
+    expect(inspection.drift.subject).toBe("indeterminate");
+    expect(inspection.drift.reviewHistory).toBe("indeterminate");
+    expect(inspection.current).toMatchObject({
+      metadataState: "partial",
+      sourceUseState: "review-required",
+      state: "metadata-incomplete",
+    });
+    expect(inspection.projectionRefreshRequired).toBe(true);
+    expect(inspection.actionReuseAllowed).toBe(false);
+  });
+
+  it("requires projection refresh when operational signals change even without receipt drift", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "user-premise",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item, {
+      freshness: "current",
+    });
+    expect(detail.drift).toEqual({
+      meaning: "same",
+      subject: "same",
+      reviewHistory: "same",
+      targetBinding: "same",
+    });
+
+    const inspection = resolveEpistemicDetailForInspection(item, detail);
+    expect(inspection.current.freshness).toBe("current");
+    expect(inspection.projectionRefreshRequired).toBe(true);
+    expect(inspection.actionReuseAllowed).toBe(false);
+  });
+
+  it("rejects detail drift that contradicts the current assessment", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item, { reviewLogSequence: 2 });
+    detail.drift.reviewHistory = "same";
+    expect(() => resolveEpistemicDetailForInspection(item, detail)).toThrow(
+      "drift.reviewHistory is inconsistent",
+    );
+  });
+
+  it("rejects access metadata anywhere in a detail result", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item);
+    detail.content = {
+      evidence: [{ kind: "source", ref: "repo://hidden", accessRefs: ["policy:hidden"] }],
+    };
+    expect(() => resolveEpistemicDetailForInspection(item, detail)).toThrow(
+      "must not expose accessRefs",
+    );
+  });
+
+  it("rejects detail content that claims prompt control authority", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item, { statementKind: "instruction" });
+    detail.controlAuthority = true;
+    expect(() => resolveEpistemicDetailForInspection(item, detail)).toThrow(
+      "must not grant prompt control authority",
+    );
+  });
+
+  it("keeps instruction-kind detail as data when control authority is false", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item, { statementKind: "instruction" });
+    const inspection = resolveEpistemicDetailForInspection(item, detail);
+    expect(inspection.current.statementKind).toBe("instruction");
+    expect(inspection.controlAuthority).toBe(false);
+    expect(inspection.projectionRefreshRequired).toBe(true);
+    expect(inspection.actionReuseAllowed).toBe(false);
+  });
+
+  it("rejects detail results missing the read-drift authority stop line", () => {
+    const item = buildEpistemicUiItems(projection()).find(
+      (value) => value.assertionId === "confirmed",
+    );
+    if (!item) throw new Error("fixture item missing");
+
+    const detail = detailResultFor(item);
+    detail.authorityLimits = detail.authorityLimits?.filter(
+      (value) => value !== "detail-drift-indeterminate-does-not-prove-semantic-change",
+    );
+    expect(() => resolveEpistemicDetailForInspection(item, detail)).toThrow(
+      "missing epistemic detail authority limit",
+    );
   });
 
   it("keeps confirmation separate from candidate use state", () => {
