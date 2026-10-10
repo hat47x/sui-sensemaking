@@ -23,7 +23,7 @@ def sample() -> DocumentV1:
                    "type": "future-edge-kind"}],
         "islands": [{"id": "old", "cardIds": ["a"]},
                     {"id": "new", "cardIds": ["b"]}],
-        "affiliations": [{"id": "association", "cardId": "a", "islandId": "old"}],
+        "affiliations": [{"id": "association", "cardId": "b", "islandId": "old"}],
     })
 
 
@@ -84,7 +84,7 @@ def test_duplicate_card_and_island_identity_are_rejected() -> None:
 def test_affiliation_conflict_fails_without_deleting_provenance() -> None:
     original = sample()
     original.affiliations = [
-        original.affiliations[0].model_copy(update={"islandId": "new"})
+        original.affiliations[0].model_copy(update={"cardId": "a", "islandId": "new"})
     ]
     with pytest.raises(InvalidCardMove, match="affiliation"):
         apply_card_move(original, card_id="a", x=400, y=0)
