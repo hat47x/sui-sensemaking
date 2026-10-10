@@ -41,6 +41,7 @@ import { IslandView } from "./canvas/IslandView";
 import { getEdgesToRender } from "./domain/edge_aggregate";
 import { classifyAiProviderError, type AiProviderErrorKind } from "./domain/ai_provider_error";
 import { alignSelectedCards, distributeSelectedCards, snapValueToGrid } from "./domain/layout_ops";
+import { commitCardDrag, isCardDragOriginCurrent } from "./domain/card_drag_commit";
 import type { AlignDirection, DistributeDirection } from "./domain/layout_ops";
 import { appendReadingOrderEntry, moveReadingOrderEntry, removeReadingOrderEntry } from "./domain/reading_order_ops";
 import {
@@ -2801,6 +2802,46 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       });
     },
     [document, isGridSnapEnabled, isReadOnly, isPreviewingSuggestion]
+  );
+
+  // The native UI captures an opaque source snapshot on pointerdown. A later
+  // document edit, save, or reload invalidates that snapshot before drop.
+  const handleCardMoveBegin = useCallback(
+    (_cardId: string): unknown => {
+      if (!documentRef.current || isReadOnly || isPreviewingSuggestion) {
+        return null;
+      }
+      return { document: documentRef.current, etag: docEtag };
+    },
+    [docEtag, isReadOnly, isPreviewingSuggestion]
+  );
+
+  // Native drag bridge: CardView owns the transient preview. The application
+  // applies the final movement once, retaining the island-join and Undo rules.
+  // This remains SUI's local DocumentV1 edit; TEI runtime dispatch is separate.
+  const handleCardMoveCommit = useCallback(
+    (cardId: string, deltaWorldX: number, deltaWorldY: number, origin?: unknown) => {
+      if (!document || isReadOnly || isPreviewingSuggestion ||
+        !isCardDragOriginCurrent(origin, document, docEtag)) {
+        return;
+      }
+      const nextDocument = commitCardDrag(document, {
+        cardId,
+        deltaWorldX,
+        deltaWorldY,
+        snapGridSize: isGridSnapEnabled ? GRID_SNAP_SIZE : undefined,
+        cardWidth: CARD_WIDTH,
+        cardHeight: CARD_HEIGHT,
+      });
+      if (nextDocument === document) {
+        return;
+      }
+      applyDocumentChange(nextDocument, t("app.status.edit.moved_card"), {
+        preserveSuggestionPreview: true,
+        preserveMergeSuggestions: true,
+      });
+    },
+    [document, docEtag, isReadOnly, isPreviewingSuggestion, isGridSnapEnabled, applyDocumentChange]
   );
 
   const applyLayoutOperation = useCallback(
@@ -12642,6 +12683,8 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           <CanvasShell
             document={focusedVisibleDocument}
             onCardMove={handleCardMove}
+            onCardMoveBegin={handleCardMoveBegin}
+            onCardMoveCommit={handleCardMoveCommit}
             onTransformChange={handleTransformChange}
             onCameraChange={setCanvasCamera}
             cameraTransformRequest={cameraTransformRequest}
