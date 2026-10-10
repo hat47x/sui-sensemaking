@@ -93,8 +93,10 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     const originalMembership = membership(origin.document, cardId);
     const nextMembership = membership(nextDocument, cardId);
     if (!originalMembership || !nextMembership) throw new SuiCardMoveActionError("invalid_move_target");
-    if (before.x === after.x && before.y === after.y &&
-        JSON.stringify(originalMembership) === JSON.stringify(nextMembership)) {
+    if (before.x === after.x && before.y === after.y) {
+      if (JSON.stringify(originalMembership) !== JSON.stringify(nextMembership)) {
+        throw new SuiCardMoveActionError("invalid_move_target");
+      }
       return null;
     }
     const resourceKey = JSON.stringify(["sui", origin.document.id]);
