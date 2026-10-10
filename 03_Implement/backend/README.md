@@ -29,6 +29,14 @@
 
 実Go Hostからの呼び出し、実セッション認可のエンドツーエンド実証、ブラウザーでのCard移動、Undo/Redo接続は**未実施**です。追加したPython／Vitest／SQLiteテストとSUIフロントエンド全体のテストも未実行であり、テストコードの追加だけをPASSの証拠とはしません。共通fixtureによるPythonとTypeScriptの比較テストを追加しましたが、実行と差分評価が必要です。
 
+### ブラウザ確定の同期的適用と現状の制限
+
+`frontend/src/api/tei_card_move_action.ts`は、サーバー確定応答・no-store再読込・SUI所有Document全体の照合後、**同期boolean**を返す`applyConfirmed`に限って反映完了とみなします。`Promise<boolean>`は原子的な状態反映を証明しないため、旧来の非同期ポート契約を廃止しました。フロントエンドでReactの`setState`を呼んで直後に`true`を返すだけでは、原子的な適用を保証できません。アプリが所有するDocument参照／ETag／未保存変更状態を同期的にガードしてから、履歴・dirty・Undo/Redoへ一貫して反映する仕組みが必要です。
+
+SUIのPydantic保存は未指定の`Island.collapsed`を`false`として表現し、既存の`shape`／`geometry`の片方からもう一方を正規化します。Document全体照合はこの既知の差だけを正規化し、Source、Hold、Edge、レビュー帰属、Affiliation等を比較対象から除外しません。バックエンドが自動更新する`updatedAt`とオプションの`null`／未指定も正規化します。
+
+`frontend/src/api/tei_card_move_action.integration.test.ts`は、SUI側ポート→同一オリジンAction POST→キャッシュ無効Document GET→同期所有状態反映を**モックHTTP応答**でつなぐテストです。**実サーバー／React／Go Hostは通っていません**。実行は`npm test -- src/api/tei_card_move_action.integration.test.ts`で行います。未保存のSUIローカル編集やセッションの変更がある場合、正式接続時の`isCurrent`は送信前から拒否する必要があります。
+
 ### 接続試験の実行（未実行）
 
 ```sh
