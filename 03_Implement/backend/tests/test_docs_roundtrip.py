@@ -1222,7 +1222,11 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
     audit_events = []
     class ActionAuditProbe:
         def emit(self, event):
-            audit_events.append(event)
+            # Ordinary GET /docs/{id} emits separate "view" audits. Count
+            # only committed native Action events, never confuse a view with
+            # a second successful write.
+            if event.eventType == "apply":
+                audit_events.append(event)
     monkeypatch.setattr(app.state, "audit_dispatcher", ActionAuditProbe(), raising=False)
 
     accepted = sqlite_client.post(endpoint, json=intent, headers=headers)
