@@ -2804,12 +2804,25 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     [document, isGridSnapEnabled, isReadOnly, isPreviewingSuggestion]
   );
 
+  // The native UI captures an opaque source snapshot on pointerdown. A later
+  // document edit, save, or reload invalidates that snapshot before drop.
+  const handleCardMoveBegin = useCallback(
+    (_cardId: string): unknown => {
+      if (!documentRef.current || isReadOnly || isPreviewingSuggestion) {
+        return null;
+      }
+      return { document: documentRef.current, etag: docEtag };
+    },
+    [docEtag, isReadOnly, isPreviewingSuggestion]
+  );
+
   // Native drag bridge: CardView owns the transient preview. The application
   // applies the final movement once, retaining the island-join and Undo rules.
   // This remains SUI's local DocumentV1 edit; TEI runtime dispatch is separate.
   const handleCardMoveCommit = useCallback(
-    (cardId: string, deltaWorldX: number, deltaWorldY: number) => {
-      if (!document || isReadOnly || isPreviewingSuggestion) {
+    (cardId: string, deltaWorldX: number, deltaWorldY: number, origin?: unknown) => {
+      if (!document || isReadOnly || isPreviewingSuggestion ||
+        !isRecord(origin) || origin.document !== document || origin.etag !== docEtag) {
         return;
       }
       const nextDocument = commitCardDrag(document, {
@@ -2828,7 +2841,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         preserveMergeSuggestions: true,
       });
     },
-    [document, isReadOnly, isPreviewingSuggestion, isGridSnapEnabled, applyDocumentChange]
+    [document, docEtag, isReadOnly, isPreviewingSuggestion, isGridSnapEnabled, applyDocumentChange]
   );
 
   const applyLayoutOperation = useCallback(
@@ -12670,6 +12683,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           <CanvasShell
             document={focusedVisibleDocument}
             onCardMove={handleCardMove}
+            onCardMoveBegin={handleCardMoveBegin}
             onCardMoveCommit={handleCardMoveCommit}
             onTransformChange={handleTransformChange}
             onCameraChange={setCanvasCamera}
