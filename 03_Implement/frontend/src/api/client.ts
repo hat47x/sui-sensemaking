@@ -1,4 +1,5 @@
 import type { Card, Document, DocumentV1, Island, KnownEdgeType } from "../domain/types";
+import type { ResourceActionIntentV1 } from "./tei_card_move_action";
 import { isMergeMethod, type MergeMethod } from "../domain/merge_method";
 import {
   InvalidTenantSessionContextError,
@@ -425,6 +426,65 @@ async function readDocumentWithCachePolicy(
     document: normalizeDocument(parseDocumentResponse(await response.text())),
     etag: normalizeEtag(response.headers.get("ETag")),
   };
+}
+
+/**
+ * SUI-owned endpoint implementing the TEI v1 Action envelope. This is not the
+ * standalone Go TEI runtime Host. Server-side authorization and ETag CAS are
+ * mandatory; a network failure is ambiguous and must never auto-retry.
+ */
+export async function commitSuiCardMoveAction(
+  intent: ResourceActionIntentV1,
+  options: TenantScopedRequestOptions = {},
+): Promise<string> {
+  if (!intent || intent.protocolVersion !== "1" || intent.applicationID !== "sui" ||
+      intent.actionID !== "sui.move" ||
+      !intent.resourceID || !/^[0-9a-f]{64}$/.test(intent.expectedRevision) ||
+      typeof intent.payload?.cardId !== "string" || !intent.payload.cardId ||
+      !Number.isFinite(intent.payload.x) || !Number.isFinite(intent.payload.y)) {
+    throw new TypeError("invalid SUI Action intent");
+  }
+  const response = await fetch(
+    `${API_BASE}/docs/${encodeURIComponent(intent.resourceID)}/action-commit`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "X-TEI-Action": "commit",
+        ...tenantSessionPreconditionHeaders(options),
+      },
+      body: JSON.stringify(intent),
+    },
+  );
+
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+  }
+  const obj = result as Record<string, unknown> | null;
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) ||
+      obj.protocolVersion !== "1" ||
+      Object.keys(obj).some((key) => !["protocolVersion", "revision", "error"].includes(key))) {
+    throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+  }
+  if (!response.ok) {
+    if ("revision" in obj || typeof obj.error !== "string" ||
+        !/^[a-z][a-z0-9_]*$/.test(obj.error)) {
+      throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+    }
+    throw new ApiError(response.status, obj.error, { code: obj.error });
+  }
+  if (response.status !== 200 || "error" in obj ||
+      typeof obj.revision !== "string" || !/^[0-9a-f]{64}$/.test(obj.revision)) {
+    throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+  }
+  return obj.revision;
 }
 
 export async function putDocument(
