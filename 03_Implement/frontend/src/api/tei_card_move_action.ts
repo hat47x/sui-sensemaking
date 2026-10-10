@@ -27,7 +27,7 @@ export type SuiCardMoveActionPorts = Readonly<{
   /** Must return the synchronous boolean true only while origin is current. */
   isCurrent: (origin: SuiCardMoveOrigin) => boolean;
   /** Atomically guard and apply the server-committed snapshot; return true on success. */
-  applyConfirmed: (readback: { document: DocumentV1; etag: string }) => boolean | Promise<boolean>;
+  applyConfirmed: (readback: { document: DocumentV1; etag: string }) => boolean;
 }>;
 
 export class SuiCardMoveActionError extends Error {
@@ -174,7 +174,10 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
       // before changing Undo/history/dirty/ETag. Return true only after applying.
       let applied = false;
       try {
-        applied = await ports.applyConfirmed({ document: readback.document, etag: readback.etag }) === true;
+        // No await here: a Promise would reopen a race against document reloads,
+        // undo/redo, tenant switching or another synchronous state change.
+        // The owning app must use an immediate guarded compare-and-apply.
+        applied = ports.applyConfirmed({ document: readback.document, etag: readback.etag }) === true;
       } catch {
         // The remote commit may already have succeeded; never retry it here.
       }
