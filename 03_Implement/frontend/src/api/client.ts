@@ -398,7 +398,18 @@ export async function getDocument(
   docId: string,
   options: TenantScopedRequestOptions = {},
 ): Promise<DocumentWithEtag<Document>> {
-  return readDocumentWithCachePolicy(docId, options, "default");
+  const headers = tenantSessionPreconditionHeaders(options);
+  const response = await fetch(`${API_BASE}/docs/${docId}`, { headers });
+
+  if (!response.ok) {
+    const errorDetail = await parseErrorDetail(response);
+    throw new ApiError(response.status, errorDetail.message, { code: errorDetail.code, disabledReason: errorDetail.disabledReason });
+  }
+
+  return {
+    document: normalizeDocument(parseDocumentResponse(await response.text())),
+    etag: normalizeEtag(response.headers.get("ETag")),
+  };
 }
 
 /** Action confirmation must bypass browser caches to compare the saved ETag. */
@@ -406,16 +417,11 @@ export async function getAuthoritativeDocument(
   docId: string,
   options: TenantScopedRequestOptions = {},
 ): Promise<DocumentWithEtag<Document>> {
-  return readDocumentWithCachePolicy(docId, options, "no-store");
-}
-
-async function readDocumentWithCachePolicy(
-  docId: string,
-  options: TenantScopedRequestOptions,
-  cache: RequestCache,
-): Promise<DocumentWithEtag<Document>> {
   const headers = tenantSessionPreconditionHeaders(options);
-  const response = await fetch(`${API_BASE}/docs/${docId}`, { headers, cache });
+  const response = await fetch(`${API_BASE}/docs/${docId}`, {
+    headers,
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     const errorDetail = await parseErrorDetail(response);
