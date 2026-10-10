@@ -93,10 +93,26 @@ function equivalentStoredDocument(expected: DocumentV1, actual: DocumentV1): boo
   const persisted = (document: DocumentV1) => ({
     ...document,
     updatedAt: null, // backend-controlled timestamp
-    islands: document.islands.map((island) => ({
-      ...island,
-      collapsed: island.collapsed ?? false,
-    })),
+    islands: document.islands.map((island) => {
+      // SUI's Pydantic Island model mirrors a declared shape into geometry
+      // (and vice versa) for legacy DocumentV1 snapshots. Only synthesize the
+      // *missing* mirror; an explicitly divergent or altered shape must fail.
+      const geometry = island.geometry ?? (
+        island.shape?.kind === "polygon" && island.shape.points
+          ? { type: "polygon" as const, points: island.shape.points }
+          : island.shape?.kind === "rect"
+            ? { type: "rect" as const }
+            : undefined
+      );
+      const shape = island.shape ?? (
+        geometry?.type === "polygon" && geometry.points
+          ? { kind: "polygon" as const, points: geometry.points }
+          : geometry?.type === "rect"
+            ? { kind: "rect" as const }
+            : undefined
+      );
+      return { ...island, collapsed: island.collapsed ?? false, geometry, shape };
+    }),
   });
   return stable(persisted(expected)) === stable(persisted(actual));
 }
