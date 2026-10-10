@@ -57,6 +57,41 @@ test("uses v1 SUI Action envelope and restores authoritative Document and ETag",
   assert.equal(f.state.result.etag, "etag-r2");
 });
 
+test("refuses successful-revision readback that silently drops provenance", async () => {
+  for (const damage of [
+    (doc) => { doc.edges[0].type = "related"; },
+    (doc) => { doc.cards[0].meta.source = "lost"; },
+    (doc) => { delete doc.cards[0].holdState; },
+    (doc) => { doc.reviewAttribution.reviewerRef = "other-reviewer"; },
+    (doc) => { doc.affiliations = []; },
+    (doc) => { doc.cards[1].text = "different"; },
+  ]) {
+    const f = fixture({
+      readDocument: async () => {
+        const doc = moved(source());
+        damage(doc);
+        return { document: doc, etag: "etag-r2" };
+      },
+    });
+    await assert.rejects(f.run(f.origin, f.next, "a"), isError("readback_document_mismatch", "etag-r2"));
+    assert.equal(f.state.applied, 0);
+  }
+});
+
+test("accepts null-vs-missing optional fields and backend-owned updatedAt", async () => {
+  const f = fixture({
+    readDocument: async () => {
+      const doc = moved(source());
+      doc.updatedAt = "2026-10-10T09:00:00Z";
+      doc.cards[0].critique = null;
+      doc.islands[0].title = null;
+      return { document: doc, etag: "etag-r2" };
+    },
+  });
+  assert.equal(await f.run(f.origin, f.next, "a"), "etag-r2");
+  assert.equal(f.state.applied, 1);
+});
+
 test("no-change drag does not write or re-read", async () => {
   const f = fixture();
   assert.equal(await f.run(f.origin, f.origin.document, "a"), null);
