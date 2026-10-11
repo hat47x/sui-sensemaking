@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createSuiCardMoveActionCommit, SuiCardMoveActionError } from "./tei_card_move_action.ts";
+import { createSuiCardMoveActionCommit, observeSuiCardMoveAfterUnknownCommit, SuiCardMoveActionError } from "./tei_card_move_action.ts";
 
 const source = () => ({
   version: 1, id: "doc", transform: { panX: 0, panY: 0, zoom: 1 },
@@ -39,6 +39,90 @@ function fixture(overrides = {}) {
 }
 const isError = (code, revision = null) => (error) =>
   error instanceof SuiCardMoveActionError && error.code === code && error.committedRevision === revision;
+
+test("ambiguous-commit observer sees convergence but never proves actor attribution", async () => {
+  const f = fixture();
+  let requests = 0;
+  const result = await observeSuiCardMoveAfterUnknownCommit(
+    f.origin, f.next, "a",
+    async (id) => {
+      assert.equal(id, "doc");
+      requests++;
+      return { document: structuredClone(f.next), etag: "etag-r2" };
+    },
+  );
+  assert.equal(result.status, "converged");
+  assert.equal(result.readback.etag, "etag-r2");
+  assert.equal(requests, 1);
+  assert.equal(f.state.writes, 0);
+  assert.equal(f.state.applied, 0);
+});
+
+test("ambiguous-commit observer distinguishes unchanged from divergent state", async () => {
+  const f = fixture();
+  const unchanged = await observeSuiCardMoveAfterUnknownCommit(
+    f.origin, f.next, "a",
+    async () => ({ document: structuredClone(f.origin.document), etag: "etag-r1" }),
+  );
+  assert.equal(unchanged.status, "unchanged");
+
+  const anotherMove = moved(source());
+  anotherMove.cards[0].x = 600;
+  const changed = await observeSuiCardMoveAfterUnknownCommit(
+    f.origin, f.next, "a",
+    async () => ({ document: anotherMove, etag: "etag-r3" }),
+  );
+  assert.equal(changed.status, "diverged");
+  assert.equal(f.state.applied, 0);
+});
+
+test("ambiguous-commit observer cannot mistake inconsistent ETag for convergence", async () => {
+  const f = fixture();
+  const value = await observeSuiCardMoveAfterUnknownCommit(
+    f.origin, f.next, "a",
+    async () => ({ document: structuredClone(f.next), etag: "etag-r1" }),
+  );
+  assert.equal(value.status, "diverged");
+});
+
+test("ambiguous-commit observer never writes or retries when readback fails", async () => {
+  const f = fixture();
+  const results = await Promise.all([
+    observeSuiCardMoveAfterUnknownCommit(
+      f.origin, f.next, "a", async () => { throw Error("offline"); },
+    ),
+    observeSuiCardMoveAfterUnknownCommit(
+      f.origin, f.next, "a", async () => ({ document: null, etag: null }),
+    ),
+    observeSuiCardMoveAfterUnknownCommit(
+      f.origin, f.next, "a", async () => {
+        const corrupted = moved(source());
+        Object.defineProperty(corrupted.cards[1], "text", {
+          enumerable: true, get() { throw Error("corrupt"); },
+        });
+        return { document: corrupted, etag: "etag-r2" };
+      },
+    ),
+  ]);
+  for (const result of results) assert.equal(result.status, "unresolved");
+  assert.equal(f.state.writes, 0);
+  assert.equal(f.state.applied, 0);
+});
+
+test("ambiguous-commit observer rejects invalid local move before any GET", async () => {
+  const f = fixture();
+  const corrupted = structuredClone(f.next);
+  corrupted.edges[0].type = "lost-provenance";
+  let reads = 0;
+  const result = await observeSuiCardMoveAfterUnknownCommit(
+    f.origin, corrupted, "a", async () => {
+      reads++;
+      return { document: f.next, etag: "etag-r2" };
+    },
+  );
+  assert.equal(result.status, "unresolved");
+  assert.equal(reads, 0);
+});
 
 test("uses v1 SUI Action envelope and restores authoritative Document and ETag", async () => {
   const f = fixture();
