@@ -217,14 +217,34 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     try {
       // Payload deliberately excludes Document, reviewer and authority claims.
       // The SUI-owned server command must revalidate the Card and island move.
-      committedRevision = await ports.dispatch({
+      try {
+        committedRevision = await ports.dispatch({
         protocolVersion: "1",
         applicationID: "sui",
         resourceID: origin.document.id,
         actionID: "sui.move",
         expectedRevision: origin.etag,
         payload: { cardId, x: after.x, y: after.y },
-      });
+        });
+      } catch (error) {
+        // After an interrupted POST, the remote transaction may already have
+        // committed. Only a definite non-timeout 4xx response or explicit
+        // application rejection proves no commit happened. Everything else
+        // must be reconciled by reloading; never auto-submit the old revision.
+        const reported = error as { status?: unknown; code?: unknown } | null;
+        const httpStatus = reported?.status;
+        const definitiveCode = reported?.code;
+        if ((typeof httpStatus === "number" && Number.isInteger(httpStatus) &&
+             httpStatus >= 400 && httpStatus < 500 && httpStatus !== 408) ||
+            definitiveCode === "action_denied" ||
+            definitiveCode === "revision_conflict" ||
+            definitiveCode === "invalid_action" ||
+            definitiveCode === "invalid_payload" ||
+            definitiveCode === "request_origin_denied") {
+          throw error;
+        }
+        throw new SuiCardMoveActionError("commit_outcome_unknown");
+      }
       if (typeof committedRevision !== "string" || committedRevision.length === 0) {
         throw new SuiCardMoveActionError("invalid_commit_response");
       }
