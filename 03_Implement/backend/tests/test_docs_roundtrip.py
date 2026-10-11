@@ -1450,6 +1450,43 @@ def test_sui_action_preserves_review_by_another_authorized_writer(
     assert loaded.headers["ETag"] == f'"{moved.json()["revision"]}"'
 
 
+def test_native_action_domain_rejection_releases_claim_and_keeps_revision(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed domain move must not leak the conditional DB row lock."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-claim-domain-rejection"
+    seeded = sqlite_client.put(f"/docs/{doc_id}", json=_sample_payload(doc_id))
+    assert seeded.status_code == 200, seeded.text
+    old_revision = seeded.headers["ETag"].strip('"')
+    envelope = {
+        "protocolVersion": "1",
+        "applicationID": "sui",
+        "resourceID": doc_id,
+        "actionID": "sui.move",
+        "expectedRevision": old_revision,
+        "payload": {"cardId": "card-does-not-exist", "x": 80.0, "y": 50.0},
+    }
+    route = f"/docs/{doc_id}/action-commit"
+    refused = sqlite_client.post(
+        route, headers={"X-TEI-Action": "commit"}, json=envelope,
+    )
+    assert refused.status_code == 400, refused.text
+    assert refused.json() == {"protocolVersion": "1", "error": "invalid_payload"}
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{old_revision}"'
+
+    # A new valid Action with the SAME expected revision can still claim
+    # and commit. There was no partial write on the failed attempt.
+    accepted = sqlite_client.post(
+        route, headers={"X-TEI-Action": "commit"},
+        json={**envelope, "payload": {"cardId": "card-1", "x": 80.0, "y": 50.0}},
+    )
+    assert accepted.status_code == 200, accepted.text
+    updated = sqlite_client.get(f"/docs/{doc_id}")
+    assert updated.headers["ETag"] == f'"{accepted.json()["revision"]}"'
+    assert updated.json()["cards"][0]["x"] == 80.0
+
+
 def test_sui_action_audit_sink_failure_does_not_misreport_committed_write(
     sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
