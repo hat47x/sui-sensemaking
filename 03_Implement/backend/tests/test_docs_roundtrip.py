@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -11,10 +12,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from sui_sensemaking_api.content_store import ContentBlob
+from sui_sensemaking_api.database_content_store import DatabaseDocumentContentStore
 from sui_sensemaking_api.db import _normalize_database_url, get_db
 from sui_sensemaking_api.main import app
 from sui_sensemaking_api.models import Base, DocumentV1
 from sui_sensemaking_api.routes.docs import _action_preserves_stored_fields
+from sui_sensemaking_api.tenant_context import LOCAL_DEFAULT_TENANT_CONTEXT
 
 RUN_PG_TESTS_ENV = "SUI_RUN_PG_TESTS"
 DATABASE_URL_ENV = "SUI_DATABASE_URL"
@@ -1322,6 +1326,73 @@ def test_native_action_refuses_silent_loss_of_existing_extension_fields() -> Non
         {"islands": [{"id": "a"}, {"id": "b"}]},
         {"islands": [{"id": "a"}]},
     )
+
+
+def test_sui_action_does_not_erase_old_unknown_fields_on_sqlite_resave(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An old stored extension is retained even if Pydantic would ignore it."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-legacy-extra-fields"
+    created = sqlite_client.put(f"/docs/{doc_id}", json=_sample_payload(doc_id))
+    assert created.status_code == 200, created.text
+
+    # Emulate an older stored Document or another forward-compatible
+    # importer using the existing content store. Do not go through PUT:
+    # ordinary PUT deliberately normalizes to the current Pydantic schema.
+    legacy = created.json()
+    legacy["cards"][0]["meta"] = {
+        "source": "original-interview",
+        "futureTrace": {"owner": "retain-me"},
+    }
+    legacy_payload = json.dumps(legacy, ensure_ascii=False, separators=(",", ":"))
+    open_db = app.dependency_overrides[get_db]()
+    db = next(open_db)
+    try:
+        store = DatabaseDocumentContentStore(db)
+        store.save(
+            tenant=LOCAL_DEFAULT_TENANT_CONTEXT,
+            doc_id=doc_id,
+            version=1,
+            updated_at=legacy["updatedAt"],
+            content=ContentBlob.from_text(legacy_payload),
+        )
+        db.commit()
+    finally:
+        open_db.close()
+
+    current = sqlite_client.get(f"/docs/{doc_id}")
+    assert current.status_code == 200
+    revision = current.headers["ETag"].strip('"')
+
+    rejected = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": revision,
+            "payload": {"cardId": "card-1", "x": 90.0, "y": 65.0},
+        },
+    )
+    assert rejected.status_code == 500, rejected.text
+    assert rejected.json() == {
+        "protocolVersion": "1", "error": "execution_failed",
+    }
+
+    verify_db = app.dependency_overrides[get_db]()
+    db = next(verify_db)
+    try:
+        stored = DatabaseDocumentContentStore(db).load(
+            tenant=LOCAL_DEFAULT_TENANT_CONTEXT, doc_id=doc_id,
+        )
+        assert stored is not None
+        assert json.loads(stored.content.text) == legacy
+    finally:
+        verify_db.close()
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
 
 
 def test_sui_action_preserves_review_by_another_authorized_writer(
