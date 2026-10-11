@@ -13,7 +13,8 @@ from sqlalchemy.orm import sessionmaker
 
 from sui_sensemaking_api.db import _normalize_database_url, get_db
 from sui_sensemaking_api.main import app
-from sui_sensemaking_api.models import Base
+from sui_sensemaking_api.models import Base, DocumentV1
+from sui_sensemaking_api.routes.docs import _action_preserves_stored_fields
 
 RUN_PG_TESTS_ENV = "SUI_RUN_PG_TESTS"
 DATABASE_URL_ENV = "SUI_DATABASE_URL"
@@ -1284,6 +1285,43 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
     # Replays, malformed input, missing Cards and archived writes do not
     # produce another successful-commit audit event.
     assert len(audit_events) == 1
+
+
+def test_native_action_refuses_silent_loss_of_existing_extension_fields() -> None:
+    """A Card move must not re-save a stripped Pydantic DocumentV1."""
+    stored = _sample_payload("doc-action-unknown-meta")
+    stored["cards"][0]["meta"] = {
+        "source": "interview:known",
+        "futureAuditHint": {"reason": "preserve this future extension"},
+    }
+    # CardMeta (intentionally) ignores extra fields. PUT may have canonicalized
+    # an older resource, but an Action cannot silently wipe its stored extras.
+    projected = DocumentV1.model_validate(stored).model_dump(
+        mode="json", exclude_none=True,
+    )
+    assert projected["cards"][0]["meta"]["source"] == "interview:known"
+    assert "futureAuditHint" not in projected["cards"][0]["meta"]
+    assert not _action_preserves_stored_fields(stored, projected)
+
+    # Known source/hold fields, null optionals and Pydantic defaults remain
+    # safe to move. Null-vs-omitted is not loss of a concrete field.
+    clean = _sample_payload("doc-action-known-meta")
+    clean["cards"][0]["meta"] = {"source": "interview:known", "seq": None}
+    clean["cards"][0]["holdState"] = "held"
+    normal = DocumentV1.model_validate(clean).model_dump(
+        mode="json", exclude_none=True,
+    )
+    assert _action_preserves_stored_fields(clean, normal)
+
+    # Nested unknown fields and shortened arrays cannot bypass the guard.
+    assert not _action_preserves_stored_fields(
+        {"cards": [{"id": "one", "meta": {"source": "original"}}]},
+        {"cards": [{"id": "one", "meta": {}}]},
+    )
+    assert not _action_preserves_stored_fields(
+        {"islands": [{"id": "a"}, {"id": "b"}]},
+        {"islands": [{"id": "a"}]},
+    )
 
 
 def test_sui_action_preserves_review_by_another_authorized_writer(
