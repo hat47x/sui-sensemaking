@@ -27,7 +27,7 @@ export type SuiCardMoveActionPorts = Readonly<{
   /** Must return the synchronous boolean true only while origin is current. */
   isCurrent: (origin: SuiCardMoveOrigin) => boolean;
   /** Atomically guard and apply the server-committed snapshot; return true on success. */
-  applyConfirmed: (readback: { document: DocumentV1; etag: string }) => boolean | Promise<boolean>;
+  applyConfirmed: (readback: { document: DocumentV1; etag: string }) => boolean;
 }>;
 
 export class SuiCardMoveActionError extends Error {
@@ -67,6 +67,116 @@ function current(ports: SuiCardMoveActionPorts, origin: SuiCardMoveOrigin) {
 }
 
 /**
+ * Compare the application document rather than only x/y and island cardIds.
+ * A successful HTTP revision does not prove that the server retained source,
+ * Hold, review, unknown Edge types, affiliations, or unrelated Card changes.
+ *
+ * Object key ordering and optional null-vs-undefined are not persisted
+ * semantic differences in DocumentV1; array order and all concrete values are.
+ */
+function equivalentStoredDocument(expected: DocumentV1, actual: DocumentV1): boolean {
+  const stable = (value: unknown): string => {
+    if (Array.isArray(value)) {
+      return `[${value.map((entry) => stable(entry)).join(",")}]`;
+    }
+    if (value && typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+      const entries = Object.keys(obj).filter((key) => obj[key] !== undefined && obj[key] !== null);
+      entries.sort();
+      return `{${entries.map((key) => `${JSON.stringify(key)}:${stable(obj[key])}`).join(",")}}`;
+    }
+    return JSON.stringify(value) ?? "null";
+  };
+  // Pydantic materializes Island.collapsed=false even when an old browser
+  // Document omitted it. This is a documented schema default, not a change.
+  // Do not drop/normalize source, review or structural data.
+  const persisted = (document: DocumentV1) => ({
+    ...document,
+    updatedAt: null, // backend-controlled timestamp
+    islands: document.islands.map((island) => {
+      // SUI's Pydantic Island model mirrors a declared shape into geometry
+      // (and vice versa) for legacy DocumentV1 snapshots. Only synthesize the
+      // *missing* mirror; an explicitly divergent or altered shape must fail.
+      const geometry = island.geometry ?? (
+        island.shape?.kind === "polygon" && island.shape.points
+          ? { type: "polygon" as const, points: island.shape.points }
+          : island.shape?.kind === "rect"
+            ? { type: "rect" as const }
+            : undefined
+      );
+      const shape = island.shape ?? (
+        geometry?.type === "polygon" && geometry.points
+          ? { kind: "polygon" as const, points: geometry.points }
+          : geometry?.type === "rect"
+            ? { kind: "rect" as const }
+            : undefined
+      );
+      return {
+        ...island,
+        collapsed: island.collapsed ?? false,
+        // Pydantic's Island.ensure_summary_review_default inserts false
+        // when a preexisting summary has no explicit review decision.
+        summaryReviewed: island.summaryText != null
+          ? island.summaryReviewed ?? false
+          : island.summaryReviewed,
+        geometry,
+        shape,
+      };
+    }),
+  });
+  return stable(persisted(expected)) === stable(persisted(actual));
+}
+
+/**
+ * A Card-move action only authorizes coordinates and island membership.
+ * Validate that its locally proposed snapshot did not also change source,
+ * reviewer, unknown Edge kinds, other Cards, island metadata, or card order.
+ * Reject before dispatch, not after an irreversible remote commit.
+ */
+function isPureCardMove(before: DocumentV1, after: DocumentV1, cardId: string): boolean {
+  // Do not dereference partially loaded or untrusted local snapshots.
+  if (!Array.isArray(before.cards) || !Array.isArray(after.cards) ||
+      !Array.isArray(before.islands) || !Array.isArray(after.islands) ||
+      before.cards.length !== after.cards.length ||
+      before.islands.length !== after.islands.length) return false;
+  for (let i = 0; i < before.cards.length; i += 1) {
+    if (!before.cards[i] || !after.cards[i] ||
+        before.cards[i].id !== after.cards[i].id) return false;
+  }
+  if (before.islands.some((island) => !island || !Array.isArray(island.cardIds)) ||
+      after.islands.some((island) => !island || !Array.isArray(island.cardIds))) return false;
+  const islandById = new Map(before.islands.map((island) => [island.id, island]));
+  if (islandById.size !== before.islands.length) return false;
+  for (const island of after.islands) {
+    const initial = islandById.get(island.id);
+    if (!initial || !Array.isArray(island.cardIds) ||
+        island.cardIds.some((id) => typeof id !== "string")) return false;
+    // A move is not allowed to manufacture duplicate containment. If the
+    // UI proposes a changed destination the server will keep exactly one
+    // containment; otherwise the POST may succeed but readback will diverge.
+    const count = island.cardIds.filter((id) => id === cardId).length;
+    if (count > 1) return false;
+    const withoutCard = island.cardIds.filter((id) => id !== cardId);
+    const initialWithoutCard = initial.cardIds.filter((id) => id !== cardId);
+    if (JSON.stringify(withoutCard) !== JSON.stringify(initialWithoutCard)) return false;
+  }
+  const originalCard = selectedCard(before, cardId);
+  if (!originalCard) return false;
+  // Reverse the *permitted* movement and compare everything else.
+  const restored: DocumentV1 = {
+    ...after,
+    cards: after.cards.map((card) =>
+      card.id === cardId ? { ...card, x: originalCard.x, y: originalCard.y } : card,
+    ),
+    islands: after.islands.map((island) => ({
+      ...island,
+      cardIds: [...islandById.get(island.id)!.cardIds],
+    })),
+  };
+  return equivalentStoredDocument(before, restored);
+}
+
+/**
  * SUI-owned adapter for a TEI resource-scoped Action commit. Native Canvas,
  * domain move calculation and Undo remain in SUI. No endpoint is activated by
  * importing this module; the host application must supply all four ports.
@@ -90,9 +200,24 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     if (!before || !after || !Number.isFinite(after.x) || !Number.isFinite(after.y)) {
       throw new SuiCardMoveActionError("invalid_move_target");
     }
+    // No server mutation when the UI's proposed change is not exclusively
+    // this Card's coordinates and containment membership.
+    if (!isPureCardMove(origin.document, nextDocument, cardId)) {
+      throw new SuiCardMoveActionError("invalid_move_target");
+    }
     const originalMembership = membership(origin.document, cardId);
     const nextMembership = membership(nextDocument, cardId);
     if (!originalMembership || !nextMembership) throw new SuiCardMoveActionError("invalid_move_target");
+    if (JSON.stringify(originalMembership) !== JSON.stringify(nextMembership)) {
+      // The SUI server only changes containment when it selects exactly one
+      // *new* destination Island. It cannot remove all containment without
+      // joining a new Island, and does not remove old ownership if the target
+      // was already a member. Avoid an irreversible partial remote commit.
+      if (nextMembership.length !== 1 ||
+          originalMembership.includes(nextMembership[0])) {
+        throw new SuiCardMoveActionError("invalid_move_target");
+      }
+    }
     if (before.x === after.x && before.y === after.y) {
       if (JSON.stringify(originalMembership) !== JSON.stringify(nextMembership)) {
         throw new SuiCardMoveActionError("invalid_move_target");
@@ -107,14 +232,34 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     try {
       // Payload deliberately excludes Document, reviewer and authority claims.
       // The SUI-owned server command must revalidate the Card and island move.
-      committedRevision = await ports.dispatch({
+      try {
+        committedRevision = await ports.dispatch({
         protocolVersion: "1",
         applicationID: "sui",
         resourceID: origin.document.id,
         actionID: "sui.move",
         expectedRevision: origin.etag,
         payload: { cardId, x: after.x, y: after.y },
-      });
+        });
+      } catch (error) {
+        // After an interrupted POST, the remote transaction may already have
+        // committed. Only a definite non-timeout 4xx response or explicit
+        // application rejection proves no commit happened. Everything else
+        // must be reconciled by reloading; never auto-submit the old revision.
+        const reported = error as { status?: unknown; code?: unknown } | null;
+        const httpStatus = reported?.status;
+        const definitiveCode = reported?.code;
+        if ((typeof httpStatus === "number" && Number.isInteger(httpStatus) &&
+             httpStatus >= 400 && httpStatus < 500 && httpStatus !== 408) ||
+            definitiveCode === "action_denied" ||
+            definitiveCode === "revision_conflict" ||
+            definitiveCode === "invalid_action" ||
+            definitiveCode === "invalid_payload" ||
+            definitiveCode === "request_origin_denied") {
+          throw error;
+        }
+        throw new SuiCardMoveActionError("commit_outcome_unknown");
+      }
       if (typeof committedRevision !== "string" || committedRevision.length === 0) {
         throw new SuiCardMoveActionError("invalid_commit_response");
       }
@@ -137,6 +282,18 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
           JSON.stringify(membership(readback.document, cardId)) !== JSON.stringify(nextMembership)) {
         throw new SuiCardMoveActionError("readback_move_mismatch", committedRevision);
       }
+      // Even a server success with the expected ETag can carry a malformed
+      // document. Preserve committedRevision in *every* post-commit error:
+      // consumers must reconcile, not retry the irreversible mutation.
+      let readbackMatches = false;
+      try {
+        readbackMatches = equivalentStoredDocument(nextDocument, readback.document);
+      } catch {
+        throw new SuiCardMoveActionError("invalid_readback", committedRevision);
+      }
+      if (!readbackMatches) {
+        throw new SuiCardMoveActionError("readback_document_mismatch", committedRevision);
+      }
       if (!current(ports, origin)) {
         throw new SuiCardMoveActionError("local_state_changed", committedRevision);
       }
@@ -144,7 +301,10 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
       // before changing Undo/history/dirty/ETag. Return true only after applying.
       let applied = false;
       try {
-        applied = await ports.applyConfirmed({ document: readback.document, etag: readback.etag }) === true;
+        // No await here: a Promise would reopen a race against document reloads,
+        // undo/redo, tenant switching or another synchronous state change.
+        // The owning app must use an immediate guarded compare-and-apply.
+        applied = ports.applyConfirmed({ document: readback.document, etag: readback.etag }) === true;
       } catch {
         // The remote commit may already have succeeded; never retry it here.
       }
@@ -154,4 +314,60 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
       active.delete(resourceKey);
     }
   };
+}
+
+
+/** Read-only observation after an ambiguous Action POST. Never retries it. */
+export type SuiCardMoveRecovery = Readonly<
+  | { status: "unresolved"; readback?: never }
+  | { status: "unchanged" | "converged" | "diverged"; readback: SuiDocumentReadback }
+>;
+
+/**
+ * A network failure does not say whether an Action committed. Only an
+ * authoritative no-store GET can observe the resource after that failure.
+ *
+ * "converged" means the *current resource happens to match* the proposed
+ * result. It does NOT prove that THIS caller's attempt was accepted; another
+ * writer may have produced the same state. "unchanged" also does not prove
+ * that the resource was never temporarily changed then restored.
+ *
+ * These are observations only: no History/Undo/dirty mutation, no retry,
+ * and no success audit/attribution. A SUI state owner must independently
+ * revalidate its current Subject/Tenant/Document/ETag before rendering or
+ * accepting a later user-initiated action.
+ */
+export async function observeSuiCardMoveAfterUnknownCommit(
+  origin: SuiCardMoveOrigin,
+  proposed: DocumentV1,
+  cardId: string,
+  readDocument: (documentId: string) => Promise<SuiDocumentReadback>,
+): Promise<SuiCardMoveRecovery> {
+  try {
+    if (!origin?.document || !origin.document.id || !origin.etag ||
+        origin.document.version !== 1 || proposed?.id !== origin.document.id ||
+        proposed.version !== 1 || !selectedCard(origin.document, cardId) ||
+        !isPureCardMove(origin.document, proposed, cardId)) {
+      return { status: "unresolved" };
+    }
+    const readback = await readDocument(origin.document.id);
+    if (!readback?.document || !readback.etag ||
+        readback.document.version !== 1 ||
+        readback.document.id !== origin.document.id ||
+        typeof readback.etag !== "string") {
+      return { status: "unresolved" };
+    }
+    if (readback.etag === origin.etag &&
+        equivalentStoredDocument(origin.document, readback.document)) {
+      return { status: "unchanged", readback };
+    }
+    if (readback.etag !== origin.etag &&
+        equivalentStoredDocument(proposed, readback.document)) {
+      return { status: "converged", readback };
+    }
+    return { status: "diverged", readback };
+  } catch {
+    // Even malformed server snapshots must not escape as "safe to retry".
+    return { status: "unresolved" };
+  }
 }
