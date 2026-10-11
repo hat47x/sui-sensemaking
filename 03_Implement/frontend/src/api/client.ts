@@ -1,4 +1,5 @@
 import type { Card, Document, DocumentV1, Island, KnownEdgeType } from "../domain/types";
+import type { ResourceActionIntentV1 } from "./tei_card_move_action";
 import { isMergeMethod, type MergeMethod } from "../domain/merge_method";
 import {
   InvalidTenantSessionContextError,
@@ -217,6 +218,14 @@ function normalizeEtag(rawEtag: string | null): string | undefined {
   return value.length > 0 ? value : undefined;
 }
 
+function isStrongSuiRevision(value: unknown): value is string {
+  // Exact-length 64-character digest with no forbidden characters.
+  // This rejects even 63 hex digits followed by a final newline.
+  return typeof value === "string" &&
+    value.length === 64 &&
+    !/[^0-9a-f]/.test(value);
+}
+
 function formatIfMatchHeader(etag: string): string {
   return etag === "*" ? etag : `"${etag}"`;
 }
@@ -398,9 +407,7 @@ export async function getDocument(
   options: TenantScopedRequestOptions = {},
 ): Promise<DocumentWithEtag<Document>> {
   const headers = tenantSessionPreconditionHeaders(options);
-  const response = headers
-    ? await fetch(`${API_BASE}/docs/${docId}`, { headers })
-    : await fetch(`${API_BASE}/docs/${docId}`);
+  const response = await fetch(`${API_BASE}/docs/${docId}`, { headers });
 
   if (!response.ok) {
     const errorDetail = await parseErrorDetail(response);
@@ -411,6 +418,101 @@ export async function getDocument(
     document: normalizeDocument(parseDocumentResponse(await response.text())),
     etag: normalizeEtag(response.headers.get("ETag")),
   };
+}
+
+/** Action confirmation must bypass browser caches to compare the saved ETag. */
+export async function getAuthoritativeDocument(
+  docId: string,
+  options: TenantScopedRequestOptions = {},
+): Promise<DocumentWithEtag<Document>> {
+  const headers = tenantSessionPreconditionHeaders(options);
+  const response = await fetch(`${API_BASE}/docs/${encodeURIComponent(docId)}`, {
+    headers,
+    cache: "no-store",
+    mode: "same-origin",
+    credentials: "same-origin",
+    redirect: "error",
+  });
+
+  if (!response.ok) {
+    const errorDetail = await parseErrorDetail(response);
+    throw new ApiError(response.status, errorDetail.message, { code: errorDetail.code, disabledReason: errorDetail.disabledReason });
+  }
+
+  // Conditional Action commits require a strong server-issued revision.
+  // The ordinary document GET deliberately tolerates weak/legacy ETags,
+  // but a weak validator is never safe evidence of an exact CAS revision.
+  const etagHeader = response.headers.get("ETag");
+  const strongRevision = etagHeader?.startsWith('"') && etagHeader.endsWith('"') &&
+    etagHeader.length === 66 ? etagHeader.slice(1, -1) : null;
+  if (!isStrongSuiRevision(strongRevision)) {
+    throw new ApiError(response.status, "invalid_authoritative_etag", {
+      code: "invalid_authoritative_etag",
+    });
+  }
+  return {
+    document: normalizeDocument(parseDocumentResponse(await response.text())),
+    etag: strongRevision,
+  };
+}
+
+/**
+ * SUI-owned endpoint implementing the TEI v1 Action envelope. This is not the
+ * standalone Go TEI runtime Host. Server-side authorization and ETag CAS are
+ * mandatory; a network failure is ambiguous and must never auto-retry.
+ */
+export async function commitSuiCardMoveAction(
+  intent: ResourceActionIntentV1,
+  options: TenantScopedRequestOptions = {},
+): Promise<string> {
+  if (!intent || intent.protocolVersion !== "1" || intent.applicationID !== "sui" ||
+      intent.actionID !== "sui.move" ||
+      !intent.resourceID || !isStrongSuiRevision(intent.expectedRevision) ||
+      typeof intent.payload?.cardId !== "string" || !intent.payload.cardId ||
+      !Number.isFinite(intent.payload.x) || !Number.isFinite(intent.payload.y)) {
+    throw new TypeError("invalid SUI Action intent");
+  }
+  const response = await fetch(
+    `${API_BASE}/docs/${encodeURIComponent(intent.resourceID)}/action-commit`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "X-TEI-Action": "commit",
+        ...tenantSessionPreconditionHeaders(options),
+      },
+      body: JSON.stringify(intent),
+    },
+  );
+
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+  }
+  const obj = result as Record<string, unknown> | null;
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) ||
+      obj.protocolVersion !== "1" ||
+      Object.keys(obj).some((key) => !["protocolVersion", "revision", "error"].includes(key))) {
+    throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+  }
+  if (!response.ok) {
+    if ("revision" in obj || typeof obj.error !== "string" ||
+        !/^[a-z][a-z0-9_]*$/.test(obj.error)) {
+      throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+    }
+    throw new ApiError(response.status, obj.error, { code: obj.error });
+  }
+  if (response.status !== 200 || "error" in obj ||
+      !isStrongSuiRevision(obj.revision)) {
+    throw new ApiError(response.status, "invalid_action_response", { code: "invalid_action_response" });
+  }
+  return obj.revision;
 }
 
 export async function putDocument(

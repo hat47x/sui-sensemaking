@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "sui-card-move-parity-v1",
+  "document": {
+    "version": 1,
+    "id": "parity-doc",
+    "createdAt": "2026-10-10T00:00:00Z",
+    "updatedAt": "2026-10-10T00:00:00Z",
+    "transform": {
+      "panX": 0,
+      "panY": 0,
+      "zoom": 1
+    },
+    "cards": [
+      {
+        "id": "a",
+        "text": "original",
+        "x": 0,
+        "y": 0,
+        "meta": {
+          "source": "interview-1"
+        },
+        "holdState": "held"
+      },
+      {
+        "id": "b",
+        "text": "target",
+        "x": 400,
+        "y": 0,
+        "textReviewed": true
+      }
+    ],
+    "edges": [
+      {
+        "id": "e",
+        "fromId": "a",
+        "toId": "b",
+        "type": "future-edge"
+      }
+    ],
+    "islands": [
+      {
+        "id": "old",
+        "cardIds": [
+          "a"
+        ]
+      },
+      {
+        "id": "new",
+        "cardIds": [
+          "b"
+        ]
+      }
+    ],
+    "affiliations": [
+      {
+        "id": "association",
+        "cardId": "b",
+        "islandId": "old"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "rectangle-join",
+      "deltaWorldX": 400,
+      "deltaWorldY": 0,
+      "expectedX": 400,
+      "expectedY": 0,
+      "expectedIslands": [
+        [],
+        [
+          "b",
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "ordinary-move",
+      "deltaWorldX": 5,
+      "deltaWorldY": 0,
+      "expectedX": 5,
+      "expectedY": 0,
+      "expectedIslands": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "grid-snap",
+      "deltaWorldX": 24,
+      "deltaWorldY": 16,
+      "snapGridSize": 10,
+      "expectedX": 20,
+      "expectedY": 20,
+      "expectedIslands": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "polygon-bounds-join",
+      "deltaWorldX": 400,
+      "deltaWorldY": 0,
+      "newIslandPolygon": [
+        {
+          "x": 385,
+          "y": -30
+        },
+        {
+          "x": 595,
+          "y": -30
+        },
+        {
+          "x": 595,
+          "y": 100
+        }
+      ],
+      "expectedX": 400,
+      "expectedY": 0,
+      "expectedIslands": [
+        [],
+        [
+          "b",
+          "a"
+        ]
+      ]
+    }
+  ]
+}

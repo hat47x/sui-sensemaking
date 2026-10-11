@@ -6,6 +6,7 @@ from urllib.parse import unquote
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from sui_sensemaking_api.content_store import (
@@ -16,6 +17,7 @@ from sui_sensemaking_api.content_store import (
 )
 from sui_sensemaking_api.generation_codec import canonical_json_bytes, encode_generation
 from sui_sensemaking_api.generation_repository import (
+    RevisionHeadConflict,
     advance_revision_head,
     load_database_generation_blob,
     save_database_generation_blob,
@@ -36,6 +38,23 @@ from sui_sensemaking_api.tenant_db_guard import apply_database_tenant_context
 
 class DocumentRevisionDivergence(RuntimeError):
     pass
+
+
+def is_document_write_contention(error: OperationalError) -> bool:
+    """Only known database lock/serialization conflicts may map to HTTP 409.
+
+    Do not turn disk failures, syntax errors or arbitrary OperationalError
+    into revision conflicts. PostgreSQL 40001/40P01/55P03 and SQLite BUSY/
+    LOCKED can arise while a conditional writer attempts to claim its row;
+    every such response still requires a fresh authoritative read.
+    """
+    underlying = getattr(error, "orig", None)
+    sqlite_error_name = getattr(underlying, "sqlite_errorname", "")
+    sqlstate = getattr(underlying, "sqlstate", None) or getattr(underlying, "pgcode", None)
+    return (
+        isinstance(sqlite_error_name, str)
+        and sqlite_error_name.startswith(("SQLITE_BUSY", "SQLITE_LOCKED"))
+    ) or sqlstate in {"40001", "40P01", "55P03"}
 
 
 class DatabaseDocumentContentStore:
@@ -157,6 +176,36 @@ class DatabaseDocumentContentStore:
             updated_at=created_at,
         )
 
+    def claim_existing_payload(
+        self, *, tenant: TenantContext, doc_id: str, expected_payload_json: str
+    ) -> bool:
+        """Atomically verify-and-claim the current Document for a conditional write.
+
+        A stale read-side ETag check is insufficient when another transaction
+        can update the same Document before this writer reaches save().
+        An SQL UPDATE with the *old raw payload* in its WHERE clause obtains
+        the database row write lock and re-evaluates the comparison when a
+        concurrent writer commits. SQLite and PostgreSQL both support this
+        conditional-update pattern. The caller owns the transaction, and
+        must NOT commit the no-op claim separately from the actual mutation.
+
+        For archives, a live lifecycle_state predicate prevents updating
+        a document archived since its preliminary read. The revision-head
+        CAS in _materialize_revision remains an additional independent guard.
+        """
+        apply_database_tenant_context(db=self._db, tenant=tenant)
+        result = self._db.execute(
+            update(DocumentRow)
+            .where(
+                DocumentRow.tenant_id == tenant.tenant_id,
+                DocumentRow.id == doc_id,
+                DocumentRow.lifecycle_state == "active",
+                DocumentRow.payload_json == expected_payload_json,
+            )
+            .values(updated_at=DocumentRow.updated_at)
+        )
+        return result.rowcount == 1
+
     def save(
         self,
         *,
@@ -166,7 +215,12 @@ class DatabaseDocumentContentStore:
         updated_at: str,
         content: ContentBlob,
         created_by: str | None = None,
+        expected_payload_json: str | None = None,
     ) -> VersionedDocumentContent:
+        if expected_payload_json is not None and not self.claim_existing_payload(
+            tenant=tenant, doc_id=doc_id, expected_payload_json=expected_payload_json,
+        ):
+            raise RevisionHeadConflict("Document payload changed since its conditional read")
         stored = self.load(tenant=tenant, doc_id=doc_id)
         if stored is None:
             row = DocumentRow(

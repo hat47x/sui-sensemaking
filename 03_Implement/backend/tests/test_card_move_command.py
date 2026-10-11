@@ -107,3 +107,30 @@ def test_all_input_document_fields_are_retained() -> None:
     assert after.readingOrder == ["a", "b"]
     assert after.transform == original.transform
     assert after.cards[0].text == original.cards[0].text
+
+def test_cross_runtime_parity_fixture_matches_server_command() -> None:
+    """The TS native-drag test reads the same fixture (snap is UI-owned)."""
+    import json
+    from pathlib import Path
+
+    fixture_path = (
+        Path(__file__).resolve().parents[2] /
+        "frontend/src/domain/fixtures/card_move_parity_v1.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    assert fixture["schemaVersion"] == "sui-card-move-parity-v1"
+    for case in fixture["cases"]:
+        raw = deepcopy(fixture["document"])
+        if points := case.get("newIslandPolygon"):
+            raw["islands"][1]["shape"] = {"kind": "polygon", "points": points}
+        before = DocumentV1.model_validate(raw)
+        result = apply_card_move(
+            before, card_id="a", x=case["expectedX"], y=case["expectedY"]
+        )
+        assert result.cards[0].x == case["expectedX"], case["name"]
+        assert result.cards[0].y == case["expectedY"], case["name"]
+        assert [island.cardIds for island in result.islands] == case["expectedIslands"], case["name"]
+        assert result.edges == before.edges, case["name"]
+        assert result.affiliations == before.affiliations, case["name"]
+        assert result.cards[0].holdState == before.cards[0].holdState
+        assert result.cards[0].meta == before.cards[0].meta

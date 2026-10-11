@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from hashlib import sha256
 from datetime import datetime, timezone
 from threading import Lock
@@ -19,8 +19,9 @@ from fastapi import (
     Response,
     status,
 )
-from pydantic import BaseModel, Field, TypeAdapter, ValidationError
-from sqlalchemy.exc import IntegrityError
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from sui_sensemaking_api.access_control import (
@@ -34,12 +35,14 @@ from sui_sensemaking_api.access_control import (
     resolve_access_decision,
 )
 from sui_sensemaking_api.audit import build_event
+from sui_sensemaking_api.card_move_command import InvalidCardMove, apply_card_move
 from sui_sensemaking_api.auth_assurance import build_auth_assurance_metadata
 from sui_sensemaking_api.auth_context import ResolvedIdentity, resolve_identity_context
 from sui_sensemaking_api.content_store import ContentBlob
 from sui_sensemaking_api.database_content_store import (
     DatabaseAppendOnlyLogContentStore,
     DatabaseDocumentContentStore,
+    is_document_write_contention,
 )
 from sui_sensemaking_api.agent_credentials import (
     AgentCredentialRepository,
@@ -1078,13 +1081,355 @@ def put_document(
             updated_at=document.updatedAt.isoformat(),
             content=ContentBlob.from_text(payload_json),
             created_by=access_request.auth.user_id,
+            # Conditional PUT shares the same atomic old-content claim as
+            # native Action. The regular single-tenant unconditional PUT
+            # keeps its explicitly documented last-write-wins semantics.
+            expected_payload_json=(
+                doc_row.payload_json if if_match is not None and doc_row is not None
+                else None
+            ),
         )
         db.commit()
     except (IntegrityError, RevisionHeadConflict) as error:
         db.rollback()
         raise HTTPException(status_code=409, detail="Document changed concurrently") from error
+    except OperationalError as error:
+        db.rollback()
+        if is_document_write_contention(error):
+            raise HTTPException(status_code=409, detail="Document changed concurrently") from error
+        raise
     response.headers["ETag"] = _format_etag(_compute_etag(payload_json))
     return document
+
+
+class _CardMovePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    cardId: str = Field(min_length=1)
+    x: float = Field(allow_inf_nan=False)
+    y: float = Field(allow_inf_nan=False)
+
+
+class _SuiCardMoveActionIntent(BaseModel):
+    """Application-owned decoding of the generic TEI Action v1 envelope."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+    protocolVersion: Literal["1"]
+    applicationID: Literal["sui"]
+    resourceID: str = Field(min_length=1)
+    actionID: Literal["sui.move"]
+    # Explicit length guard: Python's final-dollar anchor may admit an LF.
+    expectedRevision: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    payload: _CardMovePayload
+
+
+def _action_error(*, status_code: int, code: str) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={"protocolVersion": "1", "error": code},
+    )
+
+
+_MAX_SUI_ACTION_BODY_BYTES = 64 * 1024
+
+
+def _reject_duplicate_action_fields(pairs: list[tuple[str, object]]) -> dict:
+    """Python's default JSON decoder silently accepts ambiguous duplicate keys."""
+    values: dict[str, object] = {}
+    for key, value in pairs:
+        if key in values:
+            raise ValueError("duplicate Action field")
+        values[key] = value
+    return values
+
+
+def _invalid_action_constant(value: str) -> None:
+    raise ValueError("nonstandard JSON number")
+
+
+def _action_preserves_stored_fields(raw: object, parsed: object) -> bool:
+    """Refuse native mutations that would silently discard stored fields.
+
+    A Pydantic model may ignore unknown extension keys on an old stored
+    Document; a read-only load is acceptable, but a Card-move re-save would
+    erase those keys permanently. Check field *presence*, not exact values:
+    model defaults, timestamp parsing and normalized numeric values are safe,
+    whereas missing non-null fields or shortened arrays are not.
+
+    Conservative limitation: a legacy field migrated to a new path (e.g.
+    geometry.polygon -> geometry.points) also fails closed until a distinct
+    explicit migration normalizes the Document.
+    """
+    pending: list[tuple[object, object]] = [(raw, parsed)]
+    while pending:
+        original, normalized = pending.pop()
+        if isinstance(original, dict):
+            if not isinstance(normalized, dict):
+                return False
+            for key, value in original.items():
+                if value is None:
+                    continue
+                if key not in normalized or normalized[key] is None:
+                    return False
+                pending.append((value, normalized[key]))
+        elif isinstance(original, list):
+            if not isinstance(normalized, list) or len(original) != len(normalized):
+                return False
+            pending.extend(zip(original, normalized))
+    return True
+
+
+def _native_action_same_origin(request: Request) -> bool:
+    """Conform to the TEI v1 transport's explicit-origin policy.
+
+    An absent Origin is permitted for trusted non-browser callers (like TEI's
+    reference Go transport), but a supplied Origin must match the effective
+    scheme and Host. This is separate from the global BFF-cookie CSRF guard.
+    Reverse proxies must normalize trusted scheme/host; never trust arbitrary
+    X-Forwarded-* headers here.
+    """
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    host = request.headers.get("host")
+    if not origin or not host or len(origin) > 2048 or len(host) > 255 or (
+        origin != origin.strip() or host != host.strip()
+    ):
+        return False
+    try:
+        parsed = urlsplit(origin)
+        parsed.port  # Reject malformed bracketed ports.
+    except ValueError:
+        return False
+    return (
+        parsed.scheme in ("http", "https")
+        and parsed.netloc.lower() == host.lower()
+        and parsed.scheme == request.url.scheme
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.path == ""
+        and not parsed.query
+        and not parsed.fragment
+    )
+
+
+@router.post("/{doc_id}/action-commit", response_model=None)
+async def post_sui_card_move_action(
+    doc_id: str,
+    response: Response,
+    request: Request,
+    x_tei_action: str | None = Header(default=None, alias="X-TEI-Action"),
+    x_read_only: str | None = Header(default=None, alias="X-Read-Only"),
+    db: Session = Depends(get_db),
+) -> dict[str, str] | JSONResponse:
+    """Public v1 envelope; exceptions must NOT be nested under FastAPI detail."""
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        # Never expose a new mutation surface in ordinary SUI deployments.
+        # The future TEI Host integration must explicitly enable this receiver
+        # *after* supplying verified session/authority and integration tests.
+        if getattr(request.app.state, "sui_native_action_v1_enabled", False) is not True:
+            raise _action_error(status_code=404, code="action_denied")
+        if x_tei_action != "commit" or not _native_action_same_origin(request):
+            raise _action_error(status_code=403, code="request_origin_denied")
+        if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
+            raise _action_error(status_code=415, code="unsupported_content_type")
+        # The outer Action protocol is bounded and duplicates must be rejected
+        # before JSON is flattened into a Python dict, including nested payloads.
+        chunks: list[bytes] = []
+        body_bytes = 0
+        async for chunk in request.stream():
+            body_bytes += len(chunk)
+            if body_bytes > _MAX_SUI_ACTION_BODY_BYTES:
+                raise _action_error(status_code=413, code="invalid_action")
+            chunks.append(chunk)
+        try:
+            action_payload = json.loads(
+                b"".join(chunks).decode("utf-8"),
+                object_pairs_hook=_reject_duplicate_action_fields,
+                parse_constant=_invalid_action_constant,
+            )
+        except (UnicodeDecodeError, ValueError) as error:
+            raise _action_error(status_code=400, code="invalid_action") from error
+        # Keep this call *directly on the registered route*. The backend's
+        # route coverage guard checks that every /docs endpoint invokes the
+        # shared tenant/resource authorization boundary, not an indirect helper.
+        requested_read_only = x_read_only == "1" or (x_read_only or "").lower() == "true"
+        access_request, _, tenant = _authorize_request(
+            request, db, action="write", doc_id=doc_id, safe_mode=True,
+            read_only=requested_read_only,
+        )
+        # In single-tenant profiles the optional access-control adapter can be
+        # absent and _authorize_request grants a normal write. A caller's
+        # explicit read-only mode must still block mutation, independently of
+        # any authorization adapter installed for this deployment.
+        if requested_read_only:
+            raise _action_error(status_code=403, code="action_denied")
+        return _commit_sui_card_move_action(
+            doc_id=doc_id,
+            request=request,
+            response=response,
+            action_payload=action_payload,
+            x_tei_action=x_tei_action,
+            access_request=access_request,
+            tenant=tenant,
+            db=db,
+        )
+    except HTTPException as error:
+        # The standard browser dispatcher expects the error envelope at root.
+        # Preserve 404 tenant anti-enumeration, 423 archived, 409 conflict etc.
+        code = (
+            error.detail.get("error")
+            if isinstance(error.detail, dict)
+            and error.detail.get("protocolVersion") == "1"
+            else "action_denied"
+        )
+        return JSONResponse(
+            status_code=error.status_code,
+            headers={"Cache-Control": "no-store"},
+            content={"protocolVersion": "1", "error": code},
+        )
+
+
+def _commit_sui_card_move_action(
+    *,
+    doc_id: str,
+    request: Request,
+    response: Response,
+    action_payload: object,
+    x_tei_action: str | None,
+    access_request: AccessRequest,
+    tenant: TenantContext,
+    db: Session,
+) -> dict[str, str]:
+    """SUI-owned application Action receiver; not the TEI Go runtime Host.
+
+    Use the existing per-document authorization and the same SQL transaction,
+    revision-head CAS and DocumentContentStore as PUT /docs/{doc_id}.
+    The route exists only as a reference adapter until actual TEI Host routing,
+    authenticated sessions and exact-head tests are verified.
+    """
+    if x_tei_action != "commit":
+        raise _action_error(status_code=400, code="invalid_action")
+    try:
+        action = _SuiCardMoveActionIntent.model_validate(action_payload)
+    except ValidationError as error:
+        raise _action_error(status_code=400, code="invalid_action") from error
+    if action.resourceID != doc_id:
+        raise _action_error(status_code=403, code="action_denied")
+
+    # Authenticated identity and scoped tenant are resolved by the public
+    # registered endpoint, not supplied in the client Action payload.
+    store = DatabaseDocumentContentStore(db)
+    stored = store.load(tenant=tenant, doc_id=doc_id)
+    if stored is None:
+        raise _action_error(status_code=409, code="revision_conflict")
+    if stored.row.lifecycle_state == "archived":
+        raise _action_error(status_code=423, code="action_denied")
+    if _compute_etag(stored.row.payload_json) != action.expectedRevision:
+        raise _action_error(status_code=409, code="revision_conflict")
+    # The preliminary ETag comparison above is not a database lock.
+    # Acquire a conditional row write-lock before domain computation, in
+    # the *same* transaction as the later revision materialization. A
+    # concurrent conditional PUT / Action must not commit against this stale
+    # payload after an intervening writer, even if it passed a prior read.
+    try:
+        claimed = store.claim_existing_payload(
+            tenant=tenant, doc_id=doc_id, expected_payload_json=stored.row.payload_json,
+        )
+    except OperationalError as error:
+        db.rollback()
+        if is_document_write_contention(error):
+            raise _action_error(status_code=409, code="revision_conflict") from error
+        raise
+    if not claimed:
+        db.rollback()
+        raise _action_error(status_code=409, code="revision_conflict")
+
+    try:
+        raw_document = json.loads(stored.content.text)
+        original = _validate_document_payload_with_a1_contract(raw_document)
+        # The ordinary Pydantic validation path may remove unknown legacy
+        # fields. Refuse to write back a silently truncated stored resource.
+        # SUI's explicit migration pipeline, not a native Action, owns
+        # schema upgrades and lossless normalization.
+        if not _action_preserves_stored_fields(
+            raw_document, original.model_dump(mode="json", exclude_none=True)
+        ):
+            raise _action_error(status_code=500, code="execution_failed")
+    except (HTTPException, ValueError, TypeError) as error:
+        # A conditional claim acquired a write lock; roll it back now, not
+        # only when the request-scoped Session eventually closes.
+        db.rollback()
+        raise _action_error(status_code=500, code="execution_failed") from error
+    try:
+        updated = apply_card_move(
+            original, card_id=action.payload.cardId,
+            x=action.payload.x, y=action.payload.y,
+        )
+    except (InvalidCardMove, ValidationError) as error:
+        db.rollback()
+        raise _action_error(status_code=400, code="invalid_payload") from error
+
+    # A move does not declare a new human review. Existing reviewer provenance
+    # is an immutable stored fact: requiring the mover to match the original
+    # reviewer would incorrectly deny another authorized document writer.
+    if updated.reviewAttribution != original.reviewAttribution:
+        db.rollback()
+        raise _action_error(status_code=400, code="invalid_payload")
+    if len(updated.cards) > settings.max_document_cards:
+        db.rollback()
+        raise _action_error(status_code=413, code="invalid_payload")
+    payload_json = updated.model_dump_json()
+    if len(payload_json.encode("utf-8")) > settings.max_document_bytes:
+        db.rollback()
+        raise _action_error(status_code=413, code="invalid_payload")
+
+    try:
+        store.save(
+            tenant=tenant,
+            doc_id=doc_id,
+            version=updated.version,
+            updated_at=updated.updatedAt.isoformat(),
+            content=ContentBlob.from_text(payload_json),
+            created_by=access_request.auth.user_id,
+        )
+        db.commit()
+    except (IntegrityError, RevisionHeadConflict) as error:
+        db.rollback()
+        raise _action_error(status_code=409, code="revision_conflict") from error
+    except OperationalError as error:
+        db.rollback()
+        if is_document_write_contention(error):
+            raise _action_error(status_code=409, code="revision_conflict") from error
+        raise
+
+    revision = _compute_etag(payload_json)
+    response.headers["ETag"] = _format_etag(revision)
+
+    # The document is already committed. Audit delivery follows SUI's
+    # existing best-effort policy and may not misreport success as failure.
+    dispatcher = getattr(request.app.state, "audit_dispatcher", None)
+    if dispatcher is not None:
+        try:
+            dispatcher.emit(
+                build_event(
+                    event_type="apply",
+                    tenant_id=tenant.tenant_id,
+                    doc_id=doc_id,
+                    safe_mode=True,
+                    actor_ref=_audit_actor_ref(request, access_request),
+                    metadata={
+                        "actionId": "sui.move",
+                        "method": "POST",
+                        "route": "/docs/{doc_id}/action-commit",
+                        "result": "committed",
+                    },
+                )
+            )
+        except Exception:
+            logger.exception("Native SUI Action audit emission failed after commit")
+    return {"protocolVersion": "1", "revision": revision}
 
 
 class ExportAuditPayload(BaseModel):

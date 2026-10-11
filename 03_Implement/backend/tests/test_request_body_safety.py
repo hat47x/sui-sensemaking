@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from sui_sensemaking_api.main import app
-from sui_sensemaking_api.request_body_safety import MAX_JSON_BODY_NESTING_DEPTH
+from sui_sensemaking_api.request_body_safety import MAX_JSON_BODY_NESTING_DEPTH, MAX_NATIVE_ACTION_JSON_BYTES
 from sui_sensemaking_api.settings import settings
 
 
@@ -70,5 +70,28 @@ def test_api_key_rejection_precedes_json_body_inspection() -> None:
             # (same value as the X-Request-Id header) for log correlation.
             assert response.json()["detail"] == "Unauthorized"
             assert response.json()["requestId"] == response.headers.get("X-Request-Id")
+    finally:
+        settings.api_key = original_api_key
+
+
+def test_native_action_json_size_is_bounded_before_route_execution() -> None:
+    original_api_key = settings.api_key
+    settings.api_key = None
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/docs/native-action-probe/action-commit",
+                content='{"payload":"' + ("x" * MAX_NATIVE_ACTION_JSON_BYTES) + '"}',
+                headers={
+                    "content-type": "application/json",
+                    "X-TEI-Action": "commit",
+                },
+            )
+            assert response.status_code == 413, response.text
+            assert response.json() == {
+                "protocolVersion": "1",
+                "error": "invalid_action",
+            }
+            assert response.headers["Cache-Control"] == "no-store"
     finally:
         settings.api_key = original_api_key

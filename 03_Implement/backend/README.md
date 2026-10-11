@@ -11,6 +11,191 @@
 - `GET /docs/{doc_id}`
 - `PUT /docs/{doc_id}`
 
+## TEI Action用SUI Card移動コマンド（参照段階）
+
+`src/sui_sensemaking_api/card_move_command.py`は、SUIの`DocumentV1`と確定座標から**新しいDocumentスナップショット**を生成するアプリケーション所有の純粋処理です。対象Cardの存在・識別の一意性、有限座標、島への所属変更を検証し、Source、Hold、Edge、レビュー帰属などの無関係な情報を保持します。既存の非包含Affiliationと移動後の包含関係が競合する場合は、黙って来歴を削除せず拒否します。
+
+- `tests/test_card_move_command.py`：座標・矩形／多角形境界・島所属・来歴・負例の単体テスト。`../frontend/src/domain/fixtures/card_move_parity_v1.json`は、TypeScriptの`card_drag_commit.test.ts`とPythonが共用するケース表です。グリッド吸着はSUI UIが計算するため、Pythonには吸着後の最終座標を入力します。
+- `tests/test_docs_roundtrip.py::test_sui_card_move_command_with_existing_sqlite_document_cas`：このコマンドの結果を既存の`PUT /docs/{id}`へ`If-Match`付きで保存し、`GET`とETagを照合するSQLite参照テスト。
+- `../frontend/src/api/client.ts`の`getAuthoritativeDocument`：操作確定後の権威ある読み直しに`cache: "no-store"`を指定し、既存のセッション前提条件を引き継ぐ追加API。
+
+今回の変更では**SUI所有のAction受付口** `POST /docs/{doc_id}/action-commit`も追加しました。**標準状態では無効**であり、`request.app.state.sui_native_action_v1_enabled is True`を明示的に成立させない限り、HTTP 404のActionエラーとして更新を拒否します。このオプトイン条件は現在テスト環境でのみ与えており、未検証の通常配備で新しい書込み面が有効にならないようにしています。この受付口はTEI Go Hostではなく、v1の要求エンベロープ（`protocolVersion`、`applicationID`、`resourceID`、`actionID`、`expectedRevision`、`payload`）を検証し、`X-TEI-Action: commit`と`Content-Type: application/json`を必須とします。`sui.move`の`cardId/x/y`だけを許し、対象DocumentとRevisionを照合します。ブラウザーの確定処理は`commitSuiCardMoveAction`を通じて同一オリジン・既存認証／CSRF／テナントヘッダー付きで送信できます。
+
+この受付口は既存の`_authorize_request(... action="write", safe_mode=True)`と`DatabaseDocumentContentStore`を呼び出し、アーカイブ済み文書・Reviewer帰属・Card数・本文サイズの制限を再利用します。既存のRevision Headの条件付き更新が競合すれば全DBトランザクションをrollbackし、`409 revision_conflict`を返します。成功時は`{"protocolVersion":"1","revision":"<ETag>"}`、失敗時は`{"protocolVersion":"1","error":"..."}`を返し、FastAPIの`detail`ラッパーはAction応答へ混在させません。要求JSONの上限64KiB、重複キー、未知キー、他Application ID、非有限座標を拒否します。リクエスト本文は、JSON Middlewareでもバッファー保持前に上限を適用します。
+
+**このSUIアプリケーション固有の受付口を、TEIの汎用Go Hostと混同しないでください。** TEI Host→SUI保存経路の正式な連結、Host側の認可/セッション伝播、監査、原子的なReact Undo取り込みはまだ行っていません。本番のCanvas操作は依然として既存ローカル確定を使用します。
+
+`PUT /docs/{id}`は現行どおり既存の認可、テナント、アーカイブ状態、レビュー帰属、ETag・Revision処理を担当します。純粋コマンドだけでは同時更新を防げないため、TEI HostとSUI保存側のアダプターが、**権威あるRevisionの原子的比較・SUIコマンド実行・保存**を一単位として保証する必要があります。TEI CoreにはSUI専用構造を持ち込みません。
+
+実Go Hostからの呼び出し、実セッション認可のエンドツーエンド実証、ブラウザーでのCard移動、Undo/Redo接続は**未実施**です。追加したPython／Vitest／SQLiteテストとSUIフロントエンド全体のテストも未実行であり、テストコードの追加だけをPASSの証拠とはしません。共通fixtureによるPythonとTypeScriptの比較テストを追加しましたが、実行と差分評価が必要です。
+
+### ブラウザ確定の同期的適用と現状の制限
+
+`frontend/src/api/tei_card_move_action.ts`は、サーバー確定応答・no-store再読込・SUI所有Document全体の照合後、**同期boolean**を返す`applyConfirmed`に限って反映完了とみなします。`Promise<boolean>`は原子的な状態反映を証明しないため、旧来の非同期ポート契約を廃止しました。フロントエンドでReactの`setState`を呼んで直後に`true`を返すだけでは、原子的な適用を保証できません。アプリが所有するDocument参照／ETag／未保存変更状態を同期的にガードしてから、履歴・dirty・Undo/Redoへ一貫して反映する仕組みが必要です。
+
+SUIのPydantic保存は未指定の`Island.collapsed`を`false`として表現し、既存の`shape`／`geometry`の片方からもう一方を正規化します。Document全体照合はこの既知の差だけを正規化し、Source、Hold、Edge、レビュー帰属、Affiliation等を比較対象から除外しません。バックエンドが自動更新する`updatedAt`とオプションの`null`／未指定も正規化します。
+
+`frontend/src/api/tei_card_move_action.integration.test.ts`は、SUI側ポート→同一オリジンAction POST→キャッシュ無効Document GET→同期所有状態反映を**モックHTTP応答**でつなぐテストです。**実サーバー／React／Go Hostは通っていません**。実行は`npm test -- src/api/tei_card_move_action.integration.test.ts`で行います。未保存のSUIローカル編集やセッションの変更がある場合、正式接続時の`isCurrent`は送信前から拒否する必要があります。
+
+### 送信前の変更範囲検査と手動検証の入口（2026-10-10）
+
+SUIの`createSuiCardMoveActionCommit`では、`dispatch`前に`isPureCardMove`を実行します。元Documentからの許容差分を**対象Cardのx/yと島への所属変更だけ**に限定し、他Card・島の属性／順序・未知Edge・Source・Hold・Affiliation・レビュー等の変更が混入した場合は`invalid_move_target`で**サーバーへ送信する前に拒否**します。これにより、サーバーは確定したが画面側では再読込差分を受理できない事例を事前に減らします。読込後の完全性照合も継続します。
+
+島の`summaryText`があるときにSUI Pydanticが`summaryReviewed=false`を補完する正規化にも対応し、`summaryReviewed=true`など意味のある差分は拒否します。正常／異常ケースをNodeテストに追加しました。
+
+手動検証の入口として`03_Implement/scripts/verify_native_action_boundary.sh`を追加しました。正確なPR headをクリーンなワークツリーにチェックアウトした後、リポジトリルートから次を実行できます（`pytest`、Node 22+、`npm`依存が構築済みであることが前提です）。
+
+```sh
+SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+# 任意：全Frontend Vitestと本番ビルドも追加
+SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+```
+
+Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
+
+### SQLロック競合の分類と、失敗したActionの即時ロールバック（2026-10-11）
+
+新しい行claimでは、SQLiteで並行書込みが重なった場合に`SQLITE_BUSY`や`SQLITE_LOCKED`、PostgreSQLでロック取得失敗・シリアライゼーション失敗・デッドロックの例外が発生する可能性があります。`is_document_write_contention`で**これら既知の競合だけ**を識別して、Actionを`409 revision_conflict`、通常条件付きPUTをHTTP 409へ変換します。ディスク・接続障害、SQL構文エラーなどを競合へ誤分類しません。競合が疑われる利用者は最新Documentを再取得する必要があり、クライアントは自動再送しません。
+
+Actionが行claim後に不正Card・破損Document・レビュー帰属の差し替え・サイズ違反などで失敗するときは、その場で`db.rollback()`して行ロックを解放します。DB接続がリクエスト終端で閉じることのみに依存しません。テスト`test_native_action_domain_rejection_releases_claim_and_keeps_revision`で、失敗Actionの後、同じRevisionから正常Actionが確定できることを検証します。
+
+`test_document_action_cas.py`へ**同時に存在する2つのSQLite Session**で行claimを試すテストを追加しました。ロック中は後続Sessionに`SQLITE_BUSY`が起こり、先行コミット後には旧本文ではclaimできません。通常のOperationalErrorを誤って競合扱いしないテスト、PostgreSQLの`40001`/`40P01`/`55P03`のみを競合として認める分類テストも追加しました。独立したSQLite+SQLAlchemy実験でロック挙動は観察済みですが、**リポジトリの最新headをcheckoutした正式テスト、実PostgreSQLの同時トランザクション、ロック負荷下でのエラー発生頻度は未検証**です。
+
+### 不確定POST後の読取専用照合（2026-10-11）
+
+`frontend/src/api/tei_card_move_action.ts`に`observeSuiCardMoveAfterUnknownCommit`を追加。送信応答が不明な場合、**認証付きの新しいDocument取得のみ**を行い、`unchanged`（取得元と同じ）、`converged`（結果候補と一致）、`diverged`（別の状態）、`unresolved`（取得失敗・不正）を返します。`converged`は「Documentが候補と同じ状態である」という観察であり、**この利用者のActionが実行されたことの証明ではありません**。他の編集者が同じ状態にした可能性を排除できないため、監査帰属や成功メッセージを勝手に確定しません。履歴・Dirty・ETagを変更せず、POSTを自動再送しません。
+
+また、`frontend/src/api/tei_card_move_action.integration.test.ts`へ、HTTP POSTが送信後に通信断となった場合、SUIの実Client APIを使った権限付きGETで`converged`を観察し、POSTが1回・GETが1回・自動再送とUI状態反映が0回であることを確認するVitestケースを追加しました（**未実行**）。
+
+復旧用の負例5件を含め、Actionアダプター**35/35ケース・158アサーション**がGitHubソースから型注釈を取り除いたV8補助実行で成功しました。**正式Node test、TypeScriptコンパイル、Vitest、React E2Eの結果ではありません**。復旧結果をUIへ適用する責任は、SUI Reactの現在のSubject/Tenant/Document/ETag/Undo所有者に残しています。
+
+### Actionと条件付きPUTで共通する原子的な本文照合（2026-10-11追補）
+
+条件付き書込みでは、要求の先頭にある`GET/ETag`照合だけでは不十分です。読み込み後、保存開始までの間に別トランザクションがDocumentを更新する可能性があります。SUI既存の`CanvasRevisionHeadRow.head_version`にはSQL CASがありますが、**ActionとWeb PUTを含む複数経路**で同じ事前条件を使い、競合を明確にする必要があります。
+
+`DatabaseDocumentContentStore.claim_existing_payload(tenant, doc_id, expected_payload_json)`を新設しました。テナント、Document、`lifecycle_state=active`、**読取り時の生の`payload_json`**を条件として、同じ値で`updated_at`をUPDATEします。これは実際にDB行の書込みロックを取る条件付きSQLであり、先行する別トランザクションで本文が更新済みなら更新行数が0になって拒否します。この「claim」は**本体の更新・Revision Head更新と同じDBトランザクションで保持**し、単独コミットしてはいけません。Revision Head CASは追加の独立した保護として維持します。
+
+- SUI Action：当初のETag照合後、ドメイン変換前に`claim_existing_payload`を要求。0件なら`409 revision_conflict`。クレーム後にCard移動・Document検証・Store保存・DBコミットを同じトランザクションで実施します。
+- SUI通常PUT：**If-Matchあり**の場合、`save(expected_payload_json=...)`経由で同じ条件付きclaimを必須とし、競合を既存409へ写像します。**単一テナント互換モードのIf-MatchなしPUTは従来どおりlast-write-wins**です。現時点のActionがすべての旧PUT経路をCAS化したという意味ではありません。
+- 検証：`test_document_action_cas.py`へ「前回の取得→別トランザクションによる保存→古い条件付き保存の拒否」「テナント違い」「アーカイブ」「no-op claimでRevisionが増えない」を追加。通常のAction SQLite結合テストへ、Actionの成功後に古いIf-MatchでPUTしても409となる負例を追加しました。
+- 独立したSQLite+SQLAlchemyの最小再現では、一致するUPDATEのrowcount=1、古い本文・archivedでは0件と確認しました。ただし、**正確なGitHub HEADに対するPython/SQLiteの正式実行、PostgreSQLの重複リクエスト負荷試験、ロック競合時の429/409/500分類は未確認**です。SQL競合に伴うDB例外をすべて409と宣言するものではありません。
+
+検証スクリプト`scripts/verify_native_action_boundary.sh`に、共通Store・既存Revision Head・追加CASテストを組み込みました。APIのデフォルトOFFとDraft維持は変更していません。
+
+### 送信結果が不明な場合の回復と、旧Documentの無損失保証（2026-10-11）
+
+フロントの`createSuiCardMoveActionCommit`は、Action応答が通信断やHTTP 500などで失われた場合、サーバーで既に保存した可能性が残るため`commit_outcome_unknown`とします。認可拒否やRevision競合のように確実に拒否された4xxは区別して返しますが、**どちらも自動再送しません**。結果不明のActionを再実行する前に、既存SUIの`getAuthoritativeDocument`などを用いてサーバーの現在状態を照合する必要があります。HTTP 500をサーバーによるrollbackの証拠とみなしてはいけません。
+
+Card移動に伴う島所属も送信前に制約を検証します。島への重複所属、複数の新しい移動先、移動先を伴わない全所属解除、既に属する島だけを残す不可能な遷移などを`invalid_move_target`として**サーバーへ送る前に拒否**します。ドメイン計算自体は引き続きSUIのネイティブ実装で行い、TEI Coreには島の知識を持ち込みません。
+
+SUIの`DocumentV1`には、Pydanticの`extra="ignore"`等により古いDocumentの未知フィールドがモデルへ読み込まれない場合があります。通常の閲覧ができても、Card移動Actionがそのモデルを再保存すると、既存の非null情報を静かに失う危険があります。今回、バックエンドAction固有の`_action_preserves_stored_fields`を追加しました。**保存済みJSONの各非nullフィールドが、検証済みモデルのシリアライズ結果にも存在すること**を確かめ、失われる情報があれば`500 execution_failed`で**保存前にfail-closed**とします。日時等の値の型正規化や、既定フィールドの追加、null省略は許容します。旧`geometry.polygon`から`geometry.points`のようにフィールドが移される場合は、安全な専用マイグレーションで正規化されるまで保守的に拒否します。Actionが暗黙にマイグレーションしてはいけません。
+
+既知フィールドと未知`CardMeta`拡張の単体検査に加え、SQLiteへあえて旧拡張情報を保存してAction更新が拒否され、原データとRevisionが保持されることを検証する回帰テストを追加しています。**Python/SQLiteの正式実行は未完了**です。ブラウザーReactとの実接続もまだ行っていません。
+
+### 修復済み重大不具合：受信EnvelopeのRevision欠落と関数重複
+
+`routes/docs.py`の以前の差分で、`_SuiCardMoveActionIntent.expectedRevision`が欠落し、さらにActionルートの実装が重複した状態になっていたことを確認しました。壊れた状態へ追記する方式は採用せず、重複のないコミット`d952d97`の`docs.py`を基点に、既存Origin/CAS検証、監査、レビュー帰属保護を再適用しました。現在のファイルでは`_SuiCardMoveActionIntent`、`post_sui_card_move_action`、`_commit_sui_card_move_action`、`expectedRevision`の定義はそれぞれ一つです。
+
+`03_Implement/scripts/verify_native_action_boundary.sh`の先頭で、Pythonの`compileall`、`ast.parse`によるActionの必須フィールド・関数定義の唯一性、TypeScript主要エントリの署名重複を先行チェックします。これらが通らなければSQLite等の重い検証を開始しません。**スクリプトはまだ実行していません**。APIはデフォルト無効のままです。
+
+### レビュー帰属とCard移動の責任境界
+
+SUIの通常`PUT /docs/{id}`は、新しい人間レビュー申告に対して`reviewerRef`が実行者本人と一致することを必須とします。一方、Card移動Actionは既存のDocumentから`reviewAttribution`を**一切変更せず継承する操作**であり、過去のReviewer本人でなければ動かせないという制約は適切ではありません。そこでActionでの再レビュー本人照合を除外し、`updated.reviewAttribution == original.reviewAttribution`を明示検査しました。これによって、別の認可済み編集者による移動を可能にしつつ、レビュー記録の偽造・差し替えを拒否します。
+
+SQLite結合テスト`test_sui_action_preserves_review_by_another_authorized_writer`を追加し、元Reviewerで保存された`human_reviewed`文書を別Actorが移動しても、reviewAttribution・critiqueInputs・reproposalDiffsが保たれることを確認する仕様を記述しました。従来のPUTで他人のReviewerを申告すると403になる検証は維持しています。**新規テストの実行は未了**です。
+
+### 強いRevision・SUI-owned監査（2026-10-11追補）
+
+SUIの通常`getDocument`は既存互換性のため弱いETagの正規化を許容します。一方、Action後の`getAuthoritativeDocument`は**ダブルクォート付き64桁SHA-256形式の強いETag**を必須とし、弱いETag（`W/"..."`）、未設定、未引用、非正規値を`invalid_authoritative_etag`で拒否します。通信は同一オリジン・認証情報明示・リダイレクト拒否・`no-store`を強制します。Actionのリクエストと応答のRevisionも**長さ64と非16進文字不在**を別々に確認し、JavaScriptの`# sui-sensemakingバックエンド（フェーズ1 MVP）
+
+
+> 環境変数と実行パラメータの定義元は `02_Architecture/runtime_parameter_registry.md` です。本書には必要最小限だけを書きます。追加や改名のときは、先にその文書を更新してください。
+
+現在の実装は、`DocumentV1` のスナップショットの保存と読み込みを提供します。
+
+## API
+
+- `GET /healthz`
+- `GET /docs/{doc_id}`
+- `PUT /docs/{doc_id}`
+
+## TEI Action用SUI Card移動コマンド（参照段階）
+
+`src/sui_sensemaking_api/card_move_command.py`は、SUIの`DocumentV1`と確定座標から**新しいDocumentスナップショット**を生成するアプリケーション所有の純粋処理です。対象Cardの存在・識別の一意性、有限座標、島への所属変更を検証し、Source、Hold、Edge、レビュー帰属などの無関係な情報を保持します。既存の非包含Affiliationと移動後の包含関係が競合する場合は、黙って来歴を削除せず拒否します。
+
+- `tests/test_card_move_command.py`：座標・矩形／多角形境界・島所属・来歴・負例の単体テスト。`../frontend/src/domain/fixtures/card_move_parity_v1.json`は、TypeScriptの`card_drag_commit.test.ts`とPythonが共用するケース表です。グリッド吸着はSUI UIが計算するため、Pythonには吸着後の最終座標を入力します。
+- `tests/test_docs_roundtrip.py::test_sui_card_move_command_with_existing_sqlite_document_cas`：このコマンドの結果を既存の`PUT /docs/{id}`へ`If-Match`付きで保存し、`GET`とETagを照合するSQLite参照テスト。
+- `../frontend/src/api/client.ts`の`getAuthoritativeDocument`：操作確定後の権威ある読み直しに`cache: "no-store"`を指定し、既存のセッション前提条件を引き継ぐ追加API。
+
+今回の変更では**SUI所有のAction受付口** `POST /docs/{doc_id}/action-commit`も追加しました。**標準状態では無効**であり、`request.app.state.sui_native_action_v1_enabled is True`を明示的に成立させない限り、HTTP 404のActionエラーとして更新を拒否します。このオプトイン条件は現在テスト環境でのみ与えており、未検証の通常配備で新しい書込み面が有効にならないようにしています。この受付口はTEI Go Hostではなく、v1の要求エンベロープ（`protocolVersion`、`applicationID`、`resourceID`、`actionID`、`expectedRevision`、`payload`）を検証し、`X-TEI-Action: commit`と`Content-Type: application/json`を必須とします。`sui.move`の`cardId/x/y`だけを許し、対象DocumentとRevisionを照合します。ブラウザーの確定処理は`commitSuiCardMoveAction`を通じて同一オリジン・既存認証／CSRF／テナントヘッダー付きで送信できます。
+
+この受付口は既存の`_authorize_request(... action="write", safe_mode=True)`と`DatabaseDocumentContentStore`を呼び出し、アーカイブ済み文書・Reviewer帰属・Card数・本文サイズの制限を再利用します。既存のRevision Headの条件付き更新が競合すれば全DBトランザクションをrollbackし、`409 revision_conflict`を返します。成功時は`{"protocolVersion":"1","revision":"<ETag>"}`、失敗時は`{"protocolVersion":"1","error":"..."}`を返し、FastAPIの`detail`ラッパーはAction応答へ混在させません。要求JSONの上限64KiB、重複キー、未知キー、他Application ID、非有限座標を拒否します。リクエスト本文は、JSON Middlewareでもバッファー保持前に上限を適用します。
+
+**このSUIアプリケーション固有の受付口を、TEIの汎用Go Hostと混同しないでください。** TEI Host→SUI保存経路の正式な連結、Host側の認可/セッション伝播、監査、原子的なReact Undo取り込みはまだ行っていません。本番のCanvas操作は依然として既存ローカル確定を使用します。
+
+`PUT /docs/{id}`は現行どおり既存の認可、テナント、アーカイブ状態、レビュー帰属、ETag・Revision処理を担当します。純粋コマンドだけでは同時更新を防げないため、TEI HostとSUI保存側のアダプターが、**権威あるRevisionの原子的比較・SUIコマンド実行・保存**を一単位として保証する必要があります。TEI CoreにはSUI専用構造を持ち込みません。
+
+実Go Hostからの呼び出し、実セッション認可のエンドツーエンド実証、ブラウザーでのCard移動、Undo/Redo接続は**未実施**です。追加したPython／Vitest／SQLiteテストとSUIフロントエンド全体のテストも未実行であり、テストコードの追加だけをPASSの証拠とはしません。共通fixtureによるPythonとTypeScriptの比較テストを追加しましたが、実行と差分評価が必要です。
+
+### ブラウザ確定の同期的適用と現状の制限
+
+`frontend/src/api/tei_card_move_action.ts`は、サーバー確定応答・no-store再読込・SUI所有Document全体の照合後、**同期boolean**を返す`applyConfirmed`に限って反映完了とみなします。`Promise<boolean>`は原子的な状態反映を証明しないため、旧来の非同期ポート契約を廃止しました。フロントエンドでReactの`setState`を呼んで直後に`true`を返すだけでは、原子的な適用を保証できません。アプリが所有するDocument参照／ETag／未保存変更状態を同期的にガードしてから、履歴・dirty・Undo/Redoへ一貫して反映する仕組みが必要です。
+
+SUIのPydantic保存は未指定の`Island.collapsed`を`false`として表現し、既存の`shape`／`geometry`の片方からもう一方を正規化します。Document全体照合はこの既知の差だけを正規化し、Source、Hold、Edge、レビュー帰属、Affiliation等を比較対象から除外しません。バックエンドが自動更新する`updatedAt`とオプションの`null`／未指定も正規化します。
+
+`frontend/src/api/tei_card_move_action.integration.test.ts`は、SUI側ポート→同一オリジンAction POST→キャッシュ無効Document GET→同期所有状態反映を**モックHTTP応答**でつなぐテストです。**実サーバー／React／Go Hostは通っていません**。実行は`npm test -- src/api/tei_card_move_action.integration.test.ts`で行います。未保存のSUIローカル編集やセッションの変更がある場合、正式接続時の`isCurrent`は送信前から拒否する必要があります。
+
+### 送信前の変更範囲検査と手動検証の入口（2026-10-10）
+
+SUIの`createSuiCardMoveActionCommit`では、`dispatch`前に`isPureCardMove`を実行します。元Documentからの許容差分を**対象Cardのx/yと島への所属変更だけ**に限定し、他Card・島の属性／順序・未知Edge・Source・Hold・Affiliation・レビュー等の変更が混入した場合は`invalid_move_target`で**サーバーへ送信する前に拒否**します。これにより、サーバーは確定したが画面側では再読込差分を受理できない事例を事前に減らします。読込後の完全性照合も継続します。
+
+島の`summaryText`があるときにSUI Pydanticが`summaryReviewed=false`を補完する正規化にも対応し、`summaryReviewed=true`など意味のある差分は拒否します。正常／異常ケースをNodeテストに追加しました。
+
+手動検証の入口として`03_Implement/scripts/verify_native_action_boundary.sh`を追加しました。正確なPR headをクリーンなワークツリーにチェックアウトした後、リポジトリルートから次を実行できます（`pytest`、Node 22+、`npm`依存が構築済みであることが前提です）。
+
+```sh
+SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+# 任意：全Frontend Vitestと本番ビルドも追加
+SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
+  bash 03_Implement/scripts/verify_native_action_boundary.sh
+```
+
+Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
+
+が末尾改行の直前へ一致する問題（63桁+改行でも全長64）を防ぎます。弱いETag・短いもの・改行境界を検査するフロントエンドテストを追加しました。
+
+Action受付側では、**DBコミットの成功後にSUI既存の`AuditDispatcher`へ`apply`イベントを送信**します。Tenant ID、Document ID、既存の検証済みActor、Action識別子、結果を記録し、Card本文、Source本文、ユーザー指定権限を監査メタデータへ複製しません。Revision競合やその他拒否では成功イベントを送信しません。監査機構は既存方針どおりfail-openであり、外部監査先の障害がコミット済みActionのHTTP成功を500へ変えないようにしています。テストでは成功イベント1件・再送0件・監査失敗後も保存済みRevisionを確認します。
+
+**制限:** SUI監査の外部送信は既存のfail-open方針であり、配送成功が永続保証されるものではありません。Actionの法定監査・完全な永続的outbox・Actor付き生成履歴が必要な構成では、別途保証を追加するまで本番利用不可です。テストは追加済みですが、実Python/SQLite/Node/Vitest/TypeScript/Goによる最新PR headの検証は未完了です。
+
+### サーバーActionの追加境界確認（2026-10-11）
+
+SUI所有のAction受付口に、**Cookie有無と独立した、明示されたOriginの同一オリジン検証**を追加しました。Originが提示された場合、信頼されたリクエストのScheme/Hostと一致しない値は`403 request_origin_denied`です。Originがない非ブラウザー経路はTEI Go参照契約と同様に許容しますが、その場合も既存の認証／認可を必須とします。BFF Cookieがある場合には、従来どおりグローバル`BffCsrfProtectionMiddleware`がOriginとセッションに紐づくCSRFヘッダーを別途検証します。`X-TEI-Action: commit`がない要求も403、非JSON Content-Typeは`415 unsupported_content_type`とし、Go参照プロファイルのHTTPエラーコードに合わせました。悪意あるOriginの負例テストを追加しています。
+
+保存済みDocumentが現行Document検証を満たさない場合は、クライアントの権限不足と混同せず`500 execution_failed`として拒否します。ドメイン変換が検証違反で失敗した場合は`400 invalid_payload`です。どちらも保存を行いません。
+
+### 保存後のUndo履歴を扱う準備（本番React接続は未完了）
+
+`frontend/src/domain/confirmed_card_move_state.ts`に、SUI既存の`DocumentHistory`（past/present/future）とETag、dirty状態の意味論を引き継ぐ**純粋な計画関数**`planConfirmedCardMoveState`を追加しました。未保存変更・ReadOnly・保存処理中・セッション失効・ドラッグ中・Document参照／ETag不一致を拒否し、受け付けた場合は「新しいサーバーRevisionを保存済みとして設定しつつ、移動前DocumentをUndo履歴に残す」状態を計算します。Undoはサーバー操作の取消しではなく、新しいローカル編集として保存し直す必要があります。SUIの履歴上限50とRedo破棄を維持し、入力Documentは複製します。
+
+`frontend/src/domain/confirmed_card_move_state.test.ts`には正常系・原点差替え・Dirty/ReadOnly/Session/保存中・履歴制限・Undo保持のテストを追加。Github上のファイルをV8で型注釈除去して簡易実行した限定検査では**5/5ケース・29 assertions PASS**を確認しましたが、これは正式なVitest・TypeScript型検査ではありません。計画関数単体ではReactの複数Stateの原子的な更新を保証しないため、**本番App.tsxへの接続は引き続き見送ります**。SUI `runTenantScopedApiRequest`とDocument参照・ETag・dirtyの単一所有境界が整うまで、実Action受付口もデフォルト無効です。
+
+### 接続試験の実行（未実行）
+
+```sh
+cd 03_Implement/backend
+pytest -q tests/test_card_move_command.py tests/test_request_body_safety.py tests/test_docs_roundtrip.py -k 'card_move or native_action or cross_runtime_parity'
+pytest -q tests/test_tenant_session_precondition.py
+cd ../frontend
+npm run typecheck
+npm test -- src/api/client.test.ts src/domain/card_drag_commit.test.ts
+```
+
+上記は再現用コマンドであり、このチャット環境でPASSを確認したものではありません。実リポジトリを正確なコミットでチェックアウトした後、依存関係・DB環境・SafeMode・セッション前提条件をそろえて実行する必要があります。
+
 ## 永続化
 
 - テーブル: `documents(id TEXT PK, version INT, updated_at TEXT, payload_json TEXT)`

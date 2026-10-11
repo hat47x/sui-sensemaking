@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -9,11 +10,16 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
+from sui_sensemaking_api.content_store import ContentBlob
+from sui_sensemaking_api.database_content_store import DatabaseDocumentContentStore
 from sui_sensemaking_api.db import _normalize_database_url, get_db
 from sui_sensemaking_api.main import app
-from sui_sensemaking_api.models import Base
+from sui_sensemaking_api.models import Base, DocumentV1
+from sui_sensemaking_api.routes.docs import _action_preserves_stored_fields
+from sui_sensemaking_api.tenant_context import LOCAL_DEFAULT_TENANT_CONTEXT
 
 RUN_PG_TESTS_ENV = "SUI_RUN_PG_TESTS"
 DATABASE_URL_ENV = "SUI_DATABASE_URL"
@@ -1094,6 +1100,530 @@ def _assert_etag_optimistic_locking(client: TestClient) -> None:
     second_etag = fresh_put.headers.get("etag")
     assert second_etag
     assert second_etag != first_etag
+
+
+def test_sui_native_action_v1_is_inert_without_explicit_host_opt_in(
+    sqlite_client: TestClient,
+) -> None:
+    """New write route must not activate merely because the plugin was imported."""
+    response = sqlite_client.post(
+        "/docs/unconfigured-action/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={"protocolVersion": "1"},
+    )
+    assert response.status_code == 404, response.text
+    assert response.json() == {"protocolVersion": "1", "error": "action_denied"}
+
+
+def test_sui_native_action_v1_uses_authorized_store_and_cas(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Opted-in FastAPI SUI receiver + SQLite; Go TEI Host remains unconnected."""
+    # The default deployment is inert; this test enables only its own fixture.
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "native-action-envelope-probe"
+    initial = _sample_payload_v1_with_collapsed(doc_id)
+    initial["edges"][0]["type"] = "future-edge-kind"
+    initial["cards"][0]["meta"] = {"source": "interview-1"}
+    initial["cards"][0]["holdState"] = "held"
+    initial["islands"][0].pop("placardCardId", None)
+    initial["islands"][1].pop("placardCardId", None)
+    seeded = sqlite_client.put(f"/docs/{doc_id}", json=initial)
+    assert seeded.status_code == 200, seeded.text
+    etag = seeded.headers["ETag"].strip('"')
+
+    intent = {
+        "protocolVersion": "1",
+        "applicationID": "sui",
+        "resourceID": doc_id,
+        "actionID": "sui.move",
+        "expectedRevision": etag,
+        "payload": {"cardId": "card-1", "x": 212.5, "y": 91},
+    }
+    endpoint = f"/docs/{doc_id}/action-commit"
+    headers = {"X-TEI-Action": "commit"}
+
+    # Strict outer envelope; unknown fields and wrong application rejected.
+    for rejected in (
+        {**intent, "applicationID": "inventory"},
+        {**intent, "resourceID": "other"},
+        {**intent, "expectedRevision": etag + "\n"},
+        {**intent, "expectedRevision": etag[:63] + "\n"},
+        {**intent, "authority": "caller-asserted"},
+        {**intent, "payload": {**intent["payload"], "admin": True}},
+        {**intent, "payload": {"cardId": "card-1", "x": "212.5", "y": 91}},
+    ):
+        resp = sqlite_client.post(endpoint, json=rejected, headers=headers)
+        assert resp.status_code in (400, 403), resp.text
+        assert resp.json()["protocolVersion"] == "1"
+        assert resp.json()["error"] in ("invalid_action", "action_denied")
+    missing_action_header = sqlite_client.post(endpoint, json=intent)
+    assert missing_action_header.status_code == 403
+    assert missing_action_header.json() == {
+        "protocolVersion": "1", "error": "request_origin_denied",
+    }
+
+    # Browser-supplied Origin must match the trusted Host/scheme. This check
+    # is independent of whether a session cookie was supplied for BFF CSRF.
+    for origin in ("https://attacker.example", "null", "http://testserver",
+                   "http://testserver/other", "http://testserver@evil.test"):
+        denied_origin = sqlite_client.post(
+            endpoint, json=intent, headers={**headers, "Origin": origin},
+        )
+        assert denied_origin.status_code == 403, denied_origin.text
+        assert denied_origin.json() == {
+            "protocolVersion": "1", "error": "request_origin_denied",
+        }
+
+    # No implied CORS trust: a matching explicit Origin is acceptable.
+    allowed_origin = sqlite_client.post(
+        endpoint,
+        json={**intent, "applicationID": "inventory"},
+        headers={**headers, "Origin": "http://testserver"},
+    )
+    assert allowed_origin.status_code == 400
+    assert allowed_origin.json() == {"protocolVersion": "1", "error": "invalid_action"}
+
+    # Python's default decoder is last-key-wins. This boundary instead
+    # rejects duplicate keys at every nesting level before Pydantic runs.
+    serialized = __import__("json").dumps(intent, separators=(",", ":"))
+    duplicate_outer = serialized.replace(
+        '"applicationID":"sui",', '"applicationID":"sui","applicationID":"sui",',
+    )
+    duplicate_nested = serialized.replace(
+        '"x":212.5,', '"x":212.5,"x":212.5,',
+    )
+    for body in (duplicate_outer, duplicate_nested):
+        malformed = sqlite_client.post(
+            endpoint, content=body,
+            headers={**headers, "Content-Type": "application/json"},
+        )
+        assert malformed.status_code == 400, malformed.text
+        assert malformed.json() == {"protocolVersion": "1", "error": "invalid_action"}
+
+    oversized = sqlite_client.post(
+        endpoint,
+        content=serialized + (" " * 65536),
+        headers={**headers, "Content-Type": "application/json"},
+    )
+    assert oversized.status_code == 413, oversized.text
+    assert oversized.json() == {"protocolVersion": "1", "error": "invalid_action"}
+
+    bad_media = sqlite_client.post(
+        endpoint, content=serialized,
+        headers={**headers, "Content-Type": "text/plain"},
+    )
+    assert bad_media.status_code == 415
+    assert bad_media.json() == {
+        "protocolVersion": "1", "error": "unsupported_content_type",
+    }
+
+    read_only = sqlite_client.post(
+        endpoint, json=intent, headers={**headers, "X-Read-Only": "1"},
+    )
+    assert read_only.status_code == 403, read_only.text
+    assert read_only.json() == {"protocolVersion": "1", "error": "action_denied"}
+
+    # Capture application-owned audit events; rejected requests must never
+    # emit a committed-apply event.
+    audit_events = []
+    class ActionAuditProbe:
+        def emit(self, event):
+            # Ordinary GET /docs/{id} emits separate "view" audits. Count
+            # only committed native Action events, never confuse a view with
+            # a second successful write.
+            if event.eventType == "apply":
+                audit_events.append(event)
+    monkeypatch.setattr(app.state, "audit_dispatcher", ActionAuditProbe(), raising=False)
+
+    accepted = sqlite_client.post(endpoint, json=intent, headers=headers)
+    assert accepted.status_code == 200, accepted.text
+    assert len(audit_events) == 1
+    assert audit_events[0].eventType == "apply"
+    assert audit_events[0].docId == doc_id
+    assert audit_events[0].metadata["actionId"] == "sui.move"
+    assert audit_events[0].metadata["result"] == "committed"
+    assert "interview-1" not in str(audit_events[0].metadata)
+    assert accepted.json()["protocolVersion"] == "1"
+    revision = accepted.json()["revision"]
+    assert revision and revision != etag
+    assert accepted.headers["ETag"] == f'"{revision}"'
+    assert accepted.headers["Cache-Control"] == "no-store"
+
+    stored = sqlite_client.get(f"/docs/{doc_id}")
+    assert stored.status_code == 200, stored.text
+    assert stored.headers["ETag"] == f'"{revision}"'
+    doc = stored.json()
+    assert [island["cardIds"] for island in doc["islands"]] == [
+        [], ["card-2", "card-1"],
+    ]
+    assert doc["cards"][0]["x"] == 212.5
+    assert doc["cards"][0]["y"] == 91
+    assert doc["cards"][0]["meta"]["source"] == "interview-1"
+    assert doc["cards"][0]["holdState"] == "held"
+    assert doc["edges"][0]["type"] == "future-edge-kind"
+
+    # Conditional Web PUT shares the same ETag/CAS boundary as Action.
+    # Even if it was constructed from an old Document snapshot it must not
+    # roll back a newer Action, and no new revision should be materialized.
+    stale_put = sqlite_client.put(
+        f"/docs/{doc_id}",
+        json={**initial, "updatedAt": "2026-10-11T00:05:00Z"},
+        headers={"If-Match": f'"{etag}"'},
+    )
+    assert stale_put.status_code == 409, stale_put.text
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
+    # A previously acknowledged Action is NOT repeated with its stale ETag.
+    conflict = sqlite_client.post(endpoint, json=intent, headers=headers)
+    assert conflict.status_code == 409, conflict.text
+    assert conflict.json() == {"protocolVersion": "1", "error": "revision_conflict"}
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
+    invalid = sqlite_client.post(
+        endpoint,
+        json={**intent, "expectedRevision": revision, "payload": {
+            "cardId": "missing", "x": 1, "y": 2,
+        }},
+        headers=headers,
+    )
+    assert invalid.status_code == 400
+    assert invalid.json() == {"protocolVersion": "1", "error": "invalid_payload"}
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
+    archived = sqlite_client.post(f"/docs/{doc_id}/archive")
+    assert archived.status_code == 204, archived.text
+    denied = sqlite_client.post(
+        endpoint, json={**intent, "expectedRevision": revision}, headers=headers,
+    )
+    assert denied.status_code == 423
+    assert denied.json() == {"protocolVersion": "1", "error": "action_denied"}
+    # Replays, malformed input, missing Cards and archived writes do not
+    # produce another successful-commit audit event.
+    assert len(audit_events) == 1
+
+
+def test_native_action_refuses_silent_loss_of_existing_extension_fields() -> None:
+    """A Card move must not re-save a stripped Pydantic DocumentV1."""
+    stored = _sample_payload("doc-action-unknown-meta")
+    stored["cards"][0]["meta"] = {
+        "source": "interview:known",
+        "futureAuditHint": {"reason": "preserve this future extension"},
+    }
+    # CardMeta (intentionally) ignores extra fields. PUT may have canonicalized
+    # an older resource, but an Action cannot silently wipe its stored extras.
+    projected = DocumentV1.model_validate(stored).model_dump(
+        mode="json", exclude_none=True,
+    )
+    assert projected["cards"][0]["meta"]["source"] == "interview:known"
+    assert "futureAuditHint" not in projected["cards"][0]["meta"]
+    assert not _action_preserves_stored_fields(stored, projected)
+
+    # Known source/hold fields, null optionals and Pydantic defaults remain
+    # safe to move. Null-vs-omitted is not loss of a concrete field.
+    clean = _sample_payload("doc-action-known-meta")
+    clean["cards"][0]["meta"] = {"source": "interview:known", "seq": None}
+    clean["cards"][0]["holdState"] = "held"
+    normal = DocumentV1.model_validate(clean).model_dump(
+        mode="json", exclude_none=True,
+    )
+    assert _action_preserves_stored_fields(clean, normal)
+
+    # Nested unknown fields and shortened arrays cannot bypass the guard.
+    assert not _action_preserves_stored_fields(
+        {"cards": [{"id": "one", "meta": {"source": "original"}}]},
+        {"cards": [{"id": "one", "meta": {}}]},
+    )
+    assert not _action_preserves_stored_fields(
+        {"islands": [{"id": "a"}, {"id": "b"}]},
+        {"islands": [{"id": "a"}]},
+    )
+
+
+def test_sui_action_does_not_erase_old_unknown_fields_on_sqlite_resave(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An old stored extension is retained even if Pydantic would ignore it."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-legacy-extra-fields"
+    created = sqlite_client.put(f"/docs/{doc_id}", json=_sample_payload(doc_id))
+    assert created.status_code == 200, created.text
+
+    # Emulate an older stored Document or another forward-compatible
+    # importer using the existing content store. Do not go through PUT:
+    # ordinary PUT deliberately normalizes to the current Pydantic schema.
+    legacy = created.json()
+    legacy["cards"][0]["meta"] = {
+        "source": "original-interview",
+        "futureTrace": {"owner": "retain-me"},
+    }
+    legacy_payload = json.dumps(legacy, ensure_ascii=False, separators=(",", ":"))
+    open_db = app.dependency_overrides[get_db]()
+    db = next(open_db)
+    try:
+        store = DatabaseDocumentContentStore(db)
+        store.save(
+            tenant=LOCAL_DEFAULT_TENANT_CONTEXT,
+            doc_id=doc_id,
+            version=1,
+            updated_at=legacy["updatedAt"],
+            content=ContentBlob.from_text(legacy_payload),
+        )
+        db.commit()
+    finally:
+        open_db.close()
+
+    current = sqlite_client.get(f"/docs/{doc_id}")
+    assert current.status_code == 200
+    revision = current.headers["ETag"].strip('"')
+
+    rejected = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": revision,
+            "payload": {"cardId": "card-1", "x": 90.0, "y": 65.0},
+        },
+    )
+    assert rejected.status_code == 500, rejected.text
+    assert rejected.json() == {
+        "protocolVersion": "1", "error": "execution_failed",
+    }
+
+    verify_db = app.dependency_overrides[get_db]()
+    db = next(verify_db)
+    try:
+        stored = DatabaseDocumentContentStore(db).load(
+            tenant=LOCAL_DEFAULT_TENANT_CONTEXT, doc_id=doc_id,
+        )
+        assert stored is not None
+        assert json.loads(stored.content.text) == legacy
+    finally:
+        verify_db.close()
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
+
+def test_sui_action_preserves_review_by_another_authorized_writer(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Moving a Card is not an assertion of the existing reviewer's identity."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-preserves-another-reviewer"
+    original = _sample_payload_v1_with_hil_rs_contract_fields(
+        doc_id, reviewer_ref="reviewer:original",
+    )
+    created = sqlite_client.put(
+        f"/docs/{doc_id}",
+        json=original,
+        headers={"x-actor-ref": "reviewer:original"},
+    )
+    assert created.status_code == 200, created.text
+    initial_revision = created.headers["ETag"].strip('"')
+
+    # This actor is not the original reviewer, but is an authorized writer.
+    moved = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={
+            "X-TEI-Action": "commit",
+            "x-actor-ref": "reviewer:other",
+        },
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": initial_revision,
+            "payload": {"cardId": "card-1", "x": 60.0, "y": 80.0},
+        },
+    )
+    assert moved.status_code == 200, moved.text
+    loaded = sqlite_client.get(f"/docs/{doc_id}")
+    assert loaded.status_code == 200, loaded.text
+    doc = loaded.json()
+    assert doc["cards"][0]["x"] == 60.0
+    assert doc["reviewAttribution"] == created.json()["reviewAttribution"]
+    assert doc["critiqueInputs"] == created.json()["critiqueInputs"]
+    assert doc["reproposalDiffs"] == created.json()["reproposalDiffs"]
+    assert loaded.headers["ETag"] == f'"{moved.json()["revision"]}"'
+
+
+def test_native_action_and_conditional_put_map_sqlite_lock_to_conflict(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Known lock errors are 409, while no content is overwritten."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-and-put-contention"
+    saved = _sample_payload(doc_id)
+    created = sqlite_client.put(f"/docs/{doc_id}", json=saved)
+    assert created.status_code == 200
+    revision = created.headers["ETag"].strip('"')
+
+    class SimulatedSqliteBusy(Exception):
+        sqlite_errorname = "SQLITE_BUSY"
+
+    def busy_claim(self, *, tenant, doc_id, expected_payload_json):
+        raise OperationalError("UPDATE documents", {}, SimulatedSqliteBusy())
+
+    monkeypatch.setattr(DatabaseDocumentContentStore, "claim_existing_payload", busy_claim)
+    result = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": revision,
+            "payload": {"cardId": "card-1", "x": 80.0, "y": 60.0},
+        },
+    )
+    assert result.status_code == 409, result.text
+    assert result.json() == {"protocolVersion": "1", "error": "revision_conflict"}
+
+    new_payload = {**saved, "updatedAt": "2026-10-11T05:00:00Z"}
+    conditional = sqlite_client.put(
+        f"/docs/{doc_id}",
+        json=new_payload,
+        headers={"If-Match": f'"{revision}"'},
+    )
+    assert conditional.status_code == 409, conditional.text
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
+
+def test_native_action_domain_rejection_releases_claim_and_keeps_revision(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed domain move must not leak the conditional DB row lock."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-claim-domain-rejection"
+    seeded = sqlite_client.put(f"/docs/{doc_id}", json=_sample_payload(doc_id))
+    assert seeded.status_code == 200, seeded.text
+    old_revision = seeded.headers["ETag"].strip('"')
+    envelope = {
+        "protocolVersion": "1",
+        "applicationID": "sui",
+        "resourceID": doc_id,
+        "actionID": "sui.move",
+        "expectedRevision": old_revision,
+        "payload": {"cardId": "card-does-not-exist", "x": 80.0, "y": 50.0},
+    }
+    route = f"/docs/{doc_id}/action-commit"
+    refused = sqlite_client.post(
+        route, headers={"X-TEI-Action": "commit"}, json=envelope,
+    )
+    assert refused.status_code == 400, refused.text
+    assert refused.json() == {"protocolVersion": "1", "error": "invalid_payload"}
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{old_revision}"'
+
+    # A new valid Action with the SAME expected revision can still claim
+    # and commit. There was no partial write on the failed attempt.
+    accepted = sqlite_client.post(
+        route, headers={"X-TEI-Action": "commit"},
+        json={**envelope, "payload": {"cardId": "card-1", "x": 80.0, "y": 50.0}},
+    )
+    assert accepted.status_code == 200, accepted.text
+    updated = sqlite_client.get(f"/docs/{doc_id}")
+    assert updated.headers["ETag"] == f'"{accepted.json()["revision"]}"'
+    assert updated.json()["cards"][0]["x"] == 80.0
+
+
+def test_sui_action_audit_sink_failure_does_not_misreport_committed_write(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-audit-sink-failure"
+    initial = _sample_payload(doc_id)
+    seeded = sqlite_client.put(f"/docs/{doc_id}", json=initial)
+    assert seeded.status_code == 200, seeded.text
+    previous_revision = seeded.headers["ETag"].strip('"')
+
+    class BrokenAuditSink:
+        def emit(self, event):
+            # Only Action apply emission is broken; the subsequent ordinary
+            # GET still emits its separate view event through the fixture.
+            if event.eventType == "apply":
+                raise RuntimeError("audit sink unavailable")
+
+    monkeypatch.setattr(app.state, "audit_dispatcher", BrokenAuditSink(), raising=False)
+    sent = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": previous_revision,
+            "payload": {"cardId": "card-1", "x": 25.0, "y": 30.0},
+        },
+    )
+    assert sent.status_code == 200, sent.text
+    revision = sent.json()["revision"]
+    assert revision != previous_revision
+    stored = sqlite_client.get(f"/docs/{doc_id}")
+    assert stored.status_code == 200
+    assert stored.headers["ETag"] == f'"{revision}"'
+    assert stored.json()["cards"][0]["x"] == 25.0
+
+
+def test_sui_card_move_command_with_existing_sqlite_document_cas(sqlite_client: TestClient) -> None:
+    """SUI-owned command -> native PUT/GET CAS; NOT a TEI Go Host route."""
+    from sui_sensemaking_api.card_move_command import apply_card_move
+    from sui_sensemaking_api.models import DocumentV1
+
+    doc_id = "native-action-cas-probe"
+    initial = _sample_payload_v1_with_collapsed(doc_id)
+    initial["edges"][0]["type"] = "future-kind"
+    initial["cards"][0]["holdState"] = "held"
+    initial["cards"][0]["meta"] = {"source": "interview-1"}
+    initial["islands"][0].pop("placardCardId", None)
+    initial["islands"][1].pop("placardCardId", None)
+
+    first = sqlite_client.put(f"/docs/{doc_id}", json=initial)
+    assert first.status_code == 200, first.text
+    initial_etag = first.headers["ETag"]
+
+    before = sqlite_client.get(f"/docs/{doc_id}")
+    assert before.status_code == 200, before.text
+    assert before.headers["ETag"] == initial_etag
+
+    moved = apply_card_move(
+        DocumentV1.model_validate(before.json()),
+        card_id="card-1", x=212.5, y=91,
+    )
+    assert [island.cardIds for island in moved.islands] == [[], ["card-2", "card-1"]]
+
+    saved = sqlite_client.put(
+        f"/docs/{doc_id}", json=moved.model_dump(mode="json"),
+        headers={"If-Match": initial_etag},
+    )
+    assert saved.status_code == 200, saved.text
+    committed_etag = saved.headers["ETag"]
+    assert committed_etag != initial_etag
+
+    reloaded = sqlite_client.get(f"/docs/{doc_id}")
+    assert reloaded.status_code == 200, reloaded.text
+    assert reloaded.headers["ETag"] == committed_etag
+    assert reloaded.json()["cards"][0]["x"] == 212.5
+    assert reloaded.json()["cards"][0]["meta"]["source"] == "interview-1"
+    assert reloaded.json()["cards"][0]["holdState"] == "held"
+    assert reloaded.json()["edges"][0]["type"] == "future-kind"
+    assert [island["cardIds"] for island in reloaded.json()["islands"]] == [
+        [], ["card-2", "card-1"],
+    ]
+
+    # Repeating with the old revision cannot persist another mutation.
+    stale = sqlite_client.put(
+        f"/docs/{doc_id}", json=moved.model_dump(mode="json"),
+        headers={"If-Match": initial_etag},
+    )
+    assert stale.status_code == 409
+    unchanged = sqlite_client.get(f"/docs/{doc_id}")
+    assert unchanged.headers["ETag"] == committed_etag
 
 
 def test_docs_put_get_roundtrip_sqlite(sqlite_client: TestClient) -> None:
