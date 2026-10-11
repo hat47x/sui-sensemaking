@@ -55,6 +55,20 @@ SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
 
 Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
 
+### SQLロック競合の分類と、失敗したActionの即時ロールバック（2026-10-11）
+
+新しい行claimでは、SQLiteで並行書込みが重なった場合に`SQLITE_BUSY`や`SQLITE_LOCKED`、PostgreSQLでロック取得失敗・シリアライゼーション失敗・デッドロックの例外が発生する可能性があります。`is_document_write_contention`で**これら既知の競合だけ**を識別して、Actionを`409 revision_conflict`、通常条件付きPUTをHTTP 409へ変換します。ディスク・接続障害、SQL構文エラーなどを競合へ誤分類しません。競合が疑われる利用者は最新Documentを再取得する必要があり、クライアントは自動再送しません。
+
+Actionが行claim後に不正Card・破損Document・レビュー帰属の差し替え・サイズ違反などで失敗するときは、その場で`db.rollback()`して行ロックを解放します。DB接続がリクエスト終端で閉じることのみに依存しません。テスト`test_native_action_domain_rejection_releases_claim_and_keeps_revision`で、失敗Actionの後、同じRevisionから正常Actionが確定できることを検証します。
+
+`test_document_action_cas.py`へ**同時に存在する2つのSQLite Session**で行claimを試すテストを追加しました。ロック中は後続Sessionに`SQLITE_BUSY`が起こり、先行コミット後には旧本文ではclaimできません。通常のOperationalErrorを誤って競合扱いしないテスト、PostgreSQLの`40001`/`40P01`/`55P03`のみを競合として認める分類テストも追加しました。独立したSQLite+SQLAlchemy実験でロック挙動は観察済みですが、**リポジトリの最新headをcheckoutした正式テスト、実PostgreSQLの同時トランザクション、ロック負荷下でのエラー発生頻度は未検証**です。
+
+### 不確定POST後の読取専用照合（2026-10-11）
+
+`frontend/src/api/tei_card_move_action.ts`に`observeSuiCardMoveAfterUnknownCommit`を追加。送信応答が不明な場合、**認証付きの新しいDocument取得のみ**を行い、`unchanged`（取得元と同じ）、`converged`（結果候補と一致）、`diverged`（別の状態）、`unresolved`（取得失敗・不正）を返します。`converged`は「Documentが候補と同じ状態である」という観察であり、**この利用者のActionが実行されたことの証明ではありません**。他の編集者が同じ状態にした可能性を排除できないため、監査帰属や成功メッセージを勝手に確定しません。履歴・Dirty・ETagを変更せず、POSTを自動再送しません。
+
+復旧用の負例5件を含め、Actionアダプター**35/35ケース・158アサーション**がGitHubソースから型注釈を取り除いたV8補助実行で成功しました。**正式Node test、TypeScriptコンパイル、Vitest、React E2Eの結果ではありません**。復旧結果をUIへ適用する責任は、SUI Reactの現在のSubject/Tenant/Document/ETag/Undo所有者に残しています。
+
 ### Actionと条件付きPUTで共通する原子的な本文照合（2026-10-11追補）
 
 条件付き書込みでは、要求の先頭にある`GET/ETag`照合だけでは不十分です。読み込み後、保存開始までの間に別トランザクションがDocumentを更新する可能性があります。SUI既存の`CanvasRevisionHeadRow.head_version`にはSQL CASがありますが、**ActionとWeb PUTを含む複数経路**で同じ事前条件を使い、競合を明確にする必要があります。
