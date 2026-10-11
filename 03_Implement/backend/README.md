@@ -55,6 +55,16 @@ SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
 
 Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
 
+### 送信結果が不明な場合の回復と、旧Documentの無損失保証（2026-10-11）
+
+フロントの`createSuiCardMoveActionCommit`は、Action応答が通信断やHTTP 500などで失われた場合、サーバーで既に保存した可能性が残るため`commit_outcome_unknown`とします。認可拒否やRevision競合のように確実に拒否された4xxは区別して返しますが、**どちらも自動再送しません**。結果不明のActionを再実行する前に、既存SUIの`getAuthoritativeDocument`などを用いてサーバーの現在状態を照合する必要があります。HTTP 500をサーバーによるrollbackの証拠とみなしてはいけません。
+
+Card移動に伴う島所属も送信前に制約を検証します。島への重複所属、複数の新しい移動先、移動先を伴わない全所属解除、既に属する島だけを残す不可能な遷移などを`invalid_move_target`として**サーバーへ送る前に拒否**します。ドメイン計算自体は引き続きSUIのネイティブ実装で行い、TEI Coreには島の知識を持ち込みません。
+
+SUIの`DocumentV1`には、Pydanticの`extra="ignore"`等により古いDocumentの未知フィールドがモデルへ読み込まれない場合があります。通常の閲覧ができても、Card移動Actionがそのモデルを再保存すると、既存の非null情報を静かに失う危険があります。今回、バックエンドAction固有の`_action_preserves_stored_fields`を追加しました。**保存済みJSONの各非nullフィールドが、検証済みモデルのシリアライズ結果にも存在すること**を確かめ、失われる情報があれば`500 execution_failed`で**保存前にfail-closed**とします。日時等の値の型正規化や、既定フィールドの追加、null省略は許容します。旧`geometry.polygon`から`geometry.points`のようにフィールドが移される場合は、安全な専用マイグレーションで正規化されるまで保守的に拒否します。Actionが暗黙にマイグレーションしてはいけません。
+
+既知フィールドと未知`CardMeta`拡張の単体検査に加え、SQLiteへあえて旧拡張情報を保存してAction更新が拒否され、原データとRevisionが保持されることを検証する回帰テストを追加しています。**Python/SQLiteの正式実行は未完了**です。ブラウザーReactとの実接続もまだ行っていません。
+
 ### 修復済み重大不具合：受信EnvelopeのRevision欠落と関数重複
 
 `routes/docs.py`の以前の差分で、`_SuiCardMoveActionIntent.expectedRevision`が欠落し、さらにActionルートの実装が重複した状態になっていたことを確認しました。壊れた状態へ追記する方式は採用せず、重複のないコミット`d952d97`の`docs.py`を基点に、既存Origin/CAS検証、監査、レビュー帰属保護を再適用しました。現在のファイルでは`_SuiCardMoveActionIntent`、`post_sui_card_move_action`、`_commit_sui_card_move_action`、`expectedRevision`の定義はそれぞれ一つです。
