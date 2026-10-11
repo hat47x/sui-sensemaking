@@ -6,6 +6,7 @@ from urllib.parse import unquote
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from sui_sensemaking_api.content_store import (
@@ -37,6 +38,23 @@ from sui_sensemaking_api.tenant_db_guard import apply_database_tenant_context
 
 class DocumentRevisionDivergence(RuntimeError):
     pass
+
+
+def is_document_write_contention(error: OperationalError) -> bool:
+    """Only known database lock/serialization conflicts may map to HTTP 409.
+
+    Do not turn disk failures, syntax errors or arbitrary OperationalError
+    into revision conflicts. PostgreSQL 40001/40P01/55P03 and SQLite BUSY/
+    LOCKED can arise while a conditional writer attempts to claim its row;
+    every such response still requires a fresh authoritative read.
+    """
+    underlying = getattr(error, "orig", None)
+    sqlite_error_name = getattr(underlying, "sqlite_errorname", "")
+    sqlstate = getattr(underlying, "sqlstate", None) or getattr(underlying, "pgcode", None)
+    return (
+        isinstance(sqlite_error_name, str)
+        and sqlite_error_name.startswith(("SQLITE_BUSY", "SQLITE_LOCKED"))
+    ) or sqlstate in {"40001", "40P01", "55P03"}
 
 
 class DatabaseDocumentContentStore:
