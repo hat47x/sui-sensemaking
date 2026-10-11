@@ -25,7 +25,9 @@ cd "$root/03_Implement/backend"
 echo "== Syntax and critical Action-envelope structural invariants =="
 python -m compileall -q src/sui_sensemaking_api/routes/docs.py \
   src/sui_sensemaking_api/card_move_command.py \
-  tests/test_docs_roundtrip.py
+  src/sui_sensemaking_api/database_content_store.py \
+  tests/test_docs_roundtrip.py \
+  tests/test_document_action_cas.py
 python - <<'PY'
 import ast
 from collections import Counter
@@ -60,6 +62,9 @@ echo "== Python command, SQLite persistence, middleware and route authorization 
 python -m pytest -q \
   tests/test_card_move_command.py \
   tests/test_docs_roundtrip.py \
+  tests/test_database_content_store.py \
+  tests/test_generation_repository.py \
+  tests/test_document_action_cas.py \
   tests/test_request_body_safety.py \
   tests/test_tenant_session_precondition.py
 
