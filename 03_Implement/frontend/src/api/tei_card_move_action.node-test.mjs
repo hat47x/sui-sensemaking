@@ -240,6 +240,39 @@ test("no-change drag does not write or re-read", async () => {
   assert.equal(f.state.applied, 0);
 });
 
+test("rejects impossible Island transitions before remote mutation", async () => {
+  const mutations = [
+    // Server cannot remove every membership without joining a destination.
+    (doc) => { doc.islands[1].cardIds = ["b"]; },
+    // Moving to two Islands in a single Action is not a valid SUI move.
+    (doc) => { doc.islands[0].cardIds = ["a"]; },
+    // Repeating the target member also differs from server's append-once rule.
+    (doc) => { doc.islands[1].cardIds = ["b", "a", "a"]; },
+  ];
+  for (const damage of mutations) {
+    const f = fixture();
+    const altered = structuredClone(f.next);
+    damage(altered);
+    await assert.rejects(
+      f.run(f.origin, altered, "a"),
+      isError("invalid_move_target"),
+    );
+    assert.equal(f.state.writes, 0);
+    assert.equal(f.state.reads, 0);
+  }
+});
+
+test("cannot remove one preexisting Island membership without a new destination", async () => {
+  const f = fixture();
+  // Both Islands already contain 'a'. The SUI server skips existing
+  // containments while selecting a target, so it would keep both memberships.
+  f.origin.document.islands[1].cardIds.push("a");
+  const altered = structuredClone(f.next);
+  altered.islands[1].cardIds = ["b", "a"];
+  await assert.rejects(f.run(f.origin, altered, "a"), isError("invalid_move_target"));
+  assert.equal(f.state.writes, 0);
+});
+
 test("membership-only change without card movement is invalid", async () => {
   const f = fixture();
   const altered = structuredClone(f.origin.document);
