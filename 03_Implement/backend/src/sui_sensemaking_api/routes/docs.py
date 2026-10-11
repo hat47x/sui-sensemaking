@@ -1358,8 +1358,9 @@ def _commit_sui_card_move_action(
         ):
             raise _action_error(status_code=500, code="execution_failed")
     except (HTTPException, ValueError, TypeError) as error:
-        # Broken stored state must not become a user payload error, nor
-        # trigger a best-effort repair that loses existing user information.
+        # A conditional claim acquired a write lock; roll it back now, not
+        # only when the request-scoped Session eventually closes.
+        db.rollback()
         raise _action_error(status_code=500, code="execution_failed") from error
     try:
         updated = apply_card_move(
@@ -1367,17 +1368,21 @@ def _commit_sui_card_move_action(
             x=action.payload.x, y=action.payload.y,
         )
     except (InvalidCardMove, ValidationError) as error:
+        db.rollback()
         raise _action_error(status_code=400, code="invalid_payload") from error
 
     # A move does not declare a new human review. Existing reviewer provenance
     # is an immutable stored fact: requiring the mover to match the original
     # reviewer would incorrectly deny another authorized document writer.
     if updated.reviewAttribution != original.reviewAttribution:
+        db.rollback()
         raise _action_error(status_code=400, code="invalid_payload")
     if len(updated.cards) > settings.max_document_cards:
+        db.rollback()
         raise _action_error(status_code=413, code="invalid_payload")
     payload_json = updated.model_dump_json()
     if len(payload_json.encode("utf-8")) > settings.max_document_bytes:
+        db.rollback()
         raise _action_error(status_code=413, code="invalid_payload")
 
     try:
