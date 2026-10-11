@@ -6,6 +6,7 @@ SQLite/PostgreSQL or an actual TEI Host -> SUI E2E scenario.
 """
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -67,7 +68,7 @@ def test_intervening_document_write_rejects_stale_conditional_save(tmp_path) -> 
 
         with factory() as db:
             store = DatabaseDocumentContentStore(db)
-            with __import__("pytest").raises(RevisionHeadConflict):
+            with pytest.raises(RevisionHeadConflict):
                 store.save(
                     tenant=tenant, doc_id="doc", version=1,
                     updated_at="2026-10-11T00:02:00Z",
