@@ -55,6 +55,19 @@ SUI_ACTION_FULL_FRONTEND=1 SUI_ACTION_EXPECTED_SHA="$(git rev-parse HEAD)" \
 
 Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認可のテスト、TypeScriptコンパイル、SUI Client/Domain/Adapter結合Vitest、Node実行を一括検証します。**未実行のため成功の証拠ではありません。** GitHub CIの再開やDraft解除は行いません。React CanvasとGo TEI Hostの実接続E2Eは別途必要です。
 
+### Actionと条件付きPUTで共通する原子的な本文照合（2026-10-11追補）
+
+条件付き書込みでは、要求の先頭にある`GET/ETag`照合だけでは不十分です。読み込み後、保存開始までの間に別トランザクションがDocumentを更新する可能性があります。SUI既存の`CanvasRevisionHeadRow.head_version`にはSQL CASがありますが、**ActionとWeb PUTを含む複数経路**で同じ事前条件を使い、競合を明確にする必要があります。
+
+`DatabaseDocumentContentStore.claim_existing_payload(tenant, doc_id, expected_payload_json)`を新設しました。テナント、Document、`lifecycle_state=active`、**読取り時の生の`payload_json`**を条件として、同じ値で`updated_at`をUPDATEします。これは実際にDB行の書込みロックを取る条件付きSQLであり、先行する別トランザクションで本文が更新済みなら更新行数が0になって拒否します。この「claim」は**本体の更新・Revision Head更新と同じDBトランザクションで保持**し、単独コミットしてはいけません。Revision Head CASは追加の独立した保護として維持します。
+
+- SUI Action：当初のETag照合後、ドメイン変換前に`claim_existing_payload`を要求。0件なら`409 revision_conflict`。クレーム後にCard移動・Document検証・Store保存・DBコミットを同じトランザクションで実施します。
+- SUI通常PUT：**If-Matchあり**の場合、`save(expected_payload_json=...)`経由で同じ条件付きclaimを必須とし、競合を既存409へ写像します。**単一テナント互換モードのIf-MatchなしPUTは従来どおりlast-write-wins**です。現時点のActionがすべての旧PUT経路をCAS化したという意味ではありません。
+- 検証：`test_document_action_cas.py`へ「前回の取得→別トランザクションによる保存→古い条件付き保存の拒否」「テナント違い」「アーカイブ」「no-op claimでRevisionが増えない」を追加。通常のAction SQLite結合テストへ、Actionの成功後に古いIf-MatchでPUTしても409となる負例を追加しました。
+- 独立したSQLite+SQLAlchemyの最小再現では、一致するUPDATEのrowcount=1、古い本文・archivedでは0件と確認しました。ただし、**正確なGitHub HEADに対するPython/SQLiteの正式実行、PostgreSQLの重複リクエスト負荷試験、ロック競合時の429/409/500分類は未確認**です。SQL競合に伴うDB例外をすべて409と宣言するものではありません。
+
+検証スクリプト`scripts/verify_native_action_boundary.sh`に、共通Store・既存Revision Head・追加CASテストを組み込みました。APIのデフォルトOFFとDraft維持は変更していません。
+
 ### 送信結果が不明な場合の回復と、旧Documentの無損失保証（2026-10-11）
 
 フロントの`createSuiCardMoveActionCommit`は、Action応答が通信断やHTTP 500などで失われた場合、サーバーで既に保存した可能性が残るため`commit_outcome_unknown`とします。認可拒否やRevision競合のように確実に拒否された4xxは区別して返しますが、**どちらも自動再送しません**。結果不明のActionを再実行する前に、既存SUIの`getAuthoritativeDocument`などを用いてサーバーの現在状態を照合する必要があります。HTTP 500をサーバーによるrollbackの証拠とみなしてはいけません。
