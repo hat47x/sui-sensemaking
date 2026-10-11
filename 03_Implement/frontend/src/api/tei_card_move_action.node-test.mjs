@@ -272,6 +272,49 @@ test("a denied Action fails without client-side fallback or retries", async () =
   assert.equal(f.state.applied, 0);
 });
 
+test("lost POST acknowledgment is outcome-unknown and never retried", async () => {
+  let attempts = 0;
+  const f = fixture({
+    dispatch: async () => { attempts++; throw Error("connection reset"); },
+  });
+  await assert.rejects(
+    f.run(f.origin, f.next, "a"),
+    isError("commit_outcome_unknown"),
+  );
+  assert.equal(attempts, 1);
+  assert.equal(f.state.reads, 0);
+  assert.equal(f.state.applied, 0);
+});
+
+test("nondefinitive HTTP 500 after a possible commit requires reconciliation", async () => {
+  let attempts = 0;
+  const f = fixture({
+    dispatch: async () => {
+      attempts++;
+      throw Object.assign(new Error("server failure"), {
+        status: 500, code: "execution_failed",
+      });
+    },
+  });
+  await assert.rejects(f.run(f.origin, f.next, "a"), isError("commit_outcome_unknown"));
+  assert.equal(attempts, 1);
+  assert.equal(f.state.applied, 0);
+});
+
+test("definite 409 conflict remains distinguishable from uncertain transport", async () => {
+  let attempts = 0;
+  const conflict = Object.assign(new Error("revision conflict"), {
+    status: 409, code: "revision_conflict",
+  });
+  const f = fixture({ dispatch: async () => { attempts++; throw conflict; } });
+  await assert.rejects(
+    f.run(f.origin, f.next, "a"),
+    (error) => error === conflict,
+  );
+  assert.equal(attempts, 1);
+  assert.equal(f.state.reads, 0);
+});
+
 test("server-acknowledged read failure is not mistaken for rollback", async () => {
   let attempts = 0;
   const f = fixture({
