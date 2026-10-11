@@ -222,6 +222,29 @@ def test_two_live_sqlite_transactions_keep_conditional_writes_serial(
         engine.dispose()
 
 
+@pytest.mark.parametrize(
+    ("sqlstate", "should_be_conflict"),
+    [
+        ("40001", True),  # serialization_failure
+        ("40P01", True),  # deadlock_detected
+        ("55P03", True),  # lock_not_available
+        ("08006", False),  # connection_failure
+        ("23505", False),  # unique_violation (not an OperationalError conflict)
+        ("42P01", False),  # undefined_table
+    ],
+)
+def test_postgresql_contention_sqlstates_do_not_require_live_postgres(
+    sqlstate: str, should_be_conflict: bool,
+) -> None:
+    """Check narrow driver-error classification; not a PG transaction test."""
+    class PgFailure(Exception):
+        def __init__(self, state: str) -> None:
+            self.sqlstate = state
+
+    db_error = OperationalError("UPDATE documents", {}, PgFailure(sqlstate))
+    assert is_document_write_contention(db_error) is should_be_conflict
+
+
 def test_document_contention_error_classification_is_narrow(tmp_path) -> None:
     """Do not disguise non-contention DB faults as a false 409 conflict."""
     engine = create_engine(f"sqlite:///{tmp_path / 'classification.sqlite3'}")
