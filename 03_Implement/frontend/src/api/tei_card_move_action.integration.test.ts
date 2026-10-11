@@ -4,7 +4,7 @@ import {
   commitSuiCardMoveAction,
   getAuthoritativeDocument,
 } from "./client";
-import { createSuiCardMoveActionCommit } from "./tei_card_move_action";
+import { createSuiCardMoveActionCommit, observeSuiCardMoveAfterUnknownCommit } from "./tei_card_move_action";
 
 const originalRevision = "a".repeat(64);
 const committedRevision = "b".repeat(64);
@@ -138,4 +138,49 @@ describe("SUI Action ports with actual authenticated client transport", () => {
       });
     expect(applied).toBe(0);
   });
+
+  it("recovers a lost POST acknowledgment with one authenticated GET and no automatic retry", async () => {
+    const initial = source();
+    const proposed = moved(initial);
+    const responseDocument = structuredClone(proposed);
+    responseDocument.updatedAt = "2026-10-10T12:00:00Z";
+    let applied = 0;
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      // The server may have committed before the response was lost.
+      .mockRejectedValueOnce(new TypeError("connection reset"))
+      .mockResolvedValueOnce(new Response(JSON.stringify(responseDocument), {
+        status: 200, headers: {
+          "ETag": `"${committedRevision}"`,
+          "Content-Type": "application/json",
+        },
+      }));
+    const read = async (documentId: string) => {
+      const loaded = await getAuthoritativeDocument(documentId, { tenantSessionContext });
+      return { document: loaded.document, etag: loaded.etag };
+    };
+    const origin = { document: initial, etag: originalRevision };
+    const run = createSuiCardMoveActionCommit({
+      dispatch: (intent) => commitSuiCardMoveAction(intent, { tenantSessionContext }),
+      readDocument: read,
+      isCurrent: () => true,
+      applyConfirmed: () => { applied++; return true; },
+    });
+
+    await expect(run(origin, proposed, "a"))
+      .rejects.toMatchObject({ code: "commit_outcome_unknown", committedRevision: null });
+    const observed = await observeSuiCardMoveAfterUnknownCommit(
+      origin, proposed, "a", read,
+    );
+    expect(observed.status).toBe("converged");
+    expect(applied).toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/docs/doc-a/action-commit");
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/docs/doc-a");
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Sui-Sensemaking-Tenant-Session-Version": "session-v1" },
+    });
+  });
+
 });
