@@ -1080,6 +1080,13 @@ def put_document(
             updated_at=document.updatedAt.isoformat(),
             content=ContentBlob.from_text(payload_json),
             created_by=access_request.auth.user_id,
+            # Conditional PUT shares the same atomic old-content claim as
+            # native Action. The regular single-tenant unconditional PUT
+            # keeps its explicitly documented last-write-wins semantics.
+            expected_payload_json=(
+                doc_row.payload_json if if_match is not None and doc_row is not None
+                else None
+            ),
         )
         db.commit()
     except (IntegrityError, RevisionHeadConflict) as error:
@@ -1314,6 +1321,16 @@ def _commit_sui_card_move_action(
     if stored.row.lifecycle_state == "archived":
         raise _action_error(status_code=423, code="action_denied")
     if _compute_etag(stored.row.payload_json) != action.expectedRevision:
+        raise _action_error(status_code=409, code="revision_conflict")
+    # The preliminary ETag comparison above is not a database lock.
+    # Acquire a conditional row write-lock before domain computation, in
+    # the *same* transaction as the later revision materialization. A
+    # concurrent conditional PUT / Action must not commit against this stale
+    # payload after an intervening writer, even if it passed a prior read.
+    if not store.claim_existing_payload(
+        tenant=tenant, doc_id=doc_id, expected_payload_json=stored.row.payload_json,
+    ):
+        db.rollback()
         raise _action_error(status_code=409, code="revision_conflict")
 
     try:
