@@ -67,6 +67,8 @@ Actionが行claim後に不正Card・破損Document・レビュー帰属の差し
 
 `frontend/src/api/tei_card_move_action.ts`に`observeSuiCardMoveAfterUnknownCommit`を追加。送信応答が不明な場合、**認証付きの新しいDocument取得のみ**を行い、`unchanged`（取得元と同じ）、`converged`（結果候補と一致）、`diverged`（別の状態）、`unresolved`（取得失敗・不正）を返します。`converged`は「Documentが候補と同じ状態である」という観察であり、**この利用者のActionが実行されたことの証明ではありません**。他の編集者が同じ状態にした可能性を排除できないため、監査帰属や成功メッセージを勝手に確定しません。履歴・Dirty・ETagを変更せず、POSTを自動再送しません。
 
+また、`frontend/src/api/tei_card_move_action.integration.test.ts`へ、HTTP POSTが送信後に通信断となった場合、SUIの実Client APIを使った権限付きGETで`converged`を観察し、POSTが1回・GETが1回・自動再送とUI状態反映が0回であることを確認するVitestケースを追加しました（**未実行**）。
+
 復旧用の負例5件を含め、Actionアダプター**35/35ケース・158アサーション**がGitHubソースから型注釈を取り除いたV8補助実行で成功しました。**正式Node test、TypeScriptコンパイル、Vitest、React E2Eの結果ではありません**。復旧結果をUIへ適用する責任は、SUI Reactの現在のSubject/Tenant/Document/ETag/Undo所有者に残しています。
 
 ### Actionと条件付きPUTで共通する原子的な本文照合（2026-10-11追補）
