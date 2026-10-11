@@ -7,11 +7,15 @@ SQLite/PostgreSQL or an actual TEI Host -> SUI E2E scenario.
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from sui_sensemaking_api.content_store import ContentBlob
-from sui_sensemaking_api.database_content_store import DatabaseDocumentContentStore
+from sui_sensemaking_api.database_content_store import (
+    DatabaseDocumentContentStore,
+    is_document_write_contention,
+)
 from sui_sensemaking_api.generation_repository import RevisionHeadConflict
 from sui_sensemaking_api.models import Base, CanvasRevisionHeadRow, TenantRow
 from sui_sensemaking_api.tenant_context import TenantContext
@@ -141,3 +145,94 @@ def test_document_claim_is_tenant_scoped_archived_safe_and_nonmutating(tmp_path)
     finally:
         Base.metadata.drop_all(engine)
         engine.dispose()
+
+
+def test_two_live_sqlite_transactions_keep_conditional_writes_serial(
+    tmp_path,
+) -> None:
+    """Demonstrate an actual overlapping DB write lock, not only stale steps."""
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'claim-contention.sqlite3'}",
+        connect_args={"timeout": 0.075},
+    )
+    factory = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    Base.metadata.create_all(engine)
+    tenant = _tenant("tenant-a")
+    stamp = "2026-10-11T00:00:00Z"
+    first_text = '{"version":1,"seq":1}'
+    second_text = '{"version":1,"seq":2}'
+    try:
+        with factory() as db:
+            db.add(TenantRow(
+                id="tenant-a", display_name="A", lifecycle_state="active",
+                created_at=stamp, updated_at=stamp,
+            ))
+            db.commit()
+            DatabaseDocumentContentStore(db).save(
+                tenant=tenant, doc_id="doc", version=1, updated_at=stamp,
+                content=ContentBlob.from_text(first_text),
+            )
+            db.commit()
+
+        with factory() as first_db, factory() as other_db:
+            owner = DatabaseDocumentContentStore(first_db)
+            challenger = DatabaseDocumentContentStore(other_db)
+            snapshot = owner.load(tenant=tenant, doc_id="doc")
+            other_snapshot = challenger.load(tenant=tenant, doc_id="doc")
+            assert snapshot is not None and other_snapshot is not None
+            assert snapshot.row.payload_json == other_snapshot.row.payload_json
+
+            # The first writer's no-op UPDATE claims the SQL row without
+            # committing; the other distinct connection now has overlapping
+            # access and must not claim or mutate the same Document.
+            assert owner.claim_existing_payload(
+                tenant=tenant, doc_id="doc", expected_payload_json=first_text,
+            )
+            with pytest.raises(OperationalError) as blocked:
+                challenger.claim_existing_payload(
+                    tenant=tenant, doc_id="doc", expected_payload_json=first_text,
+                )
+            assert is_document_write_contention(blocked.value)
+            other_db.rollback()
+
+            owner.save(
+                tenant=tenant, doc_id="doc", version=1,
+                updated_at="2026-10-11T00:01:00Z",
+                content=ContentBlob.from_text(second_text),
+                expected_payload_json=first_text,
+            )
+            first_db.commit()
+
+            # The previous transaction's lock is gone, but its old
+            # condition is no longer true. Never overwrite the new revision.
+            assert not challenger.claim_existing_payload(
+                tenant=tenant, doc_id="doc", expected_payload_json=first_text,
+            )
+            other_db.rollback()
+
+        with factory() as db:
+            saved = DatabaseDocumentContentStore(db).load(
+                tenant=tenant, doc_id="doc",
+            )
+            assert saved is not None and saved.content.text == second_text
+            head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc", "main"))
+            assert head is not None and head.head_version == 2
+    finally:
+        Base.metadata.drop_all(engine)
+        engine.dispose()
+
+
+def test_document_contention_error_classification_is_narrow(tmp_path) -> None:
+    """Do not disguise non-contention DB faults as a false 409 conflict."""
+    engine = create_engine(f"sqlite:///{tmp_path / 'classification.sqlite3'}")
+    try:
+        with factory_session(engine) as db:
+            with pytest.raises(OperationalError) as failed:
+                db.execute(text("SELECT * FROM nonexistent_example_table"))
+            assert not is_document_write_contention(failed.value)
+    finally:
+        engine.dispose()
+
+
+def factory_session(engine):
+    return sessionmaker(bind=engine, autocommit=False, autoflush=False)()
