@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from sui_sensemaking_api.content_store import ContentBlob
@@ -1448,6 +1449,49 @@ def test_sui_action_preserves_review_by_another_authorized_writer(
     assert doc["critiqueInputs"] == created.json()["critiqueInputs"]
     assert doc["reproposalDiffs"] == created.json()["reproposalDiffs"]
     assert loaded.headers["ETag"] == f'"{moved.json()["revision"]}"'
+
+
+def test_native_action_and_conditional_put_map_sqlite_lock_to_conflict(
+    sqlite_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Known lock errors are 409, while no content is overwritten."""
+    monkeypatch.setattr(app.state, "sui_native_action_v1_enabled", True, raising=False)
+    doc_id = "action-and-put-contention"
+    saved = _sample_payload(doc_id)
+    created = sqlite_client.put(f"/docs/{doc_id}", json=saved)
+    assert created.status_code == 200
+    revision = created.headers["ETag"].strip('"')
+
+    class SimulatedSqliteBusy(Exception):
+        sqlite_errorname = "SQLITE_BUSY"
+
+    def busy_claim(self, *, tenant, doc_id, expected_payload_json):
+        raise OperationalError("UPDATE documents", {}, SimulatedSqliteBusy())
+
+    monkeypatch.setattr(DatabaseDocumentContentStore, "claim_existing_payload", busy_claim)
+    result = sqlite_client.post(
+        f"/docs/{doc_id}/action-commit",
+        headers={"X-TEI-Action": "commit"},
+        json={
+            "protocolVersion": "1",
+            "applicationID": "sui",
+            "resourceID": doc_id,
+            "actionID": "sui.move",
+            "expectedRevision": revision,
+            "payload": {"cardId": "card-1", "x": 80.0, "y": 60.0},
+        },
+    )
+    assert result.status_code == 409, result.text
+    assert result.json() == {"protocolVersion": "1", "error": "revision_conflict"}
+
+    new_payload = {**saved, "updatedAt": "2026-10-11T05:00:00Z"}
+    conditional = sqlite_client.put(
+        f"/docs/{doc_id}",
+        json=new_payload,
+        headers={"If-Match": f'"{revision}"'},
+    )
+    assert conditional.status_code == 409, conditional.text
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
 
 
 def test_native_action_domain_rejection_releases_claim_and_keeps_revision(
