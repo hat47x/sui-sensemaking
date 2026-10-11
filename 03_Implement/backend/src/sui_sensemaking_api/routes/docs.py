@@ -1134,6 +1134,38 @@ def _invalid_action_constant(value: str) -> None:
     raise ValueError("nonstandard JSON number")
 
 
+def _action_preserves_stored_fields(raw: object, parsed: object) -> bool:
+    """Refuse native mutations that would silently discard stored fields.
+
+    A Pydantic model may ignore unknown extension keys on an old stored
+    Document; a read-only load is acceptable, but a Card-move re-save would
+    erase those keys permanently. Check field *presence*, not exact values:
+    model defaults, timestamp parsing and normalized numeric values are safe,
+    whereas missing non-null fields or shortened arrays are not.
+
+    Conservative limitation: a legacy field migrated to a new path (e.g.
+    geometry.polygon -> geometry.points) also fails closed until a distinct
+    explicit migration normalizes the Document.
+    """
+    pending: list[tuple[object, object]] = [(raw, parsed)]
+    while pending:
+        original, normalized = pending.pop()
+        if isinstance(original, dict):
+            if not isinstance(normalized, dict):
+                return False
+            for key, value in original.items():
+                if value is None:
+                    continue
+                if key not in normalized or normalized[key] is None:
+                    return False
+                pending.append((value, normalized[key]))
+        elif isinstance(original, list):
+            if not isinstance(normalized, list) or len(original) != len(normalized):
+                return False
+            pending.extend(zip(original, normalized))
+    return True
+
+
 def _native_action_same_origin(request: Request) -> bool:
     """Conform to the TEI v1 transport's explicit-origin policy.
 
@@ -1285,13 +1317,19 @@ def _commit_sui_card_move_action(
         raise _action_error(status_code=409, code="revision_conflict")
 
     try:
-        original = _validate_document_payload_with_a1_contract(
-            json.loads(stored.content.text)
-        )
-    except HTTPException as error:
-        # A stored snapshot that cannot pass the current SUI Document contract
-        # is a server state failure, not an authorization refusal or a
-        # malformed client move intent. Never try to "repair" it via Action.
+        raw_document = json.loads(stored.content.text)
+        original = _validate_document_payload_with_a1_contract(raw_document)
+        # The ordinary Pydantic validation path may remove unknown legacy
+        # fields. Refuse to write back a silently truncated stored resource.
+        # SUI's explicit migration pipeline, not a native Action, owns
+        # schema upgrades and lossless normalization.
+        if not _action_preserves_stored_fields(
+            raw_document, original.model_dump(mode="json", exclude_none=True)
+        ):
+            raise _action_error(status_code=500, code="execution_failed")
+    except (HTTPException, ValueError, TypeError) as error:
+        # Broken stored state must not become a user payload error, nor
+        # trigger a best-effort repair that loses existing user information.
         raise _action_error(status_code=500, code="execution_failed") from error
     try:
         updated = apply_card_move(
