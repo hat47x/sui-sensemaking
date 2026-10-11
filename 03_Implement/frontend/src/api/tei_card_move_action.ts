@@ -151,6 +151,11 @@ function isPureCardMove(before: DocumentV1, after: DocumentV1, cardId: string): 
     const initial = islandById.get(island.id);
     if (!initial || !Array.isArray(island.cardIds) ||
         island.cardIds.some((id) => typeof id !== "string")) return false;
+    // A move is not allowed to manufacture duplicate containment. If the
+    // UI proposes a changed destination the server will keep exactly one
+    // containment; otherwise the POST may succeed but readback will diverge.
+    const count = island.cardIds.filter((id) => id === cardId).length;
+    if (count > 1) return false;
     const withoutCard = island.cardIds.filter((id) => id !== cardId);
     const initialWithoutCard = initial.cardIds.filter((id) => id !== cardId);
     if (JSON.stringify(withoutCard) !== JSON.stringify(initialWithoutCard)) return false;
@@ -203,6 +208,16 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     const originalMembership = membership(origin.document, cardId);
     const nextMembership = membership(nextDocument, cardId);
     if (!originalMembership || !nextMembership) throw new SuiCardMoveActionError("invalid_move_target");
+    if (JSON.stringify(originalMembership) !== JSON.stringify(nextMembership)) {
+      // The SUI server only changes containment when it selects exactly one
+      // *new* destination Island. It cannot remove all containment without
+      // joining a new Island, and does not remove old ownership if the target
+      // was already a member. Avoid an irreversible partial remote commit.
+      if (nextMembership.length !== 1 ||
+          originalMembership.includes(nextMembership[0])) {
+        throw new SuiCardMoveActionError("invalid_move_target");
+      }
+    }
     if (before.x === after.x && before.y === after.y) {
       if (JSON.stringify(originalMembership) !== JSON.stringify(nextMembership)) {
         throw new SuiCardMoveActionError("invalid_move_target");
