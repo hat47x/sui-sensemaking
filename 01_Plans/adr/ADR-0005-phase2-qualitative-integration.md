@@ -44,9 +44,9 @@
 
 - 状態サマリ: **2A/2B/2CすべてDone（実装 + テスト確認ベース）**
 - 根拠メモは次のとおりです。
-  - 2A（階層 / collapse）: backend roundtrip testとfrontend collapse visibility testを確認。
+  - 2A（階層 / collapse）: backend roundtrip testとフロントエンド collapse visibility testを確認。
   - 2B（similar-card merge）: merge suggestions UI・domain test・API routeが存在し、テスト通過。
-  - 2C（polygon）: polygon shape/geometryの保存復元・検証ロジックをbackend/frontend双方で確認。
+  - 2C（polygon）: polygon shape/geometryの保存復元・検証ロジックをバックエンド/フロントエンド双方で確認。
 
 | ワークストリーム | 進捗 | 補足 |
 |---|---|---|

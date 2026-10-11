@@ -111,7 +111,7 @@ SaaSの認証では、有効期間の短いアクセストークンを、ブラ�
 
 ![SafeModeと共有前の確認画面](assets/screenshots/share-export-safe-mode.png)
 
-> 起動方法による違い: 以下の `export SUI_*` の例は、backendを直接起動したときの設定です。標準のDocker Composeが `api` コンテナへ渡すのは `SUI_LLM_PROVIDER` だけで、`SUI_LOCAL_LLM_BASE_URL` などの接続情報は渡しません。どのキーが渡されるかは、[runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings) の `Delivery surface` の列を参照してください。
+> 起動方法による違い: 以下の `export SUI_*` の例は、バックエンドを直接起動したときの設定です。標準のDocker Composeが `api` コンテナへ渡すのは `SUI_LLM_PROVIDER` だけで、`SUI_LOCAL_LLM_BASE_URL` などの接続情報は渡しません。どのキーが渡されるかは、[runtime_parameter_registry.md](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings) の `Delivery surface` の列を参照してください。
 
 ## LLMプロバイダの安全上の境界
 

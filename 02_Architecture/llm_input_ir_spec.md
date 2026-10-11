@@ -60,20 +60,20 @@
 
 1. `previewConfirmed != true` の `ContextQuery` から、IRの生成を始めてはならない（APIは `422 preview_required` を返す前提）。
 2. `queryCanonicalHash` と `bundleHash` は、IRのメタデータに監査キーとして保持できなければならない。
-3. IRの生成パイプラインは、同じ正準queryに対する `bundleHash` の不一致を検知したら、`nondeterministic_bundle` として失敗扱いにする。
+3. IRの生成パイプラインは、同じ正準クエリに対する `bundleHash` の不一致を検知したら、`nondeterministic_bundle` として失敗扱いにする。
 4. CE2/CE4との連携では、バックエンドが未実装のときも、モックの `ContextQuery/ContextBundle` 契約で検証を続け、CE1の完了を待つことを禁止する。
 5. 実行の順序は `Plan -> Execute -> Verify -> Proceed` に固定し、`Proceed` では、CE2/CE4への参照専用の引き継ぎだけを許可する。
 6. Verifyが失敗したときの自己修復は最大3回までとし、3回を超えたら、処理を続けずに停止する（安全側で拒否する）。
 7. `ContextQuery/ContextBundle` は、CE1 v1の最小I/F以外の未定義キーを受理してはならない（拡張は、v2契約の改訂でのみ許可する）。
 8. 契約IDの衝突（`CE1-CTXQ-IF` / `CE1-CTXB-IF` / `CE1-HASH-DET-IF` / `CE1-PREVIEW-GATE-IF`）、またはsafeModeの後退を検知したら、ただちに停止する。
-9. CE2の提案連携では、`sourceBundleHash/status/reviewState` を必須の監査キーとして扱い、proposal-onlyの境界（auto-applyの禁止）を破ってはならない。
+9. CE2の提案連携では、`sourceBundleHash/status/reviewState` を必須の監査キーとして扱い、提案のみの境界（auto-applyの禁止）を破ってはならない。
 
 ### CE1 Contract Lock Summary（Stream B）
 
 - 署名（識別）の固定: `CE1-CTXQ-IF` / `CE1-CTXB-IF` / `CE1-HASH-DET-IF` / `CE1-PREVIEW-GATE-IF`
 - 型の固定: `ContextQueryV1` / `ContextBundleV1` のv1必須キー集合を、closed-worldとして固定
 - エラーの固定: `422 preview_required` / `400 unknown_contract_key` / `409 nondeterministic_bundle`
-- mock-firstの固定: `stubDatasetId=A2-minimal-v1` で検証し、実DB・実LLM・workerへの依存を禁止
+- mock-firstの固定: `stubDatasetId=A2-minimal-v1` で検証し、実DB・実LLM・ワーカーへの依存を禁止
 - Verify自己修復の上限: 3回（超過したら `held` で停止）
 
 ### CE1 A2 Stub Contract Profile（検証用）
@@ -105,14 +105,14 @@ CE1のContract作業では、次の順序を固定し、逆順にすることも
 Phase 5 Verifyは、最低限、次の機械判定を満たすこと。
 
 - `previewConfirmed=false -> 422 preview_required`
-- 同じ正準queryを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致
+- 同じ正準クエリを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致
 - 未定義のキーは、常に `400 unknown_contract_key`
 
 Phase 6 Proceedでは、CE2/CE4への参照専用の連携だけを許可し、実装の変更の要求を禁止する。CE2/CE4は、モック契約で依存を切り離したまま進め、CE1の完了を待つことを禁止する。
 
 A2の契約テストでは、次を機械判定する。
 
-1. 同じ正準queryを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致。
+1. 同じ正準クエリを3回実行して、`queryCanonicalHash` と `bundleHash` が3/3一致。
 2. `previewConfirmed=false` は、常に `422 preview_required`。
 3. 未定義のキーは、常に `400 unknown_contract_key`。
 4. CE2連携のキー `sourceBundleHash === bundleHash` を比較できる。
@@ -126,7 +126,7 @@ A2の契約テストでは、次を機械判定する。
 - 本仕様でのCE1の責務は **契約の固定だけ** とし、実装の詳細（handler/UI/DB/worker）は追加しない。
 - `ContextQueryV1` / `ContextBundleV1` は、closed-worldのv1を維持し、未定義のキーは常に `400 unknown_contract_key` とする。
 - プレビューのゲートは `previewConfirmed=false -> 422 preview_required` に固定し、IRの生成を始めない。
-- hashの決定性は、同じ正準queryで `queryCanonicalHash` / `bundleHash` が3/3一致することを要件とし、不一致は `409 nondeterministic_bundle` とする。
+- hashの決定性は、同じ正準クエリで `queryCanonicalHash` / `bundleHash` が3/3一致することを要件とし、不一致は `409 nondeterministic_bundle` とする。
 - CE2/CE4は、mock-firstで依存の切り離しを維持し、CE1の実装を待つことを禁止する（契約の引き渡しだけで前進する）。
 
 ## 2. KJ入力の正規化（固定仕様）
@@ -856,7 +856,7 @@ A2の契約テストでは、次を機械判定する。
 
 ### 9.1 Context
 
-- 本章は、ADR-0028 CE-1の「同じqueryなら同じbundleHash」を機械判定できるようにするため、LLM入力IRの前段の契約を固定する。
+- 本章は、ADR-0028 CE-1の「同じクエリなら同じbundleHash」を機械判定できるようにするため、LLM入力IRの前段の契約を固定する。
 - 本章の契約は、モック実装にも同じように適用し、バックエンドとフロントエンドへの依存を切り離す。
 
 ### 9.2 Decision
@@ -905,7 +905,7 @@ A2の契約テストでは、次を機械判定する。
 - CE-2以降は、`sourceBundleHash` に `ContextBundle.bundleHash` を必ず連携する。
 - `previewConfirmed=false` は、バンドルを生成する前に `422 preview_required` とする（Query Previewのバイパスを禁止する）。
 - 未定義のキーを含むリクエストは、`400 unknown_contract_key` として拒否する（CE1 v1 closed-world）。
-- 同じ正準queryで `bundleHash` が不一致となる場合は、`409 nondeterministic_bundle` として安全側で拒否する。
+- 同じ正準クエリで `bundleHash` が不一致となる場合は、`409 nondeterministic_bundle` として安全側で拒否する。
 - `safeModePolicy=strict` かつ `reviewFilter=reviewedOnly` では、未レビューの本文を入力IRへ含めない。
 - 機械判定の式: `canonical(queryA)==canonical(queryB) && hashA==hashB` が真であること。
 - CE4の監査では、`queryId` / `queryCanonicalHash` / `bundleHash` / `excludedReason` の4キーを欠落させてはならない。
@@ -920,7 +920,7 @@ A2の契約テストでは、次を機械判定する。
 - `autoResolve=false` は、AI、worker、APIが、自動的に解決済みへ変更してはならないことを示す。
 - `safeModePolicy=strict` では、未レビューの本文を `selected` から除外する一方、本文を含まない根拠・反対意見・矛盾の存在は、制約として保持できる。
 
-これらは、`ContextBundleV1` のトップレベルのキーを増やすものではなく、固定スタブの意味論を検証するための値である。永続データの状態語彙やレビュー権限を変更する場合は、別のissue/ADRで扱う。
+これらは、`ContextBundleV1` のトップレベルのキーを増やすものではなく、固定スタブの意味論を検証するための値である。永続データの状態語彙やレビュー権限を変更する場合は、別の課題/ADRで扱う。
 
 ---
 
@@ -934,11 +934,11 @@ A2の契約テストでは、次を機械判定する。
   - `previewConfirmed=true` を必須とする
   - 決定論的な `queryCanonicalHash` / `bundleHash`
   - safeModeの後退の禁止
-  - proposal-onlyの境界（直接書き込みとauto-applyの禁止）
+  - 提案のみの境界（直接書き込みとauto-applyの禁止）
 
 ### Consequences
 - Verifyで契約のドリフトを検知した場合は、IRの生成を停止し、自己修復は最大3回とする。
-- 下流はスナップショットの参照だけを可とし、契約の更新は、CE0/A1のissue側でのみ実施する。
+- 下流はスナップショットの参照だけを可とし、契約の更新は、CE0/A1の課題側でのみ実施する。
 
 ### スナップショットのメタデータ
 - Snapshot ID: `CE0-HIL-CONTRACT-SNAPSHOT-2026-04-16-v1`
@@ -961,14 +961,14 @@ A2の契約テストでは、次を機械判定する。
 - `ContextQueryV1` / `ContextBundleV1` の必須キーと意味論は、v1の凍結を維持する。
 - IR生成の前提のゲートとして、`previewConfirmed=true` を必須とし、違反は `422 preview_required` とする。
 - 未知のキーは `400 unknown_contract_key`、hashの非決定性は `409 nondeterministic_bundle` として、安全側で拒否する状態を維持する。
-- 同じ正準queryを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致することの検証を、mock-firstの基準とする。
+- 同じ正準クエリを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致することの検証を、mock-firstの基準とする。
 
 ## CE1 contract-freeze note（2026-05-07 / Stream B）
 
 - 本仕様は、CE1の `ContextQueryV1` / `ContextBundleV1` を、**contract-only / mock-first** の境界として参照する。
 - IRの生成は、Query Previewの完了後にだけ許可し、`previewConfirmed=false` は `422 preview_required` で停止する。
 - v1はclosed-worldとし、未定義のキーは `400 unknown_contract_key` とする。
-- 同じ正準queryに対して、`queryCanonicalHash` / `bundleHash` が一致しない場合は、`409 nondeterministic_bundle` として安全側で拒否する。
+- 同じ正準クエリに対して、`queryCanonicalHash` / `bundleHash` が一致しない場合は、`409 nondeterministic_bundle` として安全側で拒否する。
 - 本節は実装方式を拘束せず、契約の語彙と検証条件だけを固定する。
 
 ## CE0 Contract Matrix Freeze（CTX / SAFEMODE / REVIEW）
@@ -997,7 +997,7 @@ A2の契約テストでは、次を機械判定する。
 
 - IRを接続するときも、CE1 v1 closed-worldを維持し、未定義のキーの受理を禁止する。
 - 失敗の語彙は、`preview_required` / `unknown_contract_key` / `nondeterministic_bundle` の3種に固定する。
-- A2では、`stubDatasetId=A2-minimal-v1` を唯一の検証データセットとし、実DB・実LLM・workerの経路を無効にする。
+- A2では、`stubDatasetId=A2-minimal-v1` を唯一の検証データセットとし、実DB・実LLM・ワーカーの経路を無効にする。
 - Verifyでは、`queryCanonicalHash` / `bundleHash` の3/3一致を必須とし、自己修復の上限は3回とする。
 - Proceedは、CE2/CE4への読み取り専用の引き渡しだけを許可する。
 
@@ -1005,7 +1005,7 @@ A2の契約テストでは、次を機械判定する。
 
 - Phaseを開始するたびに、`issue-CE1-context-query-bundle-foundation.md` / `schemas.md` / 本書を再度読み込み、契約のドリフトを禁止する。
 - `ContextQueryV1` / `ContextBundleV1` は、v1 closed-worldのまま固定し、未定義のキーを受理しない（`400 unknown_contract_key`）。
-- 往復の検証は、`stubDatasetId=A2-minimal-v1` に固定して行い、同じ正準queryを3回実行して、`queryCanonicalHash` と `bundleHash` の3/3一致を必須とする。
+- 往復の検証は、`stubDatasetId=A2-minimal-v1` に固定して行い、同じ正準クエリを3回実行して、`queryCanonicalHash` と `bundleHash` の3/3一致を必須とする。
 - `previewConfirmed=false` は、IR生成を開始する前に、必ず `422 preview_required` として安全側で拒否する。
 - CE2/CE4への引き渡しは、読み取り専用とし（`sourceBundleHash === bundleHash` を検証できる最小のキーだけ）、CE1側で実装への依存を追加することを禁止する。
 
@@ -1025,7 +1025,7 @@ CE2/CE4の進行を、CE1の実装の完了待ちにしないため、IRの境�
    - Query/Bundleの正準化の結果（`queryCanonicalHash` / `bundleHash`）を変化させる切り詰めを、禁止する。
 3. **フォールバックの固定（安全側で拒否）**
    - `previewConfirmed!=true` は、`422 preview_required` で即座に失敗とする。
-   - 正準queryが同値なのにhashが不一致の場合は、`409 nondeterministic_bundle` とする。
+   - 正準クエリが同値なのにhashが不一致の場合は、`409 nondeterministic_bundle` とする。
 4. **モック/契約テストの固定**
    - `stubDatasetId=A2-minimal-v1` を、CE1検証の唯一のプロファイルとして固定する。
 
@@ -1038,7 +1038,7 @@ CE2/CE4の進行を、CE1の実装の完了待ちにしないため、IRの境�
 ## Stream B CE1 contract freeze addendum（2026-05-20 / Context-Decision-Consequences）
 
 ### Context
-CE1 v1のqueryとバンドルの契約が揺れると、IR生成の境界で、CE2/CE4の監査の再現性が崩れる。
+CE1 v1のクエリとバンドルの契約が揺れると、IR生成の境界で、CE2/CE4の監査の再現性が崩れる。
 
 ### Decision
 - `ContextQueryV1` / `ContextBundleV1` は、closed-worldのv1として維持する。

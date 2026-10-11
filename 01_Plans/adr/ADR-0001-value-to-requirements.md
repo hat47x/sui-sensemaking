@@ -169,7 +169,7 @@
   - `DATA-09-2`: ラウンド段階と反復番号、親子分岐、引継ぎ、現場への問い、カード系譜を保持し、過去成果を後続編集で変更しない。
   - `DATA-09-3`: 共有・移行用成果物は参照を自己完結させ、SafeModeのマスクを元成果の書換えではなく派生bundleとして扱う。
 - AI
-  - `AI-09-1`: AIは段階別の問い、引継ぎ、差分、反証をproposal-onlyで提示する。
+  - `AI-09-1`: AIは段階別の問い、引継ぎ、差分、反証を提案のみで提示する。
   - `AI-09-2`: AIはラウンド移行、過去成果、系譜、レビュー状態、唯一の仮説を自動確定しない。
   - `AI-09-3`: `SUI_LLM_PROVIDER=none` で作成、引継ぎ、停止・再開、分岐、比較を完了できる。
 
@@ -188,7 +188,7 @@
   - `DATA-10-3`: AIが自律的に複数段階を進めても、元Evidence、保留、反証、棄却した主要代替案への参照を失わない。
   - `DATA-10-4`: Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionのsemantic kindを成熟度として扱わず、kindが変わる意味形成は新artifact + provenance relationとして表現する。
   - `DATA-10-5`: review、authority、lifecycle、visibility / access、provenanceをsemantic kindとは別軸に保持でき、Reviewed / Accepted / Consensus / Publicを同一状態へ畳み込まない。
-  - `DATA-10-6`: Review / authority transition / Decisionは対象artifactのlogical identityだけでなく、対象revisionを特定可能にする。
+  - `DATA-10-6`: Review / authority transition / Decisionは対象artifactのlogical 識別情報だけでなく、対象revisionを特定可能にする。
 - AI
   - `AI-10-1`: AIは権限境界の内側で、Observation → Relation → Hypothesis → Structure → Synthesisの複数段階を自律実行できる。
   - `AI-10-2`: AI内部の作業判断を、人間による理解・レビュー・承認と同一視しない。
@@ -196,7 +196,7 @@
   - `AI-10-4`: KJ法に着想を得た手順以外の認知方法を利用する場合でも、Evidence保全、可逆性、保留、来歴、権限境界を維持する。
   - `AI-10-5`: AI内部のprivate chain-of-thought保存を要求せず、検証に必要な入力範囲、プロバイダ / Method、派生成果物、主要根拠・反証・代替案を外在化する。
 
-長期的な役割分担と現行SafeMode / proposal-onlyの境界は
+長期的な役割分担と現行SafeMode / 提案のみの境界は
 `01_Plans/adr/ADR-0084-sensemaking-lifecycle-and-authority-boundary.md` を正本とする。
 意味成果物、Review、Authority、Lifecycleの直交関係は
 `01_Plans/adr/ADR-0085-sensemaking-semantic-artifacts-and-authority-axes.md` と

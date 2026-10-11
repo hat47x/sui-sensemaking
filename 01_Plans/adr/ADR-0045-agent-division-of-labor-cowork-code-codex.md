@@ -26,7 +26,7 @@
 | 領域 | 主担当 | 補助 | 根拠 |
 | --- | --- | --- | --- |
 | 企画・価値判断・上流(00/01)整理・合議 | Cowork | Claude Code | 対話的合意形成と思想の言語化が強み |
-| ADR/issue 起票・多ファイル横断計画 | Claude Code | Cowork | リポジトリ全体の読解と文書整合が強み |
+| ADR/課題起票・多ファイル横断計画 | Claude Code | Cowork | リポジトリ全体の読解と文書整合が強み |
 | 実装（frontend/backend）の高速反復 | Codex | Claude Code | デスクトップ版の反復速度 |
 | テスト駆動の検証・回帰固定・git規律 | Claude Code | Codex | tsc/vitest/pytest と差分管理の確実性 |
 | 実機アドホック検証（Chrome で画面確認） | Codex | Claude Code(MCP) | Codex の Chrome 操作。Claude Code は拡張導入時に補助 |
@@ -40,7 +40,7 @@
 
 - **CP-1ブランチ専有**: 各作業は専用フィーチャーブランチで行い、`main` で直接作業しない。他エージェントの作業中ブランチに `checkout`/`reset`/`rebase` しない。
 - **CP-2こまめなpush**: 節目ごとに `git commit` し、即 `git push -u origin <branch>` でリモート保全する（ローカル消失に備える）。未コミット変更を長時間放置しない。
-- **CP-3 ADR/issue採番の衝突回避**: 新規ADR/issue採番前に `git fetch` し、`origin/main` と全リモートブランチの最大番号＋1を採る。採番直後にプレースホルダをコミット＆pushして番号を確保する。
+- **CP-3 ADR/課題採番の衝突回避**: 新規ADR/課題採番前に `git fetch` し、`origin/main` と全リモートブランチの最大番号＋1を採る。採番直後にプレースホルダをコミット＆pushして番号を確保する。
 - **CP-4復旧手順**: ブランチが消えてもreflogでコミットSHAは生存する。`git cat-file -t <sha>` で確認し、`git branch <name> <sha>` で復活、または現行main上へcherry-pickで再配置する。
 - **CP-5 main反映はPR経由**: `main` への直接pushは避け、フィーチャーブランチ → PRでマージする。
 - **CP-6範囲の明示**: タスク開始時にScope（Docs/Frontend/Backend/Schema/どのブランチ）を宣言し、他エージェントの主担当領域への割り込みは事前合意または別ブランチで行う。

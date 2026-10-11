@@ -37,7 +37,7 @@ sui-sensemakingのUI操作モデルとして、次を確定方針とする（仕
 ### Non-goals
 
 - 本ADRでは実装方式、コンポーネント分割、最終UIデザインを確定しない。
-- 本ADRではfrontend/backend/deployのコード変更を行わない。
+- 本ADRではフロントエンド/backend/deployのコード変更を行わない。
 - 本ADRではCE/HIL/ENV/PRODUCT-VALUE/DATAストリーム要件を再定義しない。
 
 ## Three-Element Verification（ADR-0067 遡及適用）
@@ -86,7 +86,7 @@ sui-sensemakingのUI操作モデルとして、次を確定方針とする（仕
 
 ### Decision
 
-- 本ADRは 仕様固定済み（Accepted） とし、実装は別PRでのみ実施する。
+- 本ADRは仕様固定済み（Accepted） とし、実装は別PRでのみ実施する。
 - 実装タスクは次の固定順で直列化する。
   1. `UX-OPERABILITY-01`: 動線レビュー
   2. `UX-OPERABILITY-02`: キーボード到達性（カード選択）

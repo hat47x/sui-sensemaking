@@ -19,28 +19,28 @@
 
 | サービス | 役割 |
 | --- | --- |
-| `web` | ビルド済みのfrontendをNginxで配信し、`/api` をbackendに中継する |
-| `api` | FastAPIのbackendと、Alembicのマイグレーションを実行する |
+| `web` | ビルド済みのフロントエンドをNginxで配信し、`/api` をバックエンドに中継する |
+| `api` | FastAPIのバックエンドと、Alembicのマイグレーションを実行する |
 | `db` | PostgreSQLを提供する |
 
 ローカルでの開発だけで確認するときは、`db` を省略して、SQLiteを使えます。
 
 ## 公開する設定キー
 
-Composeとfrontendのビルドで、利用者が設定する公開キーは、次のとおりです。
+Composeとフロントエンドのビルドで、利用者が設定する公開キーは、次のとおりです。
 
 | キー | 既定値 | 用途 |
 | --- | --- | --- |
-| `SUI_RUNTIME_PROFILE` | `evaluation` | backendの実行プロファイルと、frontendの入口のモードに、同じ値を渡す。現在のComposeは評価用を既定とし、`saas-multitenant` は、PostgreSQLの共有の認証テーブルと、必須の外部アダプタを満たす環境でだけ起動する。 |
+| `SUI_RUNTIME_PROFILE` | `evaluation` | バックエンドの実行プロファイルと、フロントエンドの入口のモードに、同じ値を渡す。現在のComposeは評価用を既定とし、`saas-multitenant` は、PostgreSQLの共有の認証テーブルと、必須の外部アダプタを満たす環境でだけ起動する。 |
 | `SUI_WEB_PORT` | `8080` | `web` のloopback（`127.0.0.1`）のポート。ホストの外からは、既定では到達できない（`DEPLOY-NET-01`）。 |
 | `SUI_POSTGRES_DB` | `sui_sensemaking` | Compose上のPostgreSQLのデータベース名 |
 | `SUI_POSTGRES_USER` | `sui_sensemaking` | Compose上のPostgreSQLのユーザー名 |
 | `SUI_POSTGRES_PASSWORD` | `sui_sensemaking` | Compose上のPostgreSQLのパスワード |
-| `SUI_FRONTEND_API_BASE` | `/api` | frontendのビルドのときに埋め込む、APIの基準パス（`/` で始まるものだけを許可し、不正な値は `/api` に戻す）。 |
-| `SUI_DATABASE_URL` | Composeでは、PostgreSQLへの接続先 | backendが使う、DBの接続先 |
+| `SUI_FRONTEND_API_BASE` | `/api` | フロントエンドのビルドのときに埋め込む、APIの基準パス（`/` で始まるものだけを許可し、不正な値は `/api` に戻す）。 |
+| `SUI_DATABASE_URL` | Composeでは、PostgreSQLへの接続先 | バックエンドが使う、DBの接続先 |
 | `SUI_LLM_PROVIDER` | `none` | LLMのプロバイダ |
 
-backendの実行時のキーの全量は、[runtime_parameter_registry.md](runtime_parameter_registry.md) を参照します。
+バックエンドの実行時のキーの全量は、[runtime_parameter_registry.md](runtime_parameter_registry.md) を参照します。
 
 ## レジストリと配備の対応表
 
@@ -48,13 +48,13 @@ backendの実行時のキーの全量は、[runtime_parameter_registry.md](runti
 
 | 公開キー | Composeでの対応 | 備考 |
 | --- | --- | --- |
-| `SUI_RUNTIME_PROFILE` | `api.environment.SUI_RUNTIME_PROFILE` と `web.build.args.SUI_RUNTIME_PROFILE` | backendとfrontendのビルドに、同じ `${SUI_RUNTIME_PROFILE:-evaluation}` を渡す。値の不一致は許容しない。 |
+| `SUI_RUNTIME_PROFILE` | `api.environment.SUI_RUNTIME_PROFILE` と `web.build.args.SUI_RUNTIME_PROFILE` | バックエンドとフロントエンドのビルドに、同じ `${SUI_RUNTIME_PROFILE:-evaluation}` を渡す。値の不一致は許容しない。 |
 | `SUI_WEB_PORT` | `web.ports`（`127.0.0.1:<port>:80`） | loopbackに結び付けた、ポート番号だけを変える。 |
 | `SUI_POSTGRES_DB` | `db.environment.POSTGRES_DB` | サードパーティの内部アダプタへの、内部での対応。 |
 | `SUI_POSTGRES_USER` | `db.environment.POSTGRES_USER` | サードパーティの内部アダプタへの、内部での対応。 |
 | `SUI_POSTGRES_PASSWORD` | `db.environment.POSTGRES_PASSWORD` | サードパーティの内部アダプタへの、内部での対応。 |
 | `SUI_FRONTEND_API_BASE` | `web.build.args.SUI_FRONTEND_API_BASE` | `/` で始まるパスだけを許可する。 |
-| `SUI_DATABASE_URL` | `api.environment.SUI_DATABASE_URL` | backendのDBの接続先。 |
+| `SUI_DATABASE_URL` | `api.environment.SUI_DATABASE_URL` | バックエンドのDBの接続先。 |
 | `SUI_LLM_PROVIDER` | `api.environment.SUI_LLM_PROVIDER` | プロバイダの切り替え。 |
 
 運用者が設定する公開キーは、`SUI_*` だけとし、`POSTGRES_*` は、Compose内部で完結する、内部のアダプタの名前として扱います。
@@ -72,7 +72,7 @@ export SUI_FRONTEND_API_BASE=/api
 export SUI_LLM_PROVIDER=none
 ```
 
-DB名、ユーザー名、パスワードを既定値から変えるときは、backendの接続先も、同じ値に合わせます。
+DB名、ユーザー名、パスワードを既定値から変えるときは、バックエンドの接続先も、同じ値に合わせます。
 
 ```bash
 export SUI_DATABASE_URL='postgresql+asyncpg://sui_sensemaking:sui_sensemaking@db:5432/sui_sensemaking'

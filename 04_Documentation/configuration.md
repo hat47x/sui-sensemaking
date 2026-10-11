@@ -14,18 +14,18 @@
 
 ## 起動方法による設定の届き方
 
-このページの `export SUI_*` の例は、特に断りがなければbackendを直接起動する場合の設定です。標準のDocker Compose（`docker-compose.yml`）が受け渡す公開キーは、次の2か所だけです。
+このページの `export SUI_*` の例は、特に断りがなければバックエンドを直接起動する場合の設定です。標準のDocker Compose（`docker-compose.yml`）が受け渡す公開キーは、次の2か所だけです。
 
 | Composeの受け渡し先 | 渡される公開キー | 挙動 |
 | --- | --- | --- |
 | `api.environment` | `SUI_RUNTIME_PROFILE`, `SUI_DATABASE_URL`, `SUI_LLM_PROVIDER`, `SUI_APP_REVISION`, `SUI_API_KEY`, `SUI_ALLOW_JIT_PROVISIONING` | プロファイル、DB、プロバイダにはComposeの既定値があります。リビジョン、APIキー、JITは、ホストで設定したときだけそのまま渡されます。 |
-| `web.build.args` | `SUI_FRONTEND_API_BASE`, `SUI_RUNTIME_PROFILE`, `SUI_APP_REVISION` | 標準のComposeではAPIの基準パスを `/api` に固定します。プロファイルとリビジョンはfrontendのビルド時に決まります。 |
+| `web.build.args` | `SUI_FRONTEND_API_BASE`, `SUI_RUNTIME_PROFILE`, `SUI_APP_REVISION` | 標準のComposeではAPIの基準パスを `/api` に固定します。プロファイルとリビジョンはフロントエンドのビルド時に決まります。 |
 
 これとは別に、`SUI_WEB_PORT` はループバックで公開するポートを決めます。`SUI_POSTGRES_DB`、`SUI_POSTGRES_USER`、`SUI_POSTGRES_PASSWORD` は、dbコンテナの設定と既定のDB URLの組み立てに使います。
 
-上の表にないbackend設定は、標準のComposeには届きません。接続に関わる設定を追加するときは、組織側の上書きファイル（オーバーレイ）で、関連するキーをひとまとめにして渡してください。各キーの正本は、[runtime_parameter_registry.md のバックエンド設定の表](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings)です。
+上の表にないバックエンド設定は、標準のComposeには届きません。接続に関わる設定を追加するときは、組織側の上書きファイル（オーバーレイ）で、関連するキーをひとまとめにして渡してください。各キーの正本は、[runtime_parameter_registry.md のバックエンド設定の表](https://github.com/hat47x/sui-sensemaking/blob/main/02_Architecture/runtime_parameter_registry.md#backend-settings)です。
 
-標準のComposeは、同梱の `evaluation` 用スタックです。`SUI_RUNTIME_PROFILE` の値自体は `enterprise-production` や `saas-multitenant` でもbackendとfrontendへ渡せます。しかし標準の `api.environment` は、両プロファイルで起動に必須の `SUI_ADMIN_API_KEY` を渡さず、SaaSに必要な外部アダプタ、OAuth、セッション関連のキーも渡しません。プロファイル名だけを変えると、設定不足で起動時に停止します。これらのプロファイルをComposeで使うときは、組織側のオーバーレイで、必須キーを一式渡してください。
+標準のComposeは、同梱の `evaluation` 用スタックです。`SUI_RUNTIME_PROFILE` の値自体は `enterprise-production` や `saas-multitenant` でもバックエンドとフロントエンドへ渡せます。しかし標準の `api.environment` は、両プロファイルで起動に必須の `SUI_ADMIN_API_KEY` を渡さず、SaaSに必要な外部アダプタ、OAuth、セッション関連のキーも渡しません。プロファイル名だけを変えると、設定不足で起動時に停止します。これらのプロファイルをComposeで使うときは、組織側のオーバーレイで、必須キーを一式渡してください。
 
 ## 公開設定と内部設定
 
@@ -64,7 +64,7 @@
 - `enterprise-production`: 起動に、互いに異なる値の `SUI_ADMIN_API_KEY` と `SUI_API_KEY` が必要です。JITは `false`、LLMは `none`、フェイルセーフは `read_only` か `deny` を勧めます。
 - `saas-multitenant`: 起動に次のすべてが必要です。`SUI_ADMIN_API_KEY`、PostgreSQL、外部のPDP、文書のポリシー紐づけ、テナント権限の各リゾルバーとその接続先、JITの無効化、フェイルセーフを `deny` にすること、OAuthの認可エンドポイント、認証セッションのハッシュキー。OAuth BFFの設定のうち、ログイン開始にはリダイレクトURIとクライアントID、コールバックでのコード交換にはトークンエンドポイント、リダイレクトURI、クライアントID、クライアントシークレットの4つがそろっている必要があります。これらは起動の必須条件ではありません。欠けていると、該当するリクエストを503で拒否します。
 
-プロファイルは `SUI_RUNTIME_PROFILE` で指定します。Docker Composeの既定は `evaluation` です。backendを直接起動して指定しなかった場合は `local-dev` になります。
+プロファイルは `SUI_RUNTIME_PROFILE` で指定します。Docker Composeの既定は `evaluation` です。バックエンドを直接起動して指定しなかった場合は `local-dev` になります。
 
 > 注意: `SUI_ALLOW_JIT_PROVISIONING` の既定値は `false` で、不明なヘッダーからの利用者作成を拒否します。`local-dev` や `evaluation` でヘッダーからの利用者自動作成を使うときは、明示的に `true` を設定してください。既定の `false` は、認証されていない未知のヘッダーから利用者が自動で作られ、悪用されることを防ぎます。
 >
@@ -81,7 +81,7 @@ export SUI_DATABASE_URL='postgresql+asyncpg://sui_sensemaking:sui_sensemaking@db
 export SUI_WEB_PORT=8080
 ```
 
-ローカルのSQLiteでbackendを直接起動するときは、次のようにします。
+ローカルのSQLiteでバックエンドを直接起動するときは、次のようにします。
 
 ```bash
 export SUI_DATABASE_URL='sqlite:///./sui_sensemaking.db'
@@ -91,17 +91,17 @@ export SUI_LLM_PROVIDER=none
 
 最初の確認では、`SUI_LLM_PROVIDER=none` を勧めます。AI機能は使えませんが、外部サービスと意図せず共有することなく、保存、表示、受け入れ確認の基本動作を確認できます。
 
-## backendの環境変数
+## バックエンドの環境変数
 
-次の表は、backendが受け付けるすべての環境変数です。
+次の表は、バックエンドが受け付けるすべての環境変数です。
 
 | 変数 | 既定値 | 用途 |
 | --- | --- | --- |
 | `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`、`evaluation`、`enterprise-production`、`saas-multitenant` のいずれか。SaaSでは、共有の認証テーブルを含む最新のマイグレーションと、必須のポリシー設定を、起動前に検査します。 |
-| `SUI_DATABASE_URL` | `sqlite:///./sui_sensemaking.db` | backendが使うSQLAlchemyの接続URL。対応するDB、検証済みのドライバ、シングルテナントと共有スキーマのSaaSの範囲は、[DB対応表](../02_Architecture/database_portability.md)が正本です。ドライバを省略したURLと、対応済みの非同期URLは、検証済みの同期ドライバに読み替えます。未検証のドライバと未知のDBは、接続を作る前に拒否します。 |
+| `SUI_DATABASE_URL` | `sqlite:///./sui_sensemaking.db` | バックエンドが使うSQLAlchemyの接続URL。対応するDB、検証済みのドライバ、シングルテナントと共有スキーマのSaaSの範囲は、[DB対応表](../02_Architecture/database_portability.md)が正本です。ドライバを省略したURLと、対応済みの非同期URLは、検証済みの同期ドライバに読み替えます。未検証のドライバと未知のDBは、接続を作る前に拒否します。 |
 | `SUI_LLM_PROVIDER` | `none` | `none`、`local`、`local_http`、`large-scale`、`large_scale`、`external`、`deepseek` のいずれか。 |
 | `SUI_LOG_LEVEL` | `INFO` | アプリケーションログ（JSONと人間向け書式）とuvicornログの出力レベル。`CRITICAL`、`ERROR`、`WARNING`、`INFO`、`DEBUG` を指定できます。未知の値（`NOTSET` を含む）は `INFO` になります。 |
-| `SUI_APP_REVISION` | `unknown` | ビルドのリビジョン。1〜64文字のASCII英数字と `.`、`_`、`-` だけを受け付け、それ以外は `unknown` にします。`/version`、すべてのアプリケーションログ、frontendの診断バンドルの `app.revision` に反映されます。Composeではビルド引数と `api.environment` で渡します。 |
+| `SUI_APP_REVISION` | `unknown` | ビルドのリビジョン。1〜64文字のASCII英数字と `.`、`_`、`-` だけを受け付け、それ以外は `unknown` にします。`/version`、すべてのアプリケーションログ、フロントエンドの診断バンドルの `app.revision` に反映されます。Composeではビルド引数と `api.environment` で渡します。 |
 | `SUI_LOCAL_LLM_BASE_URL` | 未設定 | ローカルLLMのベースURL。HTTPS、またはループバックのHTTPだけを使えます。 |
 | `SUI_LOCAL_LLM_MODEL` | 未設定 | ローカルLLMで使う256文字以下のモデルID。 |
 | `SUI_LARGE_SCALE_LLM_BASE_URL` | 未設定 | 大規模LLMのベースURL。HTTPS、またはループバックのHTTPだけを使えます。 |
@@ -127,7 +127,7 @@ export SUI_LLM_PROVIDER=none
 | `SUI_AUDIT_HTTP_TIMEOUT_SECONDS` | `2.0` | 監査ログのHTTP連携のタイムアウト（秒）。 |
 | `SUI_AUDIT_QUEUE_SIZE` | `100` | 外部への監査送信に失敗したとき、再送のために溜めておく件数の上限。正常に送れた場合と、送信が無効な場合は、溜めません。 |
 | `SUI_AUDIT_DEDUP_WINDOW_SECONDS` | `5.0` | `context-audit` と `export-audit` が同じ操作として渡した記録を、重複とみなす時間（秒）。`view`、LLM、proposalの監査には適用しません。`0` にすると無効になります。 |
-| `SUI_AUDIT_ALLOW_IN_SAFE_MODE` | `false` | `AuditEvent.safeMode=true` の監査を外部へ送ってよいかを、イベント単位で決めます。`false` のときは、viewの監査と、`safeMode=true` のcontext系・export系の監査を送りません。LLMとproposalの監査は、生成側が `safeMode=false` と明示するため、対象外です。 |
+| `SUI_AUDIT_ALLOW_IN_SAFE_MODE` | `false` | `AuditEvent.safeMode=true` の監査を外部へ送ってよいかを、イベント単位で決めます。`false` のときは、viewの監査と、`safeMode=true` の文脈系・書き出し系の監査を送りません。LLMとproposalの監査は、生成側が `safeMode=false` と明示するため、対象外です。 |
 | `SUI_ACCESS_CONTROL_ADAPTER` | `noop` | `noop`、`mock`、`external_http` のいずれか。 |
 | `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE` | `read_only` | OrgまたはRestrictedの文書で、`policyRef` が欠けているとき、またはアクセス制御のアダプタが故障したときの安全側の動作。`read_only` は、読み取りだけを許可し、書き込み、書き出し、共有を拒否します。`deny` は、読み取りを含むすべての操作を拒否します。 |
 | `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_ENDPOINT` | 未設定 | `external_http` アダプタが使うPDPの接続先URL。必須です。認証情報、クエリ、フラグメントを含まないHTTPS、またはループバックのHTTPだけを使えます。 |
@@ -171,9 +171,9 @@ export SUI_LLM_PROVIDER=none
 | `SUI_CE4_SOURCE_BUNDLE_HASH_ALLOW_MOCK` | `true` | CE4の `POST /docs/{doc_id}/context-audit` で、`sourceBundleHash=mock:<hash>` を受け付けるかを決めます。proposalとCE4の解決リクエストが受け付ける形式は別に決まっており、この設定の対象外です。 |
 | `SUI_CE4_STUB_UNRESOLVED_CONTRACTS` | `true` | 仕様が未確定のCE4の契約を、スタブの応答に閉じ込めます。現在は `true` に固定で、`false` を指定すると起動時に拒否します。 |
 
-## Composeとfrontendのビルドに関する環境変数
+## Composeとフロントエンドのビルドに関する環境変数
 
-次の表は、標準のDocker Composeがホストから参照する公開キーと、frontendを直接ビルドするときに設定できる公開キーです。これらもすべて `SUI_` で始まります。標準のComposeではホストから変えられないビルド値は、用途の欄に書いています。
+次の表は、標準のDocker Composeがホストから参照する公開キーと、フロントエンドを直接ビルドするときに設定できる公開キーです。これらもすべて `SUI_` で始まります。標準のComposeではホストから変えられないビルド値は、用途の欄に書いています。
 
 | 変数 | 既定値 | 用途 |
 | --- | --- | --- |
@@ -181,11 +181,11 @@ export SUI_LLM_PROVIDER=none
 | `SUI_POSTGRES_DB` | `sui_sensemaking` | Compose上のPostgreSQLのデータベース名。 |
 | `SUI_POSTGRES_USER` | `sui_sensemaking` | Compose上のPostgreSQLのユーザー名。 |
 | `SUI_POSTGRES_PASSWORD` | `sui_sensemaking` | Compose上のPostgreSQLのパスワード。 |
-| `SUI_RUNTIME_PROFILE` | `evaluation`（Compose） | backendとfrontendに、同じ実行プロファイルを渡します。`saas-multitenant` には、PostgreSQLの共有認証テーブルと、必須の外部アダプタが必要です。 |
-| `SUI_APP_REVISION` | `unknown` | backendの `/version` とすべてのアプリケーションログ、frontendの診断バンドルを、同じビルドに結び付けます。標準のComposeは、apiへそのまま渡し、webのビルドにも渡します。 |
-| `SUI_FRONTEND_API_BASE` | `/api` | frontendを直接ビルドするときの、APIの基準パス。標準のComposeは `/api` を固定で注入するため、ホスト側の値では変えられません。 |
+| `SUI_RUNTIME_PROFILE` | `evaluation`（Compose） | バックエンドとフロントエンドに、同じ実行プロファイルを渡します。`saas-multitenant` には、PostgreSQLの共有認証テーブルと、必須の外部アダプタが必要です。 |
+| `SUI_APP_REVISION` | `unknown` | バックエンドの `/version` とすべてのアプリケーションログ、フロントエンドの診断バンドルを、同じビルドに結び付けます。標準のComposeは、apiへそのまま渡し、webのビルドにも渡します。 |
+| `SUI_FRONTEND_API_BASE` | `/api` | フロントエンドを直接ビルドするときの、APIの基準パス。標準のComposeは `/api` を固定で注入するため、ホスト側の値では変えられません。 |
 
-PostgreSQLのイメージやfrontendのビルドツールが内部で使う名前は、sui-sensemakingの公開設定キーではありません。利用者が設定するのは、上の `SUI_*` だけです。
+PostgreSQLのイメージやフロントエンドのビルドツールが内部で使う名前は、sui-sensemakingの公開設定キーではありません。利用者が設定するのは、上の `SUI_*` だけです。
 
 ## よく使う構成の例
 
@@ -213,13 +213,13 @@ export SUI_API_KEY='change-me'
 
 この値は例です。実際の運用では推測されにくい値を使い、Gitにコミットしないでください。
 
-## frontendのAPI接続先
+## フロントエンドのAPI接続先
 
-frontendのAPI接続先は、`SUI_FRONTEND_API_BASE` で指定します。未設定なら `/api` を使います。値は同一オリジンの絶対パスとして扱い、`/` だけ、または単一の `/` で始まるパスだけを受け付けます。`//host` のような形式、バックスラッシュ、クエリ（`?`）、フラグメント（`#`）を含む値、相対パスは受け付けず、frontend側で `/api` に戻します。`/` は、ルートをAPIの基準パスとして扱います。
+フロントエンドのAPI接続先は、`SUI_FRONTEND_API_BASE` で指定します。未設定なら `/api` を使います。値は同一オリジンの絶対パスとして扱い、`/` だけ、または単一の `/` で始まるパスだけを受け付けます。`//host` のような形式、バックスラッシュ、クエリ（`?`）、フラグメント（`#`）を含む値、相対パスは受け付けず、フロントエンド側で `/api` に戻します。`/` は、ルートをAPIの基準パスとして扱います。
 
-ローカルの開発サーバーと、Docker Composeの標準構成では、`/api` がbackendへ中継されます。標準のComposeは、同梱のNginxの `location /api/` に合わせて、frontendのビルドに `/api` を固定で注入します。そのため、ホスト側で `SUI_FRONTEND_API_BASE` を変えても、標準のComposeの基準パスは変わりません。別のパスを使いたいときは、frontendを直接ビルドし、そのパスをbackendへ中継するリバースプロキシも、同時に用意してください。
+ローカルの開発サーバーと、Docker Composeの標準構成では、`/api` がバックエンドへ中継されます。標準のComposeは、同梱のNginxの `location /api/` に合わせて、フロントエンドのビルドに `/api` を固定で注入します。そのため、ホスト側で `SUI_FRONTEND_API_BASE` を変えても、標準のComposeの基準パスは変わりません。別のパスを使いたいときは、フロントエンドを直接ビルドし、そのパスをバックエンドへ中継するリバースプロキシも、同時に用意してください。
 
-frontendを直接ビルドするときは、ビルドの前に `SUI_RUNTIME_PROFILE` と `SUI_FRONTEND_API_BASE` を設定します。プロファイルを指定しなければ、ローカル優先の `local-dev` と同等になります。空文字、未知の値、前後に空白を含む値は、シングルテナントに切り替わらず、利用を止める画面が表示されます。
+フロントエンドを直接ビルドするときは、ビルドの前に `SUI_RUNTIME_PROFILE` と `SUI_FRONTEND_API_BASE` を設定します。プロファイルを指定しなければ、ローカル優先の `local-dev` と同等になります。空文字、未知の値、前後に空白を含む値は、シングルテナントに切り替わらず、利用を止める画面が表示されます。
 
 ```bash
 export SUI_RUNTIME_PROFILE=local-dev
@@ -321,13 +321,13 @@ curl -fsS http://localhost:8080/api/healthz
 docker compose logs api --tail=100
 ```
 
-backendを直接起動している場合は、次のようにします。
+バックエンドを直接起動している場合は、次のようにします。
 
 ```bash
 curl -fsS http://127.0.0.1:8000/healthz
 ```
 
-設定の誤りでbackendが起動しないときは、`api` のログに検証エラーが出ます。特に、旧キー、プロバイダ名、大規模LLMのオプトインの不足を確認してください。
+設定の誤りでバックエンドが起動しないときは、`api` のログに検証エラーが出ます。特に、旧キー、プロバイダ名、大規模LLMのオプトインの不足を確認してください。
 
 ## 関連文書
 

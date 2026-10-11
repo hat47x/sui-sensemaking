@@ -81,12 +81,12 @@
 | FB-RM-UX-01 | 視座プリセット | P0 | Done (2026-02-26) | Explore / Review / Summary を view mode として定義し、ヘッダーのモードトグルと `⌘/Ctrl+1..3` ショートカットで共通導線化。document単位のlocalStorage保存（`sui-sensemaking/view-mode-by-doc`）を導入し、再読込時に既存modeを復元する。`view_mode.ts` / `view_mode.test.ts` / `storage/view_mode.test.ts` を追加し、mode↔preset対応・保存値パースを回帰固定。 | 同一Document再読込時に mode が再現され、UIトグルとショートカットの双方で同一presetへ到達できる | `RQ-V-01` 系 |
 | FB-RM-UX-02 | 島の折りたたみ | P0 | Done (2026-02-26) | 階層Islandの collapse/expand と hit-test 制御を実装。collapse状態を island.collapsed と viewState の双方で保持し、descendant連鎖を共通ヘルパーへ統合。Collapse/Expand all を永続値へ同期。 | collapse時に配下要素が描画・選択対象から外れ、expandと再読込で復帰する | `FB-P2A-02` |
 | FB-RM-UX-03 | Polygon islands | P1 | Done (2026-02-26) | polygon shape の保存・再読込・互換読込を統合実装。`validateAndUpgradeImportedDocument` で自己交差polygonを自動破棄して card-bounds フォールバックへ退避し、`validateDocumentV2Strict` では自己交差を検証エラーとして拒否。polygon自己交差判定ユーティリティと回帰テストを追加。 | 欠損shapeで `rect` フォールバックしつつ編集継続でき、自己交差polygonが保存・厳格検証で受理されない | `FB-P2C-01..03` |
-| FB-RM-UX-04 | SafeMode UI明示 | P1 | Done (2026-02-26) | ヘッダー常設のSafeMode状態バッジ（ON/OFF）を追加し、クリックでShareパネルを開いて詳細を確認できる導線へ統一。Share & Reproduce内でSafeMode説明・export警告・「Share/Review Packでは赤字化が解除不可」の文言を共通ヘルパーで集約。`safe_mode_status.ts` / `safe_mode_status.test.ts` / `SharePanel.test.tsx` を追加し、文言と状態分岐を回帰固定。 | 閲覧者がヘッダーからSafeMode状態を即時確認でき、Share/export警告と解除不可モード表記が矛盾なく統一される | `03_Implement/frontend/src/ui/safe_mode_status.ts` |
+| FB-RM-UX-04 | SafeMode UI明示 | P1 | Done (2026-02-26) | ヘッダー常設のSafeMode状態バッジ（ON/OFF）を追加し、クリックでShareパネルを開いて詳細を確認できる導線へ統一。Share & Reproduce内でSafeMode説明・書き出し警告・「Share/Review Packでは赤字化が解除不可」の文言を共通ヘルパーで集約。`safe_mode_status.ts` / `safe_mode_status.test.ts` / `SharePanel.test.tsx` を追加し、文言と状態分岐を回帰固定。 | 閲覧者がヘッダーからSafeMode状態を即時確認でき、Share/書き出し警告と解除不可モード表記が矛盾なく統一される | `03_Implement/frontend/src/ui/safe_mode_status.ts` |
 | FB-RM-RS-01 | Trace Analytics | P1 | Done (2026-02-27) | Trace Analytics に根拠リンク本数・孤立ノード・出典密度を追加し、UI/Export/Worker golden で同一集計値を参照できるよう統合。Map/Set→配列化時のソート順固定と roundTo4 により決定論を担保。 | 同一入力で同一統計値を返し、追加指標が markdown/export/UI で一貫表示される | `03_Implement/frontend/src/worker/trace_analytics.ts` |
-| FB-RM-RS-02 | 構造メトリクス | P1 | Done (2026-03-01) | diagnostics に構造健全性指標（connected components / largest component ratio / degreeP95 / bridge edges / isolation rate / connectivity score / degree skew ratio）を追加し、UI・worker・exportを同一集計経路へ統合。Playwright E2E で Share Panel 経由 export の diagnostics 行と決定論（同一入力2回一致）を確認。 | 指標定義と計算式が `04_Documentation/diagnostics.md` に文書化され、unit/worker/E2E で決定論が固定される | `03_Implement/frontend/src/domain/view/structural_metrics.ts`, `03_Implement/frontend/e2e/diagnostics_structural_metrics.spec.ts`, `04_Documentation/diagnostics.md` |
-| FB-RM-RS-03 | Diagnostics安定化 | P1 | Done (2026-02-26) | diagnostics出力schemaVersionを固定し、pre-release方針として `schemaVersion===1` のみ受理。invalid/unsupported version・malformed/array payload・worker message/result envelope不正（他request無視含む）・progress不正・unknown type・diagnostics.error不正・必須フィールド欠落/型不正を検知してfallbackするテストを整備。`04_Documentation/diagnostics.md` を追加。 | current version以外はfallbackで安全に処理継続できる（unit testで固定） | `03_Implement/frontend/src/worker/diagnostics_protocol.ts` |
-| FB-RM-SEC-01 | ZIP hardening | P0 | Done (2026-02-26) | import時の path traversal（相対/絶対/UNC/NUL）・zip bomb（総量/件数/単体サイズ/圧縮率）・許可拡張子制限を強化し、Z001/Z002で拒否。`zip_import.test.ts` と review-pack workflow 統合テストで回帰固定。 | 悪性fixtureで拒否・通常fixtureで成功する | `03_Implement/frontend/src/import/zip_import.ts` |
-| FB-RM-SEC-02 | Worker安定化 | P1 | Done (2026-02-28) | Bundle export の zip 生成を `bundle_zip.worker.ts` + `bundle_zip_client.ts` へ移管し、worker unavailable 時は scheduler fallback を維持。`buildBundleZipBlob` に cancellation/progress を接続し、`bundle_export.test.ts` で worker/fallback/cancel を回帰固定。 | 大規模 export でも zip 圧縮で UI 応答が阻害されず、abort 時は cancelled として終了できる | `03_Implement/frontend/src/worker/bundle_zip_client.ts` |
+| FB-RM-RS-02 | 構造メトリクス | P1 | Done (2026-03-01) | diagnostics に構造健全性指標（connected components / largest component ratio / degreeP95 / bridge edges / isolation rate / connectivity score / degree skew ratio）を追加し、UI・worker・書き出しを同一集計経路へ統合。Playwright E2E で Share Panel 経由書き出しの diagnostics 行と決定論（同一入力2回一致）を確認。 | 指標定義と計算式が `04_Documentation/diagnostics.md` に文書化され、unit/worker/E2E で決定論が固定される | `03_Implement/frontend/src/domain/view/structural_metrics.ts`, `03_Implement/frontend/e2e/diagnostics_structural_metrics.spec.ts`, `04_Documentation/diagnostics.md` |
+| FB-RM-RS-03 | Diagnostics安定化 | P1 | Done (2026-02-26) | diagnostics出力schemaVersionを固定し、pre-release方針として `schemaVersion===1` のみ受理。invalid/unsupported version・malformed/array payload・worker message/result envelope不正（他要求無視含む）・progress不正・unknown type・diagnostics.error不正・必須フィールド欠落/型不正を検知してfallbackするテストを整備。`04_Documentation/diagnostics.md` を追加。 | current version以外はfallbackで安全に処理継続できる（unit testで固定） | `03_Implement/frontend/src/worker/diagnostics_protocol.ts` |
+| FB-RM-SEC-01 | ZIP hardening | P0 | Done (2026-02-26) | 取り込み時のパス traversal（相対/絶対/UNC/NUL）・zip bomb（総量/件数/単体サイズ/圧縮率）・許可拡張子制限を強化し、Z001/Z002で拒否。`zip_import.test.ts` と review-pack workflow 統合テストで回帰固定。 | 悪性fixtureで拒否・通常fixtureで成功する | `03_Implement/frontend/src/import/zip_import.ts` |
+| FB-RM-SEC-02 | Worker安定化 | P1 | Done (2026-02-28) | Bundle 書き出しの zip 生成を `bundle_zip.worker.ts` + `bundle_zip_client.ts` へ移管し、worker unavailable 時は scheduler fallback を維持。`buildBundleZipBlob` に cancellation/progress を接続し、`bundle_export.test.ts` でワーカー/fallback/cancel を回帰固定。 | 大規模書き出しでも zip 圧縮で UI 応答が阻害されず、abort 時は cancelled として終了できる | `03_Implement/frontend/src/worker/bundle_zip_client.ts` |
 | FB-RM-SEC-03 | CI回帰防止 | P0 | Done (2026-02-26) | import/serialization/shape互換の回帰テスト群を `test:regression-guards` として固定し、CIに専用ジョブ `Frontend regression guards (import/serialization/shape)` を追加。branch protection に required check として設定する手順を運用ドキュメントに明記。 | import/serialization/shape互換の回帰テストがCI専用ジョブで常時実行され、required check設定手順が文書化されている | `.github/workflows/ci.yml` |
 
 ### Mid-term Vision（統合）
@@ -95,10 +95,10 @@
 |---|---|---|---|---|---|---|
 | FB-RM-MID-01 | 類似度検出 | P1 | Done (2026-02-28) | `collectMergeCandidates` を導入し、normalized-text / token-signature の2段 heuristic で merge candidate をローカル生成。source/merged済み card を除外し、group/card順序を安定ソートで固定。UI導線は API 呼び出しから deterministic local batch へ置換。 | 同一入力で candidate group と group内 card 順が一致し、候補一覧で対象Cardを確認できる（AC-2B-1整合） | `FB-P2B-01` |
 | FB-RM-MID-02 | 統合候補提示 | P1 | Done (2026-02-28) | Merge Suggestions を4アクション（accept/partial/reject/defer）へ更新し、decision log (`mergeSuggestionDecisions`) を document に保存。候補再収集時に latest decision と編集済みテキストを復元し、自動 canonical merge を無効化。Frontend strict validation / backend roundtrip を同期。 | 自動確定なしで人間承認履歴が残り、保存再読込後も decision 状態を再現できる | `FB-P2B-02` |
-| FB-RM-MID-03 | 統合ログ監査 | P2 | Done (2026-02-28) | bundle export に `merge_decision_audit.json` を追加し、decisionId/groupId/decisionType/actorType/decidedAt と representative-source 追跡情報を決定論で出力。 | 同一入力で同一監査ログを出力でき、representative と source の追跡が可能 | `FB-P2B-03..04` |
+| FB-RM-MID-03 | 統合ログ監査 | P2 | Done (2026-02-28) | bundle 書き出しに `merge_decision_audit.json` を追加し、decisionId/groupId/decisionType/actorType/decidedAt と representative-source 追跡情報を決定論で出力。 | 同一入力で同一監査ログを出力でき、representative と source の追跡が可能 | `FB-P2B-03..04` |
 | FB-RM-MID-04 | 階層質的統合 | P1 | Done (2026-03-01) | sub-island（`parentIslandId`）+ 表札（`placardCardId`）+ レベル切替UI（overview/mid/detail）を最小垂直スライスとして導入。missing field fallback を維持しつつ、overviewでは表札カードのみ表示、mid/detailでは全カード表示の制御を実装。collapse/hit-test/selection 回帰テストを維持し、backend roundtrip でも parent/placard 永続化を固定。 | level切替で表示粒度のみ変化し、sub-island/表札カードが保存・再読込で欠落しない | `FB-P2A-*` |
-| FB-RM-MID-05 | 構造レベル別export | P2 | Done (2026-03-01) | bundle export に `overview/detail` 粒度を追加。`bundle_manifest.json` へ粒度を記録し、overview時は selected-card trace を抑止。SharePanel で粒度選択ラジオを提供。 | 同一Documentから粒度別bundleを再現可能に生成でき、overviewではtraceを含めず俯瞰用途に固定される | `01_Plans/issues/done/issue-FB-RM-MID-05-structural-granularity-export.md` |
-| FB-RM-MID-06 | 共通LLM adapter | P1 | Done (2026-03-01) | provider abstraction（none/local/large-scale）の共通I/Fを固定し、none既定・large-scale明示opt-in（`SUI_LLM_LARGE_SCALE_OPT_IN` + `SUI_LLM_ESCALATION_ENABLED`）・timeout/error/fallback契約を統一。監査最小フィールド（provider/model/transport/requested_at/trace_id/execution_path/fallback_to_none）を切替非依存で固定し、decision確定API非提供を回帰テストで検証。 | provider切替でUI/監査契約が変化せず、外部providerは明示opt-in時のみ利用される | `P-07`, `AI-07-*` |
+| FB-RM-MID-05 | 構造レベル別書き出し | P2 | Done (2026-03-01) | bundle 書き出しに `overview/detail` 粒度を追加。`bundle_manifest.json` へ粒度を記録し、overview時は selected-card trace を抑止。SharePanel で粒度選択ラジオを提供。 | 同一Documentから粒度別bundleを再現可能に生成でき、overviewではtraceを含めず俯瞰用途に固定される | `01_Plans/issues/done/issue-FB-RM-MID-05-structural-granularity-export.md` |
+| FB-RM-MID-06 | 共通LLM adapter | P1 | Done (2026-03-01) | provider abstraction（none/local/large-scale）の共通I/Fを固定し、none既定・large-scale明示opt-in（`SUI_LLM_LARGE_SCALE_OPT_IN` + `SUI_LLM_ESCALATION_ENABLED`）・timeout/error/fallback契約を統一。監査最小フィールド（provider/model/transport/requested_at/trace_id/execution_path/fallback_to_none）を切替非依存で固定し、decision確定API非提供を回帰テストで検証。 | 提供元切替でUI/監査契約が変化せず、外部提供元は明示opt-in時のみ利用される | `P-07`, `AI-07-*` |
 | FB-RM-MID-07 | 定額/オフラインAI補完（プロンプト+文脈書き出し / 構造化変更指示の適用） | P2 | Planned | キャンバス文脈（カード/島/関係）と生成AI向けプロンプトを一体エクスポートし、外部の定額AI/エージェントの思考結果を (a) ローカルLLMで反映、または (b) スキーマ化された構造化変更指示（パッチ/操作列）を出力させ専用適用ロジックで反映する。SafeMode/HIL を維持し自動確定しない。MVP で API 従量課金が困難な場合への回答。 | 文脈付きプロンプトを書き出せ、外部AIの構造化変更指示を検証のうえ人間承認下でキャンバスへ適用でき、自動確定しないことがテストで固定される。 | ROADMAP 中期D, `FB-RM-MID-06`, `ADR-0049`（2026-07-05 仕様化） |
 | FB-RM-MID-08 | TEI Reference Adoption / 移管ゲート | P0 | Planned | 大規模な機能高度化へ進む前に、現行SUIの代表change challengeを固定し、TEI-based vertical sliceへ同じ変更を適用してchange amplification、手書き差分、test / schema /文書同期負荷を比較する。不足はExisting TEI / Plugin・Adapter・Capability / native asset / Core gap candidateへ分類する。 | 同一change challengeの比較Evidence、少なくとも1件のPlugin候補評価、broad / incremental / limited / deferredの移管判断が残り、SUIのDomain / SafeMode / review authorityが二重正本化していない。 | `issue-ARCH-TEI-MIGRATION-01-tei-reference-adoption-and-development-load-validation.md`, TEI `ISSUE-000052` |
 
@@ -109,8 +109,8 @@
 | FB-RM-I18N-01 | P1 | Done (2026-02-28) | `src/i18n/messages.ts` と `src/i18n/translate.ts` を追加し、ImportPanel / SharePanel（Export〜Load document） / safe_mode_status の主要文言を辞書キー経由へ移行。placeholder補間と unknown-key fallback を実装し、UI回帰テストを追加。 | 主要画面の表示文言が辞書経由で解決され、既存コピー互換とfallback挙動がテストで固定される |
 | FB-RM-I18N-02 | P1 | Done (2026-03-01) | `src/i18n/locales/{ja,en}.json` を導入し、`t()` を `requested locale -> default locale (ja) -> key` 順で解決する契約へ更新。`validateLocaleMessages` / `resolveTemplate` を追加し、欠損キー時に既定言語へ復元するテストを固定。 | JSON辞書契約とfallback順序がコード/テストで固定され、locale欠損時でもUI文言が既定言語で解決される |
 | FB-RM-I18N-03 | P2 | Done (2026-03-02) | 英語UI等価のsmoke/flow E2Eを追加し、SQLite代替経路で再実行を含む通過ログを記録。 | 日本語/英語で機能差がなく、E2E smoke + flow が再実行でも通過する |
-| FB-RM-I18N-04 | P2 | Done (2026-03-01) | view単位言語設定を保存（view metadata + localStorage + URL/read-only優先） | view切替・再読込後も表示言語が決定論で復元される |
-| FB-RM-I18N-05 | P2 | Done (2026-03-01) | `src/i18n/document_locale_invariance.test.ts` を追加し、hash対象を `document.json` の canonical JSON のみに固定。`ja→en→ja`・URL優先・read-only の各シナリオで `document hash 不変` と `view metadata のみ変化` を分離検証し、漏洩時の層別診断（ui-state/view-metadata/document-payload）をログ化。CIジョブ `Frontend i18n document hash regression` と `npm run test:i18n-regression` を追加。 | 言語変更前後でdocument hashが不変、差分発生時は漏洩レイヤを特定できる |
+| FB-RM-I18N-04 | P2 | Done (2026-03-01) | view単位言語設定を保存（view metadata + localStorage + URL/読み取り専用優先） | view切替・再読込後も表示言語が決定論で復元される |
+| FB-RM-I18N-05 | P2 | Done (2026-03-01) | `src/i18n/document_locale_invariance.test.ts` を追加し、hash対象を `document.json` の canonical JSON のみに固定。`ja→en→ja`・URL優先・読み取り専用の各シナリオで `document hash 不変` と `view metadata のみ変化` を分離検証し、漏洩時の層別診断（ui-state/view-metadata/document-payload）をログ化。CIジョブ `Frontend i18n document hash regression` と `npm run test:i18n-regression` を追加。 | 言語変更前後でdocument hashが不変、差分発生時は漏洩レイヤを特定できる |
 | FB-RM-I18N-06 | P2 | Done (2026-03-01) | `locale_conversion_guard` と `locale_conversion_guard.test.ts` を追加し、SafeMode中の翻訳遮断・fetch/XHR/Worker監視・telemetry/audit fail-safe・timeout/adapter error時のログ秘匿を回帰固定。CIジョブ `Frontend i18n safe-mode leakage guards` と `npm run test:i18n-security` を追加。 | SafeMode ONで外部送信ゼロ、ログマスキング違反を検知、CIで再発防止できる |
 
 ### Publishing / Access Control（統合）
@@ -118,9 +118,9 @@
 | ID | 優先度 | 状態 | 具体アクション | DoD（完了条件） |
 |---|---|---|---|---|
 | FB-RM-PUB-01 | P1 | Done (2026-03-03) | Public / Unlisted / Org / Restricted を pack/view metadataへ追加し、viewは `Restricted`・packは `Public` の欠損fallback、enum外値のstrict reject、SafeMode/readOnly優先順を architecture/schema/API/実装/テストで固定。 | schema検証と既存データ互換を両立し、安全優先順位を維持したまま保存/再読込を回帰固定 |
-| FB-RM-PUB-02 | P1 | Done (2026-03-01) | URL query (`readonly/readOnly/isReadOnly/mode=readonly`) から read-only モードを解決し、`applyDocumentChange` ガードで編集系更新を一括抑止。Suggestion / Merge Suggestions の編集導線をdisabled化し、サイドパネルとヘッダーに read-only 状態を明示。 | 読み取り専用時に編集系更新が保存されず、UIで状態が明示される |
-| FB-RM-PUB-03 | P1 | Done (2026-03-01) | `publish:static` パイプラインを追加し、`index.html + assets + packs` の最小公開物を生成。`packs/index.json` から公開packを自動読込し、`safeMode=true` を強制。生成済み `index.html` は `readonly=1` URLへ自動遷移。運用手順を `operations.md` / `03_Implement/README.md` に追記。 | 生成物のみで静的サーバ閲覧が成立し、SafeMode既定ON + read-only 公開モードで再現手順が文書化される |
-| FB-RM-PUB-04 | P2 | Done (2026-03-01) | `AccessControlAdapter` 抽象I/F（roles/groups/policyRef）を追加し、API本体は `resolve_access_decision` 呼び出しへ限定。`noop` 既定 + `mock` 契約アダプタを導入し、fail-safe（safeMode/readOnly/policyRef）と監査最小項目をテストで固定。 | 本体にRBAC評価ロジックを埋め込まず、adapter未設定時も既存挙動を維持したまま外部委譲契約で運用できる |
+| FB-RM-PUB-02 | P1 | Done (2026-03-01) | URL query (`readonly/readOnly/isReadOnly/mode=readonly`) から読み取り専用モードを解決し、`applyDocumentChange` ガードで編集系更新を一括抑止。Suggestion / Merge Suggestions の編集導線をdisabled化し、サイドパネルとヘッダーに読み取り専用状態を明示。 | 読み取り専用時に編集系更新が保存されず、UIで状態が明示される |
+| FB-RM-PUB-03 | P1 | Done (2026-03-01) | `publish:static` パイプラインを追加し、`index.html + assets + packs` の最小公開物を生成。`packs/index.json` から公開packを自動読込し、`safeMode=true` を強制。生成済み `index.html` は `readonly=1` URLへ自動遷移。運用手順を `operations.md` / `03_Implement/README.md` に追記。 | 生成物のみで静的サーバ閲覧が成立し、SafeMode既定ON + 読み取り専用公開モードで再現手順が文書化される |
+| FB-RM-PUB-04 | P2 | Done (2026-03-01) | `AccessControlAdapter` 抽象I/F（roles/groups/policyRef）を追加し、API本体は `resolve_access_decision` 呼び出しへ限定。`noop` 既定 + `mock` 契約アダプタを導入し、fail-safe（safeMode/readOnly/policyRef）と監査最小項目をテストで固定。 | 本体にRBAC評価ロジックを埋め込まず、アダプター未設定時も既存挙動を維持したまま外部委譲契約で運用できる |
 | FB-RM-PUB-05 | P2 | Done (2026-03-01) | 閲覧/エクスポート監査イベントを送信抽象（noop/http）経由で連携し、設定ON/OFF・SafeMode送信制御・fail-open queue/dropを導入。運用手順（鍵/エンドポイント/障害時）を整備。 | 監査連携のON/OFF切替、OFF時副作用ゼロ、送信失敗時も本体機能継続が確認できる |
 
 ### 完了済み（文書統合）
@@ -167,7 +167,7 @@
 - [x] `computeTraceAnalytics` で根拠リンク本数・孤立ノード・出典密度を決定論ソート（ID昇順）で算出するようにした。
 - [x] `buildTraceAnalyticsMd` に追加指標を出力し、孤立ノードがある場合のみ `## Isolated nodes` セクションを生成するようにした。
 - [x] `trace_analytics.test.ts` で追加指標・孤立ノード順序・決定論・markdown出力の回帰テストを先行追加して固定した。
-- [x] `worker_golden.test.ts` とfixture `trace_analytics_c1.md` を同期し、worker経路でも追加指標の出力を固定した。
+- [x] `worker_golden.test.ts` とfixture `trace_analytics_c1.md` を同期し、ワーカー経路でも追加指標の出力を固定した。
 - [x] SidePanelのTrace Analytics表示へ追加指標（Evidence links / Isolated nodes / Source density）を反映した。
 
 #### FB-RM-RS-02 実装TODO（完了ログ）
@@ -176,8 +176,8 @@
 - [x] `computeStructureMetrics` で無向単純グラフの正規化（自己ループ除外・重複排除・ID昇順ソート）を導入し、丸め規則 `round(value * 10_000) / 10_000` を固定した。
 - [x] `diagnostics_compute.ts` と `SidePanel.tsx` を更新し、worker/export/UIのすべてで同一構造メトリクス値を表示するよう統一した。
 - [x] `structural_metrics.test.ts` / `worker_golden.test.ts` / fixture `tests/fixtures/worker/diagnostics.md` を更新し、追加指標と決定論を回帰固定した。
-- [x] Playwright E2E `e2e/diagnostics_structural_metrics.spec.ts` を追加し、Share Panel経由exportの `diagnostics.md` に追加指標が含まれること、および同一入力2回で出力一致することを固定した。
-- [x] E2E未実装だった原因分析と再発防止を `03_Implement/frontend/docs/e2e_testing.md` に反映した（issueメモ依存を解消）。
+- [x] Playwright E2E `e2e/diagnostics_structural_metrics.spec.ts` を追加し、Share Panel経由書き出しの `diagnostics.md` に追加指標が含まれること、および同一入力2回で出力一致することを固定した。
+- [x] E2E未実装だった原因分析と再発防止を `03_Implement/frontend/docs/e2e_testing.md` に反映した（課題メモ依存を解消）。
 
 #### FB-RM-RS-03 実装TODO（完了ログ）
 
@@ -205,16 +205,16 @@
 
 #### FB-RM-SEC-02 実装TODO（完了ログ）
 
-- [x] `bundle_zip_protocol.ts` を追加しrequest/progress/result/cancel/errorのメッセージ契約を定義した。
+- [x] `bundle_zip_protocol.ts` を追加し要求/progress/result/cancel/errorのメッセージ契約を定義した。
 - [x] `bundle_zip.worker.ts` を追加し、zip圧縮をoff-main-threadで実行する経路を実装した。
 - [x] `bundle_zip_client.ts` を追加し、worker unavailable時はmain-thread scheduler fallbackへ退避するようにした。
-- [x] `buildBundleZipBlob` をworker client経由へ置換し、abort signal/progress連携を実装した。
-- [x] `App.tsx` のbundle exportでzip progressを表示し、cancelledを失敗扱いしないようにした。
-- [x] `bundle_export.test.ts` にworker/fallback/cancel回帰を追加し、`test:regression-guards` で通過確認した。
+- [x] `buildBundleZipBlob` をワーカー クライアント経由へ置換し、abort signal/progress連携を実装した。
+- [x] `App.tsx` のbundle 書き出しでzip progressを表示し、cancelledを失敗扱いしないようにした。
+- [x] `bundle_export.test.ts` にワーカー/fallback/cancel回帰を追加し、`test:regression-guards` で通過確認した。
 
 #### FB-RM-SEC-03 実装TODO（完了ログ）
 
-- [x] Frontend向けにimport/serialization/shape互換の回帰テスト対象を選定。
+- [x] Frontend向けに取り込み/serialization/shape互換の回帰テスト対象を選定。
 - [x] `03_Implement/frontend/package.json` に `test:regression-guards` スクリプトを追加。
 - [x] `.github/workflows/ci.yml` に専用ジョブ `Frontend regression guards (import/serialization/shape)` を追加。
 - [x] CIジョブ名をbranch protectionのrequired checkに設定可能な安定名に固定。
@@ -225,7 +225,7 @@
 #### FB-RM-UX-04 実装TODO（完了ログ）
 
 - [x] ヘッダーにSafeMode状態バッジ（ON/OFF）を常設し、1クリックでShareパネルへ遷移できるようにした。
-- [x] Share & Reproduce内のSafeMode説明・export警告・解除不可モード表記を共通ヘルパーで統一した。
+- [x] Share & Reproduce内のSafeMode説明・書き出し警告・解除不可モード表記を共通ヘルパーで統一した。
 - [x] SafeMode ON/OFFの文言分岐を `safe_mode_status.test.ts` で固定した。
 - [x] `SharePanel.test.tsx` でSafeMode表示の回帰テストを追加した。
 
@@ -247,7 +247,7 @@
 - [x] `polygon_self_intersection.ts` を追加して判定ロジックを共通化し、幾何判定を再利用可能にした。
 - [x] `validate_doc.test.ts` / `validate.test.ts` / `polygon_self_intersection.test.ts` を追加・更新し、自己交差ケースの回帰を固定した。
 - [x] E2E追加有無を確認し、本改修はDomain validation（非UI導線）中心でPlaywrightシナリオ追加対象外だったため、PRに未追加理由と代替検証（unit + regression-guards）を明記する運用へ修正した（ADR-0018連携）。
-- [x] Playwright E2E `e2e/polygon_import_validation.spec.ts` を追加し、自己交差polygonを含むdocument.jsonの取込→置換→bundle exportでshapeが除去されることを実動作で確認した。
+- [x] Playwright E2E `e2e/polygon_import_validation.spec.ts` を追加し、自己交差polygonを含むdocument.jsonの取込→置換→bundle 書き出しでshapeが除去されることを実動作で確認した。
 
 
 #### FB-RM-MID-02 実装TODO（完了ログ）
@@ -274,7 +274,7 @@
 - [x] `src/domain/merge_decision_audit.ts` を追加し、merge decisionから監査エントリ（decisionType/actorType/representative/source）を生成する決定論ロジックを実装。
 - [x] `src/export/bundle_export.ts` を更新し、bundleに `merge_decision_audit.json` を常時同梱。
 - [x] `src/domain/merge_decision_audit.test.ts` を追加し、代表カード解決とsource追跡・時系列安定ソートを回帰固定。
-- [x] `src/export/bundle_export.test.ts` を拡張し、bundle出力に監査JSONが含まれることとpayload内容を回帰固定。
+- [x] `src/export/bundle_export.test.ts` を拡張し、bundle出力に監査JSONが含まれることとペイロード内容を回帰固定。
 - [x] `04_Documentation/operations.md` にbundle監査ファイルの運用メモを追加。
 
 
@@ -289,26 +289,26 @@
 
 #### FB-RM-PUB-02 実装TODO（完了ログ）
 
-- [x] `src/domain/policy/read_only.ts` を追加し、queryパラメータからread-only判定を行う共通ロジックを実装。
+- [x] `src/domain/policy/read_only.ts` を追加し、クエリパラメータから読み取り専用判定を行う共通ロジックを実装。
 - [x] `src/domain/policy/read_only.test.ts` を追加し、truthy/falsyとmode指定の判定を回帰固定。
-- [x] `App.tsx` の `applyDocumentChange` にread-onlyガードを追加し、編集更新を一括拒否するよう統合。
-- [x] `SuggestionPanel` / `MergeSuggestionsPanel` の編集導線をread-only時にdisabled化。
-- [x] `SidePanel` とヘッダーsubtitleにread-only状態表示を追加。
+- [x] `App.tsx` の `applyDocumentChange` に読み取り専用ガードを追加し、編集更新を一括拒否するよう統合。
+- [x] `SuggestionPanel` / `MergeSuggestionsPanel` の編集導線を読み取り専用時にdisabled化。
+- [x] `SidePanel` とヘッダーsubtitleに読み取り専用状態表示を追加。
 
 
 #### FB-RM-MID-05 実装TODO（完了ログ）
 
 - [x] `bundle_export.ts` に `exportGranularity`（overview/detail）を導入し、`bundle_manifest.json` 出力を追加。
 - [x] overview時はselected-card traceの生成を抑止し、detail時のみtraceを出力。
-- [x] SharePanelのbundle exportセクションにgranularity選択UI（radio）を追加。
-- [x] `App.tsx` からbundle export contextへgranularityを伝搬。
+- [x] SharePanelのbundle 書き出しセクションにgranularity選択UI（radio）を追加。
+- [x] `App.tsx` からbundle 書き出し文脈へgranularityを伝搬。
 - [x] `bundle_export.test.ts` / `SharePanel.test.ts` を更新し、manifest/trace抑止/UI文言を回帰固定。
 - [x] `04_Documentation/operations.md` に運用メモを追記。
 
 
 #### FB-RM-MID-04 実装TODO（完了ログ）
 
-- [x] Islandに `parentIslandId` / `placardCardId` を保持する互換実装（missing field fallback）をfrontend import/validationで維持した。
+- [x] Islandに `parentIslandId` / `placardCardId` を保持する互換実装（missing field fallback）をフロントエンド取り込み/validationで維持した。
 - [x] SidePanelからparent island / placard cardを編集可能にし、保存後の再読込で復元される導線を実装した。
 - [x] 構造レベル切替（overview/mid/detail）をView Controlsとショートカット（Alt+Shift+1/2/3）で提供し、表示粒度のみを切り替える挙動を実装した。
 - [x] overviewでplacard以外カードを非表示化する可視性ヘルパーとテストを追加し、データ本体を破壊しないことを回帰固定した。
@@ -318,7 +318,7 @@
 #### FB-RM-I18N-04 実装TODO（完了ログ）
 
 - [x] view locale解決順序を `URL(locale/lang/uiLocale) -> view metadata -> localStorage(doc+view) -> default(ja)` に固定。
-- [x] read-only時はlocale永続化を抑止し、URL指定時は上書き保存しない責務を明確化。
-- [x] `viewState.locale` をview metadata schema/export/importに追加し、不正localeをvalidationで拒否。
-- [x] App初期化・view切替・pack/view importで同一resolverを使用し、race conditionを回避。
+- [x] 読み取り専用時はlocale永続化を抑止し、URL指定時は上書き保存しない責務を明確化。
+- [x] `viewState.locale` をview metadata schema/export/取り込みに追加し、不正localeをvalidationで拒否。
+- [x] App初期化・view切替・pack/view 取り込みで同一resolverを使用し、race conditionを回避。
 - [x] `view_locale_resolution.test.ts` でview切替・再読込・欠損時fallbackを回帰固定。

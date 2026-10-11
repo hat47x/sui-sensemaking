@@ -1,4 +1,4 @@
-# ADR-0070: KJキャンバス世代をcontent-addressed DAGで管理しGitを任意adapterとする
+# ADR-0070: KJキャンバス世代をcontent-addressed DAGで管理しGitを任意アダプターとする
 
 - Status: Accepted
 - Date: 2026-08-09
@@ -30,11 +30,11 @@ Gitには、content-addressedなobject、delta圧縮、DAG、merge、交換可�
 6. AI提案のrevisionでは、`ai_run_ref` を必須とする。AI runのタスク、入力IRのダイジェスト、出力のダイジェスト、ポリシーバージョンなどは別のレコードへ置く。プロバイダ、モデル、プロンプトを全revisionへ複製しない。生のプロンプトや未レビューの本文を、世代のメタデータへ保存しない。
 7. 人がAI提案を採用した場合は、人間を起点とする新しいrevisionを作り、元の提案revisionを参照する。AI提案をhuman-authoredやhuman-reviewedへ書き換えない。
 8. 圧縮は、正規化したJSONを前提に、content-addressedなchunkまたはdeltaと、定期的なfull snapshotを組み合わせる。deltaの連鎖には上限を設ける。復元のコストまたはdeltaの比率が閾値を超えたら、full snapshotへ戻す。具体的な値は、代表データのベンチマークで決める。
-9. Gitは、アーカイブ、インポート・エクスポート、オフライン協調に限った任意のadapter候補とする。標準の実行時の正本にも、ホットパスのblob保存先にもしない。採用する場合も、アプリケーションのrevision IDとSHA-256ダイジェストを正本とする。GitのオブジェクトIDやブランチrefを、認可や真正性の根拠にしない。
-10. Git adapterは、bareリポジトリ、サーバー管理のref、フック無効、worktreeなしを前提とする。テナント分離、暗号化、GC、削除、packのバックアップと復元、同時書き込みを検証するまで、有効にしない。
+9. Gitは、アーカイブ、インポート・エクスポート、オフライン協調に限った任意のアダプター候補とする。標準の実行時の正本にも、ホットパスのblob保存先にもしない。採用する場合も、アプリケーションのrevision IDとSHA-256ダイジェストを正本とする。GitのオブジェクトIDやブランチrefを、認可や真正性の根拠にしない。
+10. Git アダプターは、bareリポジトリ、サーバー管理のref、フック無効、worktreeなしを前提とする。テナント分離、暗号化、GC、削除、packのバックアップと復元、同時書き込みを検証するまで、有効にしない。
 11. revisionと物理blobを分離する。複数のrevisionが、同じ `tenant + content digest` を持つ不変のblobを参照できる。保存先のバックエンドは、データベース、NAS、S3、将来のGitのいずれでもよい。revisionごとにobjectを複製しない。
 12. NAS/S3は、revision DAGと競合する代替の正本ではない。full snapshot、delta、chunkの物理blobバックエンド候補とする。ただし、実行時の切り替え、コーディネータ、ドメイン外部キーの実装は優先度を下げ、revisionスキーマと圧縮のベンチマークが確定するまで凍結する。
-13. 現行の `content_object_references` は、外部保存の先行メタデータであり、最終的なスキーマとは扱わない。revisionを導入するときに、`content_blobs`（ダイジェストをidentityとする）と `canvas_revisions`（論理的な世代）へ責務を分ける。既存テーブルは、互換マイグレーションまたは撤去の対象として再評価する。
+13. 現行の `content_object_references` は、外部保存の先行メタデータであり、最終的なスキーマとは扱わない。revisionを導入するときに、`content_blobs`（ダイジェストを識別情報とする）と `canvas_revisions`（論理的な世代）へ責務を分ける。既存テーブルは、互換マイグレーションまたは撤去の対象として再評価する。
 14. 正規化JSONは、UTF-8、キーの辞書順、余分な空白なし、NaN/Infinity禁止とする。fullとdeltaのどちらにするかは、保存先のバックエンドではなくコーデックが決める。deltaの連鎖の上限または圧縮比の閾値を超えた場合は、full gzipへ戻す。復元後のダイジェストの検証に成功するまで、Documentとして解釈しない。
 15. 保持のGCは、mark-and-sweep型とし、最初は候補の列挙だけを行う。head、DAGの親、元の提案、明示的なpinから到達できるrevisionは削除しない。checkpointとgovernedは、期限で自動削除しない。revisionを削除した後も、参照数がゼロで保留期間を過ぎたことを確認するまで、物理blobを削除しない。
 16. revisionの削除時には、保護条件を同じDELETE文で再評価する。候補の列挙後にpinやheadが追加されて競合した場合は、安全側で拒否する。blobのsweepは、revisionからの参照とdeltaのbaseからの参照がともにゼロで、`failed|deleting` のまま保留期限を過ぎたobjectだけを対象とする。
@@ -71,16 +71,16 @@ Gitには、content-addressedなobject、delta圧縮、DAG、merge、交換可�
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | KJキャンバスは、長期の編集、分岐、統合、人間と生成AIの提案の採否、探究ラウンドの節目を持つ。AI提案と人間による採用の系譜を保ちつつ、proposal-onlyとhuman reviewの境界を維持する | 機能: AI提案のrevisionでは `ai_run_ref` を必須にする。人が採用した場合は、人間を起点とする新revisionを作って元を参照し、AI提案をhuman-authoredへ書き換えない。データ: 生のプロンプトや未レビューの本文を、世代のメタデータへ保存しない |
+| **業務設計** | KJキャンバスは、長期の編集、分岐、統合、人間と生成AIの提案の採否、探究ラウンドの節目を持つ。AI提案と人間による採用の系譜を保ちつつ、提案のみとhuman reviewの境界を維持する | 機能: AI提案のrevisionでは `ai_run_ref` を必須にする。人が採用した場合は、人間を起点とする新revisionを作って元を参照し、AI提案をhuman-authoredへ書き換えない。データ: 生のプロンプトや未レビューの本文を、世代のメタデータへ保存しない |
 | **データ設計** | キャンバスの編集世代を、Gitに依存しないcontent-addressedなrevision DAGとして定義する（revisionはコンテンツダイジェストと親を持ち、物理本文はContent Storeに置く）。ephemeral、checkpoint、governedの3段階を採用し、全操作のevent sourcingはしない。revisionと物理blobを分離し、複数のrevisionが同じ `tenant+digest` の不変blobを参照する | 業務: 自動保存へ重いAIやactorの属性を付けない（容量、PII、監査ノイズを減らす）。機能: 正規化JSON（UTF-8、キーの辞書順、NaN禁止）を前提に、content-addressedなchunkまたはdeltaと、定期的なfull snapshotを組み合わせる |
-| **機能設計** | Gitは、アーカイブ、インポート・エクスポート、オフライン協調に限った任意のadapterとする。AIの実行は `ai_generation_runs` へ分離し、プロンプト、本文、プロバイダ、モデルをDAGへ複製しない。保持のGCはmark-and-sweep型とし、head、DAGの親、元の提案、pinから到達できるrevisionを削除しない。checkpointとgovernedは、期限で自動削除しない | 業務: revisionの削除時に、保護条件を同じDELETE文で再評価し、pinやheadが追加されて競合したら安全側で拒否する。データ: blobのGCは、対象の行をロックしたトランザクション内で参照を再確認し、`deleting` へ遷移してから物理バックエンドを削除する。失敗時は行を `deleting` のまま残し、再試行できるようにする |
+| **機能設計** | Gitは、アーカイブ、インポート・エクスポート、オフライン協調に限った任意のアダプターとする。AIの実行は `ai_generation_runs` へ分離し、プロンプト、本文、プロバイダ、モデルをDAGへ複製しない。保持のGCはmark-and-sweep型とし、head、DAGの親、元の提案、pinから到達できるrevisionを削除しない。checkpointとgovernedは、期限で自動削除しない | 業務: revisionの削除時に、保護条件を同じDELETE文で再評価し、pinやheadが追加されて競合したら安全側で拒否する。データ: blobのGCは、対象の行をロックしたトランザクション内で参照を再確認し、`deleting` へ遷移してから物理バックエンドを削除する。失敗時は行を `deleting` のまま残し、再試行できるようにする |
 
 ## Consequences
 
 - DB、NAS、S3、将来のGit保存で、同じ論理世代を使える。
 - 自動保存へ重いAIやactorの属性を付けないため、容量、PII、監査ノイズを抑えられる。
-- AI提案と人間による採用の系譜を保ちつつ、proposal-onlyとhuman reviewの境界を維持できる。
-- AI実行の再現と監査への接続に必要な最小のidentityを保持しつつ、プロンプトや生成本文の重複保存を避けられる。プロバイダの実行詳細は、既存の監査ログをトレースIDで参照する。
+- AI提案と人間による採用の系譜を保ちつつ、提案のみとhuman reviewの境界を維持できる。
+- AI実行の再現と監査への接続に必要な最小の識別情報を保持しつつ、プロンプトや生成本文の重複保存を避けられる。プロバイダの実行詳細は、既存の監査ログをトレースIDで参照する。
 - revision DAG、delta生成、GC、保持pin、ドメイン行からの参照、共有bundleについて、追加の設計が必要になる。
 - Gitの圧縮効果は、JSONの正規化と変更の局所性に依存する。実データのベンチマークなしに、採用の効果を断定しない。
 - オブジェクトストレージを先行して実装しないことで、二重参照と二重GCを避ける。一方、大容量、低価格、共有ストレージが必要になった時点で、同じblob契約へ追加できる。
@@ -105,7 +105,7 @@ Gitには、content-addressedなobject、delta圧縮、DAG、merge、交換可�
 
 ## Extended representative benchmark 2026-08-10
 
-既存のfrontendにある実Documentのフィクスチャを起点に、次の3条件を `benchmark_generation_scenarios.py` で追試した。
+既存のフロントエンドにある実Documentのフィクスチャを起点に、次の3条件を `benchmark_generation_scenarios.py` で追試した。
 
 - 40世代
 - 同じフィクスチャの2ブランチとマージ
@@ -130,7 +130,7 @@ Gitには、content-addressedなobject、delta圧縮、DAG、merge、交換可�
 
 既存のDocument APIをrevision DAGへ段階的に移行する際の曖昧さを、次のとおり解消する。
 
-1. 現行frontendの `PUT /docs/{doc_id}` は、利用者の明示的な保存操作からだけ呼ばれる。そのため、`generation_reason=manual_save`、`generation_tier=checkpoint`、`generation_origin=human` として扱う。自動保存、インポート、AI提案、人間による採用は、既存のPUTから推測しない。将来のサーバー管理の操作コンテキストか、専用のAPIで区別する。
+1. 現行フロントエンドの `PUT /docs/{doc_id}` は、利用者の明示的な保存操作からだけ呼ばれる。そのため、`generation_reason=manual_save`、`generation_tier=checkpoint`、`generation_origin=human` として扱う。自動保存、インポート、AI提案、人間による採用は、既存のPUTから推測しない。将来のサーバー管理の操作コンテキストか、専用のAPIで区別する。
 2. 通常のDocumentの既定のhead名は `main` とする。headがまだないDocumentでは、最初の実体化でversion 1を作る。以後の変更の保存は、現在のheadを単一の親に持つ。
 3. HTTP ETagは、互換期間中も `documents.payload_json` のSHA-256を維持する。コンテンツダイジェストは正規化JSONのSHA-256であり、headのversionはCAS用の整数である。この三つを、同じversionとして公開しない。
 4. バイト単位の入力表現ではなく、正規化JSONのダイジェストが現在のheadと同じなら、PUTはプロジェクションの互換フィールドを更新できる。ただし、新しいrevisionの作成とheadのversionの増加は行わない。意味のない世代の増加を避ける。同じ本文を監査用のcheckpointとして残す用途は、将来の明示的な操作に分ける。

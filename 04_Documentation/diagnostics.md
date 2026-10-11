@@ -23,7 +23,7 @@
 | 層 | 見るもの |
 | --- | --- |
 | 画面 | ブラウザのコンソール、表示の崩れ、操作できない箇所 |
-| API | HTTPステータス、`/healthz`（死活確認）と `/readyz`（DBへの到達性とスキーマの世代）、backendのログ |
+| API | HTTPステータス、`/healthz`（死活確認）と `/readyz`（DBへの到達性とスキーマの世代）、バックエンドのログ |
 | DB | `db` の状態、マイグレーション、保存した結果 |
 | 外部接続 | LLMのプロバイダ、監査ログの連携先、アクセス制御の接続先（エンドポイント） |
 
@@ -70,11 +70,11 @@ curl -fsS http://127.0.0.1:8000/healthz
 
 | 症状 | 主な確認 |
 | --- | --- |
-| 画面が真っ白になる | frontendのビルド、コンソールのエラー、nginxのログ |
-| `Internal Server Error` が表示される | backendが起動しているか、`/api/healthz` が成功するか。標準サンプルの `doc_phase1_canvas` は、初めてブラウザで表示したときに作られます。そのため、初回の表示の前に `/api/docs/doc_phase1_canvas` を呼ぶと404になりますが、これは正常です。5xxが返るときだけ、backendを調べます。 |
-| 保存に失敗する | APIのステータス、`X-API-Key`、backendのログ、DBへの接続 |
-| `Database driver for backend '...' is not available` でbackendやマイグレーションが止まる | [installation.mdの、DBごとのpip extraの表](installation.md#sqlite以外の検証済みdbを直接使う場合)を確認し、同じ仮想環境に、対象のextraを導入します。URLやパスワードを、診断ログに貼らないでください。 |
-| `password authentication failed for user "sui_sensemaking"` がbackendのログに出る | まず、`env \| grep -i sui_sensemaking`（exportした変数がcomposeの既定値を上書きし、`down -v` でも直りません）と、`docker compose config`（dbのパスワードと `SUI_DATABASE_URL` のパスワードが一致しているか）を確認します。次に、古い `sui_sensemaking_pgdata` のボリュームが残っていないかを確認します（`pg_isready` はパスワード認証を検証しないため、dbは正常に見えます）。詳しい復旧の手順は、installation.mdの同じ名前の項目を参照してください。 |
+| 画面が真っ白になる | フロントエンドのビルド、コンソールのエラー、nginxのログ |
+| `Internal Server Error` が表示される | バックエンドが起動しているか、`/api/healthz` が成功するか。標準サンプルの `doc_phase1_canvas` は、初めてブラウザで表示したときに作られます。そのため、初回の表示の前に `/api/docs/doc_phase1_canvas` を呼ぶと404になりますが、これは正常です。5xxが返るときだけ、バックエンドを調べます。 |
+| 保存に失敗する | APIのステータス、`X-API-Key`、バックエンドのログ、DBへの接続 |
+| `Database driver for backend '...' is not available` でバックエンドやマイグレーションが止まる | [installation.mdの、DBごとのpip extraの表](installation.md#sqlite以外の検証済みdbを直接使う場合)を確認し、同じ仮想環境に、対象のextraを導入します。URLやパスワードを、診断ログに貼らないでください。 |
+| `password authentication failed for user "sui_sensemaking"` がバックエンドのログに出る | まず、`env \| grep -i sui_sensemaking`（書き出しした変数がcomposeの既定値を上書きし、`down -v` でも直りません）と、`docker compose config`（dbのパスワードと `SUI_DATABASE_URL` のパスワードが一致しているか）を確認します。次に、古い `sui_sensemaking_pgdata` のボリュームが残っていないかを確認します（`pg_isready` はパスワード認証を検証しないため、dbは正常に見えます）。詳しい復旧の手順は、installation.mdの同じ名前の項目を参照してください。 |
 | AI提案が出ない | `SUI_LLM_PROVIDER`、プロバイダのエンドポイント、SafeMode |
 | 書き出しが失敗する、または長時間終わらない | 対象文書のスキーマ、画面上の進捗と中止のメッセージ、ブラウザのコンソール |
 | ワーカーが停止する | 入力データ、ワーカーのコンソール、該当ワーカーの単体テスト |
@@ -193,8 +193,8 @@ APIのステータス:
 ## 復旧の基本
 
 1. 変更の直後なら、直前の設定の差分を確認します。
-2. DBへの接続やマイグレーションのエラーなら、backendのログを確認します。
-3. frontendの表示だけがおかしいときは、キャッシュを無効にして再読み込みします。
+2. DBへの接続やマイグレーションのエラーなら、バックエンドのログを確認します。
+3. フロントエンドの表示だけがおかしいときは、キャッシュを無効にして再読み込みします。
 4. LLMや監査ログのHTTP連携が関係するときは、いったん `SUI_LLM_PROVIDER=none` と `SUI_AUDIT_EXPORT_ENABLED=false` に戻して、もう一度確認します。
 
 復旧を急ぐときも、秘密情報を含むログをそのまま共有しないでください。共有する前に、APIキー、トークン、個人情報、顧客の生のデータを取り除きます。

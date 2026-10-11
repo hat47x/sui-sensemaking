@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-18
 - Deciders: Maintainer
-- Scope: sensemaking semantic artifactのidentity、provenance、review、authority transition、Review Capsule、保持期間
+- Scope: sensemaking semantic artifactの識別情報、provenance、review、authority transition、Review Capsule、保持期間
 - Related: `ADR-0070`, `ADR-0084`, `ADR-0085`
 - Runtime impact: この変更では影響なし
 - Schema impact: この変更では影響なし
@@ -12,18 +12,18 @@
 
 ADR-0085では、Evidence / Observation / Relation / Hypothesis / Structure / Synthesis / Review / Decisionを、別の意味成果物として扱うことを決めた。あわせて、review、authority、ライフサイクル、visibility、provenanceを、semantic kindと直交させることも決めた。
 
-次に必要なのは、その成果物を将来永続化するときの、identityとeventの境界である。
+次に必要なのは、その成果物を将来永続化するときの、識別情報とeventの境界である。
 
 既存のcanvas revisionの設計（ADR-0070）は、次の重要な原則をすでに持つ。
 
-- アプリケーションのrevision identityと、コンテンツダイジェストを分ける
+- アプリケーションのrevision 識別情報と、コンテンツダイジェストを分ける
 - ダイジェストを、認可、真正性、人間によるレビューの証明に使わない
 - AI提案を人間が採用しても、AI提案のrevision自体を人間が作成したものへ書き換えない
 - AI実行の詳細は、`ai_generation_runs` などの別のレコードへ置き、revisionのメタデータへプロバイダ、モデル、プロンプトを複製しない
 
 sensemaking artifactも同じ原則を引き継がないと、次のような問題が生じる。
 
-- 同じ内容の別の仮説が、identity上で衝突する
+- 同じ内容の別の仮説が、識別情報上で衝突する
 - AI由来が人間由来へ洗い替えられる
 - Reviewの対象が「現在の内容」へずれる
 
@@ -46,9 +46,9 @@ contentDigest
 
 - `artifactId` は、内容から独立した不透明なIDとする。
 - `revisionId` も不透明なIDとし、コンテンツダイジェストそのものをIDにはしない。
-- `contentDigest` は、正規化したsemantic payloadのSHA-256などで計算できる。ただし、認可、真正性、review、authorityの証明には使わない。
-- 同じpayloadのダイジェストを持つ別のartifactを、重複排除して一つの論理identityへまとめることはしない。
-- 同じartifactの中でpayloadが同一でも、由来、reviewの対象、ブランチの意味が異なる場合は、別のrevisionを作り得る。何も変わらない更新を抑えるかどうかは、上位の操作のポリシーで決める。
+- `contentDigest` は、正規化したsemantic ペイロードのSHA-256などで計算できる。ただし、認可、真正性、review、authorityの証明には使わない。
+- 同じペイロードのダイジェストを持つ別のartifactを、重複排除して一つの論理識別情報へまとめることはしない。
+- 同じartifactの中でペイロードが同一でも、由来、reviewの対象、ブランチの意味が異なる場合は、別のrevisionを作り得る。何も変わらない更新を抑えるかどうかは、上位の操作のポリシーで決める。
 
 ### D2. semantic kindは、論理artifactの存続期間中は変更しない
 
@@ -88,7 +88,7 @@ revisionId
 contentDigest
 ```
 
-`contentDigest` は照合用であり、revision identityの代わりではない。
+`contentDigest` は照合用であり、revision 識別情報の代わりではない。
 
 対象のartifactに新しいrevisionが作られても、過去のReviewやAcceptanceを、新しいrevisionへ自動では引き継がない。
 
@@ -105,15 +105,15 @@ contentDigest
 - 実行または生成のrun ref（該当する場合）
 - 入力のartifact revision ref
 - 外部またはsourceへのref
-- 入力のscope ref（該当する場合）
+- 入力の範囲 ref（該当する場合）
 - 変換またはredactionのref（該当する場合）
 - createdAt
 
 AIやモデルによる生成の場合は、`runRef` を用いて、プロバイダ、モデル、ポリシー、入力IRなどの既存のrunレコードへ接続する。artifact revisionへは、詳細を複製しない。
 
-人間による生成の場合も、生のメールアドレスなどをactor refへ直接入れず、既存の不透明なidentityの方針に従う。
+人間による生成の場合も、生のメールアドレスなどをactor refへ直接入れず、既存の不透明な識別情報の方針に従う。
 
-旧形式のimportなどでactorが不明な場合は、推測して補わず、`actorKind=unknown` を許容する。
+旧形式の取り込みなどでactorが不明な場合は、推測して補わず、`actorKind=unknown` を許容する。
 
 ### D6. Reviewは追記専用のレコードとして扱い、Authority transitionと分ける
 
@@ -192,7 +192,7 @@ transitionは、Truthのtransitionではない。
 Consensus transitionには、少なくとも次を必要とする方向とする。
 
 - consensus policy
-- 対象のscope
+- 対象の範囲
 - 参加者の集合、またはそのスナップショットへの参照
 - authority event
 
@@ -244,7 +244,7 @@ Capsuleが参照するartifact、Review、Authority event、Decisionのうち、
 
 将来接続するときは、既存の正本を、次のように参照できるようにする。
 
-- `DocumentV1` / canvas revision: sourceまたはcontextのrevision ref
+- `DocumentV1` / canvas revision: sourceまたは文脈のrevision ref
 - `RoundSnapshotV1`: 不変のsource snapshotへのref
 - `CardLineageEdgeV1`: 既存のラウンド間のlineage。汎用のartifact provenanceへは、暗黙に変換しない
 - `ReviewAttribution`: 現行のdocument単位の人間によるレビューのメタデータ。汎用のReviewレコードの、互換Projectionの候補
@@ -329,13 +329,13 @@ Reviewは、semantic artifactのkindではなく、独立したレコードと�
 - 同一の内容でも、別の由来や論点を持つartifactを、誤って重複排除しない。
 - review件数とConsensusを混同しない。
 - chain-of-thoughtを全部保存しなくても、重要な代替案と反証を追跡できる。
-- 既存のcanvas revision、InquiryJourney、AI runのレコードを再利用しつつ、意味成果物に固有のidentityを保てる。
+- 既存のcanvas revision、InquiryJourney、AI runのレコードを再利用しつつ、意味成果物に固有の識別情報を保てる。
 
 ### Costs / Open questions
 
 - 具体的なIDの形式（UUIDv7など）は未決である。不透明な文字列の契約を先に置く。
-- semantic payloadの正規化は、kindごとに定義が必要である。
-- 汎用のRelation payloadの詳細は未決である。
+- semantic ペイロードの正規化は、kindごとに定義が必要である。
+- 汎用のRelation ペイロードの詳細は未決である。
 - Review purposeとdispositionの閉じた範囲は、パイロットでの検証が必要である。
 - Authority Scopeとconsensusの参加者スナップショットの具体的なスキーマは、未決である。
 - artifact revisionの物理的なストレージ、DBのテーブル、インデックスは未決である。

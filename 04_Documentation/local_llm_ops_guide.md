@@ -84,7 +84,7 @@ export SUI_LOCAL_LLM_BASE_URL=http://localhost:8001
 export SUI_LOCAL_LLM_MODEL=mock
 ```
 
-> 注意: `mock_local_llm.py` は、直接起動（backendをローカルで直接起動する構成）向けの確認手段です。標準のDocker Compose環境では、代わりに、検証専用の `docker-compose.llm-stub.yml` を重ねて使ってください（`docker compose -f docker-compose.yml -f docker-compose.llm-stub.yml up -d`）。これはCompose内のネットワークで完結する、別の決定論的なスタブ（`llm-stub` サービス）で、`mock_local_llm.py` とは別の仕組みです。どちらも、本番に近い、利用者向けの配備では使いません。
+> 注意: `mock_local_llm.py` は、直接起動（バックエンドをローカルで直接起動する構成）向けの確認手段です。標準のDocker Compose環境では、代わりに、検証専用の `docker-compose.llm-stub.yml` を重ねて使ってください（`docker compose -f docker-compose.yml -f docker-compose.llm-stub.yml up -d`）。これはCompose内のネットワークで完結する、別の決定論的なスタブ（`llm-stub` サービス）で、`mock_local_llm.py` とは別の仕組みです。どちらも、本番に近い、利用者向けの配備では使いません。
 
 モックを有効にしたときに、画面で確認できるAI機能は、次のとおりです。
 

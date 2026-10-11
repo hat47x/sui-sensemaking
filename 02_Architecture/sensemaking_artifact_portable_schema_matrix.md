@@ -105,7 +105,7 @@ DBで表現できない意味を、DB固有のトリガーに隠しません。
 
 - 出力側の厳密なリビジョンへの外部キー
 - 入力側の厳密なリビジョンへの複合外部キー
-- 重複の扱いは、roleとordinalを設計するときに確定する。
+- 重複の扱いは、役割とordinalを設計するときに確定する。
 
 ### 2.5 `semantic_artifact_source_refs`
 
@@ -320,8 +320,8 @@ source_authority_assertions
 - 出典のネットワーク
 - 出典のレコードID
 - 出典のスコープ
-- 安全なimport後の表現、またはコンテンツ参照
-- importセッション
+- 安全な取り込み後の表現、またはコンテンツ参照
+- 取り込みセッション
 - created_at
 
 ローカルのAuthority reducerは、これらを入力にしません。
@@ -372,9 +372,9 @@ semantic_relation_index
 | 親スコープのAuthorityを継承しない |  | ○ | ○ |
 | 参加者スナップショットの不変 | 更新経路なし | ○ |  |
 | Consensus != Reviewの件数 |  | ○ | ○ |
-| importしたAuthorityを昇格しない | 別テーブル | ○ | ○ |
+| 取り込みしたAuthorityを昇格しない | 別テーブル | ○ | ○ |
 | バンドルのクロージャ |  |  | ○ |
-| importでのIDの衝突 |  | ○ | ○ |
+| 取り込みでのIDの衝突 |  | ○ | ○ |
 | 未知の拡張Relationの保全 |  |  | ○ |
 | 拡張Relationの副作用の禁止 |  | ○ | ○ |
 | 保持ルートの保護 |  | ○ GC | ○ |
@@ -463,7 +463,7 @@ Review submits target H/r3
 
 ---
 
-## 12. importのステージングに関する疑似フロー
+## 12. 取り込みのステージングに関する疑似フロー
 
 ```text
 parse bundle
@@ -505,7 +505,7 @@ materialized network
 - lifecycleを、リビジョンのエンベロープに固定するか、追記専用イベントへ分離するか
 - Reviewのfindingを、長さ制限付きの行にするか、コンテンツオブジェクトにするかの境界
 - Consensus Policyの永続化
-- importした出典のアサーションのペイロード形状
+- 取り込みした出典のアサーションのペイロード形状
 - マテリアライザのoutboxで、既存テーブルを再利用できるか
 - 現在状態キャッシュの復旧操作
 - Relationインデックスの更新の粒度

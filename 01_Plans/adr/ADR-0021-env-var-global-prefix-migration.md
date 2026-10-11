@@ -38,7 +38,7 @@ sui-sensemakingの公開環境変数は、すべて例外なく `SUI_` で始ま
 | LLM provider | `SUI_LLM_PROVIDER` |
 | large-scale LLMへの昇格の許可 | `SUI_LLM_ESCALATION_ENABLED` |
 | API key | `SUI_API_KEY` |
-| frontendのAPI base path | `SUI_FRONTEND_API_BASE` |
+| フロントエンドのAPI base path | `SUI_FRONTEND_API_BASE` |
 | Docker ComposeのWeb公開port | `SUI_WEB_PORT` |
 | Docker ComposeのPostgreSQL入力 | `SUI_POSTGRES_DB`, `SUI_POSTGRES_USER`, `SUI_POSTGRES_PASSWORD` |
 
@@ -51,7 +51,7 @@ sui-sensemakingの公開環境変数は、すべて例外なく `SUI_` で始ま
 例を挙げる。
 
 - Docker ComposeのPostgreSQLイメージへ渡す `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- frontendのビルドツールの内部処理で使われる互換のshim
+- フロントエンドのビルドツールの内部処理で使われる互換のshim
 
 これらは、利用者が直接設定するsui-sensemakingの公開キーではない。公開文書では、正規のキーと内部への写像の境界を明示する。
 
@@ -88,7 +88,7 @@ sui-sensemakingの公開環境変数は、すべて例外なく `SUI_` で始ま
 このADRを維持するため、次を継続して確認する。
 
 - backend settingsが、`SUI_*` のvalidation aliasだけを公開入力として受け付ける。
-- frontendのビルドが、`SUI_FRONTEND_API_BASE` を正規のキーとして扱う。
+- フロントエンドのビルドが、`SUI_FRONTEND_API_BASE` を正規のキーとして扱う。
 - Docker Composeの利用者の入力が、`SUI_*` だけである。
 - `04_Documentation/configuration.md` と `02_Architecture/runtime_parameter_registry.md` が、同じ公開キーの集合を説明している。
 - 旧キー名は、拒否の対象、履歴の説明、private adapter boundaryの説明としてだけ現れる。

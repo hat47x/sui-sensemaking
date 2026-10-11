@@ -160,7 +160,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 - fallback_to_none
 - trace_id
 
-監査ログには、payload本文・PII・秘匿トークンを保存しない。
+監査ログには、ペイロード本文・PII・秘匿トークンを保存しない。
 
 ---
 
@@ -190,7 +190,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 
 ## 9. CE1 ContextQuery/ContextBundle Contract Bridge（contract-only / mock-first）
 
-本仕様はプロバイダ抽象の正本であるが、CE1基盤のquery/bundle契約との整合を、次のとおり固定する。
+本仕様はプロバイダ抽象の正本であるが、CE1基盤のクエリ/bundle契約との整合を、次のとおり固定する。
 
 ### 9.1 Closed-world contract（v1）
 
@@ -201,7 +201,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 ### 9.2 Deterministic hash gate
 
 - `queryCanonicalHash` と `bundleHash` は、監査キーとして必須とする。
-- 同じcanonical queryで `bundleHash` が一致しない場合は、`409 nondeterministic_bundle` を返し、プロバイダの実行を続けない。
+- 同じcanonical クエリで `bundleHash` が一致しない場合は、`409 nondeterministic_bundle` を返し、プロバイダの実行を続けない。
 
 ### 9.3 Mock validation profile（実装依存の切断）
 
@@ -209,7 +209,7 @@ SUI_DEEPSEEK_THINKING_MODE=disabled
 
 1. `previewConfirmed=false -> 422 preview_required`
 2. 未定義のキー -> `400 unknown_contract_key`
-3. 同じcanonical queryを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致
+3. 同じcanonical クエリを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致
 4. 3回のうち1回でも不一致なら `409 nondeterministic_bundle`
 
 ## 10. Stream B CE0/CE1 mock-first provider alignment（2026-05-06）

@@ -92,7 +92,7 @@ DoD（本ADR完了条件）:
 
 | Rule ID | 判定契約 |
 | --- | --- |
-| `DC-ACT-001` | Active issueをfilesystemから発見し、正規Status、必須meta、参照先、重複Backlog、triageとの集合一致を検査する。 |
+| `DC-ACT-001` | Active 課題をfilesystemから発見し、正規Status、必須meta、参照先、重複Backlog、triageとの集合一致を検査する。 |
 | `DC-LNK-001` | コードフェンス/コードスパンと外部URLを除外し、Markdown相対参照先が存在することを検査する。 |
 | `DC-CUR-001` | current-only文書へStream/rerun/checkpoint等の実行履歴見出しが再混入していないことを検査する。 |
 | `DC-ARC-001` | architecture current 4文書の責務SSOT、Contract ID/型、API/schema key、支援表の固定契約を検査する。 |

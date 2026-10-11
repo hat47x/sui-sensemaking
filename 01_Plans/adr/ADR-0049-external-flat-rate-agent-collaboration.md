@@ -22,7 +22,7 @@
 
 ### D1. 連携モデル（成果物ベース・非同期・人間仲介）
 
-- sui-sensemakingから外部エージェントへの自動送信は行わない。出力は人間の明示操作による書き出し（共有・書き出し境界を通過）、入力は人間の明示操作による取り込み（import信頼境界を通過）とする。
+- sui-sensemakingから外部エージェントへの自動送信は行わない。出力は人間の明示操作による書き出し（共有・書き出し境界を通過）、入力は人間の明示操作による取り込み（取り込み信頼境界を通過）とする。
 - 非同期性を前提とする: 依頼と応答は `taskId` で相関し、依頼時点の `baseDocSignature`（CE3）/ `bundleHash`（CE1）を携行する。取り込み時に文書が進んでいた場合は、既存のconflict検出 / rediff経路で安全に再突合し、黙って上書きしない。複数依頼の並行、同一応答の再取込（冪等）を許す。
 - ベンダー非依存を原則とする: 契約（パッケージ/応答スキーマ）は汎用とし、Copilot / Copilot Studioは代表プロファイルとして運用手順とテンプレートを提供する（ChatGPT Enterprise等の他の定額エージェントでも同一契約で動作する）。
 
@@ -35,7 +35,7 @@
 ### D3. 応答（AgentResponse v1）と取り込み
 
 - 応答は `taskId` を携えた構造化JSONとし、`proposals[]`（種別: 島タイトル候補 / マージ候補 / ナラティブ草稿 / 対立観点 / 違和感候補 / patch=CE3 PatchV1）を運ぶ。各提案は根拠（rationale）必須、数値スコア・順位・確度フィールドは契約上禁止（反スコアリング。存在した場合、取り込み時に破棄する）。
-- 取り込みはimport信頼境界（スキーマ検証 寛容/厳格・文字列サニタイズ・容量制限）を通り、すべてAI由来・未レビューの提案として既存面へ流し込む: マージ候補→MergeSuggestions、島タイトル→候補提示、ナラティブ→草稿、対立観点/違和感→critique候補、patch→PatchWorkspace（lint→conflict→採否/保留→ロールバック可能）。
+- 取り込みは取り込み信頼境界（スキーマ検証寛容/厳格・文字列サニタイズ・容量制限）を通り、すべてAI由来・未レビューの提案として既存面へ流し込む: マージ候補→MergeSuggestions、島タイトル→候補提示、ナラティブ→草稿、対立観点/違和感→critique候補、patch→PatchWorkspace（lint→conflict→採否/保留→ロールバック可能）。
 - 自動確定なしをテストで固定する（提案の採用は常に人間操作・全操作可逆・`merge-decision-logs`/`context-audit`（operation=proposal/apply）へ記録）。
 
 ### D4. トランスポート段階（Tier）
@@ -50,7 +50,7 @@
 - sui-sensemakingからの外部自動送信（Tier 0/1ではsui-sensemakingは外部と直接通信しない）。
 - 特定ベンダーへの固定（Copilot Studioはプロファイルであり契約は汎用）。
 - リアルタイム/対話型の同期連携・チャットUIの主役化（ADR-0001非目標）。
-- 従量課金API経路（local / large-scaleプロバイダ）の廃止（併存し、本経路はprovider設定と独立に動作する）。
+- 従量課金API経路（local / large-scaleプロバイダ）の廃止（併存し、本経路は提供元設定と独立に動作する）。
 
 ## Three-Element Verification（ADR-0067 遡及適用）
 
@@ -58,7 +58,7 @@
 |------|----------------|---------------|
 | **業務設計** | 従量課金APIはMVP段階でコスト障壁となる。企業・自治体の定額エージェント（Copilot等）に思考ワークロードを委ね、sui-sensemakingは文脈供給と結果受け入れ・レビューに徹する構成が現実解。人間が仲介する「依頼書書き出し→外部処理→応答取込→提案化」を標準ワークフローとする | 機能: 自動送信・自動適用を行わない。データ: 出るものはSafeMode適用・人間確認済みパッケージのみ |
 | **データ設計** | 依頼は`taskId`・`baseDocSignature`・`bundleHash`で相関し、取込時に文書が進んでいたらconflict検出/rediffで安全に再突合する。応答は`proposals[]`（島タイトル/マージ/ナラティブ/対立/違和感/patch）を運び、数値スコア・順位・確度は契約上禁止 | 業務: 取込はすべてAI由来・未レビューの提案として既存面へ流し込む。機能: 反スコアリングを守るためスコアフィールドは破棄 |
-| **機能設計** | Tier 0（手動授受・追加インフラ不要）をMVP本採択範囲とし、Tier 1/2は将来拡張。既存のCE1 ContextBundle・CE3 PatchV1・SafeMode境界・import信頼境界・merge-decision-logsを全て再利用し、未定義は依頼パッケージ契約・応答契約・取込経路の3点のみ | 業務: 提案の採用は常に人間操作・全操作可逆。データ: provider=none構成のまま「AIなし完結」と「定額AI増強」を両立 |
+| **機能設計** | Tier 0（手動授受・追加インフラ不要）をMVP本採択範囲とし、Tier 1/2は将来拡張。既存のCE1 ContextBundle・CE3 PatchV1・SafeMode境界・取り込み信頼境界・merge-decision-logsを全て再利用し、未定義は依頼パッケージ契約・応答契約・取込経路の3点のみ | 業務: 提案の採用は常に人間操作・全操作可逆。データ: provider=none構成のまま「AIなし完結」と「定額AI増強」を両立 |
 
 ## Consequences
 
@@ -69,7 +69,7 @@
 - 想定される副作用と制約
   - 手動授受の往復手間（Tier 1で軽減可能）。エージェント側の応答契約逸脱（壊れたJSON）への再依頼運用が必要（定型文で対処）。
   - 応答品質はエージェント側能力に依存する（sui-sensemakingは検証とレビューで防御し、品質は保証しない）。
-- 移行時に必要な対応（Actionはissueで管理）
+- 移行時に必要な対応（Actionは課題で管理）
   - 仕様正本: `02_Architecture/external_agent_collaboration_spec.html`（本ADRと同時制定）。
   - 起票: `EXT-AGENT-01`（依頼パッケージ書き出し）/ `EXT-AGENT-02`（応答取り込み→提案化）/ `EXT-AGENT-03`（Copilot Studio参照キット＋利用者向け文書）。
   - `ROADMAP` 要件D・`ADR-0007` FB-RM-MID-07へ本ADRを参照付け（本経路は同要件の (b) 構造化変更指示ルートの具体化。(a) ローカルLLM反映ルートは併存のまま将来判断）。
@@ -79,6 +79,6 @@
 - Related: `01_Plans/adr/ADR-0001-value-to-requirements.md`（P-03レビュー追跡・P-04 HIL・P-07自己ホスト/プライバシー既定・非目標）
 - Related: `01_Plans/adr/ADR-0007-future-backlog.md`（FB-RM-MID-07）, `ROADMAP.md`（要件D）
 - Related: `01_Plans/adr/ADR-0047-design-decision-adr-saturation-and-execution-first.md`（R-1: 従量課金困難という記録済みの実利用摩擦への応答）
-- Related: `02_Architecture/llm_provider_spec.md`, `02_Architecture/enterprise_architecture.html`（§03アクセス制御/SafeMode/外部送出）, `02_Architecture/api.md`（context/export監査）
+- Related: `02_Architecture/llm_provider_spec.md`, `02_Architecture/enterprise_architecture.html`（§03アクセス制御/SafeMode/外部送出）, `02_Architecture/api.md`（context/書き出し監査）
 - Related: `01_Plans/issues/done/issue-CE1-context-query-bundle-foundation.md`, `issue-CE3-patch-workspace-presets.md`, `issue-CE4-api-cli-audit-integration.md`
 - Derived-from: `ROADMAP.md` 要件D（2026-06記録の従量課金摩擦）および2026-07-05の企業・自治体向け定額エージェント連携要件

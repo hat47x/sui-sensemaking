@@ -57,7 +57,7 @@
 ### 4. sui-sensemaking向けE2E設計原則（将来拡張でも維持）
 
 1. 仕様境界優先
-   - カード編集、Island操作、保存復元、SafeMode、import/exportなど
+   - カード編集、Island操作、保存復元、SafeMode、import/書き出しなど
      仕様の価値境界を優先してE2E対象を選ぶ。
 2. 安全境界優先
    - SafeMode既定ON、漏えい防止、悪性入力拒否など安全性に関わる経路を優先する。
@@ -132,14 +132,14 @@
 - Related: `02_Architecture/coding_standards.md`
 - Related: `01_Plans/adr/ADR-0001-value-to-requirements.md`
 
-## 8. Draft QA issue の昇格条件（PRODUCT-QA-01 / QA系共通）
+## 8. Draft QA 課題の昇格条件（PRODUCT-QA-01 / QA系共通）
 
-Draft issueをOpenへ昇格させる最小条件を次で固定する。
+Draft 課題をOpenへ昇格させる最小条件を次で固定する。
 
 1. Gate定義が `Go/No-Go` と証跡型（command log / screenshot / follow-up issue）を持つ。
 2. 実行経路（Compose / SQLite / 例外記録）が事前選択され、未選択時は `Execution: Hold` を維持する。
 3. 失敗分類は `test defect / product defect / environment limitation` の3語彙に正規化する。
-4. No-Go時の戻し先issueと再開条件を1:1で記述する。
+4. No-Go時の戻し先課題と再開条件を1:1で記述する。
 5. 自己修復上限は3回、4回目相当でStopとする。
 
 ### 8.1 Verify matrix（昇格判定）
@@ -147,7 +147,7 @@ Draft issueをOpenへ昇格させる最小条件を次で固定する。
 | 観点 | Pass条件 |
 | --- | --- |
 | 判定可能性 | Gateごとに Go/No-Go 条件が明記される |
-| 証跡可能性 | コマンド/結果/失敗分類/戻し先issueが追跡できる |
+| 証跡可能性 | コマンド/結果/失敗分類/戻し先課題が追跡できる |
 | 経路固定 | Compose/SQLite/例外のいずれかが事前選択される |
-| 安全境界 | SafeMode既定ON・share/export境界のNo-Go条件がある |
+| 安全境界 | SafeMode既定ON・share/書き出し境界のNo-Go条件がある |
 | 自己修復 | 上限3回が明記される |

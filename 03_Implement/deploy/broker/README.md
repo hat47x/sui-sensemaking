@@ -12,8 +12,8 @@ identity brokerのセットアップ参考手順を提供する。
 └──────────┘             └──────────┘               └──────────┘
 ```
 
-- **Keycloak**: 複数IdPを集約し、SAML→OIDC変換、JWT発行、tenant claim注入
-- **sui-sensemaking**: JWT検証、tenant解決、認可
+- **Keycloak**: 複数IdPを集約し、SAML→OIDC変換、JWT発行、tenant クレーム注入
+- **sui-sensemaking**: JWT検証、テナント解決、認可
 
 ## 1. Keycloak 起動
 
@@ -50,8 +50,8 @@ docker-compose up -d
 
 ## 4. Tenant Claim マッパー設定
 
-sui-sensemakingはJWTの `tenant_ref` claimでテナントを識別する。
-Keycloakでこのclaimを発行するマッパーを設定する。
+sui-sensemakingはJWTの `tenant_ref` クレームでテナントを識別する。
+Keycloakでこのクレームを発行するマッパーを設定する。
 
 1. Client `sui-sensemaking-backend` → Client scopes
 2. `sui-sensemaking-backend-dedicated` → Add mapper → "By configuration"

@@ -211,7 +211,7 @@ AI内部のトークン単位の推論、隠れ状態（hidden state）、非公
 
 本ADRでは`DocumentV1`のフィールド追加・意味変更・バージョン変更を行わない。
 
-将来、これらを永続型へ落とす場合は、新しいスキーマ、マイグレーション、CRUD、サポートレベルを別issue・ADRで設計する。
+将来、これらを永続型へ落とす場合は、新しいスキーマ、マイグレーション、CRUD、サポートレベルを別課題・ADRで設計する。
 
 ## Three-Element Verification（ADR-0067）
 
@@ -234,7 +234,7 @@ AI内部のトークン単位の推論、隠れ状態（hidden state）、非公
 
 ### Costs / Open questions
 
-- logical artifact IDとrevision identityの具体形式は未決。
+- logical artifact IDとrevision 識別情報の具体形式は未決。
 - Relation語彙を閉世界（closed-world）にする範囲は未決。
 - Authority transition eventの永続スキーマは未決。
 - Review Capsuleの最小必須項目と生成SLOは未決。

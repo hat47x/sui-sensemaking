@@ -9,7 +9,7 @@
 
 sui-sensemakingは、外部PDPを使わない `SUI_ACCESS_CONTROL_ADAPTER=noop` と、監査HTTPを使わない `SUI_AUDIT_TRANSPORT=noop` を安全な既定値として持つ。一方、運用者が `external_http` または `http` を明示的に選んでもエンドポイントを設定しなかった場合、従来実装は設定を受理し、実行時に `NoopAccessControlAdapter` / `NoopAuditTransport` へ縮退していた。
 
-特にaccess-controlのnoop adapterは全要求を許可する。運用者が外部PDPを有効化したつもりでも、設定漏れだけで認可が無警告の全許可へ変わるため、実行時障害に対する `read_only` / `deny` の安全側動作より前に安全境界が失われる。監査側には警告があったが、明示した連携が成立していない状態でアプリを継続する点は同じである。
+特にaccess-controlのnoop アダプターは全要求を許可する。運用者が外部PDPを有効化したつもりでも、設定漏れだけで認可が無警告の全許可へ変わるため、実行時障害に対する `read_only` / `deny` の安全側動作より前に安全境界が失われる。監査側には警告があったが、明示した連携が成立していない状態でアプリを継続する点は同じである。
 
 `ADR-0029` と `runtime_parameter_registry.md` はこの挙動を別判断として保留していた。今回、`SEC-CONFIG-01` で実装・テストがfail-openを固定していることを確認したため、可用性と設定完全性のトレードオフを決定する必要がある。
 
@@ -17,12 +17,12 @@ sui-sensemakingは、外部PDPを使わない `SUI_ACCESS_CONTROL_ADAPTER=noop` 
 
 ## Decision
 
-### D1: 連携方式の選択とendpointを原子的な設定として検証する
+### D1: 連携方式の選択と接続先を原子的な設定として検証する
 
 - `SUI_ACCESS_CONTROL_ADAPTER=external_http` では `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_ENDPOINT` を必須とする。
 - `SUI_AUDIT_TRANSPORT=http` では `SUI_AUDIT_HTTP_ENDPOINT` を必須とする。
 - 欠損時はSettings構築を `ValueError` で停止し、DB初期化、外部通信、リクエスト受付より前に起動を拒否する。
-- エラーは欠損した設定キーだけを示し、エンドポイント、bearer、issuerその他の入力値を反射しない。
+- エラーは欠損した設定キーだけを示し、エンドポイント、bearer、発行者その他の入力値を反射しない。
 
 ### D2: runtime builderもnoopへ縮退しない
 
@@ -46,7 +46,7 @@ sui-sensemakingは、外部PDPを使わない `SUI_ACCESS_CONTROL_ADAPTER=noop` 
 
 1. **警告してnoopへ縮退する**: 設定ミスを観測できても認可は全許可のままであり、安全境界を回復しないため不採用。
 2. **SaaS profileだけ起動時に拒否する**: 単一テナントでも「外部PDPを選択した」という運用意図を設定欠損で無効化してよい理由はないため不採用。
-3. **リクエスト時に利用不能用のadapterへ切り替える**: 起動は成功して障害発見が遅れ、監査側との契約も揃わないため不採用。
+3. **リクエスト時に利用不能用のアダプターへ切り替える**: 起動は成功して障害発見が遅れ、監査側との契約も揃わないため不採用。
 4. **起動時に接続先へ確認通信を送る**: 一時障害で起動不能となり、credentialを伴う副作用のない共通の確認通信の契約もないため不採用。
 
 ## Three-Element Verification（ADR-0067 遡及適用）

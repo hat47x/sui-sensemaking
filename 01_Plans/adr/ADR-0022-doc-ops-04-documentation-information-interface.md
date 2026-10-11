@@ -30,11 +30,11 @@ DOC-OPS-04系ADR群の共通I/Fとして、次を採用する（**ADR-A承認審
    - 例外承認（exception approval）
 
 2. **見出しI/F（最小段構成）**
-   - issue補助メモは `Plan → Execute → Verify → Proceed` を必須とする。
+   - 課題補助メモは `Plan → Execute → Verify → Proceed` を必須とする。
    - ADRは `Context / Decision / Consequences / Traceability` を必須とする。
 
 3. **判定メタI/F（比較可能性の最小セット）**
-   - issue補助メモ: `Type`, `Status`, `Scope`, `Related ADR/Spec`, `Expected verification level`, `Source Issue`
+   - 課題補助メモ: `Type`, `Status`, `Scope`, `Related ADR/Spec`, `Expected verification level`, `Source Issue`
    - ADR: `Status`, `Date`, `Deciders`, `Scope`
 
 4. **参照I/F（後続ADRの拘束条件）**
@@ -65,8 +65,8 @@ DOC-OPS-04系ADR群の共通I/Fとして、次を採用する（**ADR-A承認審
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | DOC-OPS-04系ADR（可読性・品質ゲート・変更統治）は文書間の参照I/Fが揃わないと用語・見出し・判定メタの競合を起こす。B/C/Dを並列化する前に最低限の情報設計I/Fを先行固定する | 機能: issue補助メモはPlan→Execute→Verify→Proceed、ADRはContext/Decision/Consequences/Traceabilityの見出しI/Fを必須化。データ: 用語I/F（正本/暫定メモ/決裁入力/例外承認）を固定語彙として統一 |
-| **データ設計** | 判定メタI/Fを比較可能性の最小セットとして固定（issue補助メモ: Type/Status/Scope/Related ADR/Expected verification level/Source Issue、ADR: Status/Date/Deciders/Scope） | 業務: B/C/Dの同時起票で用語・見出し・メタの基線が一致しマージ競合が減る。機能: レビュー時に「内容の是非」と「フォーマット差異」を分離して判定できる |
+| **業務設計** | DOC-OPS-04系ADR（可読性・品質ゲート・変更統治）は文書間の参照I/Fが揃わないと用語・見出し・判定メタの競合を起こす。B/C/Dを並列化する前に最低限の情報設計I/Fを先行固定する | 機能: 課題補助メモはPlan→Execute→Verify→Proceed、ADRはContext/Decision/Consequences/Traceabilityの見出しI/Fを必須化。データ: 用語I/F（正本/暫定メモ/決裁入力/例外承認）を固定語彙として統一 |
+| **データ設計** | 判定メタI/Fを比較可能性の最小セットとして固定（課題補助メモ: Type/Status/Scope/Related ADR/Expected verification level/Source Issue、ADR: Status/Date/Deciders/Scope） | 業務: B/C/Dの同時起票で用語・見出し・メタの基線が一致しマージ競合が減る。機能: レビュー時に「内容の是非」と「フォーマット差異」を分離して判定できる |
 | **機能設計** | 参照I/Fを後続ADRの拘束条件として固定し、品質ゲートのCI必須化境界と例外承認フローの恒久ルールはC/D側ADRで扱う | 業務: Aの承認が遅延するとB/C/Dの実編集開始が遅れる（依存の副作用）。データ: docs-check/CIのfail-on-error境界と例外承認の役割分離は別ADRの範囲 |
 
 ## Consequences

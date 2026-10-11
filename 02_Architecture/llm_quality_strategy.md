@@ -93,8 +93,8 @@ CE0の境界（safeModeの後退禁止、reviewの自動昇格禁止、Consensus
 
 Layer A（必須）に、次のCE-1ゲートを追加する。
 
-1. Determinism gate: 同じcanonical queryを3回実行して、`bundleHash` が3/3一致すること。
-2. Query Preview gate: `previewConfirmed=true` がないrequestには `422 preview_required` を返す。
+1. Determinism gate: 同じcanonical クエリを3回実行して、`bundleHash` が3/3一致すること。
+2. Query Preview gate: `previewConfirmed=true` がない要求には `422 preview_required` を返す。
 3. SafeMode exclusion gate: `safeModePolicy=strict` かつ `reviewFilter=reviewedOnly` のとき、`excludedReason` に `unreviewed_filtered` を含む。
 4. Mock parity gate: mockバックエンドと実バックエンドで、ContextQuery/ContextBundleのJSON schemaが一致する。
 
@@ -104,7 +104,7 @@ Layer A（必須）に、次のCE-1ゲートを追加する。
 - CE-2以降の `sourceBundleHash` 検証の前提条件として、このゲートに合格した結果を監査ログに残す。
 - 監査ログの最小キーは `queryId`, `bundleHash`, `excludedReason` である。
 
-## 8. CE-2 proposal-only 品質ゲート（Stream D）
+## 8. CE-2 提案のみ品質ゲート（Stream D）
 
 ### 8.1 Context
 

@@ -27,13 +27,13 @@
 | Milestone | Status | 根拠 |
 |---|---|---|
 | M1: Current reviewer (local) | ○ Done (2026-03-06) | `reviewerRef` の localStorage保持と UI導線を実装。 |
-| M2: ReviewEvent append on review toggle | ○ Done (2026-02-26) | `reviewEvents` データモデル・reviewed toggle連動・view metadata export/import保持を実装。 |
+| M2: ReviewEvent append on review toggle | ○ Done (2026-02-26) | `reviewEvents` データモデル・reviewed toggle連動・view metadata export/取り込み保持を実装。 |
 | M3: Export redaction | ○ Done (2026-03-06) | `view.json` に redaction モードを追加し、bundle は既定 strip-identities。 |
 | M4: Merge audit log integration | ○ Done (2026-03-06) | `mergeAuditLog` / `reviewEvents` を同居トリム（決定論）で統一。 |
 | M5: Org deployment hooks (optional) | ○ Done (2026-03-07) | reviewerRef adapter I/F と SSO subject→reviewerRef 正規化契約を architecture/api/schema と同期。 |
 | M6: Optional signing (non-MVP) | ○ Done (2026-03-03) | detached signature のデータモデル、検証フロー、無署名時 non-blocking UI/運用、鍵管理・監査ログ・互換方針を設計文書へ反映。 |
 
-> 注記: M4 の「部分着手」は `mergeAuditLog` 単体の実装確認に基づく。Phase 3 の DoD 充足には `reviewEvents` 実装と export/import 連携が必要。
+> 注記: M4 の「部分着手」は `mergeAuditLog` 単体の実装確認に基づく。Phase 3 の DoD 充足には `reviewEvents` 実装と書き出し/取り込み連携が必要。
 
 ## Objectives
 - “人間がレビューしたか”を確実に区別できる
@@ -53,16 +53,16 @@
 - [x] island/card/summaryのreviewedを切り替える操作時にReviewEventを追記
 - [x] reviewerRef（あれば）とcreatedAtを記録
 - Done criteria:
-  - [x] reviewEventsがview.json export/importで保持される
+  - [x] reviewEventsがview.json export/取り込みで保持される
 
 - 実装メモ（2026-02-26）は次のとおりです。
-  - `reviewEvents` をview metadataに追加し、import時はsanitizeして後方互換（欠損許容）を維持。
+  - `reviewEvents` をview metadataに追加し、取り込み時はsanitizeして後方互換（欠損許容）を維持。
   - reviewed toggle連動対象: card text / island title / island summary / island image / relation summary。
   - retention上限は `2000` 件で古いイベントからトリム。
 
 ### M3: Export redaction
-- [x] view.json exportにredactionモードを実装
-- [x] review pack / bundle exportで既定strip-identities
+- [x] view.json 書き出しにredactionモードを実装
+- [x] review pack / bundle 書き出しで既定strip-identities
 - Done criteria:
   - 公開用にstrip-allを選ぶとレビュー履歴が消える
 
@@ -80,8 +80,8 @@
 実装メモ（2026-03-07）は次のとおりです。
 - `ReviewerRefResolverAdapter` の責務を「`AuthContext` から `reviewerRef/ownerRef` を解決する一点」に固定。
 - profileは `user_id`（既定）/`sso_subject`（任意）を提供し、`sso_subject` は入力不足時に `user_id` フォールバックを適用。
-- 永続payload（reviewEvents/view export/import）は `reviewerRef` のopaque string契約を維持し、既存互換を壊さない。
-- PII最小化として、`provider` / `external_uid` の生値はattribution payloadへ保存せず、resolver内部の派生ID生成のみに使用。
+- 永続ペイロード（reviewEvents/view export/import）は `reviewerRef` のopaque string契約を維持し、既存互換を壊さない。
+- PII最小化として、`provider` / `external_uid` の生値はattribution ペイロードへ保存せず、resolver内部の派生ID生成のみに使用。
 
 ### M6: Optional signing (non-MVP)
 - [x] detached signatureを設計（ファイル単位署名）
@@ -99,7 +99,7 @@
 #### 2) 検証フロー / 失敗時挙動
 - 署名ファイル欠損: `not_provided`（情報表示のみ、通常利用継続）。
 - 署名あり検証成功: `passed`。
-- 署名あり検証失敗: `failed`（既定では閲覧継続可、share/export時に追加確認）。
+- 署名あり検証失敗: `failed`（既定では閲覧継続可、share/書き出し時に追加確認）。
 - fail-closedが必要な組織運用のみpolicy override（`requireSignature=true`）で拒否可能。
 
 #### 3) UI/運用仕様（non-blocking）

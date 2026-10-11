@@ -125,7 +125,7 @@ python -m pytest
 | 観点 | 期待 |
 | --- | --- |
 | 起動 | `/api/healthz` が成功する |
-| 保存経路 | 一意な合成documentの `PUT -> GET` でpayloadと `ETag` が一致し、固定seedデータに依存しない |
+| 保存経路 | 一意な合成documentの `PUT -> GET` でペイロードと `ETag` が一致し、固定seedデータに依存しない |
 | 保存 | 作成・編集した内容が再読み込み後も残る |
 | SafeMode | 未レビュー情報をAIが自動で確定しない |
 | LLM無効 | `SUI_LLM_PROVIDER=none` ではAI機能が無効として扱われる |
@@ -177,12 +177,12 @@ python -m pytest
 
 - モックとフィクスチャを優先し、外部依存を固定する。
 - 同一commitで `npm run test` → `npm run e2e:mock` を同じ順で実行し、差分を再現できることを確認する。
-- 不安定な失敗が出た場合は、まず再実行か待機の調整で切り分ける。同じ原因で繰り返し失敗するなら、無条件に再実行して見逃さず、フィクスチャか実装の問題として対象のissueに記録する。
+- 不安定な失敗が出た場合は、まず再実行か待機の調整で切り分ける。同じ原因で繰り返し失敗するなら、無条件に再実行して見逃さず、フィクスチャか実装の問題として対象の課題に記録する。
 
 
-## QA issueをOpenにする条件
+## QA 課題をOpenにする条件
 
-`issue-QA-*` をDraftからOpenへ進めるときの受入条件、完了条件、証跡の形式、ゲートのテンプレートは、対象のissueメモ、[issues/README.md](../../../01_Plans/issues/README.md)（ライフサイクルの運用）、`01_Plans/adr/ADR-0019-e2e-verification-policy-and-compose-runbook.md` に従います。値や進行のテンプレートは本書へ複製せず、対象のissueを直接参照してください。
+`issue-QA-*` をDraftからOpenへ進めるときの受入条件、完了条件、証跡の形式、ゲートのテンプレートは、対象の課題メモ、[issues/README.md](../../../01_Plans/issues/README.md)（ライフサイクルの運用）、`01_Plans/adr/ADR-0019-e2e-verification-policy-and-compose-runbook.md` に従います。値や進行のテンプレートは本書へ複製せず、対象の課題を直接参照してください。
 
 ## 失敗時に残す情報
 
@@ -265,7 +265,7 @@ SUI_E2E_REAL_BACKEND=1 node ./node_modules/@playwright/test/cli.js test \
   e2e/ai_model_ux_available_models_reason.spec.ts --reporter=line --workers=1
 ```
 
-`no_active_models` のケースは空のモデルレジストリを前提とするため、バックエンドは毎回新しいSQLiteファイルで起動してください（前回の実行で登録したフィクスチャが残っていると、誤って失敗します）。ローカル開発のプロファイルは無設定で管理面が開いているため、`SUI_API_KEY` / `SUI_ADMIN_API_KEY` は不要です。4つ目の理由（`no_user_selectable_models`）は、issueメモの受入条件が明示する3件（プロバイダの不一致、許可リストが空、有効なモデルなし）に含まれないため、本スイートの対象外です。
+`no_active_models` のケースは空のモデルレジストリを前提とするため、バックエンドは毎回新しいSQLiteファイルで起動してください（前回の実行で登録したフィクスチャが残っていると、誤って失敗します）。ローカル開発のプロファイルは無設定で管理面が開いているため、`SUI_API_KEY` / `SUI_ADMIN_API_KEY` は不要です。4つ目の理由（`no_user_selectable_models`）は、課題メモの受入条件が明示する3件（プロバイダの不一致、許可リストが空、有効なモデルなし）に含まれないため、本スイートの対象外です。
 
 ### 実バックエンドが必須のスイートの境界（DATA-INQUIRY-CONCURRENCY-01 AC-9）
 
@@ -284,7 +284,7 @@ SUI_E2E_REAL_BACKEND=1 node ./node_modules/@playwright/test/cli.js test \
   e2e/inquiry_bundle_backend_conflict.spec.ts --reporter=line --workers=1
 ```
 
-DELETEの`If-Match`競合（同issueのAC-3とAC-5）は対象外です。パネルに削除操作のUIがなく（`deleteInquiryBundle`はclient.tsにだけ実装されています）、バックエンド側のCASは`test_inquiry_bundle_routes.py`で確認済みです。UIから呼べない機能のE2Eは新たに作らない、という判断です。
+DELETEの`If-Match`競合（同課題のAC-3とAC-5）は対象外です。パネルに削除操作のUIがなく（`deleteInquiryBundle`はクライアント.tsにだけ実装されています）、バックエンド側のCASは`test_inquiry_bundle_routes.py`で確認済みです。UIから呼べない機能のE2Eは新たに作らない、という判断です。
 
 ## 関連文書
 

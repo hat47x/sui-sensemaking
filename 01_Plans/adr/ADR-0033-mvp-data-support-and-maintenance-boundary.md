@@ -38,7 +38,7 @@ MVPでは、データサポート境界を次の4区分で管理する。
 - このADRだけで、新しい永続テーブルや管理画面を追加しない。
 - Card/Edge/Islandなどの個別CRUDを、MVPの必須にしない。
 - 監査ログの閲覧、削除と保管の期限、所有者の移管、復旧の手順を、完了したものとして扱わない。
-- 契約のずれを、文書上の言い換えだけで解決しない。実装、API、型の不一致は内部issueで扱う。
+- 契約のずれを、文書上の言い換えだけで解決しない。実装、API、型の不一致は内部課題で扱う。
 
 
 ## Support / Maintenance / Contract Boundary Table
@@ -46,7 +46,7 @@ MVPでは、データサポート境界を次の4区分で管理する。
 | 項目 | Support Level（MVP標準運用） | Maintenance Boundary（保守責務） | Contract Boundary（契約責務） | 含む | 含まない |
 | --- | --- | --- | --- | --- | --- |
 | Document snapshot (`documents.payload_json`) | L1: Supported | Platform operatorが可用性とバックアップ、Document ownerが内容の責任を持つ | `DocumentV1/V2` の往復互換を維持する | `GET/PUT /docs/{doc_id}`、全体の保存と復元 | 個別のCard/Edge CRUD、部分修復API |
-| Embedded entities（Card/Edge/Island/Narrative/EvidenceLink） | L2: Embedded-only | Document ownerとReviewerが業務内容を管理する | 型の互換とimport/export roundtripを維持する | スナップショット内への保存、UI操作を経由した更新 | 個別の監査検索、個別の削除と復元 |
+| Embedded entities（Card/Edge/Island/Narrative/EvidenceLink） | L2: Embedded-only | Document ownerとReviewerが業務内容を管理する | 型の互換と取り込み/export roundtripを維持する | スナップショット内への保存、UI操作を経由した更新 | 個別の監査検索、個別の削除と復元 |
 | Merge decision log (`merge_decision_logs`) | L1.5: Append-read | ReviewerとAudit operatorが判断の履歴を管理する | append-only契約とdocへの従属を維持する | 追記と参照、groupとsnapshotの整合 | 更新と削除のAPI、独立したライフサイクル |
 | Derived read models（SimilarCandidateGroup/ContextBundle） | L3: Derived | Developerが生成ロジックの品質を保守する | 生成I/Fの語彙と、安全側で拒否する条件を維持する | 生成、表示、検証 | 永続的な保守、手動の補正 |
 | A1 contract fields（`critiqueInputs`等） | L2.5: Contract-limited | DeveloperとReviewerが型の整合を管理する | frontend/backend/api/schemaの同義性を維持する | 保存、読み込み、往復の検証 | 個別の編集UI、個別のCRUD |
@@ -56,7 +56,7 @@ MVPでは、データサポート境界を次の4区分で管理する。
 
 1. **Detect**: 異常の検知（破損、契約のずれ、復元の要求）を、運用者が起票する。
 2. **Classify**: 事象を `Contract` / `Maintenance` / `Support` の3系統に分類する。
-3. **Contain**: share/exportをsafeMode既定ONで凍結し、未レビューの本文が二次的に共有されるのを抑える。
+3. **Contain**: share/書き出しをsafeMode既定ONで凍結し、未レビューの本文が二次的に共有されるのを抑える。
 4. **Recover**: `DATA-MAINT-01` の手順に従い、バックアップの復元（DB単位）またはDocumentの再投入を行う。
 5. **Verify**: `DATA-CONTRACT-01` の観点で、roundtripと `PUT create-if-absent` の契約を再確認する。
 6. **Record**: 判断と再発の防止策を `DATA-MODEL-OPS-01` の境界表へ反映する。
@@ -75,18 +75,18 @@ MVPでは、データサポート境界を次の4区分で管理する。
 |------|----------------|---------------|
 | **業務設計** | 利用者・レビュアー・運用者・セキュリティ担当者に対し、MVPで標準運用できるデータと将来契約を明確に区別できる境界を提供し、責任範囲をステークホルダー別に説明可能にする。削除、棚卸し、復旧、所有者の移管を、MVPの保証の対象外として切り分ける | データ: スキーマに存在する型が運用サポートを意味しないことを明示し続ける。機能: 個別CRUDの無い型を標準操作として誤認しない運用が必要 |
 | **データ設計** | データ境界を4区分（運用サポート/埋め込み限定/派生・読み取り中心/契約のみ）で分類する。Card/Edge/Island/Narrative/ReviewAttribution は Document 内の埋め込み構造として保存し、merge decision log は append-only 契約、Derived read models は生成ロジックとして保守する | 機能: 新しい永続テーブルまたは標準CRUDを追加する際は本ADRの区分と CRUD 表を更新しなければならない。業務: 部分修復・個別監査・復旧の不足を運用上の既知制約として扱う |
-| **機能設計** | Document スナップショットの GET/PUT /docs/{doc_id}、merge decision log の append/read を標準APIとして維持し、Card/Edge/Island 等の個別CRUDを MVP 必須にしない。Support level（L0〜L3）を定義し、`data_model_operations_overview.html` を「実際に運用できる範囲」の入口とする | データ: スナップショット内構造の増加で全体置換保存の競合・検証・復旧が難しくなる副作用を許容する。業務: API・frontend型・backend型・実装ルートの同期確認を継続的な責務とする |
+| **機能設計** | Document スナップショットの GET/PUT /docs/{doc_id}、merge decision log の append/読み取りを標準APIとして維持し、Card/Edge/Island 等の個別CRUDを MVP 必須にしない。Support level（L0〜L3）を定義し、`data_model_operations_overview.html` を「実際に運用できる範囲」の入口とする | データ: スナップショット内構造の増加で全体置換保存の競合・検証・復旧が難しくなる副作用を許容する。業務: API・フロントエンド型・バックエンド型・実装ルートの同期確認を継続的な責務とする |
 
 ## Consequences
 
 - 期待される効果
   - 初見の開発者や運用者が、MVPで保守できるデータと将来契約を区別しやすくなる。
   - ステークホルダー別に、標準操作でできることと未整備の運用課題を説明できる。
-  - 製品化に必要な管理機能、復旧手順、契約同期を個別issueとして進めやすくなる。
+  - 製品化に必要な管理機能、復旧手順、契約同期を個別課題として進めやすくなる。
 - 想定される副作用と制約
   - `Document` スナップショット内の構造が増えるほど、全体置換保存の競合・検証・復旧が難しくなる。
   - 個別CRUDがないため、管理者やサポートが部分修復したい場面では標準手段が不足する。
-  - API文書、frontend型、backend型、実装ルートの同期を継続的に確認する必要がある。
+  - API文書、フロントエンド型、バックエンド型、実装ルートの同期を継続的に確認する必要がある。
 - 移行時に必要な対応
   - `DATA-MAINT-01` で、一覧、アーカイブと削除、バックアップ、復旧、データの検証、ユーザーの棚卸しを設計する。
   - `DATA-CONTRACT-01` で、DocumentV2とAPIの差分を棚卸しし、必要な実装・テストを分割する。

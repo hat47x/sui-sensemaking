@@ -39,13 +39,13 @@
 
 1. 入力検証を先に行う
    - APIは「存在確認」「型・範囲」「参照整合」をハンドラの先頭で検証する。
-   - フロントエンドのimport/exportでも、スキーマ検証を省略しない。
+   - フロントエンドの取り込み/書き出しでも、スキーマ検証を省略しない。
 2. 例外は狭く捕捉する
    - `except Exception` は原則禁止。
    - 期待する例外型（例: `ValidationError`, `JSONDecodeError`）を明示して捕捉し、ログとメッセージを分ける。
 3. 安全な既定値を維持する
    - SafeModeの既定ONを変更しない。
-   - share/export系は「漏えいしない初期値」を守る。
+   - share/書き出し系は「漏えいしない初期値」を守る。
 4. 危険なAPIの禁止
    - `eval` / `new Function` / `dangerouslySetInnerHTML` は禁止（設計レビューで例外が承認された場合のみ許す）。
 5. 機密情報の直書き禁止
@@ -80,7 +80,7 @@
 
 ### 1.5 Frontendの品質ゲート
 
-CIのfrontendゲートは `frontend-typecheck`（`tsc --noEmit`）と `frontend-test`（`vitest run` 全件）の2つであり、どちらも常にエラーで失敗させる。
+CIのフロントエンドゲートは `frontend-typecheck`（`tsc --noEmit`）と `frontend-test`（`vitest run` 全件）の2つであり、どちらも常にエラーで失敗させる。
 
 独立したリンタは導入していない。`npm run lint` は `npm run typecheck` の別名である。将来リンタを入れる時点で、専用ジョブと運用方針を足す。
 

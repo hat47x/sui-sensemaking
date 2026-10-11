@@ -120,7 +120,7 @@ $env:SUI_LLM_PROVIDER="none"
 
 #### SQLite以外の検証済みDBを直接使う場合
 
-標準のDocker Composeは、PostgreSQL用の依存パッケージを、イメージを作るときに導入します。backendを直接起動して別のDBを使うときは、`test` に加えて、対象のDBの追加パッケージ（extra）を、同じ仮想環境に導入してください。ドライバを省略したURLも、内部で下の表の同期ドライバに読み替えますが、運用では、ドライバを明示した形を勧めます。
+標準のDocker Composeは、PostgreSQL用の依存パッケージを、イメージを作るときに導入します。バックエンドを直接起動して別のDBを使うときは、`test` に加えて、対象のDBの追加パッケージ（extra）を、同じ仮想環境に導入してください。ドライバを省略したURLも、内部で下の表の同期ドライバに読み替えますが、運用では、ドライバを明示した形を勧めます。
 
 | SQLAlchemyのバックエンド | pipのextra | 検証済みの同期ドライバ |
 | --- | --- | --- |
@@ -132,7 +132,7 @@ $env:SUI_LLM_PROVIDER="none"
 | `cockroachdb` | `cockroachdb` | `cockroachdb+psycopg` |
 | `oracle` | `oracle` | `oracle+oracledb` |
 
-たとえばMySQLなら、`pip install -e ".[test,mysql]"` を実行してから、`SUI_DATABASE_URL` を設定します。製品のバージョン、single-tenantとshared-schema SaaSの範囲、昇格の条件は、[DB対応表](../02_Architecture/database_portability.md)を確認してください。未検証のドライバを明示したURLは、別のドライバがたまたま導入されていても、起動の前に拒否します。
+たとえばMySQLなら、`pip install -e ".[test,mysql]"` を実行してから、`SUI_DATABASE_URL` を設定します。製品のバージョン、単一テナントとshared-schema SaaSの範囲、昇格の条件は、[DB対応表](../02_Architecture/database_portability.md)を確認してください。未検証のドライバを明示したURLは、別のドライバがたまたま導入されていても、起動の前に拒否します。
 
 ### frontend
 
@@ -212,7 +212,7 @@ docker compose config | grep -iE 'POSTGRES_PASSWORD|POSTGRES_USER|SUI_DATABASE_U
 
 **原因A: シェルに残った `SUI_*` の環境変数が、composeの既定値を上書きしている**
 
-`SUI_POSTGRES_PASSWORD` や `SUI_DATABASE_URL` がシェルにexportされていると、`db` を初期化したパスワードと、APIが送るパスワードが食い違い、この認証の失敗が起きます。よくあるのは、同じシェルで「Dockerを使わない最小起動」の `export SUI_...` を実行したまま、`docker compose` を起動した場合です。この場合は、`docker compose down -v` では解消しません。環境変数が残っているため、ボリュームを作り直しても、同じ食い違いが再び起きます。`env | grep -i sui_sensemaking` で出た変数を解除してから、起動し直します。
+`SUI_POSTGRES_PASSWORD` や `SUI_DATABASE_URL` がシェルに書き出しされていると、`db` を初期化したパスワードと、APIが送るパスワードが食い違い、この認証の失敗が起きます。よくあるのは、同じシェルで「Dockerを使わない最小起動」の `export SUI_...` を実行したまま、`docker compose` を起動した場合です。この場合は、`docker compose down -v` では解消しません。環境変数が残っているため、ボリュームを作り直しても、同じ食い違いが再び起きます。`env | grep -i sui_sensemaking` で出た変数を解除してから、起動し直します。
 
 ```bash
 unset SUI_DATABASE_URL SUI_POSTGRES_PASSWORD SUI_POSTGRES_USER SUI_POSTGRES_DB

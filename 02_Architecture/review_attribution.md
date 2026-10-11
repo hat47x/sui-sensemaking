@@ -8,7 +8,7 @@ sui-sensemakingは「曖昧さを保留したまま思考を進める」ため�
 
 本機能は **設計のみ**とし、MVPには実装しない。
 
-本書が対象とするのは「レビューした人と時刻」であり、カードを最初に起票した人、作成者、出典、取り込み元、最終更新者などのprovenance/accountabilityのメタデータとは分けて扱う。カードの起票者などを標準UIや `Card.meta` に入れる場合は、`CARD-META-UI-01` で、保存の境界、表示の境界、共有/export時の伏せ字処理を先に決める。
+本書が対象とするのは「レビューした人と時刻」であり、カードを最初に起票した人、作成者、出典、取り込み元、最終更新者などのprovenance/accountabilityのメタデータとは分けて扱う。カードの起票者などを標準UIや `Card.meta` に入れる場合は、`CARD-META-UI-01` で、保存の境界、表示の境界、共有/書き出し時の伏せ字処理を先に決める。
 
 ## 対象外
 - 本機能では、「改ざんできない監査証跡」を提供しない（署名・証明は将来の拡張とする）。
@@ -32,7 +32,7 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
 
 **利点**
 - 共有物（document.json）の安全性が高い
-- レビュー情報を、必要に応じて「同梱」「削除」できる（exportでの伏せ字処理）
+- レビュー情報を、必要に応じて「同梱」「削除」できる（書き出しでの伏せ字処理）
 - 認証なしで成立する
 
 **欠点**
@@ -71,16 +71,16 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
 - レビュー状態の契約は、`unreviewed | human_reviewed` に固定する。
 - `human_reviewed` への遷移は **人の操作だけ** とし、AI単独の遷移を禁止する。
 - `mode=autonomous` を含むすべてのAI実行モードで、reviewの自動昇格を禁止する。
-- SafeModeの既定ONと、share/exportでの漏えい防止は、レビュー帰属の運用を変更しても緩和してはならない。
+- SafeModeの既定ONと、share/書き出しでの漏えい防止は、レビュー帰属の運用を変更しても緩和してはならない。
 
-### CE2 proposal-only 契約の節（Stream D / proposalの境界を固定）
+### CE2 提案のみ契約の節（Stream D / proposalの境界を固定）
 
 - CE2由来のnarrativeやレビュー支援の出力は、**確定した本文ではなくproposal** として扱う。
 - proposalの最小I/Fは、`proposalId`, `diff`, `sourceBundleHash`, `status`, `reviewState` を必須とする。
 - `status` には `proposed | accepted | rejected | held` だけを許可し、`held` はdrift-stop専用の状態とする。
 - CE1（ContextBundle）との差分を検知した場合は、`status=held` で停止し、運用上の判断が出るまでProceedしない。
 - `accepted` は適用を許可する意思表示であり、自動適用のトリガーではない（auto-applyは禁止）。
-- `ConsensusGraph` へのdirect writeは禁止し、適用は `patch + approval` だけを許可する。
+- `ConsensusGraph` へのdirect 書き込みは禁止し、適用は `patch + approval` だけを許可する。
 - `reviewState` のAIによる自動昇格（`unreviewed -> human_reviewed`）は禁止し、人の操作だけを許可する。
 
 ## HIL-RS-01-A1 最小I/F契約（固定の参照）
@@ -99,8 +99,8 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
   - requiredApproval: `SecurityOfficer+SystemOwner`
 - 禁止事項（固定）は次のとおりです。
   - AIだけで `human_reviewed` へ遷移しない
-  - 実名 / email / external_uid / providerなどの生のIDを保存しない
-  - SafeModeの既定ON、およびshare/exportでの漏えい防止を後退させない
+  - 実名 / email / external_uid / 提供元などの生のIDを保存しない
+  - SafeModeの既定ON、およびshare/書き出しでの漏えい防止を後退させない
 - Freezeフラグ（固定）
   - `contractLinkLocked=true`
   - `sharedResourceFreeze=true`
@@ -196,7 +196,7 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
   - `Verified`（署名の検証に成功）
   - `Verification failed`（署名が不正、または鍵が不一致）
 - 未署名は警告ではなく情報として扱い、通常のフローをブロックしない。
-- `Verification failed` でも、操作をすぐには止めず、share/exportの前に確認ダイアログを出す。
+- `Verification failed` でも、操作をすぐには止めず、share/書き出しの前に確認ダイアログを出す。
 - 運用では、「公開して配布するときだけ署名を必須にする」「内部の下書きは任意にする」を標準とし、署名を必須にする範囲は、deployment policyで管理する。
 
 ### 監査ログとの関係
@@ -245,8 +245,8 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
   3. `null`（reviewer未設定）
 
 責務の境界は次のとおりです。
-- resolver adapterが担当するのは、`reviewerRef` / `ownerRef` の生成だけである。
-- reviewEvents/export/importのスキーマと永続化のルールは、既存の契約（opaque string、optional）を維持し、adapterはこれを変更しない。
+- resolver アダプターが担当するのは、`reviewerRef` / `ownerRef` の生成だけである。
+- reviewEvents/export/取り込みのスキーマと永続化のルールは、既存の契約（opaque string、optional）を維持し、アダプターはこれを変更しない。
 - 認可の判定（roles/groups/policyRef）や、表示名の復元は、resolverの責務の外とする。
 
 ### 9.2 規定のプロファイル
@@ -266,9 +266,9 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
 
 ### 9.4 プライバシーの境界（PIIの最小化）
 
-- `sso_subject` profileは、`provider` / `externalUid` を **派生IDの構築にだけ使用** し、レビュー帰属のpayloadへ生の値を保存しない。
+- `sso_subject` profileは、`provider` / `externalUid` を **派生IDの構築にだけ使用** し、レビュー帰属のペイロードへ生の値を保存しない。
 - `reviewerRef` はUI上で、source表示（local/SSO）に利用できるが、sourceを判定できないunknownの値を許容する。
-- exportでの伏せ字処理（`strip-identities` / `strip-all`）の契約は、M5でも変更しない。
+- 書き出しでの伏せ字処理（`strip-identities` / `strip-all`）の契約は、M5でも変更しない。
 
 ## 補足
 - 本機能は、「責任の所在を明確にし、レビューの運用を回す」ための補助である。
@@ -307,7 +307,7 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
 - `CE0-HIL-CONTRACT-SNAPSHOT-2026-04-16-v1` を参照する契約として固定し、A2/A3での再定義を禁止する。
 
 ### Consequences
-- safeModeの後退、未レビュー保護の後退、direct writeの許容を検知した場合は、安全側で拒否する。
+- safeModeの後退、未レビュー保護の後退、direct 書き込みの許容を検知した場合は、安全側で拒否する。
 - 修復は最大3回とし、超過したときは、停止の報告（失敗の条件 / 影響を受ける契約ID / 承認が必要な事項）へ移る。
 
 ### スナップショットのメタデータ
@@ -327,7 +327,7 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
 
 ### Consequences
 - レビュー運用の責任の境界（人による昇格、2者承認、safeModeの保護）を、実装に依存せずに維持できる。
-- 下流は、レビュー帰属の実装より前でも、exportや伏せ字処理と整合した検証を続けられる。
+- 下流は、レビュー帰属の実装より前でも、書き出しや伏せ字処理と整合した検証を続けられる。
 - 契約に矛盾が生じたときは、`held` や、安全側で拒否する判定に収束できる。
 
 ## CE0 Contract Matrix Freeze Link（CTX / SAFEMODE / REVIEW）
@@ -341,7 +341,7 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
 | `CE0-CTX-IF` | preview gateを通過していない文脈から、review生成を開始しない。 | `previewConfirmed!=true` で生成を開始した場合。 |
 | `CE0-SAFEMODE-IF` | safeModeの既定ONと、reviewed-onlyの既定を緩和しない。 | unreviewedの本文の露出、safeModeの既定値の後退。 |
 | `CE0-REVIEW-IF` | `unreviewed | human_reviewed` のみ。昇格は人の操作だけ。 | AIや自動処理による `human_reviewed` への昇格。 |
-| `CE0-CG-WRITE-IF` | Consensus Graphへのdirect writeを禁止し、`patch+approval` だけを許可する。 | 直接更新する経路を1件でも検出した場合。 |
+| `CE0-CG-WRITE-IF` | Consensus Graphへのdirect 書き込みを禁止し、`patch+approval` だけを許可する。 | 直接更新する経路を1件でも検出した場合。 |
 
 ### 凍結の規律
 
@@ -352,5 +352,5 @@ sui-sensemakingはOSSとして、多様な環境で利用される。
 ## Stream G hardening note (2026-05-18)
 
 - `reviewerRef` / `ownerRef` は、内部の `users.id` を起点とする不透明な参照を正本とし、`provider` / `external_uid` をattributionへ直接保存することを禁止する。
-- strict provisioningでidentityが未確定の場合は、レビュー帰属を生成せず、`identity_not_provisioned` を返す失敗モードを維持する。
+- strict provisioningで識別情報が未確定の場合は、レビュー帰属を生成せず、`identity_not_provisioned` を返す失敗モードを維持する。
 - 本契約は、監査できることのために、安全側で拒否することを優先し、便宜上の例外として条件を満たさないまま通すことを導入しない。

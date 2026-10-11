@@ -100,7 +100,7 @@ type ReviewSignatureVerification = {
   - `safemode_relaxation`
   - `share_export_leakage_relaxation`
 
-> 契約値（schemaVersion / 必須フィールド / overridePolicy）の変更の要求は、A1のissueへ差し戻し、A2/A3では変更しない。
+> 契約値（schemaVersion / 必須フィールド / overridePolicy）の変更の要求は、A1の課題へ差し戻し、A2/A3では変更しない。
 
 - 凍結の宣言（固定）
   - `contractLinkLocked=true`
@@ -136,10 +136,10 @@ type ReviewSignatureVerification = {
     - ただし、過去のイベントを再現するため、参照先が欠けていても、読み込み時にはエラーにしない（警告として扱う）
   - createdAtは、ISO文字列である
 - retention
-  - export/importのときにmaxEventsを超える場合は、古い順に削除してよい
+  - export/取り込みのときにmaxEventsを超える場合は、古い順に削除してよい
   - detailsが肥大化するのを避けるため、必要ならeventごとのnoteの長さを制限してよい（例: 500 chars）
 
-## exportでの伏せ字処理の動作
+## 書き出しでの伏せ字処理の動作
 - none
   - reviewers / reviewEventsを、そのまま出力する
 - strip-identities
@@ -185,7 +185,7 @@ ReviewerRefの推奨フォーマット（例）。
   - `result=passed`
 - 署名ファイルがあり、検証に失敗した場合は次のとおりです。
   - `result=failed` + `reasonCode`
-  - 既定では読み取り専用で閲覧を続けられ、share/exportでは追加の確認を行う
+  - 既定では読み取り専用で閲覧を続けられ、share/書き出しでは追加の確認を行う
 
 ### ポリシーの上書き（組織の任意設定）
 - 組織の運用で、署名がなければ安全側で拒否する必要がある場合に限り、`requireSignature=true` を別のpolicyで指定する。
@@ -200,12 +200,12 @@ ReviewerRefの推奨フォーマット（例）。
 
 - 正規のキーは、`AuthContext.userId`（内部の `users.id`）とする。
 - `reviewerRef` / `ownerRef` には、派生値 `user:<users.id>` を採用する。
-- `provider` や `external_uid` は、attribution payloadへ直接は保存しない。
+- `provider` や `external_uid` は、attribution ペイロードへ直接は保存しない。
 - strict mode（`SUI_ALLOW_JIT_PROVISIONING=false`）では、`users.id` が確定していない要求を拒否し、attributionを作らない。
 - `reviewerRef` / `ownerRef` の具体的な値は `ReviewerRefResolverAdapter` が決め、スキーマ側が保証するのは「空でない不透明な文字列」だけである。
-- adapterが `sso_subject` の場合は `user:sso:<provider>:<externalUid>` を許容し、入力が不足していれば、`user_id` profile（`actorRef` → `null`）へフォールバックする。
+- アダプターが `sso_subject` の場合は `user:sso:<provider>:<externalUid>` を許容し、入力が不足していれば、`user_id` profile（`actorRef` → `null`）へフォールバックする。
 - sourceの判定はUIの補助情報であり、スキーマの必須項目にはしない（`reviewerRef` 単体で互換を維持する）。
-- backfillのときは、`reviewerRef` / `ownerRef` だけを書き換えの対象とし、`provider` / `external_uid` は、attribution payloadへ新規には保存しない。
+- backfillのときは、`reviewerRef` / `ownerRef` だけを書き換えの対象とし、`provider` / `external_uid` は、attribution ペイロードへ新規には保存しない。
 
 - `internal_user_id` は、実体としては `users.id` を指す。`reviewerRef` / `ownerRef` は、表示と交換のための派生参照（`user:<users.id>`）とする。
 - attributionの永続層では `provider` / `external_uid` を保持せず、参照の逆引きは `user_identities` に委ねる。
@@ -215,7 +215,7 @@ ReviewerRefの推奨フォーマット（例）。
 ## Stream B Contract Annotation（schema-only fixation）
 
 ### Context
-- レビュー帰属のスキーマは、privacy/safeModeの境界を壊さずに、mock payloadで独立して検証できる形で固定する必要がある。
+- レビュー帰属のスキーマは、privacy/safeModeの境界を壊さずに、mock ペイロードで独立して検証できる形で固定する必要がある。
 
 ### Decision
 - `reviewerRef` は、空でない不透明な文字列とし、`provider` / `external_uid` の直接の保存を禁止する。
@@ -249,7 +249,7 @@ ReviewerRefの推奨フォーマット（例）。
 ## Stream D migration boundary memo (2026-05-20)
 
 - 本書はレビュー帰属の契約提案を固定する文書であり、MVPの時点では、attribution専用テーブルのmigrationを要求しない。
-- Alembicのhead `20260716_0006`では、tenant基盤の表と、Documentや判断ログの`tenant_id`がexpandされたが、レビュー帰属は引き続き`Document`への埋め込みを前提とし、tenant列には分解しない。
+- Alembicのhead `20260716_0006`では、テナント基盤の表と、Documentや判断ログの`tenant_id`がexpandされたが、レビュー帰属は引き続き`Document`への埋め込みを前提とし、テナント列には分解しない。
 - したがってレビュー帰属は、`L2/L2.5`（埋め込み・契約先行）として扱い、個別のCRUDや独立したmigrationを前提にしない。
 
 
@@ -258,4 +258,4 @@ ReviewerRefの推奨フォーマット（例）。
 - Authの属性を正規化する境界を再確認した。`reviewerRef` / `ownerRef` は空でない不透明な文字列を維持し、Auth内部の正本は `user:<users.id>` の派生参照とする。
 - `provider` / `external_uid` は、レビュー帰属の永続層に保存しない（逆引きは `user_identities` に委ねる）。
 - strict mode（`SUI_ALLOW_JIT_PROVISIONING=false`）のときは、`users.id` が未解決の要求を安全側で拒否し、attribution eventを新規には生成しない。
-- mock IdPの回帰で差分を吸収する箇所は、`AUTH_PROVIDER_PROFILE` とheaderのマッピングに限り、schemaのキー集合は変えない。
+- mock IdPの回帰で差分を吸収する箇所は、`AUTH_PROVIDER_PROFILE` とヘッダーのマッピングに限り、schemaのキー集合は変えない。

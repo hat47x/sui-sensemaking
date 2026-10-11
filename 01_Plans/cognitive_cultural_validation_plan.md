@@ -274,7 +274,7 @@ Maintainer自身の、SUI自身を題材にしない実務資料を使う。資�
 
 - `FieldworkRequestV1.question`、`outcome.kind` の `answered / no_result / unexpected`、`responseCardRefs` が問いと観察を結ぶ既存設計の接点となる。
 - `RoundHandoffV1` の `unresolvedQuestions`、`heldRefs`、`understandingDelta` は理解の差と未解決点の引継ぎに使える設計である。
-- frontendには型、検証、引継ぎレビュー、再開ブリーフの実装が存在する。一方、正本は一連の実装・移行・CRUDが揃うまでL0 Plannedとする。部分実装の存在を、端から端までの運用保証にしない。
+- フロントエンドには型、検証、引継ぎレビュー、再開ブリーフの実装が存在する。一方、正本は一連の実装・移行・CRUDが揃うまでL0 Plannedとする。部分実装の存在を、端から端までの運用保証にしない。
 - 利用経路が未確認なら同じ内容を手元のメモで試す。文化体系の試行を、探究履歴全体の実装完了待ちにしない。
 - 「予想」と「観察」の対応は手元で記述し、既存 `outcome` の意味を拡大したり、予測用フィールドを先に増やしたりしない。
 

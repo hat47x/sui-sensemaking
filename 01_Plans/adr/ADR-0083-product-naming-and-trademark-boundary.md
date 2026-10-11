@@ -129,7 +129,7 @@
 
 - `kj_technique.md` / `ai_kj_execution_procedures.md` はファイル名を変更する
   （`sensemaking_technique.md` / `ai_sensemaking_execution_procedures.md`）。
-  被参照が多いため、`AGENTS.md`・全issue・全ADRの参照を同一PRで更新する。
+  被参照が多いため、`AGENTS.md`・全課題・全ADRの参照を同一PRで更新する。
 - 過去ADRのファイル名スラグ（例: `ADR-0048-...-kj-vocabulary.md`）は変更しない。
   歴史記録であり、`DC-LNK-002` の引用検査に無用な影響を与える。ADRの本文は語彙移行に追随する。
 - **`01_Plans/dogfood/doc_kj_atlas_dogfood_r*.json`**（43件、KJキャンバス分析スナップショット）は
@@ -174,7 +174,7 @@
   これらは過去の状態を記録するもので、当時のリポジトリ名は `kj-atlas` であった。
   スナップショット参照・manifest・凍結検証器の定数（`FROZEN_PRODUCT_REPOSITORY` 等）は
   `hat47x/kj-atlas` のまま残す。
-- 過去issue（`01_Plans/issues/done/`）のファイル名スラグの遡及改名。
+- 過去課題（`01_Plans/issues/done/`）のファイル名スラグの遡及改名。
 - 川喜田二郎の著作からの引用・図表転載の追加。著作権保護期間中である。
 
 ## Consequences

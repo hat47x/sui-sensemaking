@@ -175,7 +175,7 @@ export type ProvenanceEnvelopeV1Alpha1 = {
 | AI / モデルによる生成 | `runRef` |
 | 別の成果物から派生 | `inputArtifactRefs` に厳密なリビジョン |
 | 外部資料を直接利用 | 可能な範囲で `sourceRefs` |
-| 旧データのimportでactorが不明 | `actor.kind="unknown"`。actor refは推測しない |
+| 旧データの取り込みでactorが不明 | `actor.kind="unknown"`。actor refは推測しない |
 | 墨消しや変換がある | 変換を追跡できる参照があれば `transformationRefs` |
 
 ### 4.3 AI runとの境界
@@ -565,7 +565,7 @@ v1alpha1からランタイム契約へ昇格する前に、少なくとも次の
 5. RoundSnapshotやCanvasリビジョンと重複する容量を計測する。
 6. 100〜1000件規模の成果物で、Review Capsuleの再構築時間を測る。
 7. 保持とGCで、Review、Authority、Decisionの参照先を削除しない。
-8. importとexportで、未知の将来フィールドやバージョン不一致を安全側で拒否する方針を決める。
+8. 取り込みと書き出しで、未知の将来フィールドやバージョン不一致を安全側で拒否する方針を決める。
 9. `SUI_LLM_PROVIDER=none` でも、human成果物、Review、Authorityの操作が成立する。
 10. 現行の `DocumentV1` の互換性を壊す必要が生じたら、実装の前に別のスキーマADRを採択する。
 
@@ -591,4 +591,4 @@ ADR-0087と `sensemaking_payload_authority_exchange_v1alpha1.md` により、次
 - コンテンツストアを共用できるか
 - 成果物バンドルの署名と真正性
 - Review CapsuleのUI表現
-- 成果物交換のimport UI
+- 成果物交換の取り込み UI

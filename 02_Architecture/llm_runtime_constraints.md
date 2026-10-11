@@ -92,7 +92,7 @@ CE2の運用では、適用処理を起動せずに、次を確認する。
 
 - safeModeが既定でONであること。
 - 既定がreviewed-onlyなので、未レビューの本文が提案の入力に混入しないこと。
-- share/exportの境界を越えて、外部サービスと共有することがないこと。
+- share/書き出しの境界を越えて、外部サービスと共有することがないこと。
 
 ### 8.2 通信と状態遷移の拘束
 
@@ -152,7 +152,7 @@ CE1のVerify失敗をあいまいに扱うと、下流に非決定性が伝わ�
 - CE1 Verifyでは、次の4項目を機械判定の必須とする。
   1) `previewConfirmed=false -> 422 preview_required`
   2) 未知のキー -> `400 unknown_contract_key`
-  3) 同じcanonical queryを3回実行して、hashが3/3一致
+  3) 同じcanonical クエリを3回実行して、hashが3/3一致
   4) hashの不一致 -> `409 nondeterministic_bundle`
 - 自己修復は最大3回とする。3回を超えたら `held` で停止する。
 - 仕様の競合、上流との矛盾、想定外のファイル競合を検知した場合は、ただちに停止する。
@@ -171,7 +171,7 @@ CE1のVerify判定があいまいだと、条件を満たさないまま通っ�
 - Verifyの必須判定を、次の4点に固定する。
   1. `previewConfirmed=false -> 422 preview_required`
   2. `unknown key -> 400 unknown_contract_key`
-  3. 同じcanonical queryを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致
+  3. 同じcanonical クエリを3回実行して、`queryCanonicalHash` / `bundleHash` が3/3一致
   4. 不一致は `409 nondeterministic_bundle`
 - 自己修正は最大3回とする。超過したら `held` で停止する。
 

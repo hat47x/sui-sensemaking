@@ -154,7 +154,7 @@ Context
 - Phase C〜Eを確定しても、横断的な制約が明文化されないと、運用の実装で後退（lock-in, PII, safeMode, 添付入力）が起きる。
 
 Decision
-- lock-inの回避: providerの表記は `none|fixture|local|external` の抽象的な列挙だけを使い、特定ベンダーの固有名を規範的な語にしない。
+- lock-inの回避: 提供元の表記は `none|fixture|local|external` の抽象的な列挙だけを使い、特定ベンダーの固有名を規範的な語にしない。
 - PIIと秘匿情報: 仕様、ログ、監査キーに生のデータを持ち込まず、識別が必要な場合はreason codeとhashによる参照に限る。
 - safeMode: 既定ONと `allowUnreviewedText=false` を、後退させない運用の原則として固定する。
 - 添付入力: LLMへの入力は、`structured_text_only=true` を満たす構造化テキストに限り、バイナリの添付や自由形式のペイロードを許可しない。
@@ -171,7 +171,7 @@ Consequences
 |------|----------------|---------------|
 | **業務設計** | LFM2.5等の軽量ローカルLLMを主軸にした運用へ移行し、none/fixture/local/externalを設定で切替可能にする。本番はLocal-firstを基本とし必要時のみdeterministic triggerでエスカレーションする | 機能: Provider Interfaceで設定切替可能にしCIの既定をfixture+rule checksに固定して再現性を担保。データ: safeModeおよび漏えい防止を評価ゲートと運用手順の両面で満たす |
 | **データ設計** | `llm_provider_spec.md`でI/F定義、`llm_runtime_constraints.md`で通信制約（in-process/IPC優先）、`llm_quality_strategy.md`で二層評価基準をレビュー確定する | 業務: ローカルLLMの利用は秘密情報の外部送信を避けプライバシー既定（P-07）を維持。機能: エスカレーションはlarge-scaleへの明示opt-in時に限定 |
-| **機能設計** | Phase A仕様固定→Phase B/CでProvider実装と評価ゲートを段階導入。providerはnone/fixture/local/externalの切替を環境変数で実現 | 業務: provider=externalは明示設定時のみ利用（既定値はnone）。データ: 二層評価（品質・安全）で生成物の品質と漏えい防止を確認 |
+| **機能設計** | Phase A仕様固定→Phase B/CでProvider実装と評価ゲートを段階導入。提供元はnone/fixture/local/externalの切替を環境変数で実現 | 業務: provider=externalは明示設定時のみ利用（既定値はnone）。データ: 二層評価（品質・安全）で生成物の品質と漏えい防止を確認 |
 
 ## Consequences
 

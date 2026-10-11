@@ -57,11 +57,11 @@ Python純粋コマンド・SQLiteのAction保存・JSON保護・テナント認�
 
 ### SQLロック競合の分類と、失敗したActionの即時ロールバック（2026-10-11）
 
-新しい行claimでは、SQLiteで並行書込みが重なった場合に`SQLITE_BUSY`や`SQLITE_LOCKED`、PostgreSQLでロック取得失敗・シリアライゼーション失敗・デッドロックの例外が発生する可能性があります。`is_document_write_contention`で**これら既知の競合だけ**を識別して、Actionを`409 revision_conflict`、通常条件付きPUTをHTTP 409へ変換します。ディスク・接続障害、SQL構文エラーなどを競合へ誤分類しません。競合が疑われる利用者は最新Documentを再取得する必要があり、クライアントは自動再送しません。
+新しい行クレームでは、SQLiteで並行書込みが重なった場合に`SQLITE_BUSY`や`SQLITE_LOCKED`、PostgreSQLでロック取得失敗・シリアライゼーション失敗・デッドロックの例外が発生する可能性があります。`is_document_write_contention`で**これら既知の競合だけ**を識別して、Actionを`409 revision_conflict`、通常条件付きPUTをHTTP 409へ変換します。ディスク・接続障害、SQL構文エラーなどを競合へ誤分類しません。競合が疑われる利用者は最新Documentを再取得する必要があり、クライアントは自動再送しません。
 
-Actionが行claim後に不正Card・破損Document・レビュー帰属の差し替え・サイズ違反などで失敗するときは、その場で`db.rollback()`して行ロックを解放します。DB接続がリクエスト終端で閉じることのみに依存しません。テスト`test_native_action_domain_rejection_releases_claim_and_keeps_revision`で、失敗Actionの後、同じRevisionから正常Actionが確定できることを検証します。
+Actionが行クレーム後に不正Card・破損Document・レビュー帰属の差し替え・サイズ違反などで失敗するときは、その場で`db.rollback()`して行ロックを解放します。DB接続がリクエスト終端で閉じることのみに依存しません。テスト`test_native_action_domain_rejection_releases_claim_and_keeps_revision`で、失敗Actionの後、同じRevisionから正常Actionが確定できることを検証します。
 
-`test_document_action_cas.py`へ**同時に存在する2つのSQLite Session**で行claimを試すテストを追加しました。ロック中は後続Sessionに`SQLITE_BUSY`が起こり、先行コミット後には旧本文ではclaimできません。通常のOperationalErrorを誤って競合扱いしないテスト、PostgreSQLの`40001`/`40P01`/`55P03`のみを競合として認める分類テストも追加しました。独立したSQLite+SQLAlchemy実験でロック挙動は観察済みですが、**リポジトリの最新headをcheckoutした正式テスト、実PostgreSQLの同時トランザクション、ロック負荷下でのエラー発生頻度は未検証**です。
+`test_document_action_cas.py`へ**同時に存在する2つのSQLite Session**で行クレームを試すテストを追加しました。ロック中は後続Sessionに`SQLITE_BUSY`が起こり、先行コミット後には旧本文ではクレームできません。通常のOperationalErrorを誤って競合扱いしないテスト、PostgreSQLの`40001`/`40P01`/`55P03`のみを競合として認める分類テストも追加しました。独立したSQLite+SQLAlchemy実験でロック挙動は観察済みですが、**リポジトリの最新headをcheckoutした正式テスト、実PostgreSQLの同時トランザクション、ロック負荷下でのエラー発生頻度は未検証**です。
 
 ### 不確定POST後の読取専用照合（2026-10-11）
 
@@ -78,8 +78,8 @@ Actionが行claim後に不正Card・破損Document・レビュー帰属の差し
 `DatabaseDocumentContentStore.claim_existing_payload(tenant, doc_id, expected_payload_json)`を新設しました。テナント、Document、`lifecycle_state=active`、**読取り時の生の`payload_json`**を条件として、同じ値で`updated_at`をUPDATEします。これは実際にDB行の書込みロックを取る条件付きSQLであり、先行する別トランザクションで本文が更新済みなら更新行数が0になって拒否します。この「claim」は**本体の更新・Revision Head更新と同じDBトランザクションで保持**し、単独コミットしてはいけません。Revision Head CASは追加の独立した保護として維持します。
 
 - SUI Action：当初のETag照合後、ドメイン変換前に`claim_existing_payload`を要求。0件なら`409 revision_conflict`。クレーム後にCard移動・Document検証・Store保存・DBコミットを同じトランザクションで実施します。
-- SUI通常PUT：**If-Matchあり**の場合、`save(expected_payload_json=...)`経由で同じ条件付きclaimを必須とし、競合を既存409へ写像します。**単一テナント互換モードのIf-MatchなしPUTは従来どおりlast-write-wins**です。現時点のActionがすべての旧PUT経路をCAS化したという意味ではありません。
-- 検証：`test_document_action_cas.py`へ「前回の取得→別トランザクションによる保存→古い条件付き保存の拒否」「テナント違い」「アーカイブ」「no-op claimでRevisionが増えない」を追加。通常のAction SQLite結合テストへ、Actionの成功後に古いIf-MatchでPUTしても409となる負例を追加しました。
+- SUI通常PUT：**If-Matchあり**の場合、`save(expected_payload_json=...)`経由で同じ条件付きクレームを必須とし、競合を既存409へ写像します。**単一テナント互換モードのIf-MatchなしPUTは従来どおりlast-write-wins**です。現時点のActionがすべての旧PUT経路をCAS化したという意味ではありません。
+- 検証：`test_document_action_cas.py`へ「前回の取得→別トランザクションによる保存→古い条件付き保存の拒否」「テナント違い」「アーカイブ」「no-op クレームでRevisionが増えない」を追加。通常のAction SQLite結合テストへ、Actionの成功後に古いIf-MatchでPUTしても409となる負例を追加しました。
 - 独立したSQLite+SQLAlchemyの最小再現では、一致するUPDATEのrowcount=1、古い本文・archivedでは0件と確認しました。ただし、**正確なGitHub HEADに対するPython/SQLiteの正式実行、PostgreSQLの重複リクエスト負荷試験、ロック競合時の429/409/500分類は未確認**です。SQL競合に伴うDB例外をすべて409と宣言するものではありません。
 
 検証スクリプト`scripts/verify_native_action_boundary.sh`に、共通Store・既存Revision Head・追加CASテストを組み込みました。APIのデフォルトOFFとDraft維持は変更していません。
@@ -312,7 +312,7 @@ python -m sui_sensemaking_api.cli admin models set-lifecycle \
 python -m sui_sensemaking_api.cli admin audit list --limit 50
 ```
 
-管理者の資格情報を、エンドユーザー向けのSPAに置かないでください。固定の資格情報は、ADR-0072のブートストラップの経路です。別に配備する管理者コンソールと、対話的なステージBのcapabilityセッションは、別の後続作業として残っています。
+管理者の資格情報を、エンドユーザー向けのSPAに置かないでください。固定の資格情報は、ADR-0072のブートストラップの経路です。別に配備する管理者コンソールと、対話的なステージBの権限セッションは、別の後続作業として残っています。
 
 PostgreSQLの往復テストを実行する場合。
 
@@ -342,7 +342,7 @@ export SUI_LEVEL2_DIAG_DIR=.artifacts/auth-level2/legacy-federation
 ```
 
 - プロバイダのプロファイルのフィクスチャ: `tests/level2/fixtures/provider_profile_*.json`, `tests/federation/profiles/*.json`
-- 差異を再現する観点: ヘッダー名、claim名、groupsの形式、amr/acrの有無
+- 差異を再現する観点: ヘッダー名、クレーム名、groupsの形式、amr/acrの有無
 - 診断のJSONは、`SUI_LEVEL2_DIAG_DIR` を明示したときだけ出力する。通常の `pytest` は、作業ツリーに診断ファイルを書き込まない。
 
 同じ統合ハーネスを直接実行する場合。

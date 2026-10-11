@@ -43,7 +43,7 @@ MVPでは以下のいずれかで簡素に扱う。
 - 更新は具体的な `If-Match` を必須とする。欠落、または `If-Match: *` は `428 document_precondition_required` で拒否する。`ETag` が一致しなければ `409` とする。
 - 作成は `If-None-Match: *` を必須とする。文書が既に存在すれば `409 document_already_exists` で上書きしない。`*` 以外は `400 document_precondition_invalid`。
 - `If-Match` と `If-None-Match` の同時指定は `400 document_precondition_conflict`。
-- single-tenant 系のプロファイル（`local-dev` / `evaluation` / `enterprise-production`）は、従来どおりLWWを維持する。
+- 単一テナント系のプロファイル（`local-dev` / `evaluation` / `enterprise-production`）は、従来どおりLWWを維持する。
 
 ---
 
@@ -220,7 +220,7 @@ CE4（API/CLI/監査統合）はCE1契約を読み取り専用参照し、実装
 - `validation_failed`: 入力契約違反
 - `audit_violation`: 必須キー欠損 / 順序違反 / 重複矛盾
 - `equivalence_violation`: `equivalenceKey` または `bundleHash` 不一致
-- `policy_violation`: proposal-only違反（auto-*検出）
+- `policy_violation`: 提案のみ違反（auto-*検出）
 - フェイルセーフ: 自己修復は最大3回。4回目相当は `StoppedForClarification`。
 
 #### 2.7.6 責務境界（API / CLI / Audit）
@@ -267,7 +267,7 @@ SafeMode既定ON、未レビュー本文保護、proposal-only、`human_reviewed
 ### 2.9 CE4 API/CLI/GUI 同値性・監査契約（CE4-API-CLI-AUDIT）
 
 CE-4はAPI/CLI/GUIの操作同値性と監査導線を固定する契約フェーズであり、実装方式やUI差分よりも監査可能性を優先する。
-またCE4はproposal-only境界を維持し、`accepted/rejected` の自動確定経路を許可しない。
+またCE4は提案のみ境界を維持し、`accepted/rejected` の自動確定経路を許可しない。
 
 #### 2.9.0 Proposal-only + API/CLI監査責務境界
 
@@ -275,7 +275,7 @@ CE-4はAPI/CLI/GUIの操作同値性と監査導線を固定する契約フェ�
 - API責務境界: 入力/出力/失敗時セマンティクスを固定する。
 - CLI責務境界: API同値の入力面・出力面・終了コードを固定する。
 - 監査責務境界: `query/bundle/proposal/apply` と `queryCanonicalHash` の記録を固定する。
-- フェイルセーフ: proposal-onlyからの逸脱（auto-apply/auto-confirm/auto-publish）や、監査欠損を成功扱いにする状態を検知した場合は、安全側で拒否する。
+- フェイルセーフ: 提案のみからの逸脱（auto-apply/auto-confirm/auto-publish）や、監査欠損を成功扱いにする状態を検知した場合は、安全側で拒否する。
 
 #### 2.9.0a CE4 API/CLI監査統合ゲート（Context / Decision / Consequences）
 
@@ -292,7 +292,7 @@ Decision
 Consequences
 - モックフィクスチャ（`sourceBundleHash=mock:<hash>`）のみでAPI/CLI監査整合の検証が可能になる。
 - 監査欠損・同値不成立を成功扱いできなくなり、安全側で拒否する境界が明確化される。
-- 下流実装はproposal-onlyのまま契約準拠テストを先行でき、未確定点の混入を防げる。
+- 下流実装は提案のみのまま契約準拠テストを先行でき、未確定点の混入を防げる。
 
 #### 2.9.1 logical operation 同値性（固定）
 
@@ -367,7 +367,7 @@ CE4範囲での語彙追加・別名導入は禁止する。
 CE4フェイルセーフ（停止条件）
 - 監査4点セット欠損を成功扱いしようとする要求
 - `dryRun=true` で `sideEffect="none"` を満たさない挙動
-- safeMode後退要求（share/export保護緩和、未レビュー保護緩和）
+- safeMode後退要求（share/書き出し保護緩和、未レビュー保護緩和）
 - Consensus直書き要求（proposal/apply契約を迂回する更新）
 - 検証の自己修復が3回失敗した場合（4回目試行は行わない）
 - 前提崩れ（同値性定義や固定操作契約の不成立）
@@ -416,7 +416,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
   - 404: `doc_id` が存在しない
   - 422: ハッシュformatなどの契約違反
 
-### 2.11 実装済み response model の補助API
+### 2.11 実装済み応答 model の補助API
 
 次のAPIはDocument CRUDとは別の、実装済みの限定契約である。レスポンスフィールドの型定義は `02_Architecture/schemas.md` §13を正本とする。
 
@@ -433,7 +433,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 
 **GET** `/docs/{doc_id}/similar-candidate-groups`
 
-- リクエストヘッダー: 通常のDocument read認可に従い、`X-Read-Only: 1 | true` を読み取り専用コンテキストとして扱う。
+- リクエストヘッダー: 通常のDocument 読み取り認可に従い、`X-Read-Only: 1 | true` を読み取り専用コンテキストとして扱う。
 - レスポンス: `CandidateListViewModel`。Documentから決定論的に導出する読み取り専用ビューであり、merge判断を自動適用しない。
   - `generatedAt: string (ISO 8601)`
   - `groups: SimilarCandidateGroup[]`
@@ -541,7 +541,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 - 対象島の外側にある隣接カードは、関係 / evidenceを理解するための**文脈専用**である。応答の `groundingIds` は従来どおり対象島の直接メンバーだけを許可し、外部カードへ広げない。
 - 親島、表札カード、レビュー状態、カード関係、`contradictionState` はIR由来の構造としてAIへ渡す。親島は親子関係を保持する構造だけを残し、親島のカード集合まで入力へ広げない。`critiqueTags` / `critiqueText` と明示的な島どうしのedgeはこのタスクだけの入力として従来の経路を維持する。
 - 対象島の仕事に必要な意味をIRで完全に保持できない場合は、プロバイダへ不完全な表札生成を依頼せず422で拒否する。主なIRエラーコードは、必須カード集合が上限を超える `required_card_budget_exceeded`、必須カード本文が文字数上限で短縮される `required_text_truncated`、投影後の必須カード集合が一致しない `required_card_context_mismatch`、必要な関係 / evidenceが欠ける `required_relation_missing` / `required_evidence_missing`。リクエスト / レスポンスの形は変更しない。
-- **DX-CLEANUP-07案B**: この直接ルートはフロントエンドの直接呼び出し元を持たない（UIはproposal-onlyの `POST /ai/proposals/island-summary` を使用）。**後方互換・外部APIクライアント用に維持**する。`suggest_island_summary` 関数本体はproposalルートの内部実装として再利用されている。
+- **DX-CLEANUP-07案B**: この直接ルートはフロントエンドの直接呼び出し元を持たない（UIは提案のみの `POST /ai/proposals/island-summary` を使用）。**後方互換・外部APIクライアント用に維持**する。`suggest_island_summary` 関数本体はproposalルートの内部実装として再利用されている。
 
 **POST** `/ai/proposals/island-summary`
 
@@ -557,7 +557,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
   - `status: "proposed"`
   - `reviewState: "unreviewed"`
 - `/ai/suggest-island-summary` のproposalを包むラッパー。人間の明示的Adopt/Reject/Hold操作を経て文書へ反映される。
-- 成功時は本文を持たないproposal相関行を`ai_proposals`へ保存する。対象Documentが存在しない、またはwrite認可されない場合はproposalを生成・登録しない。
+- 成功時は本文を持たないproposal相関行を`ai_proposals`へ保存する。対象Documentが存在しない、または書き込み認可されない場合はproposalを生成・登録しない。
 
 **POST** `/ai/proposals/opposing-viewpoint`（AI-OPPOSE-01・iteration 65以降で契約化）
 
@@ -598,7 +598,7 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 
 - 文書ごとのCE4読み取り専用proposalライフサイクル状態を返す。クエリ: `docId`（テナント単位の事前条件必須）。
 - レスポンス: `ProposalStatusResponse`（`proposalId`・`proposalKind`・`origin`・各proposalの判定状態など）。
-- 生成AI（MCP/API経由）が、proposalが依然proposal-onlyか、人間が判定済み（accepted/rejected/held）かを検証するための追跡手段。読み取り専用契約（`action="read"`）で、proposalや判定を一切書き込まない。
+- 生成AI（MCP/API経由）が、proposalが依然提案のみか、人間が判定済み（accepted/rejected/held）かを検証するための追跡手段。読み取り専用契約（`action="read"`）で、proposalや判定を一切書き込まない。
 
 **POST** `/ai/external-tasks/register`
 
@@ -794,7 +794,7 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 **GET** `/session/context`
 
 - レスポンス: `TenantSessionContextResponse`
-- 認証済みセッションのアクティブなテナント・利用可能なテナント・有効なcapability・tenantSessionVersionを返す（§8参照）。
+- 認証済みセッションのアクティブなテナント・利用可能なテナント・有効な権限・tenantSessionVersionを返す（§8参照）。
 
 **POST** `/session/active-tenant`
 
@@ -816,8 +816,8 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 
 **POST** `/admin/provision/identity-providers`
 
-- strictプロビジョニング: 外部IdPの登録。プロバイダ、issuer、audienceを登録する。
-- 認可: プラットフォーム運用者 / 管理者capability
+- strictプロビジョニング: 外部IdPの登録。プロバイダ、issuer、対象を登録する。
+- 認可: プラットフォーム運用者 / 管理者権限
 
 **POST** `/admin/provision/tenant-identity-providers`
 
@@ -831,7 +831,7 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 
 - SEC-ADMIN-PLANE-03: 制御プレーン操作の監査証跡（許可リスト読取）。`X-Admin-Api-Key`（またはprovision capability）のコントロールプレーン認可必須。
 - レスポンス: `{ "events": [{ "eventId", "occurredAt", "route", "operation?", "result", "statusCode", "requestId?", "actorRefHash?" }], "nextCursor?" }`。`limit`（既定100・上限500）と `cursor`（前ページの `nextCursor`）でboundedにページング。
-- Stage-A（`X-Admin-Api-Key`）はbootstrap運用者として全体監査を取得する。Stage-B（信頼済みセッションの`tenant.provision`）はサーバ解決したアクティブなテナントで絞り込み、他テナントおよびbootstrap行を返さない。呼び出し元が指定したactor/tenantヘッダーは監査属性・絞り込みに使用しない。
+- Stage-A（`X-Admin-Api-Key`）はbootstrap運用者として全体監査を取得する。Stage-B（信頼済みセッションの`tenant.provision`）はサーバ解決したアクティブなテナントで絞り込み、他テナントおよびbootstrap行を返さない。呼び出し元が指定したactor/テナントヘッダーは監査属性・絞り込みに使用しない。
 - 許可リストに `tenant_id`・本文・秘密情報・生PII・policyRef生値は含めない（ADR-0035）。
 - 監査記録は失敗しても処理を続ける（記録失敗でも管理操作を阻害しない）。
 
@@ -890,23 +890,23 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 
 ### 2.15 Agent資格情報（ADR-0093）
 
-外部のAI協働者（MCPなど）が、`saas-multitenant` で読み取り専用の投影を読むための資格情報である。agentはtenantのmembershipを持たない別種の主体で、Tenant Adminが登録した資格情報と、明示した文書への付与だけで読める。
+外部のAI協働者（MCPなど）が、`saas-multitenant` で読み取り専用の投影を読むための資格情報である。agentはテナントの所属を持たない別種の主体で、Tenant Adminが登録した資格情報と、明示した文書への付与だけで読める。
 
 - **ヘッダー**: `Sui-Sensemaking-Agent-Credential: suiag_...`。通常の利用者の `Authorization` とは別に扱う。ヘッダーがあれば、そのヘッダーだけを認証として評価する。
-- **OAuthトークンによる認証（ADR-0094）**: 不透明な資格情報の代わりに、`Sui-Sensemaking-Agent-Bearer: Bearer <JWT>` でも認証できる。このJWTは、MCPサーバーがトークン交換（RFC 8693）で得た、backend宛ての短命のトークンである。backendは署名・発行者・audience・有効期限を自分で検証し（ゲスト受け入れと同じ `verify_configured_oidc_token` とIdP登録簿）、検証済みの `(identity_provider_id, sub)` を、Tenant Adminが結んだ対応付けから agent に引く。tenantはトークンのclaimではなく、対応付けの行から決める。MCP宛てのトークンは受け付けない（audienceが一致しない）。二つのヘッダーを同時に送ると `400 agent_credential_conflict`。agentの資格情報と、利用者の資格情報（`Sui-Sensemaking-Auth-Session` / `Sui-Sensemaking-Guest-Session` のcookie、`X-Sui-Sensemaking-Authorization`）を同じ要求で送っても、同じ `400` で閉じる。以降の許可route・拒否・本文・監査・失効は、不透明な資格情報と同じである。
-- **tenantの決まり方**: トークンのハッシュから、サーバー側の行（資格情報）を引いて決める。リクエストのheader・query・body・pathで指定した値は使わない。
+- **OAuthトークンによる認証（ADR-0094）**: 不透明な資格情報の代わりに、`Sui-Sensemaking-Agent-Bearer: Bearer <JWT>` でも認証できる。このJWTは、MCPサーバーがトークン交換（RFC 8693）で得た、バックエンド宛ての短命のトークンである。バックエンドは署名・発行者・audience・有効期限を自分で検証し（ゲスト受け入れと同じ `verify_configured_oidc_token` とIdP登録簿）、検証済みの `(identity_provider_id, sub)` を、Tenant Adminが結んだ対応付けから agent に引く。テナントはトークンのクレームではなく、対応付けの行から決める。MCP宛てのトークンは受け付けない（対象が一致しない）。二つのヘッダーを同時に送ると `400 agent_credential_conflict`。agentの資格情報と、利用者の資格情報（`Sui-Sensemaking-Auth-Session` / `Sui-Sensemaking-Guest-Session` のcookie、`X-Sui-Sensemaking-Authorization`）を同じ要求で送っても、同じ `400` で閉じる。以降の許可route・拒否・本文・監査・失効は、不透明な資格情報と同じである。
+- **テナントの決まり方**: トークンのハッシュから、サーバー側の行（資格情報）を引いて決める。リクエストのヘッダー・query・body・パスで指定した値は使わない。
 - **通れるroute**: `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つだけ。`GET /docs` は付与された文書のmetadataだけを返す。判断ログ、類似候補など、読み取りでも本文由来の派生データを返す経路は `403 agent_route_not_enabled` で閉じる。
-- **拒否**: 不正、未知、失効、期限切れ、バージョン不一致は、区別せず `401 agent_credential_invalid` とする。付与外の文書、存在しない文書、他tenantの文書は、同じ `404 agent_document_not_granted` を返す。書き込み、export、archive は `403 agent_write_not_enabled`。
+- **拒否**: 不正、未知、失効、期限切れ、バージョン不一致は、区別せず `401 agent_credential_invalid` とする。付与外の文書、存在しない文書、他テナントの文書は、同じ `404 agent_document_not_granted` を返す。書き込み、export、archive は `403 agent_write_not_enabled`。
 - **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。
 - **監査**: eventの主体は `x-actor-ref` ではなく、検証済みの `agent:<agentId>` から求める。agentが送れる `POST /docs/{doc_id}/context-audit` は、`operation=query`、`command=context-query`、`channel=mcp` の読み取りの記録だけである（それ以外は `403 agent_audit_operation_not_enabled`）。CE-4の完全性の追跡には加えない。
 - **応答**: agentへの応答は `Cache-Control: private, no-store` とし、資格情報のヘッダーで `Vary` を付ける。`GET /docs/{doc_id}` は `ETag` を返さない。`GET /docs` の `created_by` は返さない。
 - **即時失効**: 状態・期限・付与は毎要求で確認する。キャッシュは持たない。
-- **登録・失効（Tenant Admin）**: `/tenant-admin/agent-credentials` で管理する。通常の利用者と同じ信頼済みSaaS sessionと `tenantSessionVersion` を要求し、tenant管理者向けのcapabilityを独立して確認する。
-  - `POST /tenant-admin/agent-credentials`（`agent.register`）: `{agentId, label, expiresAt, docIds}`。有効期限は、タイムゾーンつきで、未来かつ90日以内。付与する文書は1〜50件で、明示して列挙する。`201` で、`credential`（トークン平文）を**この応答でだけ**返す。`Cache-Control: no-store`。同じ `agentId` は、失効後も再登録できない（`409 agent_credential_exists`）。付与する文書は、登録者本人が読める文書に限る。読めない文書、存在しない文書、他tenantの文書は区別せず `404 document_not_found` で、何も作らない。
-  - `GET /tenant-admin/agent-credentials`（`agent.register` または `agent.revoke`）: 自tenantの資格情報と、有効な付与の `docIds`。トークンもそのハッシュも返さない。
-  - `POST /tenant-admin/agent-credentials/{agentId}/revoke`（`agent.revoke`）: 次の要求から効く。冪等で `204`。他tenantの `agentId` は `404`。
-  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`（`agent.register`）: `{identityProviderId, subject}` を agent に結ぶ。このtenantが `tenant_identity_providers` で信頼する、有効なIdPの行が無ければ `404 identity_provider_not_found`（存在しないIdPと区別しない）。すでに結ばれていれば `409`（どのtenantの agent かは示さない）。`identityProviderId` と `subject` は、前後に空白があれば `422`。一覧の `oauthBindings` に出る。
-  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他tenantの対応付けは `404`。
+- **登録・失効（Tenant Admin）**: `/tenant-admin/agent-credentials` で管理する。通常の利用者と同じ信頼済みSaaS セッションと `tenantSessionVersion` を要求し、テナント管理者向けの権限を独立して確認する。
+  - `POST /tenant-admin/agent-credentials`（`agent.register`）: `{agentId, label, expiresAt, docIds}`。有効期限は、タイムゾーンつきで、未来かつ90日以内。付与する文書は1〜50件で、明示して列挙する。`201` で、`credential`（トークン平文）を**この応答でだけ**返す。`Cache-Control: no-store`。同じ `agentId` は、失効後も再登録できない（`409 agent_credential_exists`）。付与する文書は、登録者本人が読める文書に限る。読めない文書、存在しない文書、他テナントの文書は区別せず `404 document_not_found` で、何も作らない。
+  - `GET /tenant-admin/agent-credentials`（`agent.register` または `agent.revoke`）: 自テナントの資格情報と、有効な付与の `docIds`。トークンもそのハッシュも返さない。
+  - `POST /tenant-admin/agent-credentials/{agentId}/revoke`（`agent.revoke`）: 次の要求から効く。冪等で `204`。他テナントの `agentId` は `404`。
+  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`（`agent.register`）: `{identityProviderId, subject}` を agent に結ぶ。このテナントが `tenant_identity_providers` で信頼する、有効なIdPの行が無ければ `404 identity_provider_not_found`（存在しないIdPと区別しない）。すでに結ばれていれば `409`（どのテナントの agent かは示さない）。`identityProviderId` と `subject` は、前後に空白があれば `422`。一覧の `oauthBindings` に出る。
+  - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他テナントの対応付けは `404`。
   - `DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`（`agent.revoke`）: その文書の付与だけを取り消す。`204`。
 
 ## 3. レスポンス例（概要）
@@ -977,7 +977,7 @@ MVPでは、エラーを過度に作り込まない。ただし、実装済み�
 - `view.json` / `packs/index.json` の `visibility` は **公開範囲ラベル用メタデータ** として扱う。
 - `visibility` の値は `Public | Unlisted | Org | Restricted` を採用し、不正値はバリデータで拒否する。
 - 後方互換として、`view.json` 欠損時は `Restricted`、`packs/index.json` 欠損時は `Public` を補完する。
-- `visibility` はAPIの共有可否判定を上書きしない。外部サービスとの共有制御は引き続きSafeMode / share/exportポリシーを正本とする。
+- `visibility` はAPIの共有可否判定を上書きしない。外部サービスとの共有制御は引き続きSafeMode / share/書き出しポリシーを正本とする。
 
 
 ## 8. AccessControlAdapter API契約（FB-RM-PUB-04）
@@ -1059,9 +1059,9 @@ SafeMode/readOnly優先順
 ### 8.5 実運用アダプタ設定（OIDC/SAML接続）
 
 - `SUI_ACCESS_CONTROL_ADAPTER=external_http` で、APIは外部ポリシー接続先（エンドポイント）へ `POST` 委譲する。
-- エンドポイントは認証情報・クエリ・フラグメントを含まないHTTPS、またはループバックHTTPに限定する。`external_http` を選択した場合はエンドポイントを必須とし、欠損、固定bearerやIdP issuerだけが残る不完全設定、0以下または30秒超のタイムアウトを起動時に拒否する。
+- エンドポイントは認証情報・クエリ・フラグメントを含まないHTTPS、またはループバックHTTPに限定する。`external_http` を選択した場合はエンドポイントを必須とし、欠損、固定bearerやIdP 発行者だけが残る不完全設定、0以下または30秒超のタイムアウトを起動時に拒否する。
 - リクエストボディは `AccessRequest` 契約から構成し、`auth.roles/groups` と `resource.policyRef` の意味解釈は行わない。一方で送信前の安全境界として、UTF-8 JSON全体を64KiB以下、識別子を256文字以下、`policyRef`を2,048文字以下、ロール/groupsを各64件以下の重複なし正規文字列に限定する。
-- subject/resource欠損、制御文字・前後空白、未知のaction/visibility、型不正、上限超過を含むサーバが組み立てたリクエストはトランスポート前に拒否し、元の値をクライアントやログへ返さず`adapter_error`としてフェイルセーフを適用する。
+- subject/リソース欠損、制御文字・前後空白、未知のaction/visibility、型不正、上限超過を含むサーバが組み立てたリクエストはトランスポート前に拒否し、元の値をクライアントやログへ返さず`adapter_error`としてフェイルセーフを適用する。
 - リクエストヘッダーには `x-acl-auth-mode: none|oidc|saml` を付与し、必要時のみ `Authorization: Bearer <static>` / `x-idp-issuer` / `x-trace-id` を付与する。
 - 応答は `allow:boolean`（必須）+ `readOnly:boolean?` + `reason:string?` の最小契約。オブジェクト以外、余分なフィールド、64KiB超、非UTF-8/非JSON、512文字超または制御文字を含むreasonは受理せず、応答値をクライアントやログへ返さずに`policy_ref_invalid`としてフェイルセーフを適用する。
 - `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_ENDPOINT` が未設定の場合、`external_http` を `noop` へフォールバックせず、設定不備として起動を拒否する（`ADR-0062`）。明示的な `noop` と、完全設定後のPDP実行時障害に対する `read_only|deny` は従来どおり維持する。
@@ -1095,7 +1095,7 @@ SafeMode/readOnly優先順
   - プロファイル
     - `user_id`: `user:<users.id>`（未認証は `actorRef` → `null`）
     - `sso_subject`: `user:sso:<provider>:<externalUid>`（不足時は `user_id` フォールバック）
-  - 責務境界: リゾルバはreviewerRef/ownerRef生成のみを行い、reviewEvents/export/importスキーマを変更しない（不透明な文字列としての互換を維持）。
+  - 責務境界: リゾルバはreviewerRef/ownerRef生成のみを行い、reviewEvents/export/取り込みスキーマを変更しない（不透明な文字列としての互換を維持）。
   - アダプタ未設定時はSettingsの既定値 `user_id` を使う。不正値はSettings検証で起動時に拒否し、公開設定経路ではフォールバックしない（factory内部の未知アダプタ名への `user_id` フォールバックは防御的実装）。
 - 属性境界は次のとおりです。
   - persist: `provider`, `external_uid`, `display_name`, `email`
@@ -1176,7 +1176,7 @@ export type AdminProvisionUserConflictError = {
 
 ### 9.4 移行契約（expand/contract）
 
-- expand: `users` / `user_identities` 追加後、Alembic `20260717_0007`以降は作成処理で旧`provider+external_uid`と`identity_provider_id+subject`を二重書きし、解決時は後者を優先する。expand列が空の旧行だけは旧キーへ範囲を限ってフォールバックし、成功時に新紐付けを補完する。両キーが異なるユーザーへ一致する場合や既存紐付けと入力が不一致の場合は`identity_mapping_conflict`で拒否する。互換IdPはシングルテナント移行用であり、検証済みissuer/audienceに基づくSaaS認証とは扱わない。
+- expand: `users` / `user_identities` 追加後、Alembic `20260717_0007`以降は作成処理で旧`provider+external_uid`と`identity_provider_id+subject`を二重書きし、解決時は後者を優先する。expand列が空の旧行だけは旧キーへ範囲を限ってフォールバックし、成功時に新紐付けを補完する。両キーが異なるユーザーへ一致する場合や既存紐付けと入力が不一致の場合は`identity_mapping_conflict`で拒否する。互換IdPはシングルテナント移行用であり、検証済み発行者/対象に基づくSaaS認証とは扱わない。
 - contract: attribution APIは `reviewerRef` / `ownerRef` を `user:<users.id>` に統一し、外部subject直参照を受け付けない。
 - strictモードはcontract側の強制条件として扱い、未登録subjectを `403` で拒否する。
 
@@ -1233,9 +1233,9 @@ export type AdminAgentRegistrationSummary = {
 
 - 非目標：本契約ではページング・検索・トークンroll（再発行による旧トークン継続失効付き差し替え）・複数document一括登録は定義しない。
 
-## 10. SaaS TenantContext / capability契約（ADR-0059 / ADR-0061、現存surface実装済み）
+## 10. SaaS TenantContext / 権限契約（ADR-0059 / ADR-0061、現存surface実装済み）
 
-本節はAccepted済みの目標契約であり、現在公開・到達可能な面については`SAAS-TENANT-01` AC-1〜13をmainへ統合済みである。`local-dev` / `evaluation` / `enterprise-production`はシングルテナント相当を維持し、SaaSは独立した`saas-multitenant` プロファイルで、必須ポリシー/コンポーネントの事前検査を通過した構成だけを有効化する。bootstrapポリシー、セッションコンテキスト、条件付きのアクティブなテナント変更について、安全側で拒否するルートとフロントエンドエントリゲートに加え、信頼済み認証エッジの識別情報リゾルバ・テナントリゾルバ・アクティブなテナントセッションアダプタを3点同時にだけ受け付ける起動前バンドル境界を実装済みである。プロファイル、型付き非秘密ポリシー、バンドルの型・欠損・相互必須、起動済みの状態、構築済みPDP／capability／紐付けコンポーネントの実型を状態変更なしで事前検査し、DB初期化前とアダプタ有効化前に同じ判定を再実行する。シングルテナントプロファイルへのバンドル注入、SaaSプロファイルでのバンドル欠損、未知プロファイル、設定と実コンポーネントの不一致をDB接続前に起動拒否する。SaaSプロファイルではPostgreSQL、JIT無効、外部のアクセス制御、`deny` フェイルセーフ、外部の文書紐付け、外部テナントcapabilityに加え、対応する3つの外部コンポーネント実体を必須とする。事前検査済みの同一インスタンスだけをApp状態とDocumentリソースリゾルバへ渡す。バンドル非注入のシングルテナントプロファイルでは識別情報/sessionアダプタを利用不可、テナントリゾルバとDocumentリソースリゾルバをシングルテナント互換へ戻してセッションコンテキスト系を503として閉じる。SaaSバンドル有効化時はDocumentリソースリゾルバもサーバ所有のメタデータ＋信頼済み紐付けリゾルバへ同じライフサイクル内で切り替え、公開可視性／ポリシーヘッダーを認可根拠にしない。Document、テナント管理者、文書内容を扱うAI更新操作とコンテキスト更新操作には共通バージョン事前条件を実装済みであり、Documentコンテキスト監査は世代確認と認可が成功するまで監査進行状態を更新せず、イベントcompleteness trackerを検証済み`tenantId + docId`単位に分離する。登録済みの全Document／Document access管理者ルートが各共通認可境界を呼ぶことは契約テストで固定する。同contractは登録ルート全件を既定で安全側（拒否）として列挙し、共通のテナント単位の境界を持たないルートは機械的に再検査される理由付き例外として明示分類されなければ失敗するため、未分類の新規ルートとマウントされたASGIサブアプリを検出する。実認証エッジアダプタ（`JwtSaasIdentityContextResolver`。BFFのcookie経路を含む）とanti-forgery付きサーバ所有のセッション形式は実装済みである。現在公開されているDocument／テナント管理者／セッション／文書内容を扱うAI・ワーカー/ブラウザ経路は親issueのバージョン/テナント境界で検証済みとする。一方、現存しないインポート／share／webhook／非同期ジョブの新規開始点は実装済みと主張せず、MCPはテナントに束縛された認証情報が存在しない間`saas-multitenant`を起動時即座に失敗させる。実SaaSデプロイは外部紐付け/PDP/capability等の必須コンポーネントを構成し、事前検査を通過しなければならない。
+本節はAccepted済みの目標契約であり、現在公開・到達可能な面については`SAAS-TENANT-01` AC-1〜13をmainへ統合済みである。`local-dev` / `evaluation` / `enterprise-production`はシングルテナント相当を維持し、SaaSは独立した`saas-multitenant` プロファイルで、必須ポリシー/コンポーネントの事前検査を通過した構成だけを有効化する。bootstrapポリシー、セッションコンテキスト、条件付きのアクティブなテナント変更について、安全側で拒否するルートとフロントエンドエントリゲートに加え、信頼済み認証エッジの識別情報リゾルバ・テナントリゾルバ・アクティブなテナントセッションアダプタを3点同時にだけ受け付ける起動前バンドル境界を実装済みである。プロファイル、型付き非秘密ポリシー、バンドルの型・欠損・相互必須、起動済みの状態、構築済みPDP／capability／紐付けコンポーネントの実型を状態変更なしで事前検査し、DB初期化前とアダプタ有効化前に同じ判定を再実行する。シングルテナントプロファイルへのバンドル注入、SaaSプロファイルでのバンドル欠損、未知プロファイル、設定と実コンポーネントの不一致をDB接続前に起動拒否する。SaaSプロファイルではPostgreSQL、JIT無効、外部のアクセス制御、`deny` フェイルセーフ、外部の文書紐付け、外部テナント権限に加え、対応する3つの外部コンポーネント実体を必須とする。事前検査済みの同一インスタンスだけをApp状態とDocumentリソースリゾルバへ渡す。バンドル非注入のシングルテナントプロファイルでは識別情報/セッションアダプタを利用不可、テナントリゾルバとDocumentリソースリゾルバをシングルテナント互換へ戻してセッションコンテキスト系を503として閉じる。SaaSバンドル有効化時はDocumentリソースリゾルバもサーバ所有のメタデータ＋信頼済み紐付けリゾルバへ同じライフサイクル内で切り替え、公開可視性／ポリシーヘッダーを認可根拠にしない。Document、テナント管理者、文書内容を扱うAI更新操作とコンテキスト更新操作には共通バージョン事前条件を実装済みであり、Documentコンテキスト監査は世代確認と認可が成功するまで監査進行状態を更新せず、イベントcompleteness trackerを検証済み`tenantId + docId`単位に分離する。登録済みの全Document／Document access管理者ルートが各共通認可境界を呼ぶことは契約テストで固定する。同contractは登録ルート全件を既定で安全側（拒否）として列挙し、共通のテナント単位の境界を持たないルートは機械的に再検査される理由付き例外として明示分類されなければ失敗するため、未分類の新規ルートとマウントされたASGIサブアプリを検出する。実認証エッジアダプタ（`JwtSaasIdentityContextResolver`。BFFのcookie経路を含む）とanti-forgery付きサーバ所有のセッション形式は実装済みである。現在公開されているDocument／テナント管理者／セッション／文書内容を扱うAI・ワーカー/ブラウザ経路は親課題のバージョン/テナント境界で検証済みとする。一方、現存しないインポート／share／webhook／非同期ジョブの新規開始点は実装済みと主張せず、MCPはテナントに束縛された認証情報が存在しない間`saas-multitenant`を起動時即座に失敗させる。実SaaSデプロイは外部紐付け/PDP/権限等の必須コンポーネントを構成し、事前検査を通過しなければならない。
 
 ### 10.1 session context（GET/POST version guard実装済み・SaaS runtime gated）
 
@@ -1244,11 +1244,11 @@ export type AdminAgentRegistrationSummary = {
   - `local-dev`、`evaluation`、`enterprise-production`は`single-tenant`へ写像する。`saas-multitenant`は`tenant-session-required`へ写像し、`TrustedSaasRuntimePolicy`と起動前バンドルの必須コンポーネント検証を通過した場合だけ起動する。不完全な構成はDB初期化・アダプタ有効化前に即座に失敗させる。
   - 未知・欠損プロファイルは`503 runtime_policy_unavailable`として値を返さず閉じる。成功・失敗とも`Cache-Control: no-store`と`Pragma: no-cache`を付ける。
 - `GET /session/context`
-  - 現在の検証済みTenantContext、利用者がアクティブなメンバーシップを持つテナント候補、テナント単位のcapabilityを返す。
+  - 現在の検証済みTenantContext、利用者がアクティブなメンバーシップを持つテナント候補、テナント単位の権限を返す。
   - テナント候補はサーバーで許可リストされたメンバーシップだけとし、テナント検索や自由入力を提供しない。
-  - 識別情報、TenantContext、アクティブなメンバーシップ、メンバーシップID、capabilityスナップショットをリクエストごとに再確認する。メンバーシップIDはリゾルバ値をそのままPDPへ渡さず、`principalId + tenantId`のアクティブなメンバーシップからサーバ側で再生成した値との一致を必須にする。信頼済みリゾルバ欠損、シングルテナント互換コンテキスト、停止・差し替えメンバーシップ、不正・未知capabilityでは安全側で拒否する。
-  - レスポンスは64KiB以下、プリンシパル/tenant IDを256文字以下、テナント表示名を256文字以下、capabilityバージョンと`tenantSessionVersion`を各128文字以下、利用可能なテナントを1〜256件の重複なし、有効なcapabilityを既知11件以下の重複なしへ限定する。サーバ側のセッション値が不正・非表示・過大な場合は`503 session_context_unavailable`、capabilityスナップショット違反は`503 capability_resolution_unavailable`として値を返さず閉じる。
-  - `tenantSessionVersion`は信頼済みの認証/セッションアダプタがアクティブなテナント状態へ束縛して発行する予測不能な不透明なIDである。Documentやcapabilityのバージョンではなく、同じ認証セッションの複数タブ・古いリクエストを止める想定コンテキストの照合にだけ使う。
+  - 識別情報、TenantContext、アクティブなメンバーシップ、メンバーシップID、権限スナップショットをリクエストごとに再確認する。メンバーシップIDはリゾルバ値をそのままPDPへ渡さず、`principalId + tenantId`のアクティブなメンバーシップからサーバ側で再生成した値との一致を必須にする。信頼済みリゾルバ欠損、シングルテナント互換コンテキスト、停止・差し替えメンバーシップ、不正・未知権限では安全側で拒否する。
+  - レスポンスは64KiB以下、プリンシパル/tenant IDを256文字以下、テナント表示名を256文字以下、権限バージョンと`tenantSessionVersion`を各128文字以下、利用可能なテナントを1〜256件の重複なし、有効な権限を既知11件以下の重複なしへ限定する。サーバ側のセッション値が不正・非表示・過大な場合は`503 session_context_unavailable`、権限スナップショット違反は`503 capability_resolution_unavailable`として値を返さず閉じる。
+  - `tenantSessionVersion`は信頼済みの認証/セッションアダプタがアクティブなテナント状態へ束縛して発行する予測不能な不透明なIDである。Documentや権限のバージョンではなく、同じ認証セッションの複数タブ・古いリクエストを止める想定コンテキストの照合にだけ使う。
   - `Cache-Control: no-store`と`Pragma: no-cache`を付け、利用者表示名・email・外部IdP subject・メンバーシップID・ロール/groupを返さない。
 - `POST /session/active-tenant`
   - リクエスト: `{ tenantId, expectedTenantSessionVersion }`
@@ -1281,23 +1281,23 @@ export type ActiveTenantRequestV1 = {
 };
 ```
 
-`effectiveCapabilities`は表示補助であり、APIの再認可を代替しない。信頼済みサーバ側のセッションのcapability正本はワークスペース（`document.read/write/export/share`）、テナント管理者（`document.policy.manage`、`membership.provision`、`agent.register/revoke`、`audit.read`）、プラットフォームControl Plane（`tenant.provision/suspend`）の3つの認可面へ明示分離する。`GET /session/context`とアクティブなテナント変更レスポンスはワークスペース＋テナント管理者の9種だけを返し、プラットフォームControl Plane capabilityをブラウザ向けワークスペースコンテキストへ露出しない。サーバ内部の信頼済みセッションからプラットフォームcapabilityを削除してはならず、`/admin/provision/**`等の専用ルートで独立に再認可する。キャッシュする場合は`deployment + tenantId + principalId + capabilityVersion`で分離し、認証セッションの有効期限を越えて保持しない。
+`effectiveCapabilities`は表示補助であり、APIの再認可を代替しない。信頼済みサーバ側のセッションの権限正本はワークスペース（`document.read/write/export/share`）、テナント管理者（`document.policy.manage`、`membership.provision`、`agent.register/revoke`、`audit.read`）、プラットフォームControl Plane（`tenant.provision/suspend`）の3つの認可面へ明示分離する。`GET /session/context`とアクティブなテナント変更レスポンスはワークスペース＋テナント管理者の9種だけを返し、プラットフォームControl Plane 権限をブラウザ向けワークスペースコンテキストへ露出しない。サーバ内部の信頼済みセッションからプラットフォーム権限を削除してはならず、`/admin/provision/**`等の専用ルートで独立に再認可する。キャッシュする場合は`deployment + tenantId + principalId + capabilityVersion`で分離し、認証セッションの有効期限を越えて保持しない。
 
-`tenantSessionVersion`はテナント/capabilityの認可根拠ではない。SaaSプロファイルのテナント単位の公開APIと非同期開始点は、最後に検証したバージョンを単一の`Sui-Sensemaking-Tenant-Session-Version` リクエストヘッダーとして必須受領し、信頼済みセッションを解決した後、リソース検索、ボディ解析後の副作用、PDP、ジョブ投入より前に一致を確認する。同名ヘッダーの欠損・重複・不正・不一致では本文・メタデータを返さず`409 tenant_session_changed`へ閉じ、生バージョンや現在テナントを応答・log・監査へ返さない。read、list、エクスポート、share、インポート、MCP、webhook、テナント管理者も例外にせず、古いリクエストを新コンテキストへ自動再送しない。このクライアント値からTenantContextを解決してはならない。ブラウザから利用するSaaS配備ではCORS allow-headersへこの名前だけを明示し、プロキシ/CDNで同名ヘッダーを連結・複製しない。
+`tenantSessionVersion`はテナント/権限の認可根拠ではない。SaaSプロファイルのテナント単位の公開APIと非同期開始点は、最後に検証したバージョンを単一の`Sui-Sensemaking-Tenant-Session-Version` リクエストヘッダーとして必須受領し、信頼済みセッションを解決した後、リソース検索、ボディ解析後の副作用、PDP、ジョブ投入より前に一致を確認する。同名ヘッダーの欠損・重複・不正・不一致では本文・メタデータを返さず`409 tenant_session_changed`へ閉じ、生バージョンや現在テナントを応答・log・監査へ返さない。read、list、エクスポート、share、インポート、MCP、webhook、テナント管理者も例外にせず、古いリクエストを新コンテキストへ自動再送しない。このクライアント値からTenantContextを解決してはならない。ブラウザから利用するSaaS配備ではCORS allow-headersへこの名前だけを明示し、プロキシ/CDNで同名ヘッダーを連結・複製しない。
 
 フロントエンドクライアントは現在の検証済み`availableTenants`にないテナントを通信前に拒否し、`no-store`・同一オリジンのJSONでアクティブなテナント変更を要求する。要求には現在の`tenantSessionVersion`を含め、成功レスポンスは既存バリデータに加えてプリンシパル不変、要求テナント一致、新バージョンへの変更を確認した後だけ遷移へ使用する。遷移時は進行中リクエストを中断し、ワーカーを破棄し、object URLと文書・選択・検索等のメモリ状態を破棄し、旧ブラウザ保存先スコープだけを削除して文書全体の置き換えを行う。後始末/保存先の削除の一部が失敗しても旧DOMを継続利用せず置き換えを優先する。未検証レスポンスでは後始末、保存先変更、画面遷移を開始しない。別タブ通知は旧DOMを早めにブロックする補助に限り、通知欠落時も次リクエストのサーバ事前条件で停止する。
 
-ワークスペース用テナントコントロールは、検証済みメンバーシップが1件ならアクティブなテナント表示だけ、複数なら`availableTenants`だけを選択肢とするselect要素を構築する。テナントIDの自由入力、テナント検索、ロール/group解釈を持たず、アクティブなテナント自身・許可リスト外・不正セッションから変更要求を発火しない。未保存変更の保存／破棄／取消を選ぶ警告ダイアログ、選択・旧スコープ・サーバ応答を再検証するリクエストcoordinator、Appの保存、リクエスト/ワーカー/object URL/タイマーの後始末、旧スコープの削除、強制的な置き換えを起動する任意注入ホストは実装済みである。Appホストは注入セッションとブラウザスコープが完全一致する場合だけコントロールを構築し、切替確定後または応答不明時は旧テナント本文を読み込み中／ブロック状態へ置換する。切替確認は同じ認証セッションの他タブにも影響することを常時説明する。固定のチャネル名へ`null`だけを送る別タブ通知と、受信、`pageshow.persisted`、オンライン復帰、5分以上の非表示復帰で旧Appをブロック化しリクエスト／ワーカーを停止する整合性の境界も実装済みである。通知は最善努力であり、失敗してもローカルの強制置き換えを止めない。SaaSエントリポイントはbootstrapで検証したセッションコンテキストと一致するブラウザスコープをAppへ同時注入し、文書read/write/export監査と文書内容を扱うAI更新操作のクライアントはその不透明なバージョンだけを正式ヘッダーへ付与する。サーバの`tenant_session_changed`は通常の文書競合やAIプロバイダ障害として扱わず、実行時後始末後に旧Appをブロック化する。App実行時後始末はテナントセッションの世代を単調に無効化し、Document read/write、エクスポート監査、AI更新操作、diff／診断ワーカー、バンドル生成の遅延成功結果を開始時の世代が一致する場合だけ呼出元へ返す。バンドルは世代の照合後にだけzipダウンロードへ進む。ローカルDocument／ビュー／comparison／review-pack／patchインポートもFile／zip／整合性検証／フィンガープリントの非同期結果を同じガードへ通し、review-packスナップショットURLは最後の検証後にだけ生成する。PNG／HTMLスナップショット、パッチ、エージェントタスクの非同期生成結果もガード成功後にだけダウンロード／クリップボードへ渡す。公開packはmanifest／Document／任意ビューを同一世代で取得・検証してから一括確定し、古い時はAPI／組込みサンプルへ自動フォールバックしない。子コンポーネントが所有する問い合わせバンドルインポートワーカーとtraceワーカーもAppから同じガードを受け取り、古い結果を状態更新やクリップボード開始へ渡さない。将来追加するサーバインポート／share等のエンドポイント、クリップボードAPI呼出し後のOS側の確定取り消しは未実装である。
+ワークスペース用テナントコントロールは、検証済みメンバーシップが1件ならアクティブなテナント表示だけ、複数なら`availableTenants`だけを選択肢とするselect要素を構築する。テナントIDの自由入力、テナント検索、ロール/group解釈を持たず、アクティブなテナント自身・許可リスト外・不正セッションから変更要求を発火しない。未保存変更の保存／破棄／取消を選ぶ警告ダイアログ、選択・旧スコープ・サーバ応答を再検証するリクエストcoordinator、Appの保存、リクエスト/ワーカー/object URL/タイマーの後始末、旧スコープの削除、強制的な置き換えを起動する任意注入ホストは実装済みである。Appホストは注入セッションとブラウザスコープが完全一致する場合だけコントロールを構築し、切替確定後または応答不明時は旧テナント本文を読み込み中／ブロック状態へ置換する。切替確認は同じ認証セッションの他タブにも影響することを常時説明する。固定のチャネル名へ`null`だけを送る別タブ通知と、受信、`pageshow.persisted`、オンライン復帰、5分以上の非表示復帰で旧Appをブロック化しリクエスト／ワーカーを停止する整合性の境界も実装済みである。通知は最善努力であり、失敗してもローカルの強制置き換えを止めない。SaaSエントリポイントはbootstrapで検証したセッションコンテキストと一致するブラウザスコープをAppへ同時注入し、文書読み取り/write/書き出し監査と文書内容を扱うAI更新操作のクライアントはその不透明なバージョンだけを正式ヘッダーへ付与する。サーバの`tenant_session_changed`は通常の文書競合やAIプロバイダ障害として扱わず、実行時後始末後に旧Appをブロック化する。App実行時後始末はテナントセッションの世代を単調に無効化し、Document read/write、エクスポート監査、AI更新操作、diff／診断ワーカー、バンドル生成の遅延成功結果を開始時の世代が一致する場合だけ呼出元へ返す。バンドルは世代の照合後にだけzipダウンロードへ進む。ローカルDocument／ビュー／comparison／review-pack／patchインポートもFile／zip／整合性検証／フィンガープリントの非同期結果を同じガードへ通し、review-packスナップショットURLは最後の検証後にだけ生成する。PNG／HTMLスナップショット、パッチ、エージェントタスクの非同期生成結果もガード成功後にだけダウンロード／クリップボードへ渡す。公開packはmanifest／Document／任意ビューを同一世代で取得・検証してから一括確定し、古い時はAPI／組込みサンプルへ自動フォールバックしない。子コンポーネントが所有する問い合わせバンドルインポートワーカーとtraceワーカーもAppから同じガードを受け取り、古い結果を状態更新やクリップボード開始へ渡さない。将来追加するサーバインポート／share等のエンドポイント、クリップボードAPI呼出し後のOS側の確定取り消しは未実装である。
 
 `principalId`は認証済みユーザーに対応するサーバが管理する不透明なIDであり、表示名やemail、外部IdP subjectを返さない。ブラウザ保存先スコープのプリンシパル要素にはこの値だけを使う。
 
-実装準備として、署名・issuer・audience検証後の証跡を受け取る内部リゾルバ、IdP/tenant紐付け、UserIdentity、アクティブなメンバーシップの再照合、アクティブなメンバーシップだけのテナント候補列挙と切替選択サービスを実装済みである。サーバ実行時プロファイルをプロファイル名非公開の2値へ写像する`GET /session/bootstrap-policy`、strictフロントエンドクライアント、プロファイル別エントリポイントも実装済みで、フロントエンドは成功・エラーレスポンスを4KiBまでに限定し、未知モード、余分なフィールド、非UTF-8、不正JSONを利用しない。セッションレスポンスの内部ビルダーと`GET /session/context` ルートは、アクティブなテナントの再照合、不透明なprincipalId、許可リスト済みテナント候補、信頼済みcapabilityリゾルバの既知capabilityだけを受理し、識別子・一覧件数・レスポンスsizeを上限内へ閉じる。不正・欠損したcapabilityスナップショットは`503 capability_resolution_unavailable`、不正・過大なセッション値は`503 session_context_unavailable`として安全側で拒否する。`POST /session/active-tenant`も現在コンテキストと要求テナントのメンバーシップを再確認し、検証済み選択結果だけを信頼済みセッションpersisterへ渡す。フロントエンド側はセッションGET/POSTを`no-store`・same-originで行い、成功・エラーレスポンスのストリームを64KiBまでで打ち切って超過時はキャンセルする。成功レスポンスバリデータを通過し、アクティブなテナントがavailableTenantsと一致したコンテキストだけをブラウザ保存先スコープ／遷移へ渡す。リクエストcoordinatorと任意注入Appホストも現在のセッション、要求テナント、旧スコープ、POST成功レスポンスのプリンシパル／アクティブなテナントを独立に再検証し、未保存変更の取消・保存失敗では通信や後始末を開始しない。未知・重複capability、余分なフィールド、非UTF-8、非表示・過大値は利用しない。厳格な外部HTTP capabilityリゾルバ、アプリケーションライフサイクルの既定利用不可配線、識別情報/tenant/persisterを部分注入させず実行時プロファイルとも原子的に照合する起動前バンドル境界は実装済みである。SaaSフロントエンドエントリはポリシー／セッションbootstrap成功後の検証済みコンテキストとブラウザスコープをAppホストへ同時注入し、シングルテナントエントリは従来どおり未注入で起動する。HTTPヘッダーやクエリを直接検証済みの証跡へ変換する処理は単一テナント向けの旧経路である。SaaS向け信頼済み認証エッジは `SUI_JWT_ALGORITHMS` の検証済み許可リスト（既定 `RS256,ES256`。RS/ES/PS系の既知非対称アルゴリズムを受理）でJWTの署名、issuer、audience、期限を検証し、HMAC/`none`/未知アルゴリズムは受理しない。PKCE対応モックIdPによるE2E基盤を持つ。Bearerトークンの`jti`は任意であり、通常のリクエスト単位のリプレイ検出には使用しない。共有persisterは現時点でプリンシパル単位バージョンのみを保持するため、認証セッションIDとアクティブなテナントの原子的正本化は`SAAS-TENANT-SESSION-BINDING-01`で未完了である。`saas-multitenant` プロファイルは設定上起動できるが、本番利用ゲートを満たさない。**2026-08-22時点の是正**: `SAAS-TENANT-SESSION-BINDING-01`のAC-1〜6は、BFF cookie経路（`Sui-Sensemaking-Auth-Session`、信頼済み認証エッジが`auth_session_key_hash`を解決する経路）に限り完了した。共有ストア（`SaasAuthSessionRow`）は認証セッション識別子・アクティブなテナント・バージョンを同一行でCASで原子的に保持・更新する。**この本文が記述する現行SPAのBearerトークン経路は対象外のまま**であり、依然プリンシパル単位バージョンのみの旧ストアを使う。BFF cookie経路への切替（AC-9・切替）が完了するまで、本文の記述と本番利用ゲート未充足の結論は変わらない。
+実装準備として、署名・issuer・対象検証後の証跡を受け取る内部リゾルバ、IdP/テナント紐付け、UserIdentity、アクティブなメンバーシップの再照合、アクティブなメンバーシップだけのテナント候補列挙と切替選択サービスを実装済みである。サーバ実行時プロファイルをプロファイル名非公開の2値へ写像する`GET /session/bootstrap-policy`、strictフロントエンドクライアント、プロファイル別エントリポイントも実装済みで、フロントエンドは成功・エラーレスポンスを4KiBまでに限定し、未知モード、余分なフィールド、非UTF-8、不正JSONを利用しない。セッションレスポンスの内部ビルダーと`GET /session/context` ルートは、アクティブなテナントの再照合、不透明なprincipalId、許可リスト済みテナント候補、信頼済み権限リゾルバの既知権限だけを受理し、識別子・一覧件数・レスポンスsizeを上限内へ閉じる。不正・欠損した権限スナップショットは`503 capability_resolution_unavailable`、不正・過大なセッション値は`503 session_context_unavailable`として安全側で拒否する。`POST /session/active-tenant`も現在コンテキストと要求テナントのメンバーシップを再確認し、検証済み選択結果だけを信頼済みセッションpersisterへ渡す。フロントエンド側はセッションGET/POSTを`no-store`・same-originで行い、成功・エラーレスポンスのストリームを64KiBまでで打ち切って超過時はキャンセルする。成功レスポンスバリデータを通過し、アクティブなテナントがavailableTenantsと一致したコンテキストだけをブラウザ保存先スコープ／遷移へ渡す。リクエストcoordinatorと任意注入Appホストも現在のセッション、要求テナント、旧スコープ、POST成功レスポンスのプリンシパル／アクティブなテナントを独立に再検証し、未保存変更の取消・保存失敗では通信や後始末を開始しない。未知・重複権限、余分なフィールド、非UTF-8、非表示・過大値は利用しない。厳格な外部HTTP 権限リゾルバ、アプリケーションライフサイクルの既定利用不可配線、識別情報/tenant/persisterを部分注入させず実行時プロファイルとも原子的に照合する起動前バンドル境界は実装済みである。SaaSフロントエンドエントリはポリシー／セッションbootstrap成功後の検証済みコンテキストとブラウザスコープをAppホストへ同時注入し、シングルテナントエントリは従来どおり未注入で起動する。HTTPヘッダーやクエリを直接検証済みの証跡へ変換する処理は単一テナント向けの旧経路である。SaaS向け信頼済み認証エッジは `SUI_JWT_ALGORITHMS` の検証済み許可リスト（既定 `RS256,ES256`。RS/ES/PS系の既知非対称アルゴリズムを受理）でJWTの署名、issuer、audience、期限を検証し、HMAC/`none`/未知アルゴリズムは受理しない。PKCE対応モックIdPによるE2E基盤を持つ。Bearerトークンの`jti`は任意であり、通常のリクエスト単位のリプレイ検出には使用しない。共有persisterは現時点でプリンシパル単位バージョンのみを保持するため、認証セッションIDとアクティブなテナントの原子的正本化は`SAAS-TENANT-SESSION-BINDING-01`で未完了である。`saas-multitenant` プロファイルは設定上起動できるが、本番利用ゲートを満たさない。**2026-08-22時点の是正**: `SAAS-TENANT-SESSION-BINDING-01`のAC-1〜6は、BFF cookie経路（`Sui-Sensemaking-Auth-Session`、信頼済み認証エッジが`auth_session_key_hash`を解決する経路）に限り完了した。共有ストア（`SaasAuthSessionRow`）は認証セッション識別子・アクティブなテナント・バージョンを同一行でCASで原子的に保持・更新する。**この本文が記述する現行SPAのBearerトークン経路は対象外のまま**であり、依然プリンシパル単位バージョンのみの旧ストアを使う。BFF cookie経路への切替（AC-9・切替）が完了するまで、本文の記述と本番利用ゲート未充足の結論は変わらない。
 
-フロントエンドエントリはビルド時の`SUI_RUNTIME_PROFILE`を既知の値だけに解決する。未指定・`local-dev`・`evaluation`・`enterprise-production`はポリシー通信を行わず従来のローカルファーストのAppをマウントする。`saas-multitenant`だけはサーバbootstrapポリシーが`tenant-session-required`と一致した後、サーバ所有のBFF cookieセッションによるセッションGETとレスポンス再検証を完了し、成功時だけ`deployment + tenantId + principalId` スコープ付きAppをマウントする。未知・空・非正規ビルド値、ポリシー取得失敗・不一致、401、403、セッション解決不能、不正レスポンス、不正デプロイは旧本文をマウントしない再試行可能なブロック状態へ分離し、上流メッセージ、プロファイル、プリンシパル、テナント値を表示しない。ライフサイクル中断は失敗表示へ変換せず破棄する。アクティブなテナントは認証セッションキーへ束縛してサーバ側で正本化し、フロントエンドはBearerトークンのテナントのclaimをアクティブなテナント正本として使わない。
+フロントエンドエントリはビルド時の`SUI_RUNTIME_PROFILE`を既知の値だけに解決する。未指定・`local-dev`・`evaluation`・`enterprise-production`はポリシー通信を行わず従来のローカルファーストのAppをマウントする。`saas-multitenant`だけはサーバbootstrapポリシーが`tenant-session-required`と一致した後、サーバ所有のBFF cookieセッションによるセッションGETとレスポンス再検証を完了し、成功時だけ`deployment + tenantId + principalId` スコープ付きAppをマウントする。未知・空・非正規ビルド値、ポリシー取得失敗・不一致、401、403、セッション解決不能、不正レスポンス、不正デプロイは旧本文をマウントしない再試行可能なブロック状態へ分離し、上流メッセージ、プロファイル、プリンシパル、テナント値を表示しない。ライフサイクル中断は失敗表示へ変換せず破棄する。アクティブなテナントは認証セッションキーへ束縛してサーバ側で正本化し、フロントエンドはBearerトークンのテナントのクレームをアクティブなテナント正本として使わない。
 
 Appは注入されたブラウザ保存先スコープをマウント時に検証・スナップショットし、最近開いた文書、ビューモード/ロケール/可視性、reviewer、オンボーディング、上級者向けUI、Minimap、QueryPresetを同じスコープへ紐付けする。スコープを同一マウント内で変更する場合は旧メモリ状態を再利用せず例外停止し、§10.1の文書全体の置き換えを必須とする。Appのアンマウント時は進行中のdiff・診断・バンドルリクエストを中断し、バンドルタスクをキャンセルしてdiff・診断ワーカーを破棄する。個別後始末失敗で残りの後始末や置き換えを止めない。スコープ省略時は既存シングルテナントキーを維持する。`saas-multitenant` エントリはセッションbootstrap成功時だけスコープを注入するが、バックエンド実行時ゲートと残る越境マトリクスが未完了のため、これだけをSaaS対応済みとは扱わない。
 
-capabilityリゾルバは`principalId`、`tenantId`、DB再照合済み`membershipId`だけを信頼済みエンドポイントへPOSTし、各値を256文字以下の正規なサーバ所有のID、リクエスト全体を64KiB以下に限定する。不正・欠損・過大コンテキストはトランスポート前に停止する。応答は`effectiveCapabilities`と`capabilityVersion`だけを受理し、capabilityは§10.5を含む既知11値に限定して重複・未知値・ロール/groups等の余分なフィールドを拒否する。§10.2のテナント単位のAccessRequestのactionはワークスペース＋テナント管理者の9値に限定し、プラットフォームControl Planeの2値を混入させない。レスポンスは64KiB以下、バージョンは128文字以下の不透明な正規IDとし、4xx、タイムアウト、トランスポート障害、非JSON、不正な形状は内部詳細を返さず`capability_resolution_unavailable`へ正規化する。APIキーと応答ボディはDB・監査・診断へ保存しない。
+権限リゾルバは`principalId`、`tenantId`、DB再照合済み`membershipId`だけを信頼済みエンドポイントへPOSTし、各値を256文字以下の正規なサーバ所有のID、リクエスト全体を64KiB以下に限定する。不正・欠損・過大コンテキストはトランスポート前に停止する。応答は`effectiveCapabilities`と`capabilityVersion`だけを受理し、権限は§10.5を含む既知11値に限定して重複・未知値・ロール/groups等の余分なフィールドを拒否する。§10.2のテナント単位のAccessRequestのactionはワークスペース＋テナント管理者の9値に限定し、プラットフォームControl Planeの2値を混入させない。レスポンスは64KiB以下、バージョンは128文字以下の不透明な正規IDとし、4xx、タイムアウト、トランスポート障害、非JSON、不正な形状は内部詳細を返さず`capability_resolution_unavailable`へ正規化する。APIキーと応答ボディはDB・監査・診断へ保存しない。
 
 ### 10.2 tenant-scoped access request
 
@@ -1330,24 +1330,24 @@ export type TenantScopedAccessRequestV1 = {
 
 評価順はAuthContext解決、TenantContextとサーバ側のセッションバージョン解決、クライアントが想定する `tenantSessionVersion` の照合、アクティブなメンバーシップ確認、`tenantId + resourceId`によるサーバ側の検索、主体テナントと資源テナントの一致、SafeMode/readOnlyガード、外部PDP、APIでの強制とする。バージョン不一致とテナント不一致はPDPへ委譲せず常にdenyする。リソースのテナント/visibility/policyRefをクライアントヘッダーやペイロードから採用しない。
 
-### 10.3 SaaS fail-closed / response境界
+### 10.3 SaaS fail-closed / 応答境界
 
-- テナント不明・不一致、メンバーシップ停止、アダプタ欠損、PDPタイムアウト/無効応答ではreadを含めてdenyする。
+- テナント不明・不一致、メンバーシップ停止、アダプタ欠損、PDPタイムアウト/無効応答では読み取りを含めてdenyする。
 - `tenantSessionVersion`欠損・不一致ではリソース検索前に`409 tenant_session_changed`へ閉じ、現在テナントやリソースの存在を応答へ混入させない。
 - 他テナントのリソースIDは`404`相当とし、list/search/count/paginationにも存在を混入させない。
-- currentテナント内でリソースの存在が認可済みだが操作capabilityが不足する場合は`403`を返してよい。
+- currentテナント内でリソースの存在が認可済みだが操作権限が不足する場合は`403`を返してよい。
 - 明示的な`noop`と`read_only` フェイルセーフはSaaSプロファイルで禁止する。エンドポイント欠損時noopフォールバックは`ADR-0062`によりプロファイルを問わず廃止し、外部HTTP方式の不完全設定は起動時に拒否する。§8.3〜8.6のうち明示的なシングルテナント互換挙動だけを既存プロファイルへ適用する。
-- 監査にはtenantId、不透明なactor/resource ID、action、decision、ポリシー/capabilityバージョン、相関IDだけを記録し、本文、タイトル、ロール/group生値、トークンを記録しない。
+- 監査にはtenantId、不透明なactor/resource ID、action、decision、ポリシー/権限バージョン、相関IDだけを記録し、本文、タイトル、ロール/group生値、トークンを記録しない。
 
 テナント単位のアクセス制御のエントリポイントは、TenantContext欠損、リソーステナント欠損、両テナント不一致をそれぞれ`tenant_context_missing`、`resource_tenant_missing`、`tenant_mismatch`として外部PDP呼出し前にdenyする。このガードは`read_only` フェイルセーフから独立し、テナント境界の不備を読み取り許可へ変換しない。Documentルートのリソース解決もアプリケーションライフサイクルで設定するリゾルバ境界とし、現行プロファイルは公開ヘッダーを読む`SingleTenantHeaderResourceResolver`、SaaSプロファイルはヘッダーを無視して`tenantId + docId`をDB検索する`ServerOwnedDocumentResourceResolver`を使用する。後者は既存行のテナントを確認し、未整備の可視性/policyRefを`Restricted`/欠損へ倒すためdenyモードで安全側に停止する。サーバ所有のポリシーメタデータstore、外部紐付けリゾルバアダプタ、SaaSバンドル有効化時のリゾルバ切替は実装済みである。信頼済み認証エッジ（ADR-0063 D9）とモックOAuthログイン（ADR-0064段階1）の基盤は実装済みだが、実紐付けサービス／PDP接続、認証セッション単位のアクティブなテナント正本化は未完了である。SaaSプロファイルは設定上起動できても本番利用ゲートを満たさない。
 
 `external_http` 紐付けリゾルバは、サーバ所有のメタデータから得た`tenantId`、非秘密`bindingId`、`policyVersion`だけを信頼済みエンドポイントへPOSTする。tenantIdは256文字以下、bindingId/policyVersionは128文字以下の正規ID、リクエスト全体は64KiB以下に限定し、不正・過大検索はトランスポート前に解決失敗へ倒す。応答は`{"policyRef": string}`だけを受理し、64KiB超、余分なフィールド、空白・制御文字を含む値、2,048文字超、非JSON、4xx拒否、タイムアウト/transport障害は解決失敗とする。生のリクエスト/レスポンスや内部例外の詳細をクライアント・監査・ログへ返さない。返却されたpolicyRefはAccessRequest内だけでPDPへ渡し、永続化しない。リゾルバ未設定は従来どおり利用不可として`Restricted + policy_ref_missing`へ倒す。
 
-外部PDP、監査HTTP、紐付け/capabilityリゾルバ、LLMプロバイダの外向きHTTPは3xxリダイレクトを追跡しない。元のエンドポイントに対するスキーム/ホストの検証や許可リストをリダイレクトで迂回させず、認可ヘッダー、テナントコンテキスト、policyRef、promptを別接続先へ転送しない。リダイレクト応答は各アダプタの既存のHTTP/transport失敗契約へ正規化する。
+外部PDP、監査HTTP、紐付け/権限リゾルバ、LLMプロバイダの外向きHTTPは3xxリダイレクトを追跡しない。元のエンドポイントに対するスキーム/ホストの検証や許可リストをリダイレクトで迂回させず、認可ヘッダー、テナントコンテキスト、policyRef、promptを別接続先へ転送しない。リダイレクト応答は各アダプタの既存のHTTP/transport失敗契約へ正規化する。
 
 ### 10.4 文書アクセス設定管理API（実装済み・SaaS runtime gated）
 
-テナント管理者向けに次のルートを実装する。ただし、アプリケーションライフサイクルへ信頼済みSaaS識別情報リゾルバとテナントcapabilityリゾルバが明示注入されない限り`503`で閉じる。シングルテナント互換コンテキスト、公開ヘッダーのロール/group、Document所有者、`document.write`、プラットフォーム運用者capabilityを管理権限へ昇格させない。
+テナント管理者向けに次のルートを実装する。ただし、アプリケーションライフサイクルへ信頼済みSaaS識別情報リゾルバとテナント権限リゾルバが明示注入されない限り`503`で閉じる。シングルテナント互換コンテキスト、公開ヘッダーのロール/group、Document所有者、`document.write`、プラットフォーム運用者権限を管理権限へ昇格させない。
 
 - `GET /tenant-admin/document-access`
   - アクティブなテナント内の文書IDと`visibility`、設定有無、紐付け状態、ポリシーバージョン、更新時刻、不透明なリビジョンだけを返す。
@@ -1360,19 +1360,19 @@ export type TenantScopedAccessRequestV1 = {
   - `policyBindingId`と`policyVersion`は128文字以下の不透明な正規IDに限定し、URL、トークン、生のpolicyRef、assertionを受け付けない。`Org/Restricted`は紐付け必須、`Public/Unlisted`は紐付け保存禁止とする。
   - 一覧または詳細で得たリビジョンを`If-Match`へ必須指定する。欠損は`428 document_access_precondition_required`、不一致または同時更新は`409 document_access_conflict`とする。ワイルドカードで競合検査を迂回できない。
   - `If-Match`のDocumentメタデータリビジョンとは別に、SaaS共通の`tenantSessionVersion` 事前条件を必須とする。セッションバージョン不一致をメタデータconflictとして再読込・再送せず、先に`tenant_session_changed`へ停止する。
-  - メタデータ更新と`document_access_admin_audit_events`追加を同一トランザクションで確定する。監査はtenantId、不透明なプリンシパル/doc ID、action/decision、ポリシー/capabilityバージョン、サーバ生成の相関ID、時刻だけを持ち、紐付けID、生のpolicyRef、タイトル、本文、トークンを保存しない。
+  - メタデータ更新と`document_access_admin_audit_events`追加を同一トランザクションで確定する。監査はtenantId、不透明なプリンシパル/doc ID、action/decision、ポリシー/権限バージョン、サーバ生成の相関ID、時刻だけを持ち、紐付けID、生のpolicyRef、タイトル、本文、トークンを保存しない。
 
-他テナントにしか存在しないdocIdは`404`とし、list/detail/updateはすべて解決済みTenantContextでDBガードを設定する。APIで`document.policy.manage`を毎回再評価し、capabilityリゾルバ欠損・不正応答は`503 capability_resolution_unavailable`として安全側で拒否する。
+他テナントにしか存在しないdocIdは`404`とし、list/detail/updateはすべて解決済みTenantContextでDBガードを設定する。APIで`document.policy.manage`を毎回再評価し、権限リゾルバ欠損・不正応答は`503 capability_resolution_unavailable`として安全側で拒否する。
 
-本ルートは管理APIとトランザクション内の監査の境界を先行実装した状態である。検証済み認証エッジ、実PDP capabilityリゾルバ、紐付け秘密情報ストアのリゾルバ、SaaSプロファイルでのdenyのみの配線、PostgreSQL RLS実地マトリクスが揃うまではフロントエンドから有効化せず、共有SaaS対応済みとは扱わない。
+本ルートは管理APIとトランザクション内の監査の境界を先行実装した状態である。検証済み認証エッジ、実PDP 権限リゾルバ、紐付け秘密情報ストアのリゾルバ、SaaSプロファイルでのdenyのみの配線、PostgreSQL RLS実地マトリクスが揃うまではフロントエンドから有効化せず、共有SaaS対応済みとは扱わない。
 
-### 10.5 管理面の予約capability
+### 10.5 管理面の予約権限
 
-テナント管理者は`document.policy.manage`、`membership.provision`と`agent.register/revoke`、`audit.read`、プラットフォームControl Planeは`tenant.provision/suspend`を使用する。ワークスペースは`document.read/write/export/share`を使用する。3者はアプリケーションのルート/capability認可面として分離し、ここでいう認可audienceを新しいJWT `aud` claimの追加と同義には扱わない。プラットフォームcapabilityから`document.read`や`document.policy.manage`を暗黙導出せず、ワークスペースセッションレスポンスにもプラットフォームcapabilityを返さない。プラットフォームルートはサーバ側の信頼済みセッションに保持されたプラットフォームcapabilityを独立に再認可する。汎用ロールeditor、テナント横断文書検索、support impersonationは追加しない。
+テナント管理者は`document.policy.manage`、`membership.provision`と`agent.register/revoke`、`audit.read`、プラットフォームControl Planeは`tenant.provision/suspend`を使用する。ワークスペースは`document.read/write/export/share`を使用する。3者はアプリケーションのルート/権限認可面として分離し、ここでいう認可対象を新しいJWT `aud` クレームの追加と同義には扱わない。プラットフォーム権限から`document.read`や`document.policy.manage`を暗黙導出せず、ワークスペースセッションレスポンスにもプラットフォーム権限を返さない。プラットフォームルートはサーバ側の信頼済みセッションに保持されたプラットフォーム権限を独立に再認可する。汎用ロールeditor、テナント横断文書検索、support impersonationは追加しない。
 
-### 10.6 single-tenant互換
+### 10.6 単一テナント互換
 
-既存プロファイルは内部`local-default` TenantContextを注入する互換リゾルバを使用できる。認証済み利用者ではユーザー、テナント、TenantMembershipがすべてアクティブであることをリクエストごとに確認し、停止・欠損時は`tenant_membership_inactive`で拒否する。匿名利用は既存シングルテナント互換に限ってメンバーシップなしを維持する。Documentルートはアプリケーションライフサイクルで設定された信頼済みリゾルバだけを呼び、公開Document APIへtenantIdを入力項目として追加せず、ヘッダー・クエリ・パス・ペイロードのテナント値をリゾルバへ渡さない。URLのdocIdは解決済みTenantContext内で検索し、同じコンテキストを外部PDPペイロード、本文を含まない監査メタデータ、PostgreSQL transaction-local DB settingへ伝播する。PostgreSQL RLSはsetting欠落時にread/writeとも行を許可せず、SQLiteではこのDBガードをSaaS境界として扱わない。エクスポートされたtenantIdやメンバーシップをインポート先の権限として採用しない。
+既存プロファイルは内部`local-default` TenantContextを注入する互換リゾルバを使用できる。認証済み利用者ではユーザー、テナント、TenantMembershipがすべてアクティブであることをリクエストごとに確認し、停止・欠損時は`tenant_membership_inactive`で拒否する。匿名利用は既存シングルテナント互換に限ってメンバーシップなしを維持する。Documentルートはアプリケーションライフサイクルで設定された信頼済みリゾルバだけを呼び、公開Document APIへtenantIdを入力項目として追加せず、ヘッダー・クエリ・パス・ペイロードのテナント値をリゾルバへ渡さない。URLのdocIdは解決済みTenantContext内で検索し、同じコンテキストを外部PDPペイロード、本文を含まない監査メタデータ、PostgreSQL transaction-local DB settingへ伝播する。PostgreSQL RLSはsetting欠落時に読み取り/書き込みとも行を許可せず、SQLiteではこのDBガードをSaaS境界として扱わない。エクスポートされたtenantIdやメンバーシップをインポート先の権限として採用しない。
 
 ## 11. Inquiry bundle lifecycle API（L0 Planned、ADR-0057 / SAAS-TENANT-01）
 
@@ -1422,7 +1422,7 @@ Inquiryバンドルは `DocumentV1` の任意フィールドではなく、W型�
 
 ### 11.4 非対象・互換性
 
-- SafeModeの既定ON、proposal-only、`human_reviewed` の人手限定、インポート/exportのstrict検証、DocumentV1のスキーマは変更しない。
+- SafeModeの既定ON、proposal-only、`human_reviewed` の人手限定、インポート/書き出しのstrict検証、DocumentV1のスキーマは変更しない。
 - このAPIは保存境界を追加するだけで、SafeMode未適用の既存ローカルエクスポートを自動的に安全な共有へ昇格させない。共有・エクスポートの安全境界は既存契約に従う。
 
 ## 12. 形成履歴（Informative）
@@ -1437,7 +1437,7 @@ Inquiryバンドルは `DocumentV1` の任意フィールドではなく、W型�
 
 このため実際に事故が起きた。カード重要度評価は `AI-IMPORTANCE-SCORING-01` が製品不変条件（`00_Prompt/domain.md`「AIは内容を採点せず」）との抵触として意図的に削除したのに、2026-08-12に本書へ「未実装（計画）。実装前にこの契約を正本として使用すること」という**誤った注記**が入った。検出結果に意図が乗っていなかったことが原因である。
 
-さらに、契約を本書から単に削除するだけでも別の副作用が出る。**廃止された機能を正当に論じている設計文書（廃止を決めたissue自身を含む）が、一律に「api.mdに無いエンドポイントを参照している」警告になる。** 実測で7件発生した。
+さらに、契約を本書から単に削除するだけでも別の副作用が出る。**廃止された機能を正当に論じている設計文書（廃止を決めた課題自身を含む）が、一律に「api.mdに無いエンドポイントを参照している」警告になる。** 実測で7件発生した。
 
 ### 13.2 書式
 
@@ -1454,7 +1454,7 @@ Inquiryバンドルは `DocumentV1` の任意フィールドではなく、W型�
 
 ### 13.3 併記すべきこと
 
-機械可読な1行に加えて、散文で次を書く。**実装可能なリクエスト/responseスキーマは残さない。** スキーマが残っていれば、それは仕様として読まれる（13.1の事故の直接原因）。
+機械可読な1行に加えて、散文で次を書く。**実装可能なリクエスト/応答スキーマは残さない。** スキーマが残っていれば、それは仕様として読まれる（13.1の事故の直接原因）。
 
 - 廃止の理由（どの不変条件・どの判断に抵触したか）
 - 再実装の可否。禁止する場合は、それを固定しているテスト

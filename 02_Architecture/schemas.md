@@ -35,9 +35,9 @@ MVPでは以下を成立させます。
 - `Card.meta.source` は外部の元記録へ戻る任意の手がかりであり、統合元カード、起票者、レビュー者を表さない。
 - `holdState` と `critique` は、不明な文脈、矛盾、違和感を解消せず保持するために利用できる。
 - 品質上の指摘は導出された提案であり、カード内容に関する真実の属性として保存しない。
-- 分割、言い換え、補足はproposal-onlyとし、採用前の本文を変更しない。
+- 分割、言い換え、補足は提案のみとし、採用前の本文を変更しない。
 
-提案の見送り状態、品質確認結果、確認担当者などを永続化する場合は、必須化せず、後方互換、インポート検証、共有範囲、SafeModeを定める内部issueまたはADRを先行する。
+提案の見送り状態、品質確認結果、確認担当者などを永続化する場合は、必須化せず、後方互換、インポート検証、共有範囲、SafeModeを定める内部課題またはADRを先行する。
 
 ### 1.0.1 Sensemaking semantic model boundary（ADR-0085 / L0 Planned）
 
@@ -74,7 +74,7 @@ semantic kind
 - `ReviewAttribution`を汎用レビューログへ自動マイグレーションする
 - 既存データをObservation / Hypothesis等へ推測分類する
 
-永続スキーマへ降ろす場合は、論理成果物の識別情報 / リビジョン識別情報、来歴エンベロープ、レビュー / Authority遷移、マイグレーション、サポートレベルを別issue / ADRで先に定義する。
+永続スキーマへ降ろす場合は、論理成果物の識別情報 / リビジョン識別情報、来歴エンベロープ、レビュー / Authority遷移、マイグレーション、サポートレベルを別課題 / ADRで先に定義する。
 
 ### 1.1 CE0 責務境界メタ契約
 
@@ -99,7 +99,7 @@ CE-0の責務境界として、実装型に先行して次のメタ契約を定�
 - `CG-01..05`は次のとおりです。
   - Working / ContextProjection / Consensusを分離
   - `Working -> Consensus` は `patch + approval` のみ
-  - `mode=autonomous` でもproposal-only（自動適用の禁止）
+  - `mode=autonomous` でも提案のみ（自動適用の禁止）
   - 監査4点セット（`query/bundle/proposal/apply`）欠損は成功扱い禁止
 
 | Contract ID | Must | Must Not |
@@ -379,7 +379,7 @@ DOMAIN-KJ-01（ADR-0048 D3採択）で、KJ法原典の関係記号に対応す�
 ```ts
 export type KnownEdgeType =
   | "related"      // 関連（無方向・既定）
-  | "negate"       // 対立（無方向）。KJ法の「対立」の永続値（下記 語彙境界 参照）
+  | "negate"       // 対立（無方向）。KJ法の「対立」の永続値（下記語彙境界参照）
   | "causal"       // 因果（有向: fromId=原因 → toId=結果）
   | "mutual"       // 相互（無方向・相互依存 ⇄）
   | "equivalence"; // 同値（無方向・「同じことを言っている」という記述）
@@ -734,8 +734,8 @@ MVPでは、サーバ側で最低限の検証（型・必須フィールド）�
   - **Full**: MVPで `L1/L1.5` に分類される運用対象（文書スナップショット、マージ判断の追記・読み出し連携）。
   - **Partial**: `L2/L2.5` の埋め込み限定/契約限定フィールド（例: `evidenceLinks` / `reviewAttribution` / `critiqueInputs`）を含む。保存・往復は保証するが個別CRUDは保証しない。
 - 数値 `version: 1` 以外（`version` 欠損、文字列版、`version: 2` 以降を含む旧版・未知版）はすべて安全側で拒否する。旧版を`DocumentV1`へ読込時正規化する経路は存在しない（`ADR-0058`、`DATA-CONTRACT-RESET-01`）。
-- 非互換変更（必須キー追加、既存キー意味変更、削除）は、新たな次バージョン（`version: 2`以降）を明示的に導入し、その移行判断・移行手順を別のADRまたはissueで先に定めない限り行わない。`version: 1` の意味を現行構造から変更しない。
-- 次バージョン導入前に実装が先行することを禁止し、契約文書（`schemas.md` / `02_Architecture/data_model_operations_overview.html` / 該当issue AC）を先に同期する。
+- 非互換変更（必須キー追加、既存キー意味変更、削除）は、新たな次バージョン（`version: 2`以降）を明示的に導入し、その移行判断・移行手順を別のADRまたは課題で先に定めない限り行わない。`version: 1` の意味を現行構造から変更しない。
+- 次バージョン導入前に実装が先行することを禁止し、契約文書（`schemas.md` / `02_Architecture/data_model_operations_overview.html` / 該当課題 AC）を先に同期する。
 
 ---
 
@@ -782,7 +782,7 @@ export type Visibility = "Public" | "Unlisted" | "Org" | "Restricted";
   - `packs/index.json`: `visibility` 未定義時は `Public` を補完。
 - フォールバックは **インポート読込時に正規化して内部モデルへ反映** し、エクスポート時は常に列挙値を明示出力する。
 
-| Artifact | Field | 欠損時の既定値（互換読込） | 列挙値以外 | export時 |
+| Artifact | Field | 欠損時の既定値（互換読込） | 列挙値以外 | 書き出し時 |
 | --- | --- | --- | --- | --- |
 | `view.json` | `visibility` | `Restricted` を補完 | 拒否（厳格なバリデータ） | 常に列挙値を明示 |
 | `packs/index.json` | `packs[*].visibility` | `Public` を補完 | 拒否（厳格なバリデータ） | 常に列挙値を明示 |
@@ -1051,7 +1051,7 @@ export type MergeDecisionRecord = {
 
 ### 10.4 SaaS tenant identity / persistence target（ADR-0059、L0 Planned）
 
-`ADR-0059`で次のテナント境界を採択済みとする。Alembic `20260716_0006`では、新規テナント・IdP・メンバーシップの各表、文書と判断ログのテナント列、既存ユーザー・文書・判断ログの`local-default` バックフィルまでを拡張フェーズ（expand）として実装した。`20260717_0007`では既存プロバイダラベルから互換IdPを決定的に生成し、`user_identities.identity_provider_id + subject`をバックフィル、新規JIT/事前登録でも旧列と二重書きする。`20260717_0008`では文書を`PRIMARY KEY (tenant_id, id)`、判断ログを`FOREIGN KEY (tenant_id, doc_id)`へ移行し、テナントごとの同一docIdを可能にした。`20260717_0009`ではPostgreSQL RLSを、`20260717_0010`ではテナント単位の文書認可メタデータとRLSを、`20260717_0011`では文書アクセス設定変更のテナント単位のトランザクション内の監査を追加した。ただし、PostgreSQL実地検証、検証済みissuer/audienceへの切替、旧識別情報列の縮約フェーズ（contract）、実PDPと紐付けリゾルバ、全利用者越境テストが完了するまで共有SaaSへ適用しない。
+`ADR-0059`で次のテナント境界を採択済みとする。Alembic `20260716_0006`では、新規テナント・IdP・メンバーシップの各表、文書と判断ログのテナント列、既存ユーザー・文書・判断ログの`local-default` バックフィルまでを拡張フェーズ（expand）として実装した。`20260717_0007`では既存プロバイダラベルから互換IdPを決定的に生成し、`user_identities.identity_provider_id + subject`をバックフィル、新規JIT/事前登録でも旧列と二重書きする。`20260717_0008`では文書を`PRIMARY KEY (tenant_id, id)`、判断ログを`FOREIGN KEY (tenant_id, doc_id)`へ移行し、テナントごとの同一docIdを可能にした。`20260717_0009`ではPostgreSQL RLSを、`20260717_0010`ではテナント単位の文書認可メタデータとRLSを、`20260717_0011`では文書アクセス設定変更のテナント単位のトランザクション内の監査を追加した。ただし、PostgreSQL実地検証、検証済み発行者/対象への切替、旧識別情報列の縮約フェーズ（contract）、実PDPと紐付けリゾルバ、全利用者越境テストが完了するまで共有SaaSへ適用しない。
 
 ```ts
 export type TenantId = string;
@@ -1125,12 +1125,12 @@ export type TenantBrowserStorageScopeV1 = {
 | 文書・判断ログのテナント列と複合キー | 複合PK/unique/FKまで実装済み | PostgreSQL実地検証と全利用者伝播までSaaS阻害要因継続 |
 | 新規JIT・strictモードのユーザーに対するlocalメンバーシップ | 実装済み | シングルテナント互換用 |
 | 文書・判断ログ・バックフィルのテナント限定リポジトリ | 解決済みTenantContext必須で実装済み。認証済み利用者はユーザー/Tenant/Membershipのアクティブな状態を各リクエストで確認し、リポジトリ・PDPペイロード・監査へ伝播 | 認証エッジ（ADR-0063 D9）実装済み。PostgreSQL実地検証と全利用者伝播は未了 |
-| `user_identities`の`identityProviderId + subject`移行 | Expand・バックフィル・二重書き済み。検索は新紐付け優先、旧行フォールバック成功時は自己補完、二重一致は拒否 | 互換IdPは既存。新規IdP登録API（ADR-0063/0064）によりissuer/audience/jwks_uriの登録が可能。旧列の縮約（contract）は単一テナント互換で維持 |
+| `user_identities`の`identityProviderId + subject`移行 | Expand・バックフィル・二重書き済み。検索は新紐付け優先、旧行フォールバック成功時は自己補完、二重一致は拒否 | 互換IdPは既存。新規IdP登録API（ADR-0063/0064）により発行者/audience/jwks_uriの登録が可能。旧列の縮約（contract）は単一テナント互換で維持 |
 | 文書の複合PK/FK、全利用側のテナント必須化 | Document/判断ログの複合PK・unique・FKとリポジトリ経路は実装済み | PostgreSQL実地検証とMCP/worker/cache/storage等の利用者伝播が未完了のためSaaS阻害要因継続 |
 | PostgreSQL RLS等のDB側のガード | 文書／判断ログ／文書アクセスメタデータ／管理監査のENABLE+FORCE RLSポリシー、リポジトリごとのトランザクション内限定の `sui_sensemaking.tenant_id`設定を実装。4表すべてのテナントA/Bの読み取り・テナント越境の更新・コンテキストなしでのプール再利用に加え、自テナント行のtenantId再割当を`WITH CHECK`で拒否する条件付きPostgreSQLマトリクスを定義。マイグレーションでRLSを有効化する全表の`USING`／`WITH CHECK`存在は常時の契約テストで検査する。SQLiteでは何もしない | 分離したマイグレーション用ロールと実行時ロールを使うPostgreSQL実地マトリクスが未実行のためSaaS阻害要因継続 |
-| 検証済みTenantContext / capability API / 否定系マトリクス | シングルテナントリゾルバ、停止メンバーシップ拒否、事前検証済みクレーム再照合、メンバーシップ許可リスト内部サービス、リゾルバのメンバーシップIDとDB再生成値の再一致、信頼済みリクエストコンテキスト共通境界、既知capabilityだけを返す`GET /session/context`、許可リスト再照合後だけ信頼済みの永続化部品へ渡す`POST /session/active-tenant`、識別情報・テナント・永続化部品の3点を同時にだけ受ける起動前バンドル、プロファイル／ポリシー／バンドル／実コンポーネントのDB初期化前事前検査、文書ルートの同一docId GET/PUTテナントA/Bに対するHTTPレベルの否定系マトリクスまで実装。ADR-0063 D9により認証エッジ（`JwtSaasIdentityContextResolver`）と偽造防止（anti-forgery）付きセッション永続化部品（`InMemoryActiveTenantSessionPersister`）の実接続は完了。ADR-0064段階1によりモックOAuth 2.0 + PKCEログインフローのE2Eテストも完了 | 実capability/PDPサービス、信頼済みホスト対応付け、MCP・ワーカー・ブラウザを含む完全マトリクス、PostgreSQL実地検証は未実装のため阻害要因継続 |
-| サーバ所有の文書アクセスメタデータ | テナントと文書の複合FK、可視性・紐付け・バージョンの制約、PostgreSQL RLS、テナント単位のリポジトリ、厳格な外部HTTP紐付けリゾルバ、SaaS時のサーバ所有のリソースリゾルバ切替を実装。クライアントポリシーヘッダーはSaaSリゾルバで無視し、生のpolicyRefはリクエスト内だけで利用。事前検査済み紐付け/PDP/capabilityコンポーネントの同一インスタンスを実行時へ配線する | 認証エッジ（ADR-0063 D9）実装済み。実紐付け/PDP/capabilityサービス、PostgreSQL実地検証は未了 |
-| 文書アクセスメタデータの管理API・監査 | 検証済み・信頼済みのTenantContextと`document.policy.manage`専用の一覧・詳細・条件付きのPUT、秘密値を反射しない厳格な入力、テナント単位のトランザクション内の監査、厳格な外部capability・紐付けリゾルバ、PostgreSQL RLSマイグレーションを実装 | 信頼済みSaaS認証エッジ、実ポリシーサービス/PDP接続、PostgreSQL実地検証、フロントエンド配線が未完了のため実行時には安全側で拒否され、無効のままである |
+| 検証済みTenantContext / capability API / 否定系マトリクス | シングルテナントリゾルバ、停止メンバーシップ拒否、事前検証済みクレーム再照合、メンバーシップ許可リスト内部サービス、リゾルバのメンバーシップIDとDB再生成値の再一致、信頼済みリクエストコンテキスト共通境界、既知権限だけを返す`GET /session/context`、許可リスト再照合後だけ信頼済みの永続化部品へ渡す`POST /session/active-tenant`、識別情報・テナント・永続化部品の3点を同時にだけ受ける起動前バンドル、プロファイル／ポリシー／バンドル／実コンポーネントのDB初期化前事前検査、文書ルートの同一docId GET/PUTテナントA/Bに対するHTTPレベルの否定系マトリクスまで実装。ADR-0063 D9により認証エッジ（`JwtSaasIdentityContextResolver`）と偽造防止（anti-forgery）付きセッション永続化部品（`InMemoryActiveTenantSessionPersister`）の実接続は完了。ADR-0064段階1によりモックOAuth 2.0 + PKCEログインフローのE2Eテストも完了 | 実権限/PDPサービス、信頼済みホスト対応付け、MCP・ワーカー・ブラウザを含む完全マトリクス、PostgreSQL実地検証は未実装のため阻害要因継続 |
+| サーバ所有の文書アクセスメタデータ | テナントと文書の複合FK、可視性・紐付け・バージョンの制約、PostgreSQL RLS、テナント単位のリポジトリ、厳格な外部HTTP紐付けリゾルバ、SaaS時のサーバ所有のリソースリゾルバ切替を実装。クライアントポリシーヘッダーはSaaSリゾルバで無視し、生のpolicyRefはリクエスト内だけで利用。事前検査済み紐付け/PDP/権限コンポーネントの同一インスタンスを実行時へ配線する | 認証エッジ（ADR-0063 D9）実装済み。実紐付け/PDP/権限サービス、PostgreSQL実地検証は未了 |
+| 文書アクセスメタデータの管理API・監査 | 検証済み・信頼済みのTenantContextと`document.policy.manage`専用の一覧・詳細・条件付きのPUT、秘密値を反射しない厳格な入力、テナント単位のトランザクション内の監査、厳格な外部権限・紐付けリゾルバ、PostgreSQL RLSマイグレーションを実装 | 信頼済みSaaS認証エッジ、実ポリシーサービス/PDP接続、PostgreSQL実地検証、フロントエンド配線が未完了のため実行時には安全側で拒否され、無効のままである |
 | ブラウザ保存先の名前空間 | フロントエンド側の名前空間・後始末・古いUI境界を実装。Playwright E2E（8件）によりモックのセッションとAPI条件下での複数タブ切替・bfcache復元・認証必須状態・古い409を検証済み | バックエンド共有ストアはプリンシパル単位バージョンのみでアクティブなテナントとセッションの束縛が未実装（`SAAS-TENANT-SESSION-BINDING-01`）。実認証セッション、capability/PDPサービス連携と完全利用者マトリクスが本番ゲート |
 
 ## 11. Polygon contract keys（FB-P0-2A2B2C）
@@ -1195,7 +1195,7 @@ export type A1ErrorEnvelope = {
 - `contractId` は違反した契約IDを必ず指す。
 - A2/A3でerrorCode列挙を拡張しない。
 
-## 13. 実装済み response view model
+## 13. 実装済み応答 view model
 
 文書本体へ永続化しない補助APIのレスポンスモデルを次で固定する。全モデルは未知フィールドを拒否する。
 
@@ -1312,7 +1312,7 @@ ADR-0048 D3改訂（2026-07-03）採択分。加算原則に従い、全フィ�
 ### 15.5 後方互換
 
 - 任意のため `version: 1` を維持（破壊的変更なし）。未対応クライアント・旧データは欠落を従来挙動として解釈。
-- カード面（キャンバス）の通し番号バッジは**既定OFF**（ビューパネルのトグルで表示）。CB-1自己申告はissue完了記録に記載する。
+- カード面（キャンバス）の通し番号バッジは**既定OFF**（ビューパネルのトグルで表示）。CB-1自己申告は課題完了記録に記載する。
 
 ### 15.6 参照
 
@@ -1411,7 +1411,7 @@ ADR-0048 D3改訂（2026-07-03）採択分。加算原則に従い、全フィ�
 
 ## 18. EXT-CONN-03 契約先行固定: agent-constraints.v1（訂正ループの輸出）＋加算スキーマ拡張（2026-07-15）
 
-ADR-0054段階3の契約先行固定（issue-EXT-CONN-03 AC-1 / DecisionQueueRefが要求する「制約契約の `schemas.md` 先行固定」）。本節は**契約の固定のみ**を行い、実装の着手可否はEXT-CONN-03 issueの段階ゲート（段階1/2の運用知見）に従う。加算原則に従い、DocumentV1への追加フィールドはすべて任意。
+ADR-0054段階3の契約先行固定（issue-EXT-CONN-03 AC-1 / DecisionQueueRefが要求する「制約契約の `schemas.md` 先行固定」）。本節は**契約の固定のみ**を行い、実装の着手可否はEXT-CONN-03 課題の段階ゲート（段階1/2の運用知見）に従う。加算原則に従い、DocumentV1への追加フィールドはすべて任意。
 
 ### 18.1 目的と設計判断（方式設計の要点）
 
@@ -1461,7 +1461,7 @@ TRACE（arXiv:2606.13174）の知見「記憶への保存では選好違反の57
 - 各エントリは `critiqueTags` と `facts` の**少なくとも一方が非空**（空の制約は生成しない）。
 - **理由不要原則の保持**: `note` は任意。`no_articulable_reason` は一級のシグナルであり、理由の言語化を輸出の条件にしない（domain.mdの違和感原則）。
 - **反スコアリング**: `score` / `rank` / `confidence` / `priority` / `weight` 等の数値評価語彙をトップレベル・エントリ・targetのいずれにも**含めない**（契約禁止。テストは直列化文字列への正規表現で固定する）。制約間に順序的優先度は存在せず、`entries` の並びは決定論のためのソート順（§18.6）であって重要度ではない。
-- **エージェント側の遵守は受け手の責務**: sui-sensemakingは明示的に渡すところまで（issue非目標）。遵守検証・自動学習・制約の自動生成は本契約のスコープ外。
+- **エージェント側の遵守は受け手の責務**: sui-sensemakingは明示的に渡すところまで（課題非目標）。遵守検証・自動学習・制約の自動生成は本契約のスコープ外。
 
 ### 18.3 制約の源泉（すべて文書内・人間の判断のみ）
 
@@ -1499,7 +1499,7 @@ export type AgentProposalDecisionEntry = {
 ```
 
 - `adopted` も記録する（EXT-CONN-04根拠トレイルの将来素材）。ただし**制約として輸出されるのは `rejected` / `held` のみ**（§18.3）。
-- 決定の書き込みは人間のUI操作のみ（proposal-only維持。ADR-0041 CVI-2）。`applyDocumentChange` による1操作=1履歴ステップで、却下も Cmd+Zで取り消し可能になる（現状の「セッション限りの却下」からの改善。保全思想）。
+- 決定の書き込みは人間のUI操作のみ（提案のみ維持。ADR-0041 CVI-2）。`applyDocumentChange` による1操作=1履歴ステップで、却下も Cmd+Zで取り消し可能になる（現状の「セッション限りの却下」からの改善。保全思想）。
 - 取り込み境界: 寛容/厳格の両検証モードで、`id`/`taskId`/`proposalId`/`decision`/`decidedAt` のいずれかが不正な要素は破棄し、他の正しい要素は保全する（`mergeSuggestionDecisions` の既存パターン）。
 - `constraintExportOptIn` の既定は **OFF**（欠落=false）。ONへの切り替えは人間の明示操作（Claude Design P32 B-3「輸出は既定で含めない・明示オプトイン」）。
 
@@ -1521,7 +1521,7 @@ ADR-0054「後段が前段の安全原則を弱めることはない」に従い
 ### 18.7 配布（輸送を新設しない）
 
 - **手動レーン**: `02_Architecture/external_agent_collaboration_spec.html` §3.3のタスクシートに任意節「制約」として同梱（同仕様の§3.3aを参照）。`constraintExportOptIn` がONの文書でのみ生成される。
-- **自動レーン**: EXT-CONN-01のMCPサーバー（`03_Implement/mcp/`）に読み取り専用ツール `get_agent_constraints` を追加する。既存 `get_context_projection` と同じサーバー・同じ投影コア共有パターン（`03_Implement/frontend/src/export/agent_constraints_export.ts` をモノレポ内でインポート）であり、**新しい輸送・新しいサービスは作らない**（issueの「EXT-CONN-01の投影に合流」の充足形）。`constraintExportOptIn` がOFFの文書に対してはエラー応答（契約ペイロードを返さない）。
+- **自動レーン**: EXT-CONN-01のMCPサーバー（`03_Implement/mcp/`）に読み取り専用ツール `get_agent_constraints` を追加する。既存 `get_context_projection` と同じサーバー・同じ投影コア共有パターン（`03_Implement/frontend/src/export/agent_constraints_export.ts` をモノレポ内でインポート）であり、**新しい輸送・新しいサービスは作らない**（課題の「EXT-CONN-01の投影に合流」の充足形）。`constraintExportOptIn` がOFFの文書に対してはエラー応答（契約ペイロードを返さない）。
 - **用語の区別**: `ContextProjectionConstraint`（context-projection.v1の**取得範囲**セレクタ: reviewed-only/evidence/contradiction/summary）と本契約の **constraint（訂正制約）** は別概念。取得範囲セレクタへ `"constraints"` 値を追加する案は、この語衝突を避けるため採らず、独立ツールとした。
 
 ### 18.8 後方互換
@@ -1587,7 +1587,7 @@ export type RepresentativeVisualCue = {
 ### 19.4 UI・非目標
 
 - 選択コンテキストの高度機能UIでは、基本図形、手描き、利用者画像の切り抜きを明示操作で採用できる。手描きはPointer Events（マウス・ペン・タッチ）と、矢印キー + Space/Enterによる代替操作を持つ。利用者画像はPNG/JPEG/WebP（10MB以下・各辺8000px以下）を端末内だけで読み、キーボード操作可能な横位置・縦位置・拡大の調整後に48×48 PNGへ変換する。いずれも採用前は文書を変更しない。採用済み手掛かりは表札左の20×20固定スロットへ文字と併記する。
-- Unicode絵文字はissue T7の後続小PRとし、本節の実装済み範囲へ含めない。手描きと利用者画像のレビューパック同梱・復元は実装済み。
+- Unicode絵文字は課題 T7の後続小PRとし、本節の実装済み範囲へ含めない。手描きと利用者画像のレビューパック同梱・復元は実装済み。
 - 非目標: 島作成時の自動生成・自動採用、画像だけによる意味伝達、装飾目的の常設表示（ADR-0060「提案する決定」3・4に整合）。5段階評価等のスコアリングUIは反スコアリング方針により対象外（issue §2参照）。
 
 ### 19.5 成果物・共有境界

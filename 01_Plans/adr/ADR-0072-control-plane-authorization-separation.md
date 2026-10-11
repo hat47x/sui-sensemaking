@@ -9,7 +9,7 @@
 
 ## Context
 
-`ADR-0063`/`ADR-0064` で `saas-multitenant` のtrusted auth edgeが実装され、JWT検証 → tenant解決 → session発行が動作するようになった。この過程で、管理面（provisioning）側の認可がこの認証基盤の外側に取り残された。
+`ADR-0063`/`ADR-0064` で `saas-multitenant` のtrusted auth edgeが実装され、JWT検証 → テナント解決 → セッション発行が動作するようになった。この過程で、管理面（provisioning）側の認可がこの認証基盤の外側に取り残された。
 
 コード実読と実行で確認した事実は次の3点である。
 
@@ -36,7 +36,7 @@ None
 
 `02_Architecture/enterprise_architecture.html` §06は自らこう要求している。
 
-> Workspace Data Plane、Tenant Admin、Platform Control Plane の route、audience、capability を分離し、Platform operator へ文書 read を暗黙付与しない。
+> Workspace Data Plane、Tenant Admin、Platform Control Plane の route、audience、権限を分離し、Platform operator へ文書読み取りを暗黙付与しない。
 
 現行実装はこの要求を満たしていない。
 
@@ -69,7 +69,7 @@ saas-multitenant       -> HTTP 404 {'code': 'strict_provisioning_unavailable'}
 
 | 論点 | 採択 | 内容 |
 |---|---|---|
-| **D1** | **A+B の二段** | 静的な管理用ベアラートークン（`SUI_ADMIN_API_KEY`）を**ブートストラップ専用の最小権限経路**として `/admin/**` のみに適用し、IdP登録後の通常運用は trusted auth edge の JWT ＋ platform-operator capability claim で行う。D1=C（ネットワーク分離）は**アプリ側の保証ではなくデプロイ側の推奨構成**として文書化し、A+B と排他にしない |
+| **D1** | **A+B の二段** | 静的な管理用ベアラートークン（`SUI_ADMIN_API_KEY`）を**ブートストラップ専用の最小権限経路**として `/admin/**` のみに適用し、IdP登録後の通常運用は trusted auth edge の JWT ＋ platform-operator capability クレームで行う。D1=C（ネットワーク分離）は**アプリ側の保証ではなくデプロイ側の推奨構成**として文書化し、A+B と排他にしない |
 | **D2** | **A** | 管理面を SaaS でも開放し、D1 の認可で保護する。`require_single_tenant_provisioning_surface` を認可判定へ置き換える |
 | **D3** | **A** | `enterprise-production` / `saas-multitenant` で認証手段が未設定なら `Settings()` 構築時に即座に失敗させる（`ADR-0062` と同じ方針を認証そのものへ一貫適用） |
 
@@ -93,7 +93,7 @@ saas-multitenant       -> HTTP 404 {'code': 'strict_provisioning_unavailable'}
 
 ### 実装の解禁
 
-本ADR採択により `SEC-ADMIN-PLANE-01`（Draft P0）の「ADRがProposedの間は着手しないこと」という制約が解除される。同issueは `enterprise-production` が既定で完全無認証起動する欠陥を扱っており、D3=Aがその直接の対策である。
+本ADR採択により `SEC-ADMIN-PLANE-01`（Draft P0）の「ADRがProposedの間は着手しないこと」という制約が解除される。同課題は `enterprise-production` が既定で完全無認証起動する欠陥を扱っており、D3=Aがその直接の対策である。
 
 ## 決定すべき論点（採択済み・記録として残す）
 
@@ -110,7 +110,7 @@ saas-multitenant       -> HTTP 404 {'code': 'strict_provisioning_unavailable'}
 | 案 | 内容 | 利点 | 欠点 |
 |---|---|---|---|
 | **A** | 業務面とは別の静的ベアラートークン（`SUI_ADMIN_API_KEY`）を必須化し、`/admin/**` のみに適用 | 実装が最小。ブートストラップ時（IdP未登録）にも使える | 静的秘密の運用（ローテーション・失効）が残る。主体特定ができず監査が弱い |
-| **B** | trusted auth edge の JWT ＋ platform-operator capability claim を要求 | 主体が特定でき監査に載る。プレーン分離の要求に最も整合 | IdP 未登録状態では使えない（ブートストラップに別経路が必要） |
+| **B** | trusted auth edge の JWT ＋ platform-operator capability クレームを要求 | 主体が特定でき監査に載る。プレーン分離の要求に最も整合 | IdP 未登録状態では使えない（ブートストラップに別経路が必要） |
 | **C** | 管理面を別の待ち受けポート・別のASGIアプリへ分離し、ネットワーク層で到達制御 | 前段委譲が構造的に閉じる。企業・行政の一般的な運用形 | デプロイ構成が複雑化。単一プロセス前提の現行構成から乖離 |
 | **D** | HTTP を廃し、ブートストラップ操作は CLI（`cli.py`）専用にする | HTTP 到達面が消える。最も攻撃面が小さい | 遠隔運用・自動化がしにくい。既存 `/admin/provision/users` の互換を壊す |
 
@@ -134,15 +134,15 @@ saas-multitenant       -> HTTP 404 {'code': 'strict_provisioning_unavailable'}
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 管理面（provisioning）側の認可が認証基盤の外側に取り残され、`/admin/provision/identity-providers`（信頼するJWT発行者とJWKS URIを登録するエンドポイント）が、任意の利用者・任意のテナントとして認証できる越境の起点になる。管理面の認可を業務面から分離しSaaSでも到達可能にする | 機能: 業務面とは別の静的ベアラートークン（SUI_ADMIN_API_KEY）とtrusted auth edgeのJWT+platform-operator capability claimの二段構成。データ: IdP未登録状態（ブートストラップ）と通常運用（capability claim）を構造的に区別 |
-| **データ設計** | `enterprise-production`はAPIキー未設定のまま起動でき、その場合すべてのエンドポイントが無認証になる。キーを設定しても文書API・AI API・管理APIが同一の共有静的キー1本で保護される。D3=Aで本番相当プロファイルでは認証を必須化 | 業務: 明示選択したのに設定が無ければ起動を止める（ADR-0062の起動時に即座に失敗させる方針を認証へ一貫適用）。機能: 管理面の認可はcapability claimで監査に載せる |
-| **機能設計** | D1=A+Bの二段（静的な管理用ベアラートークンはブートストラップ専用の最小権限経路、IdP登録後はcapability claim）。D2=AでSaaSでも管理面を開放し`require_single_tenant_provisioning_surface`を認可判定へ置換。D1=C（ネットワーク分離）はデプロイ側の選択として文書化 | 業務: R-3（非機能境界の超過）としてADR-0063/0064で追加したSaaS認証が管理面認可の境界を越えた。データ: D3=AはADR-0062の判断を認証そのものへ一貫適用 |
+| **業務設計** | 管理面（provisioning）側の認可が認証基盤の外側に取り残され、`/admin/provision/identity-providers`（信頼するJWT発行者とJWKS URIを登録するエンドポイント）が、任意の利用者・任意のテナントとして認証できる越境の起点になる。管理面の認可を業務面から分離しSaaSでも到達可能にする | 機能: 業務面とは別の静的ベアラートークン（SUI_ADMIN_API_KEY）とtrusted auth edgeのJWT+platform-operator capability クレームの二段構成。データ: IdP未登録状態（ブートストラップ）と通常運用（capability claim）を構造的に区別 |
+| **データ設計** | `enterprise-production`はAPIキー未設定のまま起動でき、その場合すべてのエンドポイントが無認証になる。キーを設定しても文書API・AI API・管理APIが同一の共有静的キー1本で保護される。D3=Aで本番相当プロファイルでは認証を必須化 | 業務: 明示選択したのに設定が無ければ起動を止める（ADR-0062の起動時に即座に失敗させる方針を認証へ一貫適用）。機能: 管理面の認可は権限クレームで監査に載せる |
+| **機能設計** | D1=A+Bの二段（静的な管理用ベアラートークンはブートストラップ専用の最小権限経路、IdP登録後は権限クレーム）。D2=AでSaaSでも管理面を開放し`require_single_tenant_provisioning_surface`を認可判定へ置換。D1=C（ネットワーク分離）はデプロイ側の選択として文書化 | 業務: R-3（非機能境界の超過）としてADR-0063/0064で追加したSaaS認証が管理面認可の境界を越えた。データ: D3=AはADR-0062の判断を認証そのものへ一貫適用 |
 
 ## 推奨（保守者の判断を拘束しない）
 
 D1=A + Bの二段、D2=A、D3=A を推奨する。
 
-理由: ブートストラップという「IdPがまだ無い」状態が構造的に存在する以上、JWTのみ（B単独）ではD2が閉じない。一方A単独では監査要件が満たせない。したがって「静的な管理用ベアラートークンをブートストラップ専用の最小権限経路として残し、IdP登録後の通常運用はcapability claimで行う」二段構成が、`ADR-0062` の起動時に即座に失敗させる方針とも `enterprise_architecture` §06のプレーン分離要求とも整合する。D3=Aは `ADR-0062` がaccess_control / auditに対して既に採った判断（明示選択したのに設定が無ければ起動を止める）を、認証そのものへ一貫適用するものである。
+理由: ブートストラップという「IdPがまだ無い」状態が構造的に存在する以上、JWTのみ（B単独）ではD2が閉じない。一方A単独では監査要件が満たせない。したがって「静的な管理用ベアラートークンをブートストラップ専用の最小権限経路として残し、IdP登録後の通常運用は権限クレームで行う」二段構成が、`ADR-0062` の起動時に即座に失敗させる方針とも `enterprise_architecture` §06のプレーン分離要求とも整合する。D3=Aは `ADR-0062` がaccess_control / auditに対して既に採った判断（明示選択したのに設定が無ければ起動を止める）を、認証そのものへ一貫適用するものである。
 
 ただしD1=C（ネットワーク分離）を採る組織も多く、これはデプロイ側の選択としてD1=A/Bと排他ではない。Cを「推奨構成」として文書化し、A/Bをアプリ側の最低保証とする整理もありうる。
 

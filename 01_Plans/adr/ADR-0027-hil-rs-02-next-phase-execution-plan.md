@@ -20,24 +20,24 @@
 ### D1. 実行境界
 
 - HIL-RS-02は「議論→意思決定→文書化→進捗同期」を1サイクルで完結させる計画フェーズとする。
-- 変更はDocs/Planを主対象とし、実装変更はA2/A3 issueがOpen化されるまで行わない。
+- 変更はDocs/Planを主対象とし、実装変更はA2/A3 課題がOpen化されるまで行わない。
 
 ### D2. 安全・統治制約（非機能）
 
-- SafeMode既定ON、share/export漏えい防止、責務分離（human_dual_control_only）を後退させない。
+- SafeMode既定ON、share/書き出し漏えい防止、責務分離（human_dual_control_only）を後退させない。
 - 未確定項目はDecision Queueへ記録し、確定扱いしない。
 
 ### D3. 依存順序
 
 1. Umbrella issue（HIL-RS-02）でAC/非スコープ/検証計画を固定する。
 2. A1（Governance contract hardening）をOpen化し、A2/A3の着手条件を明示する。
-3. A2（frontend適用）/A3（運用と文書の同期）はDraftで先行準備し、A1完了後にOpen化する。
+3. A2（フロントエンド適用）/A3（運用と文書の同期）はDraftで先行準備し、A1完了後にOpen化する。
 
 ### D4. Exit Criteria
 
 - EC-1: 議事録が作成され、論点ごとの「提案・懸念・反証・結論」を含む。
 - EC-2: ADRにContext/Decision/Consequences/Alternatives/Rollbackが存在する。
-- EC-3: issue分解が最小実行単位（umbrella + A1/A2/A3）で作成される。
+- EC-3: 課題分解が最小実行単位（umbrella + A1/A2/A3）で作成される。
 - EC-4: `project-progress-dashboard.md` と `issues/README.md` のActive / Decision Queue / 次の1手が同期される。
 - EC-5: docs-check（validator + unittest + diff check）が成功する。
 
@@ -67,7 +67,7 @@
   - A1完了前のA2/A3 `Draft -> Open`。
 - 停止条件（即停止）
   1. 契約ID / schemaVersion / overridePolicy / SSOTの不一致。
-  2. SafeMode既定ON、share/export漏えい防止、`human_dual_control_only` の後退要求。
+  2. SafeMode既定ON、share/書き出し漏えい防止、`human_dual_control_only` の後退要求。
   3. 凍結対象の共有リソース（ダッシュボードとREADME）への未承認更新要求。
 
 ### D7. 最小インターフェース契約（HIL-RS/CE0 bridge）
@@ -86,9 +86,9 @@
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 「議論→意思決定→文書化→進捗同期」を1サイクルで完結させる計画フェーズとし、議論と実行ログの分散による判断根拠の追跡困難を防ぐ。会議ログの定型、Decision Queueの未確定管理、ダッシュボードの同期を、単一文書として固定する | 機能: A1（Governance contract hardening）をOpen化し、A2（frontend適用）/A3（運用と文書の同期）はDraftで先行準備、A1完了後にOpen化。データ: 実装変更はA2/A3 issueがOpen化されるまで行わない |
-| **データ設計** | 未確定項目はDecision Queueへ記録し確定扱いしない。HIL-RS凍結I/F（A1-CRITIQUE-IF等のContract IDs）は変更禁止。SafeMode既定ON・share/export漏えい防止・責務分離（human_dual_control_only）を後退させない | 業務: 議事録は論点ごとに「提案・懸念・反証・結論」を含む。機能: docs-check（validator+unittest+diff check）がExit Criteriaとして成功必須 |
-| **機能設計** | Exit Criteria（EC-1議事録/EC-2 ADR完全性/EC-3 issue最小分解/EC-4 ダッシュボードの同期/EC-5 docs-check）を固定。計画フェーズの判断根拠を1サイクルで追跡可能にする | 業務: 実装速度より監査容易性を優先し短期速度は低下する。データ: アクティブなissueの数が増え、同期する文書の更新コストが増加する |
+| **業務設計** | 「議論→意思決定→文書化→進捗同期」を1サイクルで完結させる計画フェーズとし、議論と実行ログの分散による判断根拠の追跡困難を防ぐ。会議ログの定型、Decision Queueの未確定管理、ダッシュボードの同期を、単一文書として固定する | 機能: A1（Governance contract hardening）をOpen化し、A2（フロントエンド適用）/A3（運用と文書の同期）はDraftで先行準備、A1完了後にOpen化。データ: 実装変更はA2/A3 課題がOpen化されるまで行わない |
+| **データ設計** | 未確定項目はDecision Queueへ記録し確定扱いしない。HIL-RS凍結I/F（A1-CRITIQUE-IF等のContract IDs）は変更禁止。SafeMode既定ON・share/書き出し漏えい防止・責務分離（human_dual_control_only）を後退させない | 業務: 議事録は論点ごとに「提案・懸念・反証・結論」を含む。機能: docs-check（validator+unittest+diff check）がExit Criteriaとして成功必須 |
+| **機能設計** | Exit Criteria（EC-1議事録/EC-2 ADR完全性/EC-3 課題最小分解/EC-4 ダッシュボードの同期/EC-5 docs-check）を固定。計画フェーズの判断根拠を1サイクルで追跡可能にする | 業務: 実装速度より監査容易性を優先し短期速度は低下する。データ: アクティブな課題の数が増え、同期する文書の更新コストが増加する |
 
 ## Consequences
 
@@ -96,12 +96,12 @@
   - 計画フェーズの判断根拠が1サイクルで追跡可能になる。
   - A1依存を明示することで、A2/A3の手戻りを抑制できる。
 - 副作用と制約
-  - アクティブなissueの数が増え、同期する文書の更新コストが増加する。
+  - アクティブな課題の数が増え、同期する文書の更新コストが増加する。
   - 実装速度より監査容易性を優先するため短期速度は低下する。
 
 ## Alternatives
 
-- 代替A（不採用）: HIL-RS-02を1 issueに集約する。
+- 代替A（不採用）: HIL-RS-02を1 課題に集約する。
   - 不採用理由: 依存/責務境界が見えず、停止条件判定が不安定。
 - 代替B（不採用）: A2/A3を即Open化して並列開始する。
   - 不採用理由: A1契約差分による再作業リスクが高い。
@@ -113,15 +113,15 @@
   2. SafeMode/漏えい防止/責務分離の後退が必要になった場合
 - ロールバック手順
   1. HIL-RS-02-A2/A3をDraft維持またはOpenからDraftへ戻す。
-  2. A1 issueへ変更要求を差し戻し、Decision Queueへ未確定として登録。
+  2. A1 課題へ変更要求を差し戻し、Decision Queueへ未確定として登録。
   3. 必要時は本ADRをSupersededとし、上位ADR改訂後に再起票する。
 
-## Stream J Audit（ADR連動監査: active issue基準）
+## Stream J Audit（ADR連動監査: active 課題基準）
 
 ### Read
 
 - `01_Plans/issues` のアクティブな状態（Draft/Open/In Progress）と `triage_actionable_plans.py` の逆引き結果で、監査対象ADRを抽出した。
-- 対象: `ADR-0026` / `ADR-0027`（アクティブなissueに直結）。
+- 対象: `ADR-0026` / `ADR-0027`（アクティブな課題に直結）。
 
 ### ADR/CDC
 
@@ -131,7 +131,7 @@
 ### Plan
 
 - 欠損ADRがある場合のみ、該当ADRへ欠損見出しを最小追記する。
-- 欠損がない場合は、アクティブなissueに連動する観点で「追加補完不要」を本文に固定する。
+- 欠損がない場合は、アクティブな課題に連動する観点で「追加補完不要」を本文に固定する。
 
 ### Execute
 
@@ -141,7 +141,7 @@
 
 - docs-checkを `validator + unittest + triage` の組み合わせで再実行し、監査記録と整合することを確認する。
 
-### Proceed（issue逆引き表）
+### Proceed（課題逆引き表）
 
 | Active issue | 連動ADR | CDC欠損 | 対応 |
 | --- | --- | --- | --- |
@@ -161,11 +161,11 @@
 
 ### Plan（対象/非対象宣言）
 - 対象: `ADR-0026/0027` とHIL-RS-01/02 issue（許可リスト内）
-- 非対象: 実装コード、ダッシュボード、許可リスト外issue。
+- 非対象: 実装コード、ダッシュボード、許可リスト外課題。
 
 ### Execute（HIL-RS-01-A1 -> HIL-RS-02-A1 -> next-phase）
 1. HIL-RS-01-A1契約固定の再確認（固定キーのドリフトなし）。
-2. HIL-RS-02-A1統治ゲート（Pending bypass禁止・NoGo return path固定）を再確認。
+2. HIL-RS-02-A1統治ゲート（Pending bypass禁止・NoGo return パス固定）を再確認。
 3. next-phase計画は `Approval Record` 完了までDraft/Conditionalを維持。
 
 ### Verify（AC/DoD照合）
@@ -228,7 +228,7 @@
 - 外部依存の扱い: A2/A3は `readOnly=true` の契約成果物の参照で吸収し、待機依存を作らない。
 
 ### Phase 4: 整合チェック（Issue/ADRリンク・用語・優先度）
-- リンク整合: `ADR-0026`/`ADR-0027` ⇄ HIL-RS-02 A1 / next-phase issueの相互参照を維持。
+- リンク整合: `ADR-0026`/`ADR-0027` ⇄ HIL-RS-02 A1 / next-phase 課題の相互参照を維持。
 - 用語整合: `safeModeDefault=ON` / `safeModeBoundary=SAFE_MODE_STRICT_ON` / `human_dual_control_only` を統一。
 - 優先度整合: critical path（A1先行、A2/A3後続）を維持。
 - 自己修正: `0/3`（不整合未検知）。
@@ -312,7 +312,7 @@
 ## Stream B Planning Sync Addendum（2026-05-04）
 
 ### Context
-- HIL-RS-02ではA1依存が明示されている一方、issueの実務ではAC/DoDの不足の判定と阻害要因の記法が不統一で、triageの出力のReady/Blocked判定に揺れがあった。
+- HIL-RS-02ではA1依存が明示されている一方、課題の実務ではAC/DoDの不足の判定と阻害要因の記法が不統一で、triageの出力のReady/Blocked判定に揺れがあった。
 
 ### Decision
 - HIL-RS-02配下Issueの運用規則として以下を固定する。

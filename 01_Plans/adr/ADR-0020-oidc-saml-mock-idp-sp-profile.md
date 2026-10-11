@@ -181,8 +181,8 @@ FastAPI側に「ヘッダー認証のDependency / Middleware」を実装し、�
   - `mock_idp`: SAML（`pysaml2`）, OIDC（`Authlib`）
   - `mock_sp`: 認証成功後に `X-Forwarded-User` などを付与してバックエンドへ転送する
 - 目標: 主要なIdP製品とサービスで観測されるデータ連携の仕様と様式を、
-  **テストコード上のprovider profile fixtures** として再現し、検証する。
-  - 例: ヘッダー名の差異、JWT claim名の差異、`groups` の形式、`amr/acr` の有無。
+  **テストコード上の提供元 profile fixtures** として再現し、検証する。
+  - 例: ヘッダー名の差異、JWT クレーム名の差異、`groups` の形式、`amr/acr` の有無。
   - 方針: 製品ごとに実装の分岐を増やさず、preset + fixtureの差し替えで吸収する。
 - 実行例（Dockerに依存しない）
   - `uvicorn mock_idp:app --port 8081`
@@ -191,7 +191,7 @@ FastAPI側に「ヘッダー認証のDependency / Middleware」を実装し、�
 
 #### Mock SP/IdPを実施すべき条件
 
-- `AuthContextAdapter` の入力モードやprovider presetの仕様を変更したとき。
+- `AuthContextAdapter` の入力モードや提供元 presetの仕様を変更したとき。
 - provider profile fixtures（主要IdPの連携様式）を追加または変更したとき。
 - logout / step-up / `amr` など、IdP連携の境界に関わる仕様を変更したとき。
 - 依存ライブラリ更新（`pysaml2`, `Authlib`, `xmlsec1`）で、連携の回帰リスクが高いとき。
@@ -212,7 +212,7 @@ FastAPI側に「ヘッダー認証のDependency / Middleware」を実装し、�
 4. E2Eの受け入れ基準
    - **必須**: Level 1（AuthContext契約E2E）を通過する。
    - **条件付きで必須**: IdP連携の境界を変更するPRでは、Level 2（Mock SP/IdP）も通過する。
-   - **Level 2の実施時**: 少なくとも1つのprovider profile fixture（主要IdPの様式）を使った回帰を含める。
+   - **Level 2の実施時**: 少なくとも1つの提供元 profile fixture（主要IdPの様式）を使った回帰を含める。
 
 ### 9) 未決事項（TODO / Issue化）
 
@@ -261,7 +261,7 @@ AUTH-ARCH-01で固定した論点と、継続して検討する論点を分け�
   - 必須: `userId`（`X-Forwarded-User` 相当）
   - 任意: `amr`（認証手段, 例: `pwd`, `webauthn`）, `acr`/`aal`（保証レベル）, `auth_time`（認証時刻）
 - 運用上の必須ルール
-  - 高リスクの操作（将来のexport/share/admin相当）は、`amr/acr/aal` に基づく追加の制御ができるI/Fで設計する（値がない場合は、安全側で拒否するか読み取り専用にする）。
+  - 高リスクの操作（将来の書き出し/share/admin相当）は、`amr/acr/aal` に基づく追加の制御ができるI/Fで設計する（値がない場合は、安全側で拒否するか読み取り専用にする）。
   - `amr` などの属性は監査の目的で扱うが、端末固有の情報や公開鍵クレデンシャルIDなど、識別子の過剰な保存は避ける。
   - セッションの長さと再認証の要求（step-up）はIAP側のポリシーで実施し、アプリ本体は結果だけを受け取る。
 - テストの観点
@@ -281,7 +281,7 @@ AUTH-ARCH-01で固定した論点と、継続して検討する論点を分け�
 4. `02_Architecture/api.md`
    - `ALLOW_JIT_PROVISIONING=false` のときの拒否の契約（403）と、管理者API/CLI（将来のSCIMを含む）のI/F。
 
-この論点は、`issue-AUTH-ARCH-01-*` に加えて、スキーマ計画専用のissueで追跡する。
+この論点は、`issue-AUTH-ARCH-01-*` に加えて、スキーマ計画専用の課題で追跡する。
 
 ### 非目標
 
@@ -294,7 +294,7 @@ AUTH-ARCH-01で固定した論点と、継続して検討する論点を分け�
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
 | **業務設計** | 企業・行政で要求される監査/統制と整合しつつ、sui-sensemakingは認証実装責務を最小化しOSSとしての安全運用性を高める。認証プロトコルはアプリに実装せず前段IAP/IdPへ委譲する | 機能: 本番IdP製品選定（Keycloak/Authentik/Cloud IAP等）は固定せず、アプリ内パスワード認証機能を追加しない。データ: 全RBAC実装を完了条件にせずI/F整備を優先 |
-| **データ設計** | ユーザーデータ境界はAUTH-ARCH-01/AUTH-SCHEMA-01の決裁結果と同期し、変更時はfollow-up issueから再度ADRへ昇格する。Mock SP/IdPはIdP連携境界変更時の拡張ゲートとして運用 | 業務: 入力方式の差異（header/JWT、IAPヘッダー名差異）は設定テンプレートで吸収し実装分岐の増殖を抑制。機能: Level 2は主要IdPのデータ連携様式をfixture化して設定互換の回帰保証を担う |
+| **データ設計** | ユーザーデータ境界はAUTH-ARCH-01/AUTH-SCHEMA-01の決裁結果と同期し、変更時はfollow-up 課題から再度ADRへ昇格する。Mock SP/IdPはIdP連携境界変更時の拡張ゲートとして運用 | 業務: 入力方式の差異（header/JWT、IAPヘッダー名差異）は設定テンプレートで吸収し実装分岐の増殖を抑制。機能: Level 2は主要IdPのデータ連携様式をfixture化して設定互換の回帰保証を担う |
 | **機能設計** | プロキシ設定ミス（trusted proxy, header mapping）が主要リスクとなるためLevel 1 E2Eを常時維持する。Mock SP/IdPを「常時必須」にせず拡張ゲートとして運用 | 業務: 本番IdP選定は組織の既存投資を尊重し設定で対応。データ: header/JWTの入力形式差は設定テンプレートで吸収し認証境界を維持 |
 
 ## Consequences
@@ -305,7 +305,7 @@ AUTH-ARCH-01で固定した論点と、継続して検討する論点を分け�
 - Mock SP/IdPは「常時必須」ではなく、IdP連携境界変更時の拡張ゲートとして運用する。
 - Level 2は主要IdPのデータ連携様式をfixture化して再現し、設定互換の回帰保証を担う。
 - 入力方式の差異（header/JWT、各IAPのヘッダー名差異）は設定テンプレートで吸収し、実装分岐の増殖を抑制する。
-- ユーザーデータ境界はAUTH-ARCH-01 / AUTH-SCHEMA-01の決裁結果と同期済みであり、変更時はfollow-up issueから再度ADRへ昇格する。
+- ユーザーデータ境界はAUTH-ARCH-01 / AUTH-SCHEMA-01の決裁結果と同期済みであり、変更時はfollow-up 課題から再度ADRへ昇格する。
 
 ## Traceability
 

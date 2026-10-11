@@ -26,7 +26,7 @@ W型探求（2026-08-17〜18、R1問題提起〜R6手順計画、カード444枚
   - `suggest-document-title`（`candidates`）との形状統一で、フロントエンドの複数候補UIを再利用できる。
   - `extra="forbid"` により、LLMが旧形式（`summaryText` 単独）を返した場合は422で拒否され、契約の一本化が強制される。
 - 非目標（このADRで扱わない範囲）は次のとおりである。
-  - 壁打ち（Phase 2・島詳細チャットパネル、DOMAIN-EXPR-03の再提案の対話化）のUI設計は別issue/ADRで扱う。
+  - 壁打ち（Phase 2・島詳細チャットパネル、DOMAIN-EXPR-03の再提案の対話化）のUI設計は別課題/ADRで扱う。
   - 多段編成（Phase 3・`parentIslandId` CRUDと一行見出しの連鎖）はDOGFOOD-32で扱う。
   - 複層キャンバス（WorkingGraph/ContextProjectionGraph/Consensus分離）は別ADRで扱う。
   - 本ADRでは `propose_island_summary` のProposalDiffは変更しない（`after`/`groundingIds` は `candidates[0]` から取り、人間の単一adoptの契約を維持）。
@@ -35,7 +35,7 @@ W型探求（2026-08-17〜18、R1問題提起〜R6手順計画、カード444枚
 
 | 次元 | このADRでの主張 | 他次元への制約 |
 |------|----------------|---------------|
-| **業務設計** | 定性分析者は島の表札づくりで、AIが提示した複数候補の「志」を比較し、壁打ち（Phase 2）で洗練して**人間が最終的にadopt** する。AIは自動適用しない（proposal-only維持）。価値は、生成AI単独より質の高い洞察にある | 機能: 複数候補を提示し人間が選択する導線が必要。データ: 候補（志）は提案であり Document へ自動保存しない |
+| **業務設計** | 定性分析者は島の表札づくりで、AIが提示した複数候補の「志」を比較し、壁打ち（Phase 2）で洗練して**人間が最終的にadopt** する。AIは自動適用しない（提案のみ維持）。価値は、生成AI単独より質の高い洞察にある | 機能: 複数候補を提示し人間が選択する導線が必要。データ: 候補（志）は提案であり Document へ自動保存しない |
 | **データ設計** | `groundingIds`（接地・代表カード≤10）と `summaryText`（凝縮・志）を候補単位で分離して表現する。複数候補は `suggest-island-summary` の応答にのみ現れ、Document へ永続化されるのは人間が adopt した `candidates[0]`（=ProposalDiff.after）のみ | 業務: 志は人間の確定前は「提案」であり、確定された志のみ文書に残る。機能: 接地の≤10・重複なし・メンバー限定の品質ガードを候補ごとに強制する |
 | **機能設計** | `POST /ai/suggest-island-summary` が `candidates: list[_IslandSummaryCandidate]`（1〜3件）を返す。`POST /ai/proposals/island-summary` は `candidates[0]` を ProposalDiff（`field:"summaryText"`, `after`, `groundingIds`）へ写し、状態遷移は proposed→unreviewed→人間のadopt/rejectのまま | 業務: proposal-only・human_reviewed の緩和禁止を維持（SafeMode不変条件）。データ: 各候補の `groundingIds` は対象島のメンバーカードIDに限る |
 
@@ -59,6 +59,6 @@ W型探求（2026-08-17〜18、R1問題提起〜R6手順計画、カード444枚
 - Related: `01_Plans/adr/ADR-0068-safemode-enforcement-at-api-boundary.md`（proposal-only・unreviewed境界）
 - Related: `01_Plans/adr/ADR-0040-domain-expression-first-class-strategy.md`（DOMAIN-EXPR-03再提案 → 壁打ちへの発展）
 - Related: `00_Prompt/sensemaking_technique.md` §3（表札検査）, `00_Prompt/ai_sensemaking_execution_procedures.md` §3（代弁文）
-- Related: `01_Plans/issues/issue-DOGFOOD-33-*.md`（本ADRの実装issue）
+- Related: `01_Plans/issues/issue-DOGFOOD-33-*.md`（本ADRの実装課題）
 - Derived-from: W型探求（2026-08-17〜18）R4構想・R5具体策・R6手順計画の結論
 ---

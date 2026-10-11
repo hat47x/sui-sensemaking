@@ -65,7 +65,7 @@ Bash(python3 -m unittest:*)
 
 Claude Code でブラウザ実機の最小確認を行う場合、MCP サーバ（例: `claude-in-chrome` / preview 系）が利用可能な環境で使う。
 
-### 3.1 前提（frontend を起動して確認できる状態）
+### 3.1 前提（フロントエンドを起動して確認できる状態）
 
 ```bash
 # WSL: node20（既定 v12 では Vite が動かない）
@@ -96,6 +96,6 @@ MCP の有無に関わらず、**マージ判定は e2e と単体テストの事
 
 ## 4. 安全境界（全エージェント共通）
 
-- `domain.md` の禁止事項（AIが保留を勝手に解消しない／`human_reviewed` 自動昇格しない 等）と SafeMode 既定ON を侵さない（`ADR-0041` CVI）。
+- `domain.md` の禁止事項（AIが保留を勝手に解消しない／`human_reviewed` 自動昇格しない等）と SafeMode 既定ON を侵さない（`ADR-0041` CVI）。
 - `.claude/settings.local.json` 以外に秘匿情報（トークン・鍵）を置かない。
 - 設定変更は再現性のため本書を更新してから行う。

@@ -8,7 +8,7 @@
 
 ## Context
 
-機能実装が急速に出揃った（CE0–CE4 Done、DOMAIN-EXPR進行、undo/redo・safe_mode・LLM provider実装済み）。
+機能実装が急速に出揃った（CE0–CE4 Done、DOMAIN-EXPR進行、undo/redo・safe_mode・LLM 提供元実装済み）。
 この段階で、根幹価値（`domain.md`：保留・違和感・可逆性／`ai_cognitive_externalization_requirements.md`：proposal-only・安全な外在化）を最大化する上での最大のボトルネックは、機能の不在ではなく「実装が根幹価値を裏切らないこと」の保証構造の欠落である。
 
 事実として、根幹価値の禁止事項（非後退の不変条件）は実装側に散在している。
@@ -19,7 +19,7 @@
 - dryRun副作用なし・監査4点: `03_Implement/backend/tests/test_ce2_proposal_api.py`, `test_audit.py`
 - Consensus Graph直接更新禁止: CE0契約テスト群
 
-不変条件の「正本」は `02_Architecture/value_traceability.md`（検証観点列）にあるが、それらを 1つの実行できる砦 として束ねた横断テストも、正本ADRも存在しない（`core_value*` / `invariant*` テストはgrep 0件）。
+不変条件の「正本」は `02_Architecture/value_traceability.md`（検証観点列）にあるが、それらを 1つの実行できる砦として束ねた横断テストも、正本ADRも存在しない（`core_value*` / `invariant*` テストはgrep 0件）。
 
 この状態の危険性は段階とともに増す。Codexを含む並行実装が高速で進むほど、あるPRが1つの不変条件を静かに後退させても、関連する個別テストがたまたま変更対象でなければ気づけない。根幹価値は「1箇所の違反で全体が崩れる」性質を持つのに、それを守る単一の砦がない。
 
@@ -31,7 +31,7 @@
 
 `value_traceability.md` から導出し、次を非後退の不変条件として固定する。実装都合での緩和を禁止する。
 
-- **CVI-1 SafeMode既定ON**: 共有・export既定で未レビュー本文・生テキストを漏らさない。
+- **CVI-1 SafeMode既定ON**: 共有・書き出し既定で未レビュー本文・生テキストを漏らさない。
 - **CVI-2 proposal-only**: AI出力は候補のみ。auto-apply / auto-confirm / auto-publishを全経路で禁止。
 - **CVI-3人手レビュー昇格のみ**: `unreviewed → human_reviewed` は人手のみ。AI/worker/API自動昇格禁止。
 - **CVI-4 Consensus直接更新禁止**: `patch + approval` 以外でConsensus Graphを更新しない。
@@ -64,7 +64,7 @@
   - CVIの表現が `value_traceability.md` とずれると二重管理になる → 正本はvalue_traceability、砦はその参照とする。
 - 移行時に必要な対応
   - `02_Architecture/value_traceability.md` にCVI-1..7のIDと参照先テストの対応表を追記する。
-  - 実装issue（`CORE-VALUE-GUARD-01`）で砦テストの新設と既存テスト索引づけを行う。
+  - 実装課題（`CORE-VALUE-GUARD-01`）で砦テストの新設と既存テスト索引づけを行う。
 
 ## Traceability
 

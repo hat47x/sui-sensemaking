@@ -46,10 +46,10 @@
   - AIは候補生成器（自動確定禁止）
   - Consensus Graph直接更新禁止（patch提案経由のみ）
   - safeMode既定ON・未レビュー出力の既定抑止
-  - Human contextとAI projection contextの分離
+  - Human 文脈とAI projection 文脈の分離
 - 成果物は次のとおりです。
   - `02_Architecture` への契約追記（API/IR/review attribution/safeMode境界）
-  - Contract IDsをissueで凍結
+  - Contract IDsを課題で凍結
 
 ##### CE-0 Contract Matrix（固定契約）
 
@@ -58,7 +58,7 @@
 | `CE0-CTX-IF` | ContextQuery/ContextBundleの最小I/F固定 | `goal/scope/depth/constraints/reviewFilter/safeModePolicy/outputMode` | deterministic `bundleHash` を持つ ContextBundle | Query Previewバイパス、非決定論bundle |
 | `CE0-SAFEMODE-IF` | safeMode既定ONと未レビュー保護を固定 | `safeMode=true` 時のreview state情報 | `allowUnreviewedText=false` を既定適用 | 未レビュー本文のAI入力混入、保護緩和 |
 | `CE0-REVIEW-IF` | review状態遷移の責務境界を固定 | `human_reviewed`/`unreviewed` state | 人手操作でのみ `human_reviewed` 昇格 | AIによるreview自動昇格 |
-| `CG-01..05` | Working / Projection / Consensus責務固定 | KJ構造 + query constraints + actor/modelTier | proposal-only運用（patch+approval経由） | Consensus直接更新、監査欠損成功扱い |
+| `CG-01..05` | Working / Projection / Consensus責務固定 | KJ構造 + query constraints + actor/modelTier | 提案のみ運用（patch+approval経由） | Consensus直接更新、監査欠損成功扱い |
 
 #### CE-1: Context Query / Bundle 基盤
 
@@ -69,7 +69,7 @@
   - ContextBundle（deterministic projection）
   - Query Preview UI（送信前確認）
 - 検証は次のとおりです。
-  - 同一queryでbundleが再生成一致
+  - 同一クエリでbundleが再生成一致
   - safeMode時の除外ルール適用
   - diff/auditログ生成
 
@@ -111,7 +111,7 @@
   - query log / generated patch / apply logの監査導線
   - Multi-Model Routing監査（`routingStage`, `provider`, `model`, `sourceBundleHash`, `proposalId`）
 - 検証は次のとおりです。
-  - CLI/APIで同一queryが同一bundleを生成
+  - CLI/APIで同一クエリが同一bundleを生成
   - 監査ログの欠落なし
   - `final_judgement` 経路障害時に `held` へfail-safe遷移する
 
@@ -135,8 +135,8 @@
 
 - AI出力の自動確定・自動公開を要求する仕様変更。
 - `reviewed` 状態をAI自動付与する変更。
-- safeMode既定ONまたはshare/export保護を後退させる変更。
-- Human contextとAI projection contextを同一表現へ強制する変更。
+- safeMode既定ONまたはshare/書き出し保護を後退させる変更。
+- Human 文脈とAI projection 文脈を同一表現へ強制する変更。
 
 ### D6. フェーズ別の実行ブレークダウン（具体化）
 
@@ -157,12 +157,12 @@
     **旧称を検索語にしていた従来のコマンドは、改名が正しく行われると何も返さなくなり黙って通る。**
     <!-- /retired-vocabulary -->
 - CE0-D（Record）
-  - issueメモへContract IDs / Stop Conditions / 未確定論点（Pending）を記録。
+  - 課題メモへContract IDs / Stop Conditions / 未確定論点（Pending）を記録。
 
 **CE-0 Done条件**
 - Contract IDsが1箇所に集約され、重複定義0件。
 - `safeMode` と `unreviewed` の後退表現が0件。
-- 影響範囲（In Scope）と非対象（Out of Scope）がissue/ADR/Architectureで一致している。
+- 影響範囲（In Scope）と非対象（Out of Scope）が課題/ADR/Architectureで一致している。
 
 #### CE-1 ブレークダウン
 
@@ -179,7 +179,7 @@
   - `04_Documentation/operations.md` へQuery Preview運用手順を追加。
 
 **CE-1 Done条件**
-- 同一query再実行でbundle hash一致率100%。
+- 同一クエリ再実行でbundle hash一致率100%。
 - Query Previewなしで送信する経路が残っていない。
 
 #### CE-2 ブレークダウン
@@ -212,7 +212,7 @@
   - AI-aware Perspectiveを表示レイヤに限定（Consensus Graph非破壊）。
 - CE3-C（Verify）
   - 部分採用後のロールバック復元をE2Eで確認。
-  - Presetによるquery再現性（同preset=同query）を確認。
+  - Presetによるクエリ再現性（同preset=同クエリ）を確認。
 - CE3-D（Sync）
   - `03_Implement/frontend/docs/e2e_testing.md` へCE-3検証シナリオを追加。
 
@@ -225,11 +225,11 @@
 - CE4-A（公開契約）
   - ContextQuery/Bundle API schemaを固定しversionを採番。
 - CE4-B（Implement）
-  - CLIからquery実行・bundle出力・patch適用dry-runを実装。
+  - CLIからクエリ実行・bundle出力・patch適用dry-runを実装。
   - 監査ログ（query/generated/apply）を統合フォーマット化。
   - 監査ログへ `routingStage` と `provider/model` を追加し、段階別追跡を可能化。
 - CE4-C（Verify）
-  - API/CLI/GUIの同値性テスト（同query同bundle）。
+  - API/CLI/GUIの同値性テスト（同クエリ同bundle）。
   - 回帰テストに品質メトリクス（coverage / rejected reason分類）を追加。
   - `final_judgement` 経路停止時に `held` 遷移し、自動公開へ進まないことを確認。
 - CE4-D（Sync）
@@ -317,14 +317,14 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 
 1. AI単独運用（人間協調なし）を許可するか。
 2. Core Graphは常に単一正本か、主体別グラフ統合を許可するか。
-3. 高額モデルをhuman role、廉価モデルをagent roleに割り当てる代理構成を許可するか。
+3. 高額モデルをhuman role、廉価モデルをagent 役割に割り当てる代理構成を許可するか。
 
 #### D11-2. 決定
 
 - 決定A（Gate-1）:
   - Core Graphを **Consensus Graph（合意済み統合グラフ）** と再定義する。
 - 決定B（Gate-1）:
-  - 主体別に **Working Graph**（human/agent/role別）を許可する。
+  - 主体別に **Working Graph**（human/agent/役割別）を許可する。
   - `mode=autonomous` オプションでAI単独運用を許可する。
 - 決定C（Gate-2）:
   - model tier（high-cost/low-cost）運用は許可候補だが、actor責任と分離して記録するまで限定運用。
@@ -357,7 +357,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
   - Contract IDとGo/NoGo Gateの固定
   - CE-1以降で参照する最小I/F境界
 - 非対象範囲（Out of Scope）:
-  - CE-1以降の実装詳細（API payload詳細、UI配置、CLI UX、RBAC実装）
+  - CE-1以降の実装詳細（API ペイロード詳細、UI配置、CLI UX、RBAC実装）
   - モデル選定/価格戦略の最終確定（`modelTier` は分離記録のみ凍結）
 
 ## Three-Element Verification（ADR-0067 遡及適用）
@@ -393,7 +393,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
   - 上位文書（`domain.md`/`ADR-0001`）と整合しない要求が顕在化した場合
   - 既存SafeMode契約と両立できない場合
 - 手順は次のとおりです。
-  1. CE進行を停止し、対象issueをDraftへ戻す。
+  1. CE進行を停止し、対象課題をDraftへ戻す。
   2. 本ADRに `Superseded by` を付与し、修正版ADRを起票する。
   3. 既に着手した実装はCE単位でrevertする。
 
@@ -410,7 +410,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 - CE0/CE1の契約・統治を先に固定しないまま下流（CE2/CE4）を進めると、語彙衝突と責務境界の再解釈が発生する。
 
 ### Decision
-- Snapshot IDを `SNAP-CE0-CE1-CONTRACT-GOVERNANCE-v1` として固定し、以下をdownstream read-onlyで引き渡す。
+- Snapshot IDを `SNAP-CE0-CE1-CONTRACT-GOVERNANCE-v1` として固定し、以下をdownstream 読み取り専用で引き渡す。
   - `safeModeDefault=ON`
   - `overridePolicy=human_dual_control_only`
   - `queryPreviewRequired=true`
@@ -425,13 +425,13 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 ## Stream A Dependency-Cut Design（Mock-first assumptions）
 
 - Mockで分離可能な依存（contract-only）
-  1. `ContextQueryV1` 生成器（Preview Gateを通したcanonical queryのみ受理）
+  1. `ContextQueryV1` 生成器（Preview Gateを通したcanonical クエリのみ受理）
   2. `ContextBundleV1` 生成器（`queryCanonicalHash` / `bundleHash` を固定返却）
   3. Proposal Envelope（`proposalId + diff + rationale`）
   4. Governance Gate（`go/conditional/no-go` 判定のみ）
 - Mock前提
   - UI配置・操作導線は未確定のまま（契約語彙のみ固定）
-  - Provider実装差分はcontract adapterで吸収し、contract key追加は禁止
+  - Provider実装差分はcontract アダプターで吸収し、contract key追加は禁止
   - hash不一致は `409 nondeterministic_bundle` でfail-closed
 
 ## Stream A addendum（2026-05-06 / CE0 contract freeze linkage）
@@ -441,7 +441,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 
 ### Decision
 - CE0固定契約（proposal-only / safeMode既定ON / review昇格の人間責務）を、A1凍結契約 `HIL-RS-02-A1-CONTRACT-FREEZE-v1` と `schemaVersion=1.0.0` に明示的にリンクする。
-- A2/A3相当の下流作業はread-only契約参照 + mock検証に限定し、未承認事項の確定化を禁止する。
+- A2/A3相当の下流作業は読み取り専用契約参照 + mock検証に限定し、未承認事項の確定化を禁止する。
 
 ### Consequences
 - CEフェーズ実行時の判定分岐が固定化され、`Pending` 残存時は `Hold/Needs-decision` を一貫適用できる。
@@ -454,7 +454,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 
 ### Decision
 - CE系/ HIL系の双方で `Pending bypass` を禁止し、承認遷移は `Pending -> Approved | Pending -> Rejected` のみ許可する。
-- Contract freezeはread-only（ID追加/改名/削除禁止）で維持し、承認待ちは `Hold/Needs-decision` を適用する。
+- Contract freezeは読み取り専用（ID追加/改名/削除禁止）で維持し、承認待ちは `Hold/Needs-decision` を適用する。
 
 ### Consequences
 - 契約語彙と統治ゲートの解釈が統一され、下流laneでの再定義・強行遷移を抑止できる。
@@ -464,7 +464,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 
 ### Phase 1 Read（stopper check）
 - Read target: 本ADR, `issue-FB-P2C-01-a1-interface-contract.md`, `issue-HIL-RS-01-A1-architecture-minimum-interface-contract.md`, `issue-HIL-RS-01-next-phase-human-loop-reversible-synthesis.md`。
-- triage stopper check: 対象3 issueすべてで `Status` と `Priority` を確認済み（欠落なし）。
+- triage stopper check: 対象3 課題すべてで `Status` と `Priority` を確認済み（欠落なし）。
 
 ### Phase 2 ADR clarification（CE-0 / CE-1）
 - Context: CE-0/CE-1の契約固定が曖昧なまま下流へ進むと、A1以外で契約再定義が発生し、`Pending bypass` とSafeMode後退リスクが増幅する。
@@ -473,7 +473,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
   - 固定参照値: `freezeContractId=HIL-RS-02-A1-CONTRACT-FREEZE-v1`, `schemaVersion=1.0.0`, `safeModeBoundary=SAFE_MODE_STRICT_ON`, `safeModeDefault=ON`, `overridePolicy=human_dual_control_only`。
   - 人間承認遷移は `Pending -> Approved | Pending -> Rejected` のみ許可し、それ以外の遷移を禁止する。
 - Consequences:
-  - A2/A3への受け渡しはread-only handoffのみ。
+  - A2/A3への受け渡しは読み取り専用 handoffのみ。
   - `pendingDecisionQueueCount>0` の間は `Hold/Needs-decision` を維持する。
 
 ### Phase 3 Plan（AC / DoD）
@@ -481,7 +481,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 - AC-2: contract drift `0`（固定参照値の不一致なし）。
 - AC-3: responsibility boundary drift `0`（AI=proposal-only, Human=final approval）。
 - AC-4: `Pending bypass` 禁止。
-- AC-5: read-only handoff成立（A2/A3側の再定義禁止）。
+- AC-5: 読み取り専用 handoff成立（A2/A3側の再定義禁止）。
 - DoD: 上記ACを満たし、Stop条件（safeMode後退/契約再定義/未定義競合/指定外編集）未該当。
 
 ### Phase 4-6 Execute / Verify / Proceed
@@ -494,7 +494,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 
 ### Context
 - Stream A（クリティカルパス）として、HIL-RS/CE0の契約凍結を「下流がmockだけで独立実行できる状態」まで固定する必要がある。
-- 実装着手前に、APIシグネチャ/データ型/エラー契約/互換ポリシーを再定義禁止のread-only契約へ明文化し、ストリーム間依存を切断する。
+- 実装着手前に、APIシグネチャ/データ型/エラー契約/互換ポリシーを再定義禁止の読み取り専用契約へ明文化し、ストリーム間依存を切断する。
 
 ### Decision
 - CE0の固定I/Fを `ContextQueryV1` / `ContextBundleV1` / `ProposalPatchV1` / `AuditEventV1` に限定し、v1のrequired keyの削除・意味変更を禁止する。
@@ -503,7 +503,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 - 下流ストリームはmock contract（`stubDatasetId=A2-minimal-v1`, `sourceBundleHash=mock:<64hex>`）で先行実行し、CE1/CE2/CE4実装完了待ちを禁止する。
 
 ### Consequences
-- Stream B/C/Eは固定I/Fをread-only参照するだけで、契約再定義なしにCDCと検証を進められる。
+- Stream B/C/Eは固定I/Fを読み取り専用参照するだけで、契約再定義なしにCDCと検証を進められる。
 - 互換違反が出た場合は「v1更新」ではなく「v2起票 + 移行計画」へ強制分岐できる。
 - 契約凍結後の変更提案はDecision Queue管理に一本化され、未承認項目の混入を抑止できる。
 
@@ -515,7 +515,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 ## Stream D HIL-RS cognitive externalization guardrails（2026-06-13）
 
 ### Context
-- HIL-RSの可逆統合は、認知外在化要件上のContextQuery / ContextBundle / proposal-only統治と同じ安全境界に置かれる。
+- HIL-RSの可逆統合は、認知外在化要件上のContextQuery / ContextBundle / 提案のみ統治と同じ安全境界に置かれる。
 - AI出力は探索候補であり、Consensus Graph / `human_reviewed` を直接更新する権限を持たない。
 
 ### Decision
@@ -524,5 +524,5 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 - `apply` 系イベントは人間判断後の監査イベントであり、AI候補生成時点では `proposal` までに留める。
 
 ### Consequences
-- A2/A3への引き渡しはproposal-onlyとrollbackRef必須の制約を含むが、Frontend実装仕様や運用文書本文はこのStreamで確定しない。
+- A2/A3への引き渡しは提案のみとrollbackRef必須の制約を含むが、Frontend実装仕様や運用文書本文はこのStreamで確定しない。
 - `Pending` を無視した自動適用、SafeMode既定ONの後退、AIによるレビュー済み化は認知外在化要件違反としてStopする。

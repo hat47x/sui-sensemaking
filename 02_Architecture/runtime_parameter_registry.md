@@ -54,14 +54,14 @@
    - 認証・認可・監査の責務分離が必要で、障害時のフェイルセーフを `read_only` か `deny` で固定する。
    - JITプロビジョニングを無効化し、運用承認済みの接続先・秘密管理がある。
 4. `saas-multitenant` を選ぶ条件
-   - `SUI_ADMIN_API_KEY` を設定し、PostgreSQLの共有認証状態、信頼済みのSaaS認証エッジ、外部のアクセス制御、外部の文書ポリシー紐付け、外部のテナントcapability、JIT無効、`deny` のフェイルセーフ、SaaS OAuthブローカーの認可エンドポイント、認証セッションのハッシュキーなど、`TrustedSaasRuntimePolicy` の必須条件を満たす。
+   - `SUI_ADMIN_API_KEY` を設定し、PostgreSQLの共有認証状態、信頼済みのSaaS認証エッジ、外部のアクセス制御、外部の文書ポリシー紐付け、外部のテナント権限、JIT無効、`deny` のフェイルセーフ、SaaS OAuthブローカーの認可エンドポイント、認証セッションのハッシュキーなど、`TrustedSaasRuntimePolicy` の必須条件を満たす。
    - 起動前の事前検査で必須条件を満たしている。必須条件が1つでも欠ける場合は起動を即座に失敗させ、シングルテナントのプロファイルへフォールバックしない。有効なIdPの有無の検査はDB初期化後の警告診断であり、プロバイダが0件であること自体は起動を拒否する条件ではない。
 
 ### SaaS profile implementation gate（ADR-0059）
 
 - `SUI_RUNTIME_PROFILE`でプロファイルを明示選択する。`local-dev`、`evaluation`、`enterprise-production`は正規化して受理する。
 - `saas-multitenant`は必須ポリシー、実アダプタ、PostgreSQLの共有認証表をすべて起動前に検査し、不足時は即座に失敗させる。無視して`local-dev`やメモリ上の状態へフォールバックしない。
-- バックエンドが持つ信頼済みSaaSアダプタのバンドルと`saas-multitenant`は、相互に必須である。事前検査では、プロファイル、非秘密の実行時安全ポリシー、バンドルの型・欠損・相互必須、起動済みの状態に加え、構築済みのPDP・capability・紐付けの各コンポーネントの実型を、状態を変更せずに検査する。同じ判定をDB初期化前とアダプタ有効化前にも再実行する。次の構成は、DB接続前に起動を拒否する。シングルテナントのプロファイルへのバンドル注入、SaaSプロファイルでのバンドル欠損、未知のプロファイル、設定上は外部連携でも実コンポーネントが何もしない実装（noop）または利用不可になる構成である。プロファイル間の相互検証は`SUI_ADMIN_API_KEY`を必須とする。実行時安全ポリシーは、PostgreSQL、JIT無効、外部のアクセス制御、`deny` のフェイルセーフ、外部の文書ポリシー紐付け、外部のテナントcapability、SaaS OAuthブローカーの認可エンドポイント、認証セッションのハッシュキーを必須とする。実コンポーネントも`ExternalPolicyAccessControlAdapter`、`ExternalHttpTenantCapabilityResolver`、`ExternalHttpDocumentPolicyBindingResolver`の完全セットを必須とする。SaaSプロファイルを受理する現行実装でも、この完全セットが欠ける構成は起動しない。
+- バックエンドが持つ信頼済みSaaSアダプタのバンドルと`saas-multitenant`は、相互に必須である。事前検査では、プロファイル、非秘密の実行時安全ポリシー、バンドルの型・欠損・相互必須、起動済みの状態に加え、構築済みのPDP・capability・紐付けの各コンポーネントの実型を、状態を変更せずに検査する。同じ判定をDB初期化前とアダプタ有効化前にも再実行する。次の構成は、DB接続前に起動を拒否する。シングルテナントのプロファイルへのバンドル注入、SaaSプロファイルでのバンドル欠損、未知のプロファイル、設定上は外部連携でも実コンポーネントが何もしない実装（noop）または利用不可になる構成である。プロファイル間の相互検証は`SUI_ADMIN_API_KEY`を必須とする。実行時安全ポリシーは、PostgreSQL、JIT無効、外部のアクセス制御、`deny` のフェイルセーフ、外部の文書ポリシー紐付け、外部のテナント権限、SaaS OAuthブローカーの認可エンドポイント、認証セッションのハッシュキーを必須とする。実コンポーネントも`ExternalPolicyAccessControlAdapter`、`ExternalHttpTenantCapabilityResolver`、`ExternalHttpDocumentPolicyBindingResolver`の完全セットを必須とする。SaaSプロファイルを受理する現行実装でも、この完全セットが欠ける構成は起動しない。
 - バックエンドは検証済みのプロファイルを起動時に記録し、`GET /session/bootstrap-policy`ではプロファイル名を公開せず、`single-tenant`または`tenant-session-required`のどちらかだけに写像する。フロントエンドのビルドも同じプロファイルを受け取る。既存の3プロファイルはポリシーを問い合わせずにローカルファーストで起動し、`saas-multitenant`だけはサーバのポリシーとの一致とセッションの初期化成功まで、Appをマウントしない。未知・空・正規形でないビルド値、ポリシーの不一致、取得失敗は、シングルテナントへフォールバックせず、ブロック状態にとどめる。
 - 現行実装は、テナント解決、PDP、DBガードを含む相互検証と事前検査がすべて成立した場合だけSaaSの起動を許可する。欠ける構成は起動を拒否する。
 - `ADR-0062`により、プロファイルを問わず `external_http` / `http` を明示選択した場合は対応エンドポイントを必須とする。エンドポイント欠損をnoopへフォールバックせず、DB初期化やリクエスト受付より前に起動を拒否する。
@@ -119,8 +119,8 @@
 | `SUI_DEEPSEEK_MODEL` | `deepseek-v4-flash` | DeepSeek APIに渡すモデルID。256文字以下の正規 | direct | 通常値 | 呼び出しペイロードのモデルフィールドが設定値と一致することを確認する |
 | `SUI_DEEPSEEK_THINKING_MODE` | `disabled` | DeepSeek V4 Chat Completionsの思考モード。`disabled` / `enabled`。旧 `deepseek-chat` の非思考モードの挙動を保つため既定は `disabled` | direct | 通常値 | DeepSeek送信ペイロードの `thinking.type` が設定値と一致することを確認する |
 | `SUI_DEEPSEEK_THINKING_TASK_MAP` | 未設定（空文字） | タスク別のDeepSeek思考モード（`task=mode` のカンマ区切り。mode は `disabled` か `enabled`）。未記載のタスクは `SUI_DEEPSEEK_THINKING_MODE` に従うが、最終判断のタスク（`check_narrative` / `detect_contradiction`）だけは既定で `enabled`。300カードの全量で、`disabled` は島の欠落を6回中3回しか検出せず、`enabled` は6回中6回検出した（2026-10-09、小標本）。不正な書式は起動時に拒否する。将来は、タスクの種類ごとに適切な権限をもつ管理者が個別に設定できる形を目指す | direct | 通常値 | 指定タスクのDeepSeek送信ペイロードの `thinking.type` が設定値と一致し、最終判断タスクは未設定でも `enabled` であることを確認する |
-| `SUI_API_KEY` | 未設定 | 業務面APIを `X-API-Key` で保護する。`enterprise-production` では起動必須。`saas-multitenant` は信頼済みJWT/cookie識別情報を使うため業務面キー自体は起動必須ではない。`/healthz` / `/readyz` / `/version` は運用プローブとして常に対象外。`/admin/*` も業務面キーの対象外で、`X-Admin-Api-Key` またはプロビジョニング用capabilityによるコントロールプレーン認可へ分離する | direct / base Compose | 秘密値 | 業務面ルートでキーなし/誤りが401、正しいキーが成功すること。3つの運用プローブはキーなしで到達でき、`/admin/*` は業務面キーではなくコントロールプレーン資格情報で認可されることを確認する |
-| `SUI_ADMIN_API_KEY` | 未設定 | ADR-0072 D1=A+B: コントロールプレーンの段階A 初期投入用の資格情報。`X-Admin-Api-Key` で提示する。段階Bでは信頼済みSaaSセッションの `tenant.provision` capabilityでも認可でき、リクエストに管理者bearerは不要。**業務面の `SUI_API_KEY` はどちらのStageでも受理せず、同じ秘密値の設定も起動時に拒否する**。`enterprise-production` / `saas-multitenant` では設定自体が起動必須。`local-dev` / `evaluation` では未設定時だけ開発用にコントロールプレーンを開く。IdP未登録の初期投入では段階Bを使えないため段階Aが本番の経路 | direct | 秘密値 | 業務面キーで `/admin/provision/*` が401、正しい `X-Admin-Api-Key` が成功、信頼済みSaaSセッション + `tenant.provision` も管理者bearerなしで成功することを確認する。併せて両キー同値がSettings構築で拒否されることを確認する（秘密値自体は出力しない） |
+| `SUI_API_KEY` | 未設定 | 業務面APIを `X-API-Key` で保護する。`enterprise-production` では起動必須。`saas-multitenant` は信頼済みJWT/cookie識別情報を使うため業務面キー自体は起動必須ではない。`/healthz` / `/readyz` / `/version` は運用プローブとして常に対象外。`/admin/*` も業務面キーの対象外で、`X-Admin-Api-Key` またはプロビジョニング用権限によるコントロールプレーン認可へ分離する | direct / base Compose | 秘密値 | 業務面ルートでキーなし/誤りが401、正しいキーが成功すること。3つの運用プローブはキーなしで到達でき、`/admin/*` は業務面キーではなくコントロールプレーン資格情報で認可されることを確認する |
+| `SUI_ADMIN_API_KEY` | 未設定 | ADR-0072 D1=A+B: コントロールプレーンの段階A 初期投入用の資格情報。`X-Admin-Api-Key` で提示する。段階Bでは信頼済みSaaSセッションの `tenant.provision` 権限でも認可でき、リクエストに管理者bearerは不要。**業務面の `SUI_API_KEY` はどちらのStageでも受理せず、同じ秘密値の設定も起動時に拒否する**。`enterprise-production` / `saas-multitenant` では設定自体が起動必須。`local-dev` / `evaluation` では未設定時だけ開発用にコントロールプレーンを開く。IdP未登録の初期投入では段階Bを使えないため段階Aが本番の経路 | direct | 秘密値 | 業務面キーで `/admin/provision/*` が401、正しい `X-Admin-Api-Key` が成功、信頼済みSaaSセッション + `tenant.provision` も管理者bearerなしで成功することを確認する。併せて両キー同値がSettings構築で拒否されることを確認する（秘密値自体は出力しない） |
 | `SUI_AUDIT_EXPORT_ENABLED` | `false` | 監査エクスポートのディスパッチ全体を統括するゲート。`false` では、検証を通過したトランスポート設定に関係なくディスパッチャは無効化され `NoopAuditTransport` を使い、外部送信しない。ただし `SUI_AUDIT_TRANSPORT=http` の完全設定検証は独立して適用され、エクスポート無効でもエンドポイント欠損は起動時に拒否する。`true` のときだけトランスポート設定が実送信に使われる | direct | 通常値 | `false` + 完全な`http`設定ではテストダブルへ1件も到達しないこと、`false`でも`http` + エンドポイント欠損は起動拒否、`true` + `http`では監査イベントがテストダブルへ到達することを確認する |
 | `SUI_AUDIT_TRANSPORT` | `noop` | 監査トランスポート。`noop` または `http`。`http` はエクスポート有効化フラグと独立してエンドポイント必須の完全設定検証を受ける。検証通過後、実送信トランスポートとして作用するのは `SUI_AUDIT_EXPORT_ENABLED=true` の場合だけで、エクスポート無効時は `http` 指定でもディスパッチャは `NoopAuditTransport` を使う | direct | 通常値 | トランスポート名の正常時起動自己申告はない。エクスポート無効でも`http` + エンドポイント欠損が起動拒否されること、完全な`http`設定ではエクスポート無効時にPOSTせず、有効時だけテストダブルへ到達することを確認する |
 | `SUI_AUDIT_HTTP_ENDPOINT` | 未設定 | 監査ログHTTP連携の接続先。認証情報・クエリ・フラグメントなしのHTTPS、またはループバックHTTPだけを許可し、`SUI_AUDIT_TRANSPORT=http` 時は必須 | direct | 通常値（接続先URL。認証情報は別キー） | テストダブルへの到達確認（実サービスへは送らない） |
@@ -135,15 +135,15 @@
 | `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_TIMEOUT_SECONDS` | `1.5` | `external_http` アダプタのタイムアウト秒数 | direct | 通常値 | タイムアウト超過時にフェイルセーフモードの挙動が作動することを確認する |
 | `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_AUTH_MODE` | `none` | `external_http` アダプタがPDPへ渡す認証方式メタデータ。`none`, `oidc`, `saml` を `x-acl-auth-mode` ヘッダーへ写す。この値自体は `Authorization` ヘッダーを生成・変更せず、固定bearerは別設定 `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_STATIC_BEARER_TOKEN` が担う | direct | 通常値 | PDPテストダブルで `x-acl-auth-mode` が設定値と一致することを確認する。`Authorization` はこの値だけでは付与されないことも確認する |
 | `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_STATIC_BEARER_TOKEN` | 未設定 | `external_http` アダプタの固定bearerトークン。非空の正規bearer値（空白・制御文字不可） | direct | 秘密値 | PDPリクエストにBearerヘッダが付与されることを確認する（値はマスク） |
-| `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_IDP_ISSUER` | 未設定 | `external_http` アダプタがPDPへ渡すIdP issuerメタデータ。設定する場合は `SUI_ACCESS_CONTROL_ADAPTER=external_http` とエンドポイントが必須。正規のヘッダー値として検査し、設定時は `x-idp-issuer` ヘッダーへ写す。この設定自体はJWT/SAML issuerのローカル検証を行わない | direct | 通常値 | PDPテストダブルで `x-idp-issuer` が設定値と一致することを確認する。issuer検証の結果を示すプローブとしては扱わない |
+| `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_IDP_ISSUER` | 未設定 | `external_http` アダプタがPDPへ渡すIdP 発行者メタデータ。設定する場合は `SUI_ACCESS_CONTROL_ADAPTER=external_http` とエンドポイントが必須。正規のヘッダー値として検査し、設定時は `x-idp-issuer` ヘッダーへ写す。この設定自体はJWT/SAML 発行者のローカル検証を行わない | direct | 通常値 | PDPテストダブルで `x-idp-issuer` が設定値と一致することを確認する。発行者検証の結果を示すプローブとしては扱わない |
 | `SUI_DOCUMENT_POLICY_BINDING_RESOLVER` | `none` | サーバ所有の紐付けIDを一時的なpolicyRefへ解決するリゾルバ。`none`, `external_http`。`saas-multitenant` では `external_http` が必須で、起動前に外部コンポーネントを検査し、`ServerOwnedDocumentResourceResolver` のポリシー紐付けリゾルバとして配線 | direct | 通常値 | リゾルバ名の起動自己申告はない。`saas-multitenant` では起動前事前検査が `ExternalHttpDocumentPolicyBindingResolver` の実型を要求し、`external_http` の個別配送は紐付けサービステストダブルへの検索到達で確認する |
 | `SUI_DOCUMENT_POLICY_BINDING_HTTP_ENDPOINT` | 未設定 | 紐付けリゾルバの接続先。認証情報・クエリ・フラグメントなしのHTTPS、またはループバックHTTPだけを許可 | direct | 通常値（接続先URL。認証情報は別キー） | テストダブルへの到達確認（実サービスへは送らない） |
 | `SUI_DOCUMENT_POLICY_BINDING_HTTP_API_KEY` | 未設定 | 紐付けリゾルバ専用の固定bearerトークン。非空の正規bearer値（空白・制御文字不可）。DB・監査・診断へ出力しない | direct | 秘密値 | 送信ヘッダにキーが付与されることを確認する（値はマスクして確認） |
 | `SUI_DOCUMENT_POLICY_BINDING_HTTP_TIMEOUT_SECONDS` | `1.5` | 紐付けリゾルバのタイムアウト秒数。`0 < value <= 30` | direct | 通常値 | タイムアウト超過時にリゾルバが安全側で拒否へ倒れることを確認する |
-| `SUI_TENANT_CAPABILITY_RESOLVER` | `none` | テナント単位の有効なcapabilityリゾルバ。`none`, `external_http`。`saas-multitenant` では `external_http` が必須で、起動前に外部コンポーネントを検査し、実行時のテナントcapabilityリゾルバとして配線 | direct | 通常値 | リゾルバ名の起動自己申告はない。`saas-multitenant` では起動前事前検査が `ExternalHttpTenantCapabilityResolver` の実型を要求し、`external_http` の個別配送はcapabilityサービステストダブルへの検索到達で確認する |
-| `SUI_TENANT_CAPABILITY_HTTP_ENDPOINT` | 未設定 | capabilityリゾルバの接続先。認証情報・クエリ・フラグメントなしのHTTPS、またはループバックHTTPだけを許可 | direct | 通常値（接続先URL。認証情報は別キー） | テストダブルへの到達確認（実サービスへは送らない） |
-| `SUI_TENANT_CAPABILITY_HTTP_API_KEY` | 未設定 | capabilityリゾルバ専用の固定bearerトークン。非空の正規bearer値（空白・制御文字不可）。DB・監査・診断へ出力しない | direct | 秘密値 | 送信ヘッダにキーが付与されることを確認する（値はマスクして確認） |
-| `SUI_TENANT_CAPABILITY_HTTP_TIMEOUT_SECONDS` | `1.5` | capabilityリゾルバのタイムアウト秒数。`0 < value <= 30` | direct | 通常値 | タイムアウト超過時にリゾルバが安全側で拒否へ倒れることを確認する |
+| `SUI_TENANT_CAPABILITY_RESOLVER` | `none` | テナント単位の有効な権限リゾルバ。`none`, `external_http`。`saas-multitenant` では `external_http` が必須で、起動前に外部コンポーネントを検査し、実行時のテナント権限リゾルバとして配線 | direct | 通常値 | リゾルバ名の起動自己申告はない。`saas-multitenant` では起動前事前検査が `ExternalHttpTenantCapabilityResolver` の実型を要求し、`external_http` の個別配送は権限サービステストダブルへの検索到達で確認する |
+| `SUI_TENANT_CAPABILITY_HTTP_ENDPOINT` | 未設定 | 権限リゾルバの接続先。認証情報・クエリ・フラグメントなしのHTTPS、またはループバックHTTPだけを許可 | direct | 通常値（接続先URL。認証情報は別キー） | テストダブルへの到達確認（実サービスへは送らない） |
+| `SUI_TENANT_CAPABILITY_HTTP_API_KEY` | 未設定 | 権限リゾルバ専用の固定bearerトークン。非空の正規bearer値（空白・制御文字不可）。DB・監査・診断へ出力しない | direct | 秘密値 | 送信ヘッダにキーが付与されることを確認する（値はマスクして確認） |
+| `SUI_TENANT_CAPABILITY_HTTP_TIMEOUT_SECONDS` | `1.5` | 権限リゾルバのタイムアウト秒数。`0 < value <= 30` | direct | 通常値 | タイムアウト超過時にリゾルバが安全側で拒否へ倒れることを確認する |
 | `SUI_ALLOW_JIT_PROVISIONING` | `false` | シングルテナントの転送ヘッダー識別情報パスにだけ作用するJITプロビジョニングゲート。未登録プロバイダ/subjectで `true` の場合はユーザー・識別情報紐付け・local-defaultメンバーシップを作成し、`false` では403 `identity_not_provisioned`。`saas-multitenant` は起動ポリシーで `false` を必須とし、信頼済みJWT/cookie識別情報リゾルバはこの設定を参照せず未登録subjectを常に403で拒否する（SEC-RATE-LIMIT-01） | direct / base Compose | 通常値 | シングルテナントヘッダーパスで `false` 時は未登録識別情報が403かつ新規作成されず、`true` 時だけ作成されること。SaaSでは `true` が起動拒否され、未登録subjectが設定値に関係なく403になることを確認する |
 | `SUI_MAX_DOCUMENT_BYTES` | `20971520` | DocumentV1保存ペイロードのUTF-8バイト上限（20 MiB・SEC-DOC-BOUND-01） | direct | 通常値 | 超えるペイロードで413 `document_too_large` を確認する |
 | `SUI_MAX_DOCUMENT_CARDS` | `50000` | DocumentV1のカード件数上限（SEC-DOC-BOUND-01） | direct | 通常値 | 超えるカード件数で413 `document_too_many_cards` を確認する |
@@ -154,7 +154,7 @@
 | `SUI_AUTH_NAME_FIELD` | `x-forwarded-name` | シングルテナントの転送ヘッダー識別情報パスでJITプロビジョニング時に新規 `UserRow.display_name` を初期化するヘッダー名。既存ユーザー属性は更新しない。`saas-multitenant` の信頼済みJWT/cookieパスでは使用しない | direct | 通常値 | JITで新規ユーザーを作る時だけ指定値が `UserRow.display_name` に入り、既存ユーザーリクエストでは属性が上書きされないことを確認する |
 | `SUI_AUTH_SUBJECT_FIELD` | `x-auth-subject` | シングルテナントの転送ヘッダー識別情報パスで外部UID/subjectの第一候補を受け取るヘッダー名。欠損時だけ `AUTH_USER_FIELD` へフォールバックする。`saas-multitenant` の信頼済みJWT/cookieパスでは使用しない | direct | 通常値 | subjectヘッダーがあれば `AUTH_USER_FIELD` より優先して `AuthContext.external_uid` へ反映されることを確認する |
 | `SUI_JWT_ALGORITHMS` | `RS256,ES256` | 信頼済みOIDC/JWT署名検証のアルゴリズム許可リスト（カンマ区切り）。受理値は `RS256`, `RS384`, `RS512`, `ES256`, `ES384`, `ES512`, `PS256`, `PS384`, `PS512`。空の一覧、HMAC系、`none` を含む未知値はSettings検証で起動時に拒否する | direct | 通常値 | 既定値以外の既知アルゴリズムを設定でき、設定許可リスト外のアルゴリズムで署名されたJWTが401、HMAC/未知値は起動時に拒否されることを確認する |
-| `SUI_TENANT_CLAIM_NAME` | `tenant_ref` | 信頼済みJWT内のテナント外部識別子を運ぶクレーム名。既定は `tenant_ref` だが固定名ではなく、Settings検証を通るカスタム名を指定できる。値は `tenant_identity_providers.external_tenant_ref` と照合する | direct | 通常値 | カスタムクレーム名を設定すると認証エッジがそのclaimを参照し、指定claimが存在しないJWTは401で拒否されることを確認する |
+| `SUI_TENANT_CLAIM_NAME` | `tenant_ref` | 信頼済みJWT内のテナント外部識別子を運ぶクレーム名。既定は `tenant_ref` だが固定名ではなく、Settings検証を通るカスタム名を指定できる。値は `tenant_identity_providers.external_tenant_ref` と照合する | direct | 通常値 | カスタムクレーム名を設定すると認証エッジがそのクレームを参照し、指定クレームが存在しないJWTは401で拒否されることを確認する |
 | `SUI_TRUSTED_PROXIES` | （空） | シングルテナント転送ヘッダー識別情報パスの信頼できる送信元プロキシのCIDRのカンマ区切りリスト。設定時は識別情報解決の冒頭で `request.client.host` をヘッダー読取より先に検査し、非信頼IPは認証ヘッダーの有無にかかわらず403 `untrusted_proxy`。未設定時は送信元ゲートを行わず警告ログを1回出す。本番では `10.0.0.0/8` 等で限定すること。`saas-multitenant` の信頼済みJWT/cookieパスでは使用しない。 | direct | 通常値 | CIDR設定時に非信頼IPがヘッダー読取前に403、信頼IPが識別情報解決へ進むこと、未設定時は送信元ゲートを行わず警告することを確認する |
 | `SUI_REVIEWER_REF_RESOLVER_ADAPTER` | `user_id` | reviewerRef解決アダプタ。`user_id` または `sso_subject` | direct | 通常値 | reviewerRefの解決方式が選択値（`user_id`/`sso_subject`）どおりであることを確認する |
 | `SUI_CE4_EQUIVALENCE_MODE` | `equivalence_and_bundle_hash` | CE4同値性判定モード | fixed | 通常値 | 既定値以外を設定すると起動時に拒否されることを確認する |
@@ -223,11 +223,11 @@
 - 信頼済みSaaS識別情報リゾルバ、テナントリゾルバ、有効なテナントセッションの永続化アダプタは環境変数やリクエストヘッダーから選択せず、アプリケーション起動前の同一アダプタバンドルとしてのみ注入します。3要素の部分設定、起動後の差し替え、未検証の状態オブジェクトは拒否し、バンドル非注入時はセッションAPIを安全側で拒否に保ちます。SaaSバンドル有効化時は文書リソースリゾルバもサーバ所有のメタデータ＋信頼済み紐付けリゾルバへ切り替えます。アプリケーション終了時（lifespan）は3アダプタをアプリケーション状態から同時に無効化し、文書リソースリゾルバもシングルテナント互換へ戻します。再起動時も実行時プロファイルとの照合を通過するまで再有効化しません。
 - `SUI_ACCESS_CONTROL_ADAPTER` は `noop`, `mock`, `external_http` だけを許可します。
 - `SUI_ACCESS_CONTROL_FAIL_SAFE_MODE` は `read_only`, `deny` だけを許可します。
-- `SUI_AUDIT_TRANSPORT`は`noop`, `http`だけを許可します。監査HTTPと外部PDPのエンドポイントは認証情報・クエリ・フラグメント、空白・制御文字・バックスラッシュを含まないHTTPS、またはループバックHTTPだけを受理し、ポート不正も拒否します。`http` / `external_http` を明示選択した場合は対応エンドポイントを必須とし、欠損時はnoopへフォールバックせず起動を拒否します。HTTP連携を無効にしたままエンドポイント/APIキーを残すことや、エンドポイントなしでbearer/IdP issuerだけを設定することも拒否します。
-- 監査HTTPと外部PDPのタイムアウトは`0 < value <= 30`、監査キューは1以上を必須にします。固定bearerは空値・空白・制御文字を、IdP issuerヘッダー値は2,048文字超・前後空白・制御文字を拒否し、検証エラーへ入力値を反射しません。
+- `SUI_AUDIT_TRANSPORT`は`noop`, `http`だけを許可します。監査HTTPと外部PDPのエンドポイントは認証情報・クエリ・フラグメント、空白・制御文字・バックスラッシュを含まないHTTPS、またはループバックHTTPだけを受理し、ポート不正も拒否します。`http` / `external_http` を明示選択した場合は対応エンドポイントを必須とし、欠損時はnoopへフォールバックせず起動を拒否します。HTTP連携を無効にしたままエンドポイント/APIキーを残すことや、エンドポイントなしでbearer/IdP 発行者だけを設定することも拒否します。
+- 監査HTTPと外部PDPのタイムアウトは`0 < value <= 30`、監査キューは1以上を必須にします。固定bearerは空値・空白・制御文字を、IdP 発行者ヘッダー値は2,048文字超・前後空白・制御文字を拒否し、検証エラーへ入力値を反射しません。
 - `SUI_DOCUMENT_POLICY_BINDING_RESOLVER` は `none`, `external_http` だけを許可します。`external_http`ではエンドポイントを必須とし、非ループバックHTTP、URL内認証情報・クエリ・フラグメント、空白・制御文字を含むAPIキーを拒否します。`none`でHTTP設定だけを残すことも拒否します。
-- `SUI_TENANT_CAPABILITY_RESOLVER`も同じ信頼済みHTTP接続制約を適用します。外部応答は既知capabilityの重複なし配列と不透明なcapabilityバージョンだけを受理し、不明値・不完全設定は安全側で拒否にします。
-- 外部PDP、監査HTTP、文書ポリシー紐付け、テナントcapability、LLMの外向きHTTPは3xxリダイレクトを追跡しません。検証済みエンドポイントやホスト許可リストをリダイレクト先で迂回させず、固定bearer、テナントコンテキスト、policyRef、プロンプトを別の接続先へ転送しません。
+- `SUI_TENANT_CAPABILITY_RESOLVER`も同じ信頼済みHTTP接続制約を適用します。外部応答は既知権限の重複なし配列と不透明な権限バージョンだけを受理し、不明値・不完全設定は安全側で拒否にします。
+- 外部PDP、監査HTTP、文書ポリシー紐付け、テナント権限、LLMの外向きHTTPは3xxリダイレクトを追跡しません。検証済みエンドポイントやホスト許可リストをリダイレクト先で迂回させず、固定bearer、テナントコンテキスト、policyRef、プロンプトを別の接続先へ転送しません。
 - `SUI_ACCESS_CONTROL_EXTERNAL_HTTP_AUTH_MODE` は `none`, `oidc`, `saml` だけを許可します。
 - `SUI_REVIEWER_REF_RESOLVER_ADAPTER` は `user_id`, `sso_subject` だけを許可します。
 - CE4の固定契約値は、実装で安全側に検証します。
@@ -252,7 +252,7 @@
 | 公開環境変数 | このレジストリと公開文書に載せるキーは `SUI_*` のみ。 | 現在の方針で充足。キーを追加する場合はこの表を先に更新する。 |
 | 第三者コンテナ内部名 | `POSTGRES_*` は `ADR-0029` の非公開アダプタ境界。利用者には設定させない。 | 現在の方針では完了の阻害要因ではない。全process envからの排除を求める場合は別ADRとデプロイ再設計が必要。 |
 | `external_http` エンドポイント未設定時の挙動 | `ADR-0062`で即時失敗を採択。明示した外部HTTP連携はエンドポイントを必須とし、欠損時は起動拒否する。 | 既定 `noop` は維持し、完全設定された連携の実行時障害は既存のフェイルセーフ、または失敗しても処理を続ける方式へ委譲する。 |
-| 最終検証 | 設定検証、文書のキー乖離検索、Composeの設定展開（config）、フロントエンドのビルドキーの確認を実行する。 | issueを完了とする前の確認事項として残す。 |
+| 最終検証 | 設定検証、文書のキー乖離検索、Composeの設定展開（config）、フロントエンドのビルドキーの確認を実行する。 | 課題を完了とする前の確認事項として残す。 |
 
 ## Drift recurrence prevention checklist（ENV-CONFIG-DRIFT-01 / ENV-ARCH-01 / ENV-PROFILE-01）
 
@@ -263,7 +263,7 @@
 3. **境界**: ベンダー名（例: `POSTGRES_*`）を公開キーとして公開文書に露出していないこと。
 4. **プロファイル**: `local-dev` / `evaluation` / `enterprise-production` の推奨差分が変更理由と整合し、`saas-multitenant`は必須ポリシー・コンポーネントが完備した場合だけ起動可能で、不足時は即座に失敗させること。
 5. **文書間の同期**: `deployment.md` と `04_Documentation/configuration.md` に同じ公開キー集合が反映されていること。
-6. **互換性ゲート**: 非互換が必要な場合は即実装せず、ADRまたはissueに実施可否の判定とロールバックを先に記録すること。
+6. **互換性ゲート**: 非互換が必要な場合は即実装せず、ADRまたは課題に実施可否の判定とロールバックを先に記録すること。
 
 停止条件は次のとおり。
 - 上記1〜6のうち未充足がある場合は変更を停止し、承認待ちに切り替える。
@@ -286,9 +286,9 @@
 - 計画: 変更前に `Naming / Defaults / Boundary / Profiles` の4観点を固定する。
 - 実行: 公開契約の更新を先に行い、実装・デプロイ・文書を追随させる。
 - 検証: 文書チェック（docs-check）、設定検証、`compose config` で同一キー集合を確認する。
-- 続行: 4観点がすべて合格の場合のみ進行し、1つでも不合格なら停止してissueまたはADRへ戻す。
+- 続行: 4観点がすべて合格の場合のみ進行し、1つでも不合格なら停止して課題またはADRへ戻す。
 
 ### Failure budget（3回失敗で停止）
 
 - 同一論点で検証が3回連続で失敗した場合、4回目の試行に進まず **停止** とする。
-- 停止時は「失敗原因」「再開条件」「要追加判断（ADRまたはissue）」を `01_Plans/issues/` に記録する。
+- 停止時は「失敗原因」「再開条件」「要追加判断（ADRまたは課題）」を `01_Plans/issues/` に記録する。

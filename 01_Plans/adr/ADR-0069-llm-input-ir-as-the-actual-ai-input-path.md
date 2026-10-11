@@ -64,7 +64,7 @@ IRは、本問題提起にすでに答えを出している。しかし、その
 
 ### ADR-0047 ゲート判定
 
-R-3（非機能の境界の超過）に該当すると判断する。`ADR-0009`（Accepted）の凍結仕様と出荷実装が乖離しており、`ADR-0041` のCVI群のうち入力側の保証（CVI-2 proposal-onlyの前提となる入力の健全性と、SafeModeの保護）が、契約ではなく、フロントエンドの実装だけに依存している。
+R-3（非機能の境界の超過）に該当すると判断する。`ADR-0009`（Accepted）の凍結仕様と出荷実装が乖離しており、`ADR-0041` のCVI群のうち入力側の保証（CVI-2 提案のみの前提となる入力の健全性と、SafeModeの保護）が、契約ではなく、フロントエンドの実装だけに依存している。
 
 R-1（実使用の摩擦）ではない。本件はコード監査から出たものであり、ドッグフードや実際の利用で観測された摩擦ではない。`ADR-0067` / `ADR-0068` と同じ性質である。
 
@@ -116,7 +116,7 @@ R-1（実使用の摩擦）ではない。本件はコード監査から出た�
 |---|---|---|
 | **A（推奨）** | サーバ（Python）で IR を構築し、TS の既存実装との同値性をテストで固定する | SafeMode をサーバ側で強制できる（下記 ADR-0068 との関係を参照）。ずれは `test_ts_python_contract_drift.py` の拡張で管理する |
 | B | フロントエンドが IR を組み立てて送る | **推奨しない。** サーバが、クライアントが構築した投影を信頼することになり、`SEC-AI-SAFEMODE-01` が指摘した迂回経路を、そのまま残す |
-| C | 投影ロジックを Python へ一本化し TS 側を削除する | 描画とexportがサーバとの往復を要することになり、ローカルファースト（`architecture.html`）に反する |
+| C | 投影ロジックを Python へ一本化し TS 側を削除する | 描画と書き出しがサーバとの往復を要することになり、ローカルファースト（`architecture.html`）に反する |
 
 推奨はA。
 
@@ -216,7 +216,7 @@ Stage 5で、残っている経路を棚卸しした結果、本ADRの「IRをAI
 
 ### ADR-0068 との関係（重要）
 
-**更新（2026-08-29）**: 本節の起票時点では、`ADR-0068` はProposedだった。その後Acceptedとなり、実装issue `issue-SEC-AI-SAFEMODE-01`（Done）が、`_reject_unreviewed_cards`/`_reject_unreviewed_text` を、`detect-contradiction` を含む対象のルートへ、すでに配線済みである（コードで確認済み）。同issue自身が、当時、「短期のSafeModeの強制は、ADR-0068を採択して `/ai/*` に適用し、ADR-0069/IRは別途進める併用が現実的」と記録している。吸収ではなく併用（多層防御）が既定路線として、先に実現している。
+**更新（2026-08-29）**: 本節の起票時点では、`ADR-0068` はProposedだった。その後Acceptedとなり、実装課題 `issue-SEC-AI-SAFEMODE-01`（Done）が、`_reject_unreviewed_cards`/`_reject_unreviewed_text` を、`detect-contradiction` を含む対象のルートへ、すでに配線済みである（コードで確認済み）。同課題自身が、当時、「短期のSafeModeの強制は、ADR-0068を採択して `/ai/*` に適用し、ADR-0069/IRは別途進める併用が現実的」と記録している。吸収ではなく併用（多層防御）が既定路線として、先に実現している。
 
 `ADR-0068`（SafeMode enforcement at API boundary、Accepted・実装済み）と本ADRは、同じ境界を対象とする。ただし、既存の `_reject_unreviewed_cards`/`_reject_unreviewed_text` を、本ADRの実装が除去したり弱めたりしてはならない。本ADR D4=A（IR §7.1による `safe_mode` の強制）は、既存の境界の保護に追加する第二層として実装すること（唯一の防御手段として置き換えない）。
 
@@ -237,7 +237,7 @@ Stage 5で、残っている経路を棚卸しした結果、本ADRの「IRをAI
 
 `02_Architecture/functional-dependency-integrity-2026-08-06.html` の F-5「島所属の関数従属性が強制されていない」が、未解消である。カードから島への所属が一意に定まらない状態では、`islands` を含むIRの構築結果が一意にならない。本ADRの実装前にF-5を解消するか、投影側で一意化の規則（先勝ち、後勝ち、全列挙のいずれか）を明示すること。
 
-**決定（2026-08-29）**: 書き込み側のドラッグ&ドロップの経路は、すでに単一の所属を強制していることを確認した（`island_edge_aggregate.ts` `moveCardToIsland()`）。一方、統合（canonicalization）の経路（`canonical_ops.ts` `updateIslands()`）は、島をまたぐマージのときに、重複した所属を生成しうることを、新たに確認した（`issue-DOMAIN-ISLAND-MEMBERSHIP-01`）。同issueが追加する助言的な診断が、実運用のデータでの発生頻度を計測するまでの、暫定の一意化規則として、「先勝ち」を採用する（`getIslandsForCard()`/`islands.find()` がすでに実装している、配列の先頭から見て最初に一致した島を採用する）。IRビルダー（D4=A）は、複数の島に同時に現れるカードについて、この規則で単一の `island_id` を選ぶこと。`issue-DOMAIN-ISLAND-MEMBERSHIP-01` のAC-1〜2が完了するまで、本ADRの `islands` の実装（D3）には着手しない。
+**決定（2026-08-29）**: 書き込み側のドラッグ&ドロップの経路は、すでに単一の所属を強制していることを確認した（`island_edge_aggregate.ts` `moveCardToIsland()`）。一方、統合（canonicalization）の経路（`canonical_ops.ts` `updateIslands()`）は、島をまたぐマージのときに、重複した所属を生成しうることを、新たに確認した（`issue-DOMAIN-ISLAND-MEMBERSHIP-01`）。同課題が追加する助言的な診断が、実運用のデータでの発生頻度を計測するまでの、暫定の一意化規則として、「先勝ち」を採用する（`getIslandsForCard()`/`islands.find()` がすでに実装している、配列の先頭から見て最初に一致した島を採用する）。IRビルダー（D4=A）は、複数の島に同時に現れるカードについて、この規則で単一の `island_id` を選ぶこと。`issue-DOMAIN-ISLAND-MEMBERSHIP-01` のAC-1〜2が完了するまで、本ADRの `islands` の実装（D3）には着手しない。
 
 ## Traceability
 

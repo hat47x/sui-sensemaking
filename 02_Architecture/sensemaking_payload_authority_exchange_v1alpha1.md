@@ -455,7 +455,7 @@ Backup / Restore
   = 別の運用・真正性契約
 ```
 
-この二つを、一つのimport処理へ統合しません。
+この二つを、一つの取り込み処理へ統合しません。
 
 ### 8.2 マニフェスト
 
@@ -525,9 +525,9 @@ export type ArtifactExchangeBundleV1Alpha1 = {
 - 許可がなくて読めない参照は、バンドルへ含めない。
 - 許可による除外でクロージャを満たせないときは、外部依存として露出してよいかをポリシーで判断する。不可なら、エクスポートを安全側で拒否する。
 
-### 8.6 importしたAuthority
+### 8.6 取り込みしたAuthority
 
-import先では、
+取り込み先では、
 
 ```text
 SourceAuthorityAssertion
@@ -536,13 +536,13 @@ SourceAuthorityAssertion
 
 です。
 
-importした成果物リビジョンのローカルのAuthority既定値は、`working` とする方向を採ります。
+取り込みした成果物リビジョンのローカルのAuthority既定値は、`working` とする方向を採ります。
 
 利用者が明示的にReviewの対象として提示するときは、ローカルの遷移で `candidate` へ進められます。
 
 出典側のAcceptedやConsensusを、ローカルのAcceptedやConsensusへ直接復元するのは、交換ではなくバックアップとリストアの領域です。
 
-### 8.7 importしたReview
+### 8.7 取り込みしたReview
 
 ```text
 SourceReviewAssertion(human)
@@ -554,7 +554,7 @@ SourceReviewAssertion(human)
 
 ### 8.8 IDの衝突
 
-import時に、同じ `artifactId / revisionId` が既に存在する場合は、次の4項目を検証します。
+取り込み時に、同じ `artifactId / revisionId` が既に存在する場合は、次の4項目を検証します。
 
 1. semantic kind
 2. コンテンツのダイジェスト
@@ -667,7 +667,7 @@ Authorityの現在状態は、遷移イベント列から再構築できなけ�
 - オブジェクトストア
 - 既存のContent Store
 
-次のADRで、代表的なフィクスチャと、クエリ、GC、import/exportのワークロードをもとに比較します。
+次のADRで、代表的なフィクスチャと、クエリ、GC、import/書き出しのワークロードをもとに比較します。
 
 ---
 
@@ -683,8 +683,8 @@ Authorityの現在状態は、遷移イベント列から再構築できなけ�
 | 親スコープがAccepted | 子スコープへ自動的に継承しない |
 | 参加者のメンバーシップが変更 | 過去のスナップショットは変わらない |
 | human Review 5件と参加者集合 | Consensusを自動生成しない |
-| 出典側でAcceptedの成果物を交換importする | ローカルではWorking。出典のアサーションを保持する |
-| 出典側のhuman Reviewをimportする | ローカルのhuman_reviewedを付与しない |
+| 出典側でAcceptedの成果物を交換取り込みする | ローカルではWorking。出典のアサーションを保持する |
+| 出典側のhuman Reviewを取り込みする | ローカルのhuman_reviewedを付与しない |
 | バンドル内の参照が欠落し、外部依存にも未記載 | 拒否する |
 | IDが同一で、ダイジェストが不一致 | 衝突として、安全側で拒否する |
 | SafeModeで必要な参照が読めない | ポリシーに従い、外部依存にするか、エクスポートを拒否する |
@@ -702,8 +702,8 @@ Authorityの現在状態は、遷移イベント列から再構築できなけ�
 3. 拡張Relationの、未知のものの往復。
 4. 同じリビジョンが、複数スコープのAuthority状態を持つフィクスチャ。
 5. 参加者スナップショットが、メンバーシップの変更に耐えること。
-6. 出典側のAcceptedやConsensusのimportが、ローカルのAuthorityへ漏れないこと。
-7. 出典側のhuman Reviewのimportが、`human_reviewed` へ漏れないこと。
+6. 出典側のAcceptedやConsensusの取り込みが、ローカルのAuthorityへ漏れないこと。
+7. 出典側のhuman Reviewの取り込みが、`human_reviewed` へ漏れないこと。
 8. 自己完結したバンドルと、外部依存つきバンドルの検証。
 9. SafeModeの適用後に、クロージャを検証すること。
 10. 成果物が100件、1000件、10000件のときの、Information NetworkのマテリアライズとReview Capsuleの再構築の計測。
@@ -729,5 +729,5 @@ ADR-0088で、物理永続化の第一候補を、RDBのメタデータとイベ
 - 成果物バンドルの署名と真正性
 - 物理テーブル、インデックス、パーティションの最終形
 - オブジェクトとBLOBの重複排除のベンチマーク結果
-- 成果物交換のimport UI
+- 成果物交換の取り込み UI
 - Review CapsuleのUI

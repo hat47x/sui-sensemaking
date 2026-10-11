@@ -27,7 +27,7 @@ cd 03_Implement/backend && pip install -e ".[test]" && export PYTHONPATH=src && 
 
 ## PR
 
-- 変更の範囲を絞り、関連するテストを実行する（backendは `pytest`、frontendは `npm test`）。
+- 変更の範囲を絞り、関連するテストを実行する（バックエンドは `pytest`、フロントエンドは `npm test`）。
 - 契約（API、スキーマ、環境変数）を変えたら、`02_Architecture/` の該当する文書を、同じPRで更新する。
 - SafeMode、proposal-only、`human_reviewed`、共有と書き出し、インポートに関する安全上の不変条件は、緩めない（[`AGENTS.md`](AGENTS.md)）。
 - 脆弱性は、[`SECURITY.md`](SECURITY.md) に従って報告する。

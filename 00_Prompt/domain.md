@@ -40,7 +40,7 @@
 
 ## 2. 基本思想（非コード概念）
 
-> §2 の各項は 主体を問わない。人間にも、AIにも、両者の協働にも等しく適用される。
+> §2 の各項は主体を問わない。人間にも、AIにも、両者の協働にも等しく適用される。
 > AIに限定された規定は §7 に置く。§2 と §7 の双方に現れる事項は、§2 が上位である。
 
 ### DOM-CORE-01 保留（Suspension / Hold）
@@ -72,7 +72,7 @@
 - 明確な理由や言語化ができなくてもよい
 - 「何か違う」「混ぜたくない」「しっくりこない」という感覚
 
-違和感は 思考を前に進めるための一次データ であり、
+違和感は思考を前に進めるための一次データであり、
 説明責任を伴いません。
 
 ---
@@ -83,13 +83,13 @@
 - 一度決めた構造に縛られないこと
 
 本アプリケーションでは、
-履歴・差分・巻き戻し が設計上の前提です。
+履歴・差分・巻き戻しが設計上の前提です。
 
 ---
 
 ### DOM-CORE-04 非序列化（Non-ranking）
 
-- 内容に 点数・順位・等級・準備度スコアを与えない
+- 内容に点数・順位・等級・準備度スコアを与えない
 - 統合の結果を単一の正解として提示しない
 
 序列化は分布を早い段階でなくしてしまう操作です。どの項目が重要かを決めるのは利用者であり、
@@ -194,10 +194,10 @@
   現行`Card` / `Edge` / `EvidenceLink` / `Island` / `Narrative` / `ReviewAttribution`を、将来の意味成果物へ一対一で読み替えない。`DocumentV1`の意味はこの概念モデルだけを理由に変更しない。
 
 - DOM-SM-10 Authority Scope ≠ Permission / Visibility  
-  Accepted / Consensus等のAuthorityは、どの意味上のscopeで成立したかを明示する。閲覧可能、公開済み、同じワークスペースに属する、といった事実をAuthorityへ読み替えない。親のscopeのAuthorityも子・兄弟・外部のscopeへ自動継承しない。
+  Accepted / Consensus等のAuthorityは、どの意味上の範囲で成立したかを明示する。閲覧可能、公開済み、同じワークスペースに属する、といった事実をAuthorityへ読み替えない。親の範囲のAuthorityも子・兄弟・外部の範囲へ自動継承しない。
 
 - DOM-SM-11 Imported Authority ≠ Local Authority  
-  別のワークスペース / ネットワーク / システムからimportしたAccepted / Consensus / Human Reviewは、sourceの文脈の来歴として保持できるが、ローカルのAccepted / Consensus / `human_reviewed`を自動成立させない。ローカルのauthorityへ昇格する場合はローカルのscopeで新しいReview / Authority操作を行う。
+  別のワークスペース / ネットワーク / システムから取り込みしたAccepted / Consensus / Human Reviewは、sourceの文脈の来歴として保持できるが、ローカルのAccepted / Consensus / `human_reviewed`を自動成立させない。ローカルのauthorityへ昇格する場合はローカルの範囲で新しいReview / Authority操作を行う。
 
 - DOM-SM-12 Extension Relation ≠ Core Semantics  
   domain / method / experiment固有のRelationを保持できるが、明示的なポリシーがない拡張relationをAuthority、Consensus、Permission、Truth、Importance、保持のルートへ利用しない。未知のrelationは破棄せず、不透明なrelationとして保持できる。
@@ -248,11 +248,11 @@
 > | §3 の表 | 語彙対応。概念「違和感」がコード上 `Critique` であること |
 > | §6（本節） | 詳細仕様。どの種別を持ち、どう扱うか |
 >
-> 矛盾が生じた場合は §2 が上位 です。
+> 矛盾が生じた場合は §2 が上位です。
 
 ### Critique とは
 
-- ユーザーによる 否定・拒否・留保の表明
+- ユーザーによる否定・拒否・留保の表明
 - 理由を要求しない根拠は `DOM-CORE-02` に定める。本節では繰り返しません。
 
 ### Critique の種類
@@ -271,7 +271,7 @@
 ### Critique の扱い
 
 - DOM-CRIT-06 データとして保存する
-- DOM-CRIT-07 学習や精度向上ではなく、制約条件として再配置に反映 する
+- DOM-CRIT-07 学習や精度向上ではなく、制約条件として再配置に反映する
 
 ---
 
@@ -280,7 +280,7 @@
 > §2 の `DOM-CORE-*` はAIにも適用される。本節はそれに追加される、AI固有の規定である。
 > AI内部の探索権限と、人間承認済みの意味へ昇格する権限を分ける。
 > 現行の実行時のSafeMode・proposal-only・`human_reviewed`境界は維持するが、
-> proposal-onlyを「AIは一段階の候補しか生成できない」という意味には解釈しない（ADR-0084）。
+> 提案のみを「AIは一段階の候補しか生成できない」という意味には解釈しない（ADR-0084）。
 
 AI は以下を **行ってよい**：
 
@@ -312,7 +312,7 @@ AI は以下を **行ってはならない**：
 
 ## 8. 共有・要約・説明に関する注意
 
-- DOM-SHARE-01 本アプリケーション内部の構造は 未確定・仮説的 であることを明示する
+- DOM-SHARE-01 本アプリケーション内部の構造は未確定・仮説的であることを明示する
 - 利用者が要約や資料として共有する内容では、次を必ず含める。
 - DOM-SHARE-02 共有内容に保留点を含める
 - DOM-SHARE-03 共有内容に対立・分岐点を含める
@@ -325,7 +325,7 @@ AI は以下を **行ってはならない**：
 
 ## 9. 変更ルール
 
-- 本ファイルの変更は 思想変更に相当 します
+- 本ファイルの変更は思想変更に相当します
 - 変更時は必ず理由と影響範囲を明記してください
 - 実装側がDOMAIN定義に合わせて修正されるべきであり、
   DOMAINを実装都合で変えてはなりません
@@ -342,8 +342,8 @@ AI は以下を **行ってはならない**：
 
 ### 2026-09-18 Authority Scope・import authority・Relation拡張境界
 
-ADR-0087に基づき、Accepted / Consensusの成立するscopeを、権限や可視性（permission / visibility）から分離し、
-外部からimportしたAuthority / Human Reviewをローカルのauthorityへ自動継承しないこと、
+ADR-0087に基づき、Accepted / Consensusの成立する範囲を、権限や可視性（permission / visibility）から分離し、
+外部から取り込みしたAuthority / Human Reviewをローカルのauthorityへ自動継承しないこと、
 および拡張RelationをCore semanticsへ暗黙昇格しないことを
 `DOM-SM-10..12`として追加した。
 
@@ -354,7 +354,7 @@ ADR-0087に基づき、Accepted / Consensusの成立するscopeを、権限や�
 ADR-0084に基づき、SUIの長期射程を人間主導のKJ法キャンバスだけに固定せず、
 AI Workspaceでの自律的なObservation / Hypothesis / Structure / Synthesis形成を許容する方向へ拡張した。
 一方、`human_reviewed`、Accepted / Consensus、元Evidenceの改変は別の権限操作として分離し、
-現行の実行時のSafeMode・proposal-only運用は変更していない。
+現行の実行時のSafeMode・提案のみ運用は変更していない。
 
 この変更は「AIが人間承認なしに確定できる」という規範変更ではなく、
 AI内部の探索を逐次承認させる必要はないことと、人間承認済み状態への昇格を同一視しない
