@@ -21,7 +21,7 @@ from fastapi import (
 )
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from sui_sensemaking_api.access_control import (
@@ -42,6 +42,7 @@ from sui_sensemaking_api.content_store import ContentBlob
 from sui_sensemaking_api.database_content_store import (
     DatabaseAppendOnlyLogContentStore,
     DatabaseDocumentContentStore,
+    is_document_write_contention,
 )
 from sui_sensemaking_api.agent_credentials import (
     AgentCredentialRepository,
@@ -1092,6 +1093,11 @@ def put_document(
     except (IntegrityError, RevisionHeadConflict) as error:
         db.rollback()
         raise HTTPException(status_code=409, detail="Document changed concurrently") from error
+    except OperationalError as error:
+        db.rollback()
+        if is_document_write_contention(error):
+            raise HTTPException(status_code=409, detail="Document changed concurrently") from error
+        raise
     response.headers["ETag"] = _format_etag(_compute_etag(payload_json))
     return document
 
@@ -1327,9 +1333,16 @@ def _commit_sui_card_move_action(
     # the *same* transaction as the later revision materialization. A
     # concurrent conditional PUT / Action must not commit against this stale
     # payload after an intervening writer, even if it passed a prior read.
-    if not store.claim_existing_payload(
-        tenant=tenant, doc_id=doc_id, expected_payload_json=stored.row.payload_json,
-    ):
+    try:
+        claimed = store.claim_existing_payload(
+            tenant=tenant, doc_id=doc_id, expected_payload_json=stored.row.payload_json,
+        )
+    except OperationalError as error:
+        db.rollback()
+        if is_document_write_contention(error):
+            raise _action_error(status_code=409, code="revision_conflict") from error
+        raise
+    if not claimed:
         db.rollback()
         raise _action_error(status_code=409, code="revision_conflict")
 
@@ -1380,6 +1393,11 @@ def _commit_sui_card_move_action(
     except (IntegrityError, RevisionHeadConflict) as error:
         db.rollback()
         raise _action_error(status_code=409, code="revision_conflict") from error
+    except OperationalError as error:
+        db.rollback()
+        if is_document_write_contention(error):
+            raise _action_error(status_code=409, code="revision_conflict") from error
+        raise
 
     revision = _compute_etag(payload_json)
     response.headers["ETag"] = _format_etag(revision)
