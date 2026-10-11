@@ -315,3 +315,59 @@ export function createSuiCardMoveActionCommit(ports: SuiCardMoveActionPorts) {
     }
   };
 }
+
+
+/** Read-only observation after an ambiguous Action POST. Never retries it. */
+export type SuiCardMoveRecovery = Readonly<
+  | { status: "unresolved"; readback?: never }
+  | { status: "unchanged" | "converged" | "diverged"; readback: SuiDocumentReadback }
+>;
+
+/**
+ * A network failure does not say whether an Action committed. Only an
+ * authoritative no-store GET can observe the resource after that failure.
+ *
+ * "converged" means the *current resource happens to match* the proposed
+ * result. It does NOT prove that THIS caller's attempt was accepted; another
+ * writer may have produced the same state. "unchanged" also does not prove
+ * that the resource was never temporarily changed then restored.
+ *
+ * These are observations only: no History/Undo/dirty mutation, no retry,
+ * and no success audit/attribution. A SUI state owner must independently
+ * revalidate its current Subject/Tenant/Document/ETag before rendering or
+ * accepting a later user-initiated action.
+ */
+export async function observeSuiCardMoveAfterUnknownCommit(
+  origin: SuiCardMoveOrigin,
+  proposed: DocumentV1,
+  cardId: string,
+  readDocument: (documentId: string) => Promise<SuiDocumentReadback>,
+): Promise<SuiCardMoveRecovery> {
+  try {
+    if (!origin?.document || !origin.document.id || !origin.etag ||
+        origin.document.version !== 1 || proposed?.id !== origin.document.id ||
+        proposed.version !== 1 || !selectedCard(origin.document, cardId) ||
+        !isPureCardMove(origin.document, proposed, cardId)) {
+      return { status: "unresolved" };
+    }
+    const readback = await readDocument(origin.document.id);
+    if (!readback?.document || !readback.etag ||
+        readback.document.version !== 1 ||
+        readback.document.id !== origin.document.id ||
+        typeof readback.etag !== "string") {
+      return { status: "unresolved" };
+    }
+    if (readback.etag === origin.etag &&
+        equivalentStoredDocument(origin.document, readback.document)) {
+      return { status: "unchanged", readback };
+    }
+    if (readback.etag !== origin.etag &&
+        equivalentStoredDocument(proposed, readback.document)) {
+      return { status: "converged", readback };
+    }
+    return { status: "diverged", readback };
+  } catch {
+    // Even malformed server snapshots must not escape as "safe to retry".
+    return { status: "unresolved" };
+  }
+}
