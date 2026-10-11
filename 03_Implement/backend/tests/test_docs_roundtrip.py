@@ -1262,6 +1262,17 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
     assert doc["cards"][0]["holdState"] == "held"
     assert doc["edges"][0]["type"] == "future-edge-kind"
 
+    # Conditional Web PUT shares the same ETag/CAS boundary as Action.
+    # Even if it was constructed from an old Document snapshot it must not
+    # roll back a newer Action, and no new revision should be materialized.
+    stale_put = sqlite_client.put(
+        f"/docs/{doc_id}",
+        json={**initial, "updatedAt": "2026-10-11T00:05:00Z"},
+        headers={"If-Match": f'"{etag}"'},
+    )
+    assert stale_put.status_code == 409, stale_put.text
+    assert sqlite_client.get(f"/docs/{doc_id}").headers["ETag"] == f'"{revision}"'
+
     # A previously acknowledged Action is NOT repeated with its stale ETag.
     conflict = sqlite_client.post(endpoint, json=intent, headers=headers)
     assert conflict.status_code == 409, conflict.text
