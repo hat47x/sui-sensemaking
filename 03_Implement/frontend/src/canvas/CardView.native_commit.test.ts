@@ -110,7 +110,7 @@ describe("CardView opt-in drop-only native movement", () => {
     const origin = Object.freeze({ documentID: "doc", expectedRevision: "r1" });
     const laterOrigin = Object.freeze({ documentID: "other", expectedRevision: "r2" });
     const onCommitMove = vi.fn();
-    const render = (value: typeof origin) => {
+    const render = (value: Readonly<{ documentID: string; expectedRevision: string }>) => {
       act(() => {
         root.render(createElement(CardView, {
           card: { id: "c1", text: "card", x: 10, y: 20 },
