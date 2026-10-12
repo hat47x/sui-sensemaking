@@ -117,5 +117,6 @@ jobs:
         working-directory: 03_Implement/frontend
         run: |
           npm run typecheck
-          npm test -- src/api/client.test.ts src/api/tei_card_move_action.integration.test.ts src/domain/card_drag_commit.test.ts src/domain/confirmed_card_move_state.test.ts
+          npm test -- src/api/client.test.ts src/api/tei_card_move_action.integration.test.ts src/domain/card_drag_commit.test.ts src/domain/confirmed_card_move_state.test.ts src/canvas/CardView.native_commit.test.ts
           node --experimental-strip-types --test src/api/tei_card_move_action.node-test.mjs
+          npm run build
