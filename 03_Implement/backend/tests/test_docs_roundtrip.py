@@ -1165,7 +1165,7 @@ def test_sui_native_action_v1_uses_authorized_store_and_cas(
 
     # Browser-supplied Origin must match the trusted Host/scheme. This check
     # is independent of whether a session cookie was supplied for BFF CSRF.
-    for origin in ("https://attacker.example", "null", "http://testserver",
+    for origin in ("https://attacker.example", "null", "http://testserver:9090",
                    "http://testserver/other", "http://testserver@evil.test"):
         denied_origin = sqlite_client.post(
             endpoint, json=intent, headers={**headers, "Origin": origin},
