@@ -104,7 +104,7 @@ cd 03_Implement/backend
 | `SUI_MCP_TOKEN_EXCHANGE_ENDPOINT` | unset | `saas-multitenant` のHTTP通信で必須。IdPのトークンエンドポイント（RFC 8693）。https（loopbackのみhttp可）で、資格情報やフラグメントを含めない。 |
 | `SUI_MCP_TOKEN_EXCHANGE_CLIENT_ID` | unset | 同上。交換のためにIdPへ名乗る、このMCPサーバー自身のOAuthクライアントID。 |
 | `SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET` | unset | 同上。上のクライアントの秘密。設定ファイルやログへ書き込まない。このプロセスが持つ秘密は、これだけである（トークンの発行や登録はしない）。 |
-| `SUI_MCP_TOKEN_EXCHANGE_AUDIENCE` | unset | 同上。交換後のトークンの宛先（backend）。IdP登録簿の `audience` と一致させる。4つは、すべて同時に設定する。 |
+| `SUI_MCP_TOKEN_EXCHANGE_AUDIENCE` | unset | 同上。交換後のトークンの宛先（backend）。バックエンドの `SUI_AGENT_OAUTH_AUDIENCE` と一致させる。4つは、すべて同時に設定する。 |
 | `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | Backend base URL this process fetches `GET /docs/{id}` from. Not the frontend's browser-relative `SUI_FRONTEND_API_BASE` -- this process runs outside the frontend's nginx proxy and needs an absolute URL. |
 | `SUI_API_KEY` | unset | Sent as `X-API-Key` when the backend requires it. The browser client relies on same-origin proxying instead; this standalone process must send it itself. |
 

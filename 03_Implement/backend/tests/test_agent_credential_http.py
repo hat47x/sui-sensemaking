@@ -507,3 +507,13 @@ def test_agent_credentials_do_not_authenticate_other_routes_in_the_saas_profile(
     # この試験用のappは SaaS の信頼済みsession基盤を持たないので、通常の利用者の経路は
     # 503 で閉じる。agent のヘッダーでは認証が成立せず、200 にならないことを確かめる。
     assert response.status_code in {401, 503}, response.text
+
+
+def test_agent_credential_mixed_with_a_member_credential_is_rejected_on_the_list_too(env) -> None:
+    response = env["client"].get(
+        "/docs",
+        headers=_h(env["token_a"], **{"X-Sui-Sensemaking-Authorization": "member-token"}),
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "agent_credential_conflict"
