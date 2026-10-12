@@ -19,6 +19,18 @@
 プロンプトとIRは、本番ルートの `_detect_contradiction_ir` / `_build_detect_contradiction_prompt`
 で作る。リクエスト設定（task、`FINAL_JUDGEMENT_MAX_TOKENS`、`inputs`）も本番と同じにする。
 
+測定が及ぶ範囲（読み違えを避けるための注記）:
+
+- プロバイダは `LLMRequest.inputs`（IR全体、300カードで約100KB）を読まず、送るのは `prompt` だけである。
+  モデルが受け取るのは、2枚の本文、その2枚に触れる関係・島の行（島の題とメンバーID）で、約0.5〜0.8KBに収まる。
+  したがって文書の規模（300カード・30島）は、この経路では入力量として効かない。
+  測るのは「2枚を比べる判断」で、文書全体から矛盾を探す能力ではない。
+- IRは `MAX_CARDS` で切り詰められる（`ir_truncated_cases`）。計画した2枚は `required_card_ids` で必ず残る。
+  影響を受けるのは、プロンプトの島の行にあるメンバーIDの欠けだけで、
+  `planted_island_members_dropped_cases` に件数を出す。
+- モデルレジストリ・テナントの許可リスト・確定済み矛盾の抑止（モデルを呼ばない経路）は測らない。
+  環境変数で設定したプロバイダを直接呼び、モデルの判断だけを見る。
+
 既定はドライラン（ネットワークなし）。送信には `--execute` と
 `SUI_TOKEN_MEASUREMENT_OPT_IN=1` の両方が必要で、現在設定されているプロバイダ名・
 モデルIDの一致も確認する。応答の内容は保存せず、件数だけを集計する（内容へのスコアは作らない）。
@@ -197,6 +209,12 @@ def build_case(*, islands: int, spec: dict[str, Any], contradicting: bool) -> di
     ir = _detect_contradiction_ir(payload)
     if adjudicated_contradiction(ir, first, second) is not None:
         raise ValueError("確定・保留済みの矛盾があると、本番ルートはモデルを呼びません")
+    # IRの切り詰めで、計画した島のメンバーIDがプロンプトの島の行から欠けたか。
+    ir_members = {island["id"]: set(island["card_ids"]) for island in ir.get("islands", [])}
+    members_dropped = any(
+        not set(island["cardIds"]) <= ir_members.get(island["id"], set())
+        for island in (claim_island, other_island)
+    )
     return {
         "prompt": _build_detect_contradiction_prompt(payload, ir),
         "ir": ir,
@@ -205,6 +223,7 @@ def build_case(*, islands: int, spec: dict[str, Any], contradicting: bool) -> di
         "control_kind": None if contradicting else spec["control_kind"],
         "planted_card_ids": sorted(texts),
         "planted_island_ids": sorted([claim_island["id"], other_island["id"]]),
+        "planted_island_members_dropped": members_dropped,
     }
 
 
@@ -278,6 +297,9 @@ def evaluate(
         "prompt_utf8_bytes_max": prompt_bytes,
         "ir_truncated_cases": sum(
             1 for case in cases if (case["ir"].get("truncation") or {}).get("truncated")
+        ),
+        "planted_island_members_dropped_cases": sum(
+            1 for case in cases if case["planted_island_members_dropped"]
         ),
         "planned_calls": len(cases),
         "worst_case_spend_usd": round(worst_case_total, 4),

@@ -91,6 +91,34 @@ def test_control_prompt_carries_no_negation_of_the_claim() -> None:
         assert not any(negation in control for negation in negations)
 
 
+def test_model_input_is_the_pair_and_island_lines_not_the_whole_document() -> None:
+    # プロバイダは `inputs` を読まない。300カードの文書でも、送られるのは2枚の周辺だけ。
+    case = _case(islands=30, index=4, contradicting=True)
+    prompt = case["prompt"]
+    planted = set(case["planted_card_ids"])
+    others = [card.text for card in case["payload"].doc.cards if card.id not in planted]
+    assert len(others) == 298
+    assert not any(text in prompt for text in others)
+    assert len(prompt.encode("utf-8")) < 2_000
+    assert len(json.dumps(case["ir"], ensure_ascii=False).encode("utf-8")) > 50_000
+
+
+def test_ir_truncation_never_drops_the_planted_cards_only_island_member_ids() -> None:
+    small = ev.evaluate(model="m", expected_provider="p", islands=6, trials=3)
+    assert small["ir_truncated_cases"] == 0
+    assert small["planted_island_members_dropped_cases"] == 0
+
+    full = ev.evaluate(model="m", expected_provider="p", islands=30, trials=4)
+    assert full["ir_truncated_cases"] == full["planned_calls"] == 8
+    # 島23（カード230〜239）は、IRの上限（200カード）を超えるので、メンバーIDが欠ける。
+    assert 0 < full["planted_island_members_dropped_cases"] <= full["planned_calls"]
+    for index in range(4):
+        case = _case(islands=30, index=index)
+        assert set(case["planted_card_ids"]) <= {card["id"] for card in case["ir"]["cards"]}
+        for island_id in case["planted_island_ids"]:
+            assert f'- {island_id} "' in case["prompt"]
+
+
 def test_dry_run_reports_plan_and_worst_case_cost_without_a_provider() -> None:
     report = ev.evaluate(model="m", expected_provider="p", islands=4, trials=3)
     assert report["executed"] is False
