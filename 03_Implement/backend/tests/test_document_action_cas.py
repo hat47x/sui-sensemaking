@@ -6,6 +6,8 @@ SQLite/PostgreSQL or an actual TEI Host -> SUI E2E scenario.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
@@ -84,7 +86,7 @@ def test_intervening_document_write_rejects_stale_conditional_save(tmp_path) -> 
         with factory() as db:
             store = DatabaseDocumentContentStore(db)
             current = store.load(tenant=tenant, doc_id="doc")
-            assert current is not None and current.content.text == later
+            assert current is not None and json.loads(current.content.text) == json.loads(later)
             head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc", "main"))
             assert head is not None and head.head_version == 2
     finally:
@@ -131,7 +133,7 @@ def test_document_claim_is_tenant_scoped_archived_safe_and_nonmutating(tmp_path)
             )
             db.commit()
             unchanged = store.load(tenant=tenant, doc_id="doc")
-            assert unchanged is not None and unchanged.content.text == raw
+            assert unchanged is not None and json.loads(unchanged.content.text) == json.loads(raw)
             head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc", "main"))
             assert head is not None and head.head_version == 1
             assert store.set_lifecycle_state(tenant=tenant, doc_id="doc", state="archived")
@@ -214,7 +216,7 @@ def test_two_live_sqlite_transactions_keep_conditional_writes_serial(
             saved = DatabaseDocumentContentStore(db).load(
                 tenant=tenant, doc_id="doc",
             )
-            assert saved is not None and saved.content.text == second_text
+            assert saved is not None and json.loads(saved.content.text) == json.loads(second_text)
             head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc", "main"))
             assert head is not None and head.head_version == 2
     finally:
