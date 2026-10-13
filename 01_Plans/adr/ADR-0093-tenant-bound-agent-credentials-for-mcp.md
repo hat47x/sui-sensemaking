@@ -85,4 +85,6 @@ CVI（不変条件）のうち、share/書き出しで未レビュー情報・�
 - **agent の監査は読み取りの記録だけ。** agent が送れる context-audit は、MCP の `context-query` だけとする。提案・適用の監査は作れない。CE-4 の完全性の追跡は、人間の経路の提案→適用の連鎖のためのものなので、agent の読み取り監査はそこに加えない。
 - **監査 event は主体の区分を持つ。** 閲覧などの監査 event に、固定項目 `principalKind`（`member` / `guest` / `agent`）を加える。区分は、検証済みの認証経路から決め、header の申告は使わない。`actorRefHash` は区分を含まない指紋なので、人間と非人間を記録だけで区別するために必要になる。責任を持つ人間への追跡は、資格情報と付与の行に残る登録者・付与者で行い、監査 event には載せない（仮決め。運用で不足が分かったら見直す）。
 
-**この訂正が保証しないこと。** agent 経由の監査イベントが、既定の監査設定で記録されない経路があるかは、導入時に確かめる（未解決）。ログに資格情報が出ないことは、`03_Implement/backend/tests/test_agent_credential_log_hygiene.py` で検査する。これは試験の範囲の保証であり、本番の監視基盤の出力までは確かめない。
+- **agent の監査を残すための運用条件。** 監査の外部出力は既定で無効（`SUI_AUDIT_EXPORT_ENABLED=false`）で、SafeMode の event は `SUI_AUDIT_ALLOW_IN_SAFE_MODE` が真でないと送られない。agent の読み取りは SafeMode の event なので、既定の設定では、agent の操作は外部に記録されない。agent を有効にする環境では、両方を有効にする（仮決め。event は本文・題名・トークンを含まない固定の metadata なので、SafeMode でも出して差し支えないと見立てている）。この条件を起動時に強制するかは、未決とする。
+
+**この訂正が保証しないこと。**ログに資格情報が出ないことは、`03_Implement/backend/tests/test_agent_credential_log_hygiene.py` で検査する。これは試験の範囲の保証であり、本番の監視基盤の出力までは確かめない。
