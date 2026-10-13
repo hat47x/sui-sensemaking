@@ -315,6 +315,22 @@ _MEMBER_CREDENTIAL_COOKIES = ("Sui-Sensemaking-Auth-Session", "Sui-Sensemaking-G
 _MEMBER_CREDENTIAL_HEADERS = ("X-Sui-Sensemaking-Authorization",)
 
 
+def agent_audit_is_not_exported(config: object) -> bool:
+    """agent を有効にしているのに、agent の操作が外部に記録されない構成か（ADR-0093）。
+
+    監査の外部出力は既定で無効で、SafeMode の event は別の設定が真でないと送られない。
+    agent の読み取りは SafeMode の event なので、両方が真のときだけ記録が残る。
+    """
+    agent_enabled = bool(
+        getattr(config, "agent_credential_hash_key", None)
+        or getattr(config, "agent_oauth_audience", None)
+    )
+    exported = bool(getattr(config, "audit_export_enabled", False)) and bool(
+        getattr(config, "audit_allow_in_safe_mode", False)
+    )
+    return agent_enabled and not exported
+
+
 def reject_mixed_credentials(request: Request) -> None:
     """agent の資格情報と、ゲスト/メンバーの資格情報を同時に送る要求を 400 で拒否する。"""
     if not request_has_agent_credential(request):

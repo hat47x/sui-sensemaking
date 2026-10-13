@@ -16,6 +16,7 @@ from sui_sensemaking_api.access_control import build_access_control_adapter
 from sui_sensemaking_api.admin_audit_repository import record_admin_audit_event
 from sui_sensemaking_api.control_plane_auth import control_plane_subject
 from sui_sensemaking_api.model_registry_seed import seed_registry_from_env
+from sui_sensemaking_api.agent_credentials import agent_audit_is_not_exported
 from sui_sensemaking_api.audit import build_audit_dispatcher
 from sui_sensemaking_api.db import SessionLocal, init_db
 from sui_sensemaking_api.database_content_store import DocumentRevisionDivergence
@@ -242,6 +243,13 @@ if settings.runtime_profile == "saas-multitenant":
     )
     # ADR-0094: 交換後のagentトークンが持つべき audience。未設定ならOAuth経路は使えない。
     app.state.agent_oauth_audience = settings.agent_oauth_audience
+    if agent_audit_is_not_exported(settings):
+        # ADR-0093: agent を有効にしているのに、agent の操作が外部に記録されない構成。
+        # 起動は止めず（既存の運用を壊さない）、気づけるように警告する。
+        logger.warning(
+            "agent credentials are enabled but audit events are not exported "
+            "(set SUI_AUDIT_EXPORT_ENABLED=true and SUI_AUDIT_ALLOW_IN_SAFE_MODE=true)"
+        )
     app.state.guest_redeem_state_store = _guest_redeem_state_store
     # Domain separation in guest_redeem.py makes key reuse cryptographically distinct.
     app.state.guest_redeem_state_hash_key = _saas_auth_session_hash_key
