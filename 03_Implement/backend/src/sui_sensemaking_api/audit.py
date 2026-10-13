@@ -18,7 +18,9 @@ from sui_sensemaking_api.trusted_http import open_trusted_http
 
 logger = logging.getLogger(__name__)
 
-AuditEventType = Literal["view", "export", "query", "bundle", "proposal", "apply", "llm"]
+AuditEventType = Literal[
+    "view", "export", "query", "bundle", "proposal", "apply", "llm", "agent_admin"
+]
 MAX_AUDIT_EVENT_BYTES = 64 * 1024
 MAX_AUDIT_METADATA_FIELDS = 32
 MAX_AUDIT_METADATA_KEY_LENGTH = 128
