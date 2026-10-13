@@ -788,6 +788,7 @@ def list_documents(
     `"{updated_at}:{id}"` cursor for the next page. The response stays a bare
     array, so existing clients are unaffected.
     """
+    reject_mixed_credentials(request)
     agent_principal = resolve_agent_request(request=request, db=db)
     if agent_principal is not None:
         # ADR-0093: 付与された文書の metadata だけを返す。tenant全体は見せない。
