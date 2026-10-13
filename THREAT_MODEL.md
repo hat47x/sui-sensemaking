@@ -58,7 +58,7 @@
 **想定する対策**
 
 - ロックファイルを使い、差分をレビューする。
-- CIで、lintとテストを常時実行する。
+- CIで、lintとテストを実行する。ただし現在は、常設のCIがなく（`04_Documentation/release.md`）、確認はリリース前の手動実行に頼っている。
 - 依存の更新のPRを分け、最小の権限でレビューする。
 
 ### 4. データのプライバシー
@@ -212,7 +212,7 @@ stdioの段階では、待ち受けのポートを開かず、外部から到達
 
 ADR-0063のD9により、認証の入口から検証済みの証跡を生成する実際のリゾルバー（`JwtSaasIdentityContextResolver`）と、CSRF対策付きのセッションの保存先（`InMemoryActiveTenantSessionPersister`）への接続は、実装済みである。ADR-0064のフェーズ1により、モックのOAuth 2.0とPKCEのログインフローと、JWTの検証のE2Eのテストも完了している。PostgreSQLで、スーパーユーザーでもBYPASSRLSでもない実行時のロールを使った、RLSの実際の検証、現在公開しているAPI、書き出しの監査、ワーカー、ブラウザ、キャッシュにおける、テナントを越えた検証の表、同じ認証セッションを共有する2つのタブから、実際のバックエンドへの古いリクエストの拒否までを、`SAAS-TENANT-01` のAC-1からAC-13として完了した。現在は存在しない、将来のインポート、共有、Webhookなどと、テナントに結び付いた認証情報をまだ持たないMCPのSaaSへの昇格は、別の将来の面であり、親のIssueが完了したことから、実装済みだと推論してはならない。MCPは、該当する認証情報がない間は、起動を止める状態を保つ。クリップボードのAPIを呼んだあとの、OS側での確定の取り消しは、ブラウザの外の副作用の限界として残るが、現在のテナント分離の受け入れの条件ではない。`saas-multitenant` のプロファイルは、`TrustedSaasRuntimePolicy.validate()` と、起動時の事前の検査が、必須の設定とコンポーネントを検証したときだけ起動する。実際の運用の配備では、その外部の依存を、明示的に構成する。
 
-**二層でのテナント分離の同時の検証は完了している（QA-TENANT-ISOLATION-01）**: アプリ層の `WHERE tenant_id` の絞り込みと、DB層のPostgreSQLのRLSは、これまで、独立にしか検証されていなかった。`test_tenant_isolation_postgres_rls.py`（CIのPostgreSQLのマトリクスで、`-m postgres` を付けて実行する）で、実際のHTTPの経路で、両方の層が同時に働くことを固定した（テナントAが書き込み、テナントBが読み取ると、404になる）。さらに、カナリアのテスト（`test_rls_alone_blocks_cross_tenant_without_app_where`）が、アプリ層のWHEREを介さない生のSELECTで、RLSだけで、テナントを越えた読み取りを止められることを固定している。これは、アプリ層の1か所が欠けても、RLSが後段で止める保証の、直接の証拠である。
+**二層でのテナント分離の同時の検証は完了している（QA-TENANT-ISOLATION-01）**: アプリ層の `WHERE tenant_id` の絞り込みと、DB層のPostgreSQLのRLSは、これまで、独立にしか検証されていなかった。`test_tenant_isolation_postgres_rls.py`（PostgreSQLの接続先を環境変数で与え、`-m postgres` を付けて手動で実行する。2026-08-14に手元のPostgreSQL 16で通過を確認した。常設のCIは2026-09-03に外したため、現在は自動では実行されない）で、実際のHTTPの経路で、両方の層が同時に働くことを固定した（テナントAが書き込み、テナントBが読み取ると、404になる）。さらに、カナリアのテスト（`test_rls_alone_blocks_cross_tenant_without_app_where`）が、アプリ層のWHEREを介さない生のSELECTで、RLSだけで、テナントを越えた読み取りを止められることを固定している。これは、アプリ層のWHEREが欠けた場合に、RLSが `documents` テーブルの読み取りを後段で止めることの、PostgreSQLでの直接の確認である。他の表や書き込みの経路、PostgreSQL以外のDBについて、同じ保護を保証するものではない。
 
 ## 検証と運用
 
