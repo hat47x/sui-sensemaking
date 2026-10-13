@@ -11,7 +11,7 @@ sui-sensemakingの `ContextBundle` の投影を読み取り専用で公開する
 1. `get_context_projection({ docId, constraint, safeMode? })`。フロントエンドの投影の中核である `buildContextProjection` を呼びます。`constraint` は `reviewed-only | evidence | contradiction | summary` のいずれかです。`safeMode` は省略すると `true`（安全な既定値）になります。
 2. `get_proposal_status({ docId })`。文書のCE4提案のライフサイクルを返します。AIの各提案が、まだ提案のみのまま（`status=proposed`）か、人間が決定した（`accepted | rejected | held`、`decidedAt` つき）かが分かります。生成AIの検証役は、提案が自動適用されていないことと、人間の決定の経緯を、何も変更せずに確認できます。
 
-**適用範囲（DOGFOOD-05）**: 未レビューのカードは、どの `constraint` でも `cards`、`relations`、`evidence`、`contradictions`、`voids[].cardIds` に現れず、その本文も返しません。`safeMode: false` でも同じです。未レビューのカードは `cards` に含まれず、件数だけが `counts.unreviewed` に出ます（`SEC-CONTEXT-PROJECTION-01` で安全側に拒否）。ただし、島の題名（`islands[].title`）と文書の題名（`documentMetadata.title`、取得できた場合）は、レビュー状態と `safeMode` に関係なく返します。この経路は、**レビュー済み**の内容を見直して構造化するためのもので、未レビューの資料を最初に探索する用途ではありません。レビュー済みカードの作業状態を尊重したいAIの協働者には、`holdState` のメタデータを返します（DOGFOOD-08）。
+**適用範囲（DOGFOOD-05）**: 未レビューのカードは、どの `constraint` でも `cards`、`relations`、`evidence`、`contradictions`、`voids[].cardIds` に現れず、その本文も返しません。`safeMode: false` でも同じです。未レビューのカードは `cards` に含まれず、件数だけが `counts.unreviewed` に出ます（`SEC-CONTEXT-PROJECTION-01` で安全側に拒否）。ただし、島の題名（`islands[].title`）は、レビュー済み（`titleReviewed`）の島の題名だけを返します。未レビューの島の題名は返さず、プレースホルダ `(未レビュー)` で置き換えます。文書の題名は、エージェントには返しません（`documentMetadata.title` は `null`）。この経路は、**レビュー済み**の内容を見直して構造化するためのもので、未レビューの資料を最初に探索する用途ではありません。レビュー済みカードの作業状態を尊重したいAIの協働者には、`holdState` のメタデータを返します（DOGFOOD-08）。
 
 リソースもプロンプトも書き込みツールもありません。2つのツールには `readOnlyHint: true` が付いています。`tools/list` の内容（2つのツールだけであること）と、`resources/list` が未対応（`-32601`）であることは、`src/context_projection_tool.test.ts` が固定のスナップショットと照合して固定しています。今後の変更で権限が増えたように見える場合は、このファイルを確認してください。
 

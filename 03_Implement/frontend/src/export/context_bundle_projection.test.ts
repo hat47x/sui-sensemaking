@@ -26,7 +26,7 @@ function buildDoc(): DocumentV1 {
       { id: "c4", text: "reviewed hypothesis four", x: 300, y: 0, claimType: "hypothesis", textReviewed: true },
     ],
     edges: [{ id: "e1", fromId: "c1", toId: "c2", type: "related" }],
-    islands: [{ id: "i1", cardIds: ["c1", "c2"], title: "First island" }],
+    islands: [{ id: "i1", cardIds: ["c1", "c2"], title: "First island", titleReviewed: true }],
     readingOrder: ["c1", "c2", "c3", "c4"],
     narratives: [],
     evidenceLinks: [
@@ -359,6 +359,21 @@ describe("buildContextProjection: structural void and narrative-check state", ()
           { id: "v-mixed", kind: "orphaned_island", resolved: false, cardIds: ["c1"] },
           { id: "v-unreviewed-only", kind: "orphaned_island", resolved: false },
         ]);
+      }
+    }
+  });
+});
+
+describe("buildContextProjection: island title review gate", () => {
+  it("never returns an unreviewed island title, under any constraint or SafeMode (fail closed)", async () => {
+    const doc = buildDoc();
+    doc.islands = [{ id: "i1", cardIds: ["c1", "c2"], title: "unreviewed secret title", titleReviewed: false }];
+
+    for (const constraint of CONTEXT_PROJECTION_CONSTRAINTS) {
+      for (const safeMode of [true, false]) {
+        const projection = await buildContextProjection({ doc, constraint, safeMode });
+        expect(JSON.stringify(projection), `${constraint}/${safeMode}`).not.toContain("unreviewed secret title");
+        expect(projection.islands).toEqual([{ id: "i1", title: "(未レビュー)" }]);
       }
     }
   });

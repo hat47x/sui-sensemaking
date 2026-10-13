@@ -18,7 +18,7 @@ import { canonicalizeJson } from "../domain/patch/patch_fingerprint";
 //
 // External read surface == the "share" SafeMode context: the content leaves
 // the app boundary to an outside agent, so with SafeMode ON no card text is
-// exposed (only structure/counts). Anti-scoring (ADR-0001/ADR-0049 §4.2):
+// exposed (only structure/counts, plus island titles a person has reviewed). Anti-scoring (ADR-0001/ADR-0049 §4.2):
 // no score/rank/confidence/priority is ever emitted, in the output or the
 // hashed payload.
 //
@@ -132,6 +132,16 @@ function projectCardText(
   return { text: SafeModePolicy.redactText(card.text, true), redacted: true };
 }
 
+/**
+ * An island title can quote card text (like a void title), so the external
+ * surface returns it only once a person has reviewed it. An unreviewed title is
+ * replaced by a placeholder; an island with no title keeps "(無題)".
+ */
+export function projectIslandTitle(island: DocumentV1["islands"][number]): string {
+  if (typeof island.title !== "string") return "(無題)";
+  return island.titleReviewed === true ? island.title : "(未レビュー)";
+}
+
 const byFromThenTo = (a: ProjectedLink, b: ProjectedLink): number =>
   a.from === b.from ? a.to.localeCompare(b.to) : a.from.localeCompare(b.from);
 
@@ -202,7 +212,7 @@ export async function buildContextProjection(input: ContextProjectionInput): Pro
 
   const islands = [...doc.islands]
     .sort((a, b) => a.id.localeCompare(b.id))
-    .map((island) => ({ id: island.id, title: island.title ?? "(無題)" }));
+    .map((island) => ({ id: island.id, title: projectIslandTitle(island) }));
 
   // Relations are only meaningful when both endpoints are in scope. For
   // summary they are always in scope of the full doc (structure only).

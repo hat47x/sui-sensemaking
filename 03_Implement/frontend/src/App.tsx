@@ -9716,6 +9716,15 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     ]
   );
 
+  const handleDiscardUncorrelatedAgentReview = useCallback((reviewKey: string) => {
+    const review = agentImportedProposalReviews.find((item) => item.reviewKey === reviewKey);
+    // Only a pending review without an audit record can be discarded locally;
+    // audited reviews keep their Reject path so the decision is recorded.
+    if (!review || review.status !== "pending" || review.auditProposalId) return;
+    setAgentImportedProposalReviews((previous) => previous.filter((item) => item.reviewKey !== reviewKey));
+    setStatusMessage(t("agent_response_import.rejected_status_message"));
+  }, [agentImportedProposalReviews]);
+
   const handleRejectAgentImportedProposal = useCallback(async (reviewKey: string) => {
     const review = agentImportedProposalReviews.find((item) => item.reviewKey === reviewKey);
     if (!document || !review || review.status !== "pending") return;
@@ -12966,6 +12975,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       reviews={agentImportedProposalReviews}
       onAdopt={handleAdoptAgentImportedProposal}
       onReject={handleRejectAgentImportedProposal}
+      onDiscardUncorrelated={handleDiscardUncorrelatedAgentReview}
       onExportPatchFile={handleExportAgentImportedProposalPatchFile}
     />
     </LazyPanelBoundary>

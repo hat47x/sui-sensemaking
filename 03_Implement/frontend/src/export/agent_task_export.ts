@@ -2,6 +2,7 @@ import type { DocumentV1 } from "../domain/types";
 import { resolveKnownEdgeType } from "../domain/types";
 import { SafeModePolicy } from "../domain/policy/safe_mode";
 import { canonicalizeJson } from "../domain/patch/patch_fingerprint";
+import { projectIslandTitle } from "./context_bundle_projection";
 
 // EXT-AGENT-01 (ADR-0049 D2, spec `02_Architecture/external_agent_collaboration_spec.md`
 // §3): AgentTaskPackage v1 -- a single Markdown "task sheet" a human hands to an
@@ -155,7 +156,8 @@ function buildContextExcerpt(input: AgentTaskSheetInput): ContextExcerpt {
     .sort()
     .map((islandId) => islandsById.get(islandId))
     .filter((island): island is NonNullable<typeof island> => island !== undefined)
-    .map((island) => ({ id: island.id, title: island.title ?? "(無題)" }));
+    // Same rule as the external projection: an island title leaves the app only once reviewed.
+    .map((island) => ({ id: island.id, title: projectIslandTitle(island) }));
 
   const relationEntries = doc.edges
     .filter((edge) => selectedEntityIds.has(edge.fromId) && selectedEntityIds.has(edge.toId))

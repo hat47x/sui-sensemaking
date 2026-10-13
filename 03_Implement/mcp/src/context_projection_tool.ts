@@ -20,15 +20,16 @@ export function registerContextProjectionTool(server: McpServer, documentClientC
     "get_context_projection",
     {
       title: "Get context projection",
-      // safeMode withholds card text only. Island titles (islands[].title) and the
-      // document title (documentMetadata.title) are returned regardless of safeMode.
-      // The description string below says "only structure and counts", which does
-      // not hold for those title fields.
+      // safeMode withholds card text only. An island title (islands[].title) is returned only
+      // once it is reviewed (titleReviewed); an unreviewed one is shown as a placeholder. The
+      // document title is not returned to agent callers (documentMetadata.title is null).
+      // The description string below states the same rules.
       description:
         "Read-only, constraint-scoped, SafeMode-respecting projection of a sui-sensemaking document " +
         "(ADR-0054 stage 1). The output never includes a score, rank, confidence, or priority " +
-        "value of any kind. When safeMode is true (the default), no card text is exposed -- only " +
-        "structure and counts. " +
+        "value of any kind. When safeMode is true (the default), no card text is exposed. " +
+        "Island titles are returned only when reviewed (an unreviewed title is replaced by a " +
+        "placeholder); the document title is not returned to agent callers. " +
         "Unreviewed cards are never exposed on ANY constraint (even safeMode=false reports " +
         "cards=0 for them, SEC-CONTEXT-PROJECTION-01 fail-closed): use this tool for reviewing " +
         "and structuring already-reviewed content, not for initial exploration of unreviewed " +

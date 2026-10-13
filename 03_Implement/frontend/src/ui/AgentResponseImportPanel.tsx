@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, type KeyboardEvent } from "react";
 import { t } from "../i18n/translate";
 import type { ParsedAgentProposal, AgentResponseImportMode } from "../import/agent_response_import";
 import type { ImportedProposalReview } from "../import/agent_response_import";
@@ -23,6 +23,8 @@ type AgentResponseImportPanelProps = {
   reviews: ImportedProposalReview[];
   onAdopt: (reviewKey: string) => void;
   onReject: (reviewKey: string) => void;
+  /** Discards an uncorrelated pending review (no audit record): App removes it from state. */
+  onDiscardUncorrelated: (reviewKey: string) => void;
   onExportPatchFile: (reviewKey: string) => void;
 };
 
@@ -75,17 +77,17 @@ export function AgentResponseImportPanel({
   reviews,
   onAdopt,
   onReject,
+  onDiscardUncorrelated,
   onExportPatchFile,
 }: AgentResponseImportPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const parseErrorsId = useId();
   // An uncorrelated proposal has no audit record, so App refuses onReject for
-  // it. Its Discard only hides the card here: no document write, no apply or
-  // import call, and nothing is marked reviewed.
-  const [dismissedReviewKeys, setDismissedReviewKeys] = useState<ReadonlySet<string>>(() => new Set<string>());
-  const visibleReviews = reviews.filter((review) => !dismissedReviewKeys.has(review.reviewKey));
+  // it. Discard asks App to drop the review from its state, which also lets a
+  // later paste of the same response import it again. No document write, no
+  // apply or import call, and nothing is marked reviewed.
   const dismissUncorrelatedReview = (reviewKey: string) => {
-    setDismissedReviewKeys((previous) => new Set(previous).add(reviewKey));
+    onDiscardUncorrelated(reviewKey);
     panelRef.current?.focus();
   };
 
@@ -200,9 +202,9 @@ export function AgentResponseImportPanel({
         </div>
       ) : null}
 
-      {visibleReviews.length > 0 ? (
+      {reviews.length > 0 ? (
         <div style={{ display: "grid", gap: 8 }}>
-          {visibleReviews.map((review) => (
+          {reviews.map((review) => (
             <div
               key={review.reviewKey}
               data-testid={`agent-response-proposal-${review.proposalId}`}

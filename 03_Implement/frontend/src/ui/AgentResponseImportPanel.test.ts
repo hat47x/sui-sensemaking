@@ -37,6 +37,7 @@ function buildProps(overrides: Partial<React.ComponentProps<typeof AgentResponse
     reviews: [],
     onAdopt: vi.fn(),
     onReject: vi.fn(),
+    onDiscardUncorrelated: vi.fn(),
     onExportPatchFile: vi.fn(),
     ...overrides,
   };

@@ -151,4 +151,27 @@ describe("agent_task_export golden fixtures", () => {
     expect(output.taskSheetMd).toContain(output.correlation.bundleHash);
     expect(output.taskJson).toBe(JSON.stringify(output.correlation, null, 2));
   });
+
+  it("does not put an unreviewed island title into the sheet or the structured output", async () => {
+    const doc: DocumentV1 = {
+      ...fixtureDoc,
+      islands: [
+        ...(fixtureDoc.islands ?? []),
+        { id: "i-unreviewed", cardIds: ["c1"], title: "unreviewed secret island title" },
+      ],
+    };
+    const output = await buildAgentTaskSheet({
+      doc,
+      taskKind: "island_titles",
+      selectedCardIds: ["c1"],
+      selectedIslandIds: ["i-unreviewed"],
+      safeMode: true,
+      taskId: FIXED_TASK_ID,
+      createdAt: FIXED_CREATED_AT,
+    });
+
+    expect(output.taskSheetMd).toContain("(未レビュー)");
+    expect(output.taskSheetMd).not.toContain("unreviewed secret island title");
+    expect(output.taskJson).not.toContain("unreviewed secret island title");
+  });
 });

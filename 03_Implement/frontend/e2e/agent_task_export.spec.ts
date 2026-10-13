@@ -10,6 +10,19 @@ import { SHARE_REPRODUCE_BUTTON } from "./helpers/i18n";
 
 const FIXED_TIMESTAMP = "2026-07-09T00:00:00.000Z";
 
+// Parsed body of a POST /ai/external-tasks/register request (models_ai.py
+// ExternalAgentTaskRegistrationRequest). Recorded per test, reset in beforeEach.
+type RegisterTaskRequestBody = {
+  docId?: string;
+  taskId?: string;
+  baseDocSignature?: string;
+  sourceBundleHash?: string;
+  queryCanonicalHash?: string;
+  taskKind?: string;
+  provenanceLevel?: string;
+};
+let registerRequestBodies: RegisterTaskRequestBody[] = [];
+
 function buildFixtureDocument() {
   return {
     version: 1,
@@ -52,10 +65,12 @@ async function routeFixture(page: Page): Promise<void> {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "accepted" }) });
   });
   // The task correlation must be registered before the sheet is released
-  // (fail-closed in the app). Echo the taskId the client sent, as the backend
-  // does; the response carries no body text (ExternalAgentTaskRegistrationResponse).
+  // (fail-closed in the app). The response has only registered, taskId and
+  // provenanceLevel (ExternalAgentTaskRegistrationResponse, extra forbid), so
+  // the stub echoes the taskId the client sent and nothing else.
   await page.route("**/ai/external-tasks/register", async (route) => {
-    const sent = JSON.parse(route.request().postData() ?? "{}") as { taskId?: string };
+    const sent = JSON.parse(route.request().postData() ?? "{}") as RegisterTaskRequestBody;
+    registerRequestBodies.push(sent);
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -77,6 +92,7 @@ async function readDownloadText(download: Download): Promise<string> {
 }
 
 test.beforeEach(async ({ page }) => {
+  registerRequestBodies = [];
   await routeFixture(page);
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto("/?locale=en");
@@ -123,6 +139,16 @@ test("export is blocked until scope is confirmed, then downloads a task sheet wi
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("task-sheet.md");
 
+  // The sheet is released only after this registration succeeded. The request
+  // must name the fixture document, the unsigned provenance level and a base
+  // signature (the backend rejects a stale one with 409).
+  expect(registerRequestBodies).toHaveLength(1);
+  const registered = registerRequestBodies[0];
+  expect(registered?.docId).toBe("doc_agent_task_e2e_fixture");
+  expect(registered?.provenanceLevel).toBe("user_presented_unsigned");
+  expect(typeof registered?.baseDocSignature).toBe("string");
+  expect(registered?.baseDocSignature).not.toBe("");
+
   const taskSheet = await readDownloadText(download);
   const sectionOrder = ["## 依頼", "## ガードレール", "## 文脈", "## 応答契約", "## 相関ブロック"].map((heading) =>
     taskSheet.indexOf(heading),
@@ -132,6 +158,8 @@ test("export is blocked until scope is confirmed, then downloads a task sheet wi
   expect(taskSheet).toContain("あなたの出力は提案であり確定しません");
   expect(taskSheet).toContain('"schemaVersion": "agent-task.v1"');
   expect(taskSheet).toContain('"docId": "doc_agent_task_e2e_fixture"');
+  // The signature the sheet carries must be the one the registration sent.
+  expect(taskSheet).toContain(`"baseDocSignature": "${registered?.baseDocSignature}"`);
 
   // AC-3: the unreviewed card's text is excluded by default.
   expect(taskSheet).not.toContain("unreviewed draft card");
@@ -140,6 +168,46 @@ test("export is blocked until scope is confirmed, then downloads a task sheet wi
   // §4.2 anti-scoring, outside the guardrail's own prohibition sentence.
   const withoutGuardrail = taskSheet.replace(/「あなたの出力は提案であり確定しません[^」]*」/, "");
   expect(withoutGuardrail).not.toMatch(/score|rank|confidence|priority|readiness/i);
+});
+
+test("a failed task registration blocks the download and shows the registration_failed message", async ({ page }) => {
+  // Playwright runs the most recently registered route first, so this 409
+  // handler takes precedence over the 200 stub from routeFixture. 409 is what
+  // the backend returns for a stale base document or a conflicting registration.
+  await page.route("**/ai/external-tasks/register", async (route) => {
+    registerRequestBodies.push(JSON.parse(route.request().postData() ?? "{}") as RegisterTaskRequestBody);
+    await route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "External task registration conflicted" }),
+    });
+  });
+
+  await page.getByRole("button", { name: "Advanced", exact: true }).click();
+  await page.getByRole("button", { name: /reviewed card one/ }).click();
+  await page.getByRole("button", { name: "Export to agent" }).click();
+
+  const panel = page.locator('[data-ui-region="agent-task-export"]');
+  await expect(panel).toBeVisible();
+
+  const downloadButton = page.getByRole("button", { name: "Download task sheet (.md)" });
+  await expect(downloadButton).toBeDisabled();
+  await page.getByTestId("agent-task-scope-confirmed").check();
+  await expect(downloadButton).toBeEnabled();
+
+  // Any download that starts within this window means the sheet was released
+  // without a successful registration.
+  const downloadFired = page.waitForEvent("download", { timeout: 2000 }).then(
+    () => true,
+    () => false,
+  );
+  await downloadButton.click();
+
+  await expect(page.getByTestId("status-message")).toHaveText(
+    "Export was stopped because the task correlation could not be registered.",
+  );
+  expect(registerRequestBodies).toHaveLength(1);
+  expect(await downloadFired).toBe(false);
 });
 
 test("Escape closes the panel and returns focus to the trigger", async ({ page }) => {
