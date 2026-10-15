@@ -112,7 +112,7 @@ docker compose up --build
 
 ### 4. 相談と報告の窓口
 
-- バグの候補と機能の案: Discussionsで共有してください。実行できる作業は、メンテナが [`ROADMAP.md`](ROADMAP.md) に整理します。
+- バグの報告と機能の案: GitHub Issues のテンプレートで起票してください。採用する作業は、メンテナが [`ROADMAP.md`](ROADMAP.md) に反映します。
 - 脆弱性の報告: [`SECURITY.md`](SECURITY.md)
 - 一般的なサポート: [`SUPPORT.md`](SUPPORT.md)
 
