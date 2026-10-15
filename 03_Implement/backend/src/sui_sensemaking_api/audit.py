@@ -18,7 +18,9 @@ from sui_sensemaking_api.trusted_http import open_trusted_http
 
 logger = logging.getLogger(__name__)
 
-AuditEventType = Literal["view", "export", "query", "bundle", "proposal", "apply", "llm"]
+AuditEventType = Literal[
+    "view", "export", "query", "bundle", "proposal", "apply", "llm", "agent_admin"
+]
 MAX_AUDIT_EVENT_BYTES = 64 * 1024
 MAX_AUDIT_METADATA_FIELDS = 32
 MAX_AUDIT_METADATA_KEY_LENGTH = 128
@@ -41,6 +43,9 @@ class AuditEvent(BaseModel):
     docId: str = Field(min_length=1, max_length=MAX_AUDIT_IDENTIFIER_LENGTH)
     safeMode: bool
     actorRefHash: str | None = Field(default=None, pattern=r"^[0-9a-f]{24}$")
+    # 主体の区分。actorRefHash は区分を含まないので、人間と非人間（agent）を、記録だけで
+    # 区別できるようにする。未指定（既存の経路）は None。
+    principalKind: Literal["member", "guest", "agent"] | None = None
     metadata: dict[str, str | int | float | bool | None] = Field(
         default_factory=dict,
         max_length=MAX_AUDIT_METADATA_FIELDS,
@@ -243,6 +248,7 @@ def build_event(
     doc_id: str,
     safe_mode: bool,
     actor_ref: str | None = None,
+    principal_kind: Literal["member", "guest", "agent"] | None = None,
     metadata: dict[str, object] | None = None,
 ) -> AuditEvent:
     actor_ref_hash: str | None = None
@@ -257,6 +263,7 @@ def build_event(
         docId=doc_id,
         safeMode=safe_mode,
         actorRefHash=actor_ref_hash,
+        principalKind=principal_kind,
         metadata=sanitize_metadata(metadata or {}),
     )
 

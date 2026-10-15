@@ -438,6 +438,7 @@ def test_audit_event_carries_tenant_and_agent_but_no_content_or_token(env) -> No
     assert event.tenantId == "tenant-a"
     assert event.actorRefHash == sha256(b"agent:agent-a").hexdigest()[:24]
     assert event.actorRefHash != sha256(b"spoofed-user").hexdigest()[:24]
+    assert event.principalKind == "agent"
     assert env["token_a"] not in repr(event)
     assert "REVIEWED-TEXT" not in repr(event)
 

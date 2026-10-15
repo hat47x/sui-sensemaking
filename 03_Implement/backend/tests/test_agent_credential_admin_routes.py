@@ -495,3 +495,42 @@ def test_an_unknown_identity_provider_cannot_be_bound(tmp_path) -> None:
 
     assert response.status_code == 404
     assert response.json()["detail"]["code"] == "identity_provider_not_found"
+
+
+class _SpyDispatcher:
+    def __init__(self) -> None:
+        self.events: list[object] = []
+
+    def emit(self, event: object, *, dedup_key=None) -> None:  # noqa: ANN001
+        self.events.append(event)
+
+
+def test_admin_operations_are_audited_as_a_member_without_secrets(tmp_path) -> None:
+    principal = {"identityProviderId": "idp-agents", "subject": "agent-client-1"}
+    with _client(tmp_path) as (client, _, _, _):
+        spy = _SpyDispatcher()
+        client.app.state.audit_dispatcher = spy
+        created = client.post(BASE, json=_body(docIds=["shared-doc", "a-second"]))
+        client.post(f"{BASE}/agent-1/oauth-bindings", json=principal)
+        client.post(f"{BASE}/agent-1/oauth-bindings/remove", json=principal)
+        client.delete(f"{BASE}/agent-1/documents/a-second")
+        client.post(f"{BASE}/agent-1/revoke")
+        failed = client.post(f"{BASE}/no-such/revoke")
+
+    token = created.json()["credential"]
+    pairs = [(e.metadata["operation"], e.docId) for e in spy.events]
+    assert pairs == [
+        ("register", "shared-doc"),
+        ("register", "a-second"),
+        ("bind_oauth", "-"),
+        ("unbind_oauth", "-"),
+        ("revoke_grant", "a-second"),
+        ("revoke", "-"),
+    ]
+    assert failed.status_code == 404  # 失敗した操作は記録しない
+    assert {e.principalKind for e in spy.events} == {"member"}
+    assert {e.tenantId for e in spy.events} == {"tenant-a"}
+    assert all(e.actorRefHash for e in spy.events)
+    dumped = repr(spy.events)
+    assert token not in dumped
+    assert "agent-client-1" not in dumped  # OAuth の subject は載せない

@@ -20,6 +20,7 @@ from sui_sensemaking_api.agent_credentials import (
     AgentCredentialError,
     AgentCredentialRepository,
 )
+from sui_sensemaking_api.audit import build_event
 from sui_sensemaking_api.auth_context import ResolvedIdentity
 from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.routes.docs import authorize_resolved_member_document
@@ -164,6 +165,38 @@ def _require_registrant_can_read(
             raise
 
 
+def _emit_admin_audit(
+    request: Request,
+    *,
+    identity: ResolvedIdentity,
+    tenant: TenantContext,
+    operation: str,
+    agent_id: str,
+    doc_id: str | None = None,
+    extra: dict[str, object] | None = None,
+) -> None:
+    """管理操作を、読み取りと同じ監査の経路に載せる。本文・トークン・OAuthの subject は含めない。
+
+    文書に紐づかない操作の docId は "-"。操作者は人間（member）で、区分は検証済みの
+    session から決める。成功した操作だけを記録する（失敗は応答の状態で足りる）。
+    """
+    dispatcher = getattr(request.app.state, "audit_dispatcher", None)
+    if dispatcher is None:
+        return
+    dispatcher.emit(
+        build_event(
+            event_type="agent_admin",
+            tenant_id=tenant.tenant_id,
+            doc_id=doc_id or "-",
+            # 管理操作は SafeMode に依存しない。metadata は固定で、内容を含まない。
+            safe_mode=False,
+            actor_ref=identity.auth_context.actor_ref,
+            principal_kind="member",
+            metadata={"operation": operation, "agentId": agent_id, **(extra or {})},
+        )
+    )
+
+
 def _summary(
     row,  # noqa: ANN001
     doc_ids: tuple[str, ...],
@@ -249,6 +282,15 @@ def register_agent_credential(
             status_code=409, code="agent_credential_exists", message="agentId already exists."
         ) from error
 
+    for granted in payload.docIds:
+        _emit_admin_audit(
+            request,
+            identity=identity,
+            tenant=tenant,
+            operation="register",
+            agent_id=payload.agentId,
+            doc_id=granted,
+        )
     logger.info(
         "agent credential registered",
         extra={
@@ -294,7 +336,7 @@ def revoke_agent_credential(
     request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
-    _, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
+    identity, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
     repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
     try:
         repo.revoke_credential(agent_id=agent_id, now=datetime.now(timezone.utc))
@@ -306,6 +348,9 @@ def revoke_agent_credential(
             code="agent_credential_not_found",
             message="Agent credential not found.",
         ) from error
+    _emit_admin_audit(
+        request, identity=identity, tenant=tenant, operation="revoke", agent_id=agent_id
+    )
     logger.info(
         "agent credential revoked", extra={"tenantId": tenant.tenant_id, "agentId": agent_id}
     )
@@ -319,7 +364,7 @@ def revoke_agent_document_grant(
     request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
-    _, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
+    identity, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
     repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
     try:
         repo.revoke_document_grant(agent_id=agent_id, doc_id=doc_id, now=datetime.now(timezone.utc))
@@ -329,6 +374,14 @@ def revoke_agent_document_grant(
         raise _error(
             status_code=404, code="agent_grant_not_found", message="Agent grant not found."
         ) from error
+    _emit_admin_audit(
+        request,
+        identity=identity,
+        tenant=tenant,
+        operation="revoke_grant",
+        agent_id=agent_id,
+        doc_id=doc_id,
+    )
     return Response(status_code=204)
 
 
@@ -378,6 +431,14 @@ def bind_agent_oauth_principal(
             code="agent_oauth_principal_bound",
             message="The OAuth principal is already bound.",
         ) from error
+    _emit_admin_audit(
+        request,
+        identity=identity,
+        tenant=tenant,
+        operation="bind_oauth",
+        agent_id=agent_id,
+        extra={"identityProviderId": payload.identityProviderId},
+    )
     logger.info(
         "agent oauth principal bound",
         extra={"tenantId": tenant.tenant_id, "agentId": agent_id},
@@ -392,7 +453,7 @@ def unbind_agent_oauth_principal(
     request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
-    _, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
+    identity, tenant = _authorize(request=request, db=db, any_of=(AGENT_REVOKE_CAPABILITY,))
     repo = AgentCredentialRepository(db, tenant_id=tenant.tenant_id)
     try:
         repo.unbind_oauth_principal(
@@ -406,4 +467,12 @@ def unbind_agent_oauth_principal(
         raise _error(
             status_code=404, code="agent_binding_not_found", message="Agent binding not found."
         ) from error
+    _emit_admin_audit(
+        request,
+        identity=identity,
+        tenant=tenant,
+        operation="unbind_oauth",
+        agent_id=agent_id,
+        extra={"identityProviderId": payload.identityProviderId},
+    )
     return Response(status_code=204)

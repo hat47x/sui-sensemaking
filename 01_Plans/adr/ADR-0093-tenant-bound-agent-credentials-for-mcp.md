@@ -83,5 +83,9 @@ CVI（不変条件）のうち、share/書き出しで未レビュー情報・�
 - **資格情報の系統を混ぜない。** agent の資格情報（不透明・OAuth）と、利用者の資格情報（cookie・ヘッダー）を同じ要求で送ると、`400 agent_credential_conflict` で閉じる。どの主体として扱うかを曖昧にしないため。
 - **agent への応答は共有キャッシュに残さない。** agent の応答は `Cache-Control: private, no-store` とし、資格情報のヘッダーで `Vary` を付ける。ETag は返さない。保存された全文のハッシュは、伏せた項目の変更や内容の一致を示す手掛かりになるため。`created_by`（内部のユーザーID）も返さない。
 - **agent の監査は読み取りの記録だけ。** agent が送れる context-audit は、MCP の `context-query` だけとする。提案・適用の監査は作れない。CE-4 の完全性の追跡は、人間の経路の提案→適用の連鎖のためのものなので、agent の読み取り監査はそこに加えない。
+- **監査 event は主体の区分を持つ。** 閲覧などの監査 event に、固定項目 `principalKind`（`member` / `guest` / `agent`）を加える。区分は、検証済みの認証経路から決め、header の申告は使わない。`actorRefHash` は区分を含まない指紋なので、人間と非人間を記録だけで区別するために必要になる。責任を持つ人間への追跡は、資格情報と付与の行に残る登録者・付与者で行い、監査 event には載せない（仮決め。運用で不足が分かったら見直す）。
 
-**この訂正が保証しないこと。** agent 経由の監査イベントが、既定の監査設定で記録されない経路があるかは、導入時に確かめる（未解決）。ログに資格情報が出ないことは、`03_Implement/backend/tests/test_agent_credential_log_hygiene.py` で検査する。これは試験の範囲の保証であり、本番の監視基盤の出力までは確かめない。
+- **agent の監査を残すための運用条件。** 監査の外部出力は既定で無効（`SUI_AUDIT_EXPORT_ENABLED=false`）で、SafeMode の event は `SUI_AUDIT_ALLOW_IN_SAFE_MODE` が真でないと送られない。agent の読み取りは SafeMode の event なので、既定の設定では、agent の操作は外部に記録されない。agent を有効にする環境では、両方を有効にする（仮決め。event は本文・題名・トークンを含まない固定の metadata なので、SafeMode でも出して差し支えないと見立てている）。この条件は、起動時に警告する（`saas-multitenant` で agent の設定があり、両方の設定が揃っていないとき。起動は止めない。既存の運用を壊さないための仮決めで、拒否に強めるかは未決）。
+- **管理操作も監査 event に載せる。** 登録・失効・付与の取消・OAuth 対応付けの結び/外しは、成功したときに `agent_admin` の event を出す（操作者は `member`、metadata は操作の種類と `agentId` だけ。トークン、OAuth の subject は含めない）。文書に紐づかない操作の `docId` は `-`。`agent_admin` の event は SafeMode に依存しないが、外部出力が無効なら送られない（上記の運用条件に従う）。仮決め。
+
+**この訂正が保証しないこと。**ログに資格情報が出ないことは、`03_Implement/backend/tests/test_agent_credential_log_hygiene.py` で検査する。これは試験の範囲の保証であり、本番の監視基盤の出力までは確かめない。

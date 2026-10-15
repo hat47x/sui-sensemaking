@@ -657,6 +657,16 @@ def _audit_actor_ref(request: Request, access_request: AccessRequest) -> str | N
     return request.headers.get("x-actor-ref")
 
 
+def _audit_principal_kind(access_request: AccessRequest) -> Literal["member", "guest", "agent"]:
+    """監査eventの主体の区分。検証済みの認証経路から決め、headerの申告は使わない。"""
+    provider = access_request.auth.provider
+    if provider == "agent_credential":
+        return "agent"
+    if provider == "guest_session":
+        return "guest"
+    return "member"
+
+
 # 必須で空にできない文字列項目へ入れる、「伏せた」ことを示す印。
 _AGENT_WITHHELD = "[withheld]"
 _AGENT_CARD_FIELDS = ("id", "x", "y", "claimType", "holdState", "textReviewed")
@@ -917,6 +927,7 @@ def get_document(
                 doc_id=doc_id,
                 safe_mode=True,
                 actor_ref=_audit_actor_ref(request, access_request),
+                principal_kind=_audit_principal_kind(access_request),
                 metadata={
                     "route": f"/docs/{doc_id}",
                     "method": "GET",
@@ -1420,6 +1431,7 @@ def _commit_sui_card_move_action(
                     doc_id=doc_id,
                     safe_mode=True,
                     actor_ref=_audit_actor_ref(request, access_request),
+                    principal_kind=_audit_principal_kind(access_request),
                     metadata={
                         "actionId": "sui.move",
                         "method": "POST",
@@ -1672,6 +1684,7 @@ def post_context_audit(
                 doc_id=doc_id,
                 safe_mode=payload.safeMode,
                 actor_ref=_audit_actor_ref(request, access_request),
+                principal_kind=_audit_principal_kind(access_request),
                 metadata={
                     "route": f"/docs/{doc_id}/context-audit",
                     "method": "POST",
@@ -1740,6 +1753,7 @@ def post_export_audit(
                 doc_id=doc_id,
                 safe_mode=payload.safeMode,
                 actor_ref=_audit_actor_ref(request, access_request),
+                principal_kind=_audit_principal_kind(access_request),
                 metadata={
                     "route": f"/docs/{doc_id}/export-audit",
                     "method": "POST",
