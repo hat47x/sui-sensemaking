@@ -9595,20 +9595,6 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         setStatusMessage(t("agent_response_import.audit_required_status_message"));
         return;
       }
-      try {
-        await runTenantScopedApiRequest(() => recordExternalAgentProposalDecision({
-          docId: document.id,
-          proposalId: review.auditProposalId!,
-          sourceBundleHash: review.sourceBundleHash!,
-          idempotencyKey: `${review.auditProposalId}:adopt`,
-          decision: "adopt",
-          provenanceLevel: "user_presented_unsigned",
-        }, { tenantSessionContext: verifiedTenantSession }));
-      } catch {
-        setStatusMessage(t("agent_response_import.audit_failed_status_message"));
-        return;
-      }
-
       let adopted = false;
       switch (review.kind) {
         case "island_title": {
@@ -9699,6 +9685,21 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       }
 
       if (!adopted) {
+        setStatusMessage(t("agent_response_import.audit_failed_status_message"));
+        return;
+      }
+
+      try {
+        await runTenantScopedApiRequest(() => recordExternalAgentProposalDecision({
+          docId: document.id,
+          proposalId: review.auditProposalId!,
+          sourceBundleHash: review.sourceBundleHash!,
+          idempotencyKey: `${review.auditProposalId}:adopt`,
+          decision: "adopt",
+          provenanceLevel: "user_presented_unsigned",
+        }, { tenantSessionContext: verifiedTenantSession }));
+      } catch {
+        setStatusMessage(t("agent_response_import.audit_failed_status_message"));
         return;
       }
 

@@ -1026,7 +1026,7 @@ describe("UX Operability regression contracts", () => {
     const parseBlock = appSource.slice(appSource.indexOf("const handleParseAgentResponse"), parseBlockEnd);
     expect(parseBlock).not.toContain("applyDocumentChange(");
     const adoptBlock = appSource.slice(parseBlockEnd, appSource.indexOf("const handleRejectAgentImportedProposal"));
-    expect(adoptBlock.indexOf("recordExternalAgentProposalDecision(")).toBeLessThan(adoptBlock.indexOf("applyDocumentChange("));
+    expect(adoptBlock.indexOf("applyDocumentChange(")).toBeLessThan(adoptBlock.indexOf("recordExternalAgentProposalDecision("));
     expect(adoptBlock).toContain('t("agent_response_import.audit_failed_status_message")');
     expect(appSource.match(/applyDocumentChange\(\{ \.\.\.document, islands: nextIslands \}, t\("app\.history\.agent_response\.island_title_imported"\)\)/g)).toHaveLength(1);
     expect(appSource).toContain('t("app.history.agent_response.narrative_imported")');
