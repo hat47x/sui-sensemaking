@@ -119,6 +119,42 @@ describe("validateDocumentV1Strict", () => {
     );
   });
 
+  it("accepts structure decisions and rejects malformed actions or empty card ids", () => {
+    const decision = {
+      id: "structure-1",
+      createdAt: now,
+      action: "island_create",
+      islandId: "i1",
+      cardIds: ["c1"],
+      rationale: "these cards share a concern",
+    };
+
+    const valid = validateDocumentV1Strict({
+      ...validDocument,
+      islands: [{ id: "i1", cardIds: ["c1"] }],
+      structureDecisions: [decision],
+    });
+    expect(valid.ok).toBe(true);
+
+    const invalidAction = validateDocumentV1Strict({
+      ...validDocument,
+      structureDecisions: [{ ...decision, action: "bogus" }],
+    });
+    expect(invalidAction.ok).toBe(false);
+    if (invalidAction.ok) return;
+    expect(invalidAction.errors).toContain(
+      "structureDecisions[0].action: must be 'island_create' | 'cards_added_to_island' | 'cards_removed_from_island' | 'hold_state_changed'"
+    );
+
+    const invalidCards = validateDocumentV1Strict({
+      ...validDocument,
+      structureDecisions: [{ ...decision, cardIds: [] }],
+    });
+    expect(invalidCards.ok).toBe(false);
+    if (invalidCards.ok) return;
+    expect(invalidCards.errors).toContain("structureDecisions[0].cardIds: must contain at least one card id");
+  });
+
   it("accepts a shelf entry that points to a shelved card", () => {
     const result = validateDocumentV1Strict({
       ...validDocument,

@@ -41,6 +41,7 @@ import {
   type RepresentativeVisualCue,
   type ReviewAttribution,
   type ShelfEntry,
+  type StructureDecisionRecord,
   type SummaryHistoryEntry,
   type Transform,
   type VoidEntry,
@@ -193,6 +194,7 @@ const DOCUMENT_FIELDS = {
   deterministicTieBreak: "rebuild",
   shelf: "rebuild",
   contradictionSignalDecisions: "omit",
+  structureDecisions: "rebuild",
   voids: "rebuild",
 } satisfies Record<keyof DocumentV1, FieldPolicy>;
 
@@ -1003,6 +1005,19 @@ function sanitizePatchLog(entry: PatchApplyLogEntry): PatchApplyLogEntry {
   };
 }
 
+function sanitizeStructureDecision(entry: StructureDecisionRecord): StructureDecisionRecord {
+  return {
+    id: entry.id,
+    createdAt: entry.createdAt,
+    action: entry.action,
+    ...(entry.islandId !== undefined ? { islandId: entry.islandId } : {}),
+    cardIds: [...entry.cardIds],
+    ...(entry.fromValue !== undefined ? { fromValue: entry.fromValue } : {}),
+    ...(entry.toValue !== undefined ? { toValue: entry.toValue } : {}),
+    ...(entry.rationale !== undefined ? { rationale: redact(entry.rationale) } : {}),
+  };
+}
+
 function sanitizeMergeDecision(entry: MergeSuggestionDecisionEntry): MergeSuggestionDecisionEntry {
   return {
     id: entry.id,
@@ -1097,6 +1112,9 @@ export function deriveDocumentSafeModeProjection(
       : {}),
     ...(document.mergeSuggestionDecisions !== undefined
       ? { mergeSuggestionDecisions: document.mergeSuggestionDecisions.map(sanitizeMergeDecision) }
+      : {}),
+    ...(document.structureDecisions !== undefined
+      ? { structureDecisions: document.structureDecisions.map(sanitizeStructureDecision) }
       : {}),
     ...(document.critiqueInputs !== undefined
       ? { critiqueInputs: document.critiqueInputs.map(sanitizeCritiqueInput) }

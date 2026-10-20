@@ -24,6 +24,7 @@ import type {
   RelationSummaryHistoryEntry,
   RepresentativeVisualCue,
   ShelfEntry,
+  StructureDecisionRecord,
   SummaryHistoryEntry,
   Transform,
   VoidEntry,
@@ -1032,6 +1033,51 @@ function parseMergeSuggestionDecisions(value: unknown): MergeSuggestionDecisionE
   return entries.length > 0 ? entries : undefined;
 }
 
+function isStructureDecisionAction(value: unknown): value is StructureDecisionRecord["action"] {
+  return value === "island_create"
+    || value === "cards_added_to_island"
+    || value === "cards_removed_from_island"
+    || value === "hold_state_changed";
+}
+
+function parseStructureDecisions(value: unknown): StructureDecisionRecord[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const entries: StructureDecisionRecord[] = [];
+  for (const item of value) {
+    if (
+      !isRecord(item)
+      || typeof item.id !== "string"
+      || item.id.length === 0
+      || typeof item.createdAt !== "string"
+      || !isStructureDecisionAction(item.action)
+      || !Array.isArray(item.cardIds)
+      || !item.cardIds.every((cardId) => typeof cardId === "string")
+      || (item.islandId !== undefined && typeof item.islandId !== "string")
+      || (item.fromValue !== undefined && item.fromValue !== null && typeof item.fromValue !== "string")
+      || (item.toValue !== undefined && item.toValue !== null && typeof item.toValue !== "string")
+      || (item.rationale !== undefined && typeof item.rationale !== "string")
+    ) {
+      continue;
+    }
+
+    entries.push({
+      id: item.id,
+      createdAt: item.createdAt,
+      action: item.action,
+      ...(typeof item.islandId === "string" ? { islandId: item.islandId } : {}),
+      cardIds: [...new Set(item.cardIds)],
+      ...(item.fromValue !== undefined ? { fromValue: item.fromValue } : {}),
+      ...(item.toValue !== undefined ? { toValue: item.toValue } : {}),
+      ...(typeof item.rationale === "string" ? { rationale: item.rationale } : {}),
+    });
+  }
+
+  return entries.length > 0 ? entries : undefined;
+}
+
 function isContradictionSignalReviewStatus(value: unknown): value is ContradictionSignalReviewStatus {
   return value === "accepted" || value === "held" || value === "rejected";
 }
@@ -1130,6 +1176,7 @@ export function validateImportedDocument(value: unknown): ValidateResult {
   const patchApplyLog = parsePatchApplyLog(value.patchApplyLog);
   const mergeSuggestionDecisions = parseMergeSuggestionDecisions(value.mergeSuggestionDecisions);
   const contradictionSignalDecisions = parseContradictionSignalDecisions(value.contradictionSignalDecisions);
+  const structureDecisions = parseStructureDecisions(value.structureDecisions);
   const shelf = parseShelf(value.shelf, new Set(cards.map((card) => card.id)));
   const voids = parseVoids(value.voids);
   const shelvedCardIds = new Set((shelf ?? []).map((entry) => entry.cardId));
@@ -1160,6 +1207,7 @@ export function validateImportedDocument(value: unknown): ValidateResult {
       ...(patchApplyLog !== undefined ? { patchApplyLog } : {}),
       ...(mergeSuggestionDecisions !== undefined ? { mergeSuggestionDecisions } : {}),
       ...(contradictionSignalDecisions !== undefined ? { contradictionSignalDecisions } : {}),
+      ...(structureDecisions !== undefined ? { structureDecisions } : {}),
       ...(shelf !== undefined ? { shelf } : {}),
       ...(voids !== undefined ? { voids } : {}),
     },

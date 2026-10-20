@@ -5,7 +5,8 @@ import { t } from "../i18n/translate";
 
 import { formatTimestamp } from "../domain/format_timestamp";
 import { CRITIQUE_TAGS, KNOWN_EDGE_TYPES, resolveKnownEdgeType } from "../domain/types";
-import type { EdgeType, KnownEdgeType } from "../domain/types";
+import type { EdgeType, KnownEdgeType, StructureDecisionRecord } from "../domain/types";
+import { structureDecisionsForTarget } from "../domain/structure_decisions";
 import { cardQualityRestoreTarget, currentCardQualityQuestion, type CardQualityAssistState, type CardQualityDecision } from "../domain/card_quality";
 import { DomainStateSummary } from "./DomainStateSummary";
 import type {
@@ -86,6 +87,7 @@ type SidePanelProps = {
   onCreateRepresentativeCard: () => void;
   onCardCritiqueChange: (value: string) => void;
   onRestoreCardCritiqueHistoryEntry: (historyEntryId: string) => void;
+  onStructureDecisionRationaleChange: (decisionId: string, rationale: string) => void;
   /** DOMAIN-TRACE-01: raw seq/source input for the selected card (empty = remove). */
   onCardMetaChange: (rawSeq: string, rawSource: string) => void;
   /** DOMAIN-KA-01: raw voice/value input for the selected card (empty = remove). */
@@ -287,6 +289,97 @@ type SidePanelProps = {
 
 const runWithoutTenantScope = <T,>(task: () => Promise<T>): Promise<T> => task();
 
+function StructureDecisionRow({
+  record,
+  isReadOnly,
+  onRationaleChange,
+}: {
+  record: StructureDecisionRecord;
+  isReadOnly: boolean;
+  onRationaleChange: (decisionId: string, rationale: string) => void;
+}) {
+  const [draft, setDraft] = useState(record.rationale ?? "");
+
+  useEffect(() => {
+    setDraft(record.rationale ?? "");
+  }, [record.id, record.rationale]);
+
+  return (
+    <div data-structure-decision={record.id} style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: 8 }}>
+      <div style={{ fontSize: 11, color: "#64748b" }}>{formatTimestamp(record.createdAt)}</div>
+      <div style={{ fontSize: 12, color: "#0f172a", fontWeight: 600 }}>
+        {t(`structure_action.${record.action}`)}
+      </div>
+      <div style={{ fontSize: 11, color: "#475569" }}>
+        {t("side_panel.structure_history.cards", { cards: record.cardIds.join(", ") })}
+        {record.fromValue !== undefined || record.toValue !== undefined
+          ? ` / ${record.fromValue ?? "-"} → ${record.toValue ?? "-"}`
+          : ""}
+      </div>
+      {record.rationale ? (
+        <div style={{ fontSize: 12, color: "#334155", marginTop: 4, whiteSpace: "pre-wrap" }}>{record.rationale}</div>
+      ) : null}
+      <textarea
+        aria-label={t("side_panel.structure_history.rationale_label")}
+        value={draft}
+        disabled={isReadOnly}
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder={t("side_panel.structure_history.rationale_placeholder")}
+        rows={2}
+        style={{
+          width: "100%",
+          marginTop: 6,
+          border: "1px solid #cbd5e1",
+          borderRadius: 6,
+          padding: "4px 6px",
+          boxSizing: "border-box",
+          fontSize: 12,
+        }}
+      />
+      <button
+        type="button"
+        disabled={isReadOnly || draft.trim() === (record.rationale ?? "")}
+        onClick={() => onRationaleChange(record.id, draft)}
+        style={{ marginTop: 4 }}
+      >
+        {t("side_panel.structure_history.save_rationale")}
+      </button>
+    </div>
+  );
+}
+
+function StructureDecisionHistory({
+  records,
+  isReadOnly,
+  onRationaleChange,
+}: {
+  records: StructureDecisionRecord[];
+  isReadOnly: boolean;
+  onRationaleChange: (decisionId: string, rationale: string) => void;
+}) {
+  return (
+    <details data-testid="structure-decision-history" style={{ marginTop: 12 }}>
+      <summary style={{ fontSize: 12, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+        {t("side_panel.structure_history.title", { count: records.length })}
+      </summary>
+      <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+        {records.length === 0 ? (
+          <div style={{ fontSize: 12, color: "#64748b" }}>{t("side_panel.structure_history.no_history")}</div>
+        ) : (
+          [...records].reverse().map((record) => (
+            <StructureDecisionRow
+              key={record.id}
+              record={record}
+              isReadOnly={isReadOnly}
+              onRationaleChange={onRationaleChange}
+            />
+          ))
+        )}
+      </div>
+    </details>
+  );
+}
+
 export function SidePanel({
   selectedCard,
   sourceCardsForSelectedCanonical,
@@ -297,6 +390,7 @@ export function SidePanel({
   onCreateRepresentativeCard,
   onCardCritiqueChange,
   onRestoreCardCritiqueHistoryEntry,
+  onStructureDecisionRationaleChange,
   onCardMetaChange,
   onCardKaChange,
   onCardCritiqueTagsChange,
@@ -4604,6 +4698,18 @@ export function SidePanel({
           {t("side_panel.empty_selection_hint")}
         </div>
       )}
+      {selectedIsland || selectedCard ? (
+        <StructureDecisionHistory
+          records={document
+            ? structureDecisionsForTarget(document, {
+              islandId: selectedIsland?.id,
+              cardId: selectedCard?.id,
+            })
+            : []}
+          isReadOnly={isReadOnly}
+          onRationaleChange={onStructureDecisionRationaleChange}
+        />
+      ) : null}
     </aside>
   );
 }

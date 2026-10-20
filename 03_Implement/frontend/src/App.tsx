@@ -81,6 +81,7 @@ import {
   updateCardCritiqueWithHistory,
   updateIslandCritiqueWithHistory,
 } from "./domain/critique_history_ops";
+import { appendStructureDecision, updateStructureDecisionRationale } from "./domain/structure_decisions";
 import { KNOWN_EDGE_TYPES } from "./domain/types";
 import { answerCardQualityQuestion, beginCardQualityRewrite, cardQualityRestoreTarget, openCardQualityAssist, type CardQualityAssistState, type CardQualityDecision } from "./domain/card_quality";
 import { validateDocument } from "./import/schema_validation";
@@ -5300,16 +5301,20 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
       const mergedCardIds = Array.from(new Set([...island.cardIds, ...selectedCardIds]));
-      if (mergedCardIds.length === island.cardIds.length) {
+      const addedCardIds = mergedCardIds.filter((cardId) => !island.cardIds.includes(cardId));
+      if (addedCardIds.length === 0) {
         return;
       }
       applyDocumentChange(
-        {
-          ...document,
-          islands: document.islands.map((candidate) =>
-            candidate.id === islandId ? { ...candidate, cardIds: mergedCardIds } : candidate
-          ),
-        },
+        appendStructureDecision(
+          {
+            ...document,
+            islands: document.islands.map((candidate) =>
+              candidate.id === islandId ? { ...candidate, cardIds: mergedCardIds } : candidate
+            ),
+          },
+          { action: "cards_added_to_island", islandId, cardIds: addedCardIds }
+        ),
         t("app.history.island.selected_cards_added")
       );
     },
@@ -5396,10 +5401,12 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
 
     const newIsland = createIslandFromSelection(uniqueSelectedCardIds);
 
-    applyDocumentChange({
-      ...document,
-      islands: [...document.islands, newIsland],
-    });
+    applyDocumentChange(
+      appendStructureDecision(
+        { ...document, islands: [...document.islands, newIsland] },
+        { action: "island_create", islandId: newIsland.id, cardIds: uniqueSelectedCardIds }
+      )
+    );
     // Creating an island changes the primary target. Keeping the source-card
     // selection would leave the header/bulk bar and inspector describing
     // different targets at the same time.
@@ -5745,6 +5752,24 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   // DOMAIN-TRACE-01 (schemas.md §15): one history step per change (⌘Z
   // reversible). The meta object is dropped entirely when both fields are
   // cleared so an unset card stays byte-identical to the pre-feature shape.
+  const handleStructureDecisionRationaleChange = useCallback(
+    (decisionId: string, rationale: string) => {
+      if (!document) {
+        return;
+      }
+
+      const nextDocument = updateStructureDecisionRationale(document, decisionId, rationale);
+      if (nextDocument === document) {
+        return;
+      }
+
+      applyDocumentChange(nextDocument, t("app.history.structure_decision.rationale_updated"), {
+        preserveSuggestionPreview: true,
+      });
+    },
+    [applyDocumentChange, document]
+  );
+
   const handleCardMetaChange = useCallback(
     (cardId: string, rawSeq: string, rawSource: string) => {
       if (!document) {
@@ -5889,13 +5914,19 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
 
+      const previousHoldState = document.cards.find((card) => card.id === cardId)?.holdState ?? "active";
       const nextDocument = updateCardHoldStateAndShelf(document, cardId, selection, new Date().toISOString());
       if (nextDocument === document) {
         return;
       }
 
       applyDocumentChange(
-        nextDocument,
+        appendStructureDecision(nextDocument, {
+          action: "hold_state_changed",
+          cardIds: [cardId],
+          fromValue: previousHoldState,
+          toValue: selection,
+        }),
         t("app.history.card.hold_state_updated", { value: selection }),
         { preserveSuggestionPreview: true }
       );
@@ -5928,7 +5959,12 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     }
 
     applyDocumentChange(
-      nextDocument,
+      appendStructureDecision(nextDocument, {
+        action: "hold_state_changed",
+        cardIds: selectedCardIds,
+        fromValue: null,
+        toValue: targetSelection,
+      }),
       t("app.history.card.hold_state_updated", { value: targetSelection }),
       { preserveSuggestionPreview: true }
     );
@@ -9090,20 +9126,21 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     }
 
     const mergedCardIds = Array.from(new Set([...selectedIsland.cardIds, ...selectedCardIds]));
-    if (
-      mergedCardIds.length === selectedIsland.cardIds.length &&
-      mergedCardIds.every((cardId, index) => cardId === selectedIsland.cardIds[index])
-    ) {
+    const addedCardIds = mergedCardIds.filter((cardId) => !selectedIsland.cardIds.includes(cardId));
+    if (addedCardIds.length === 0) {
       return;
     }
 
     applyDocumentChange(
-      {
-        ...document,
-        islands: document.islands.map((island) =>
-          island.id === selectedIsland.id ? { ...island, cardIds: mergedCardIds } : island
-        ),
-      },
+      appendStructureDecision(
+        {
+          ...document,
+          islands: document.islands.map((island) =>
+            island.id === selectedIsland.id ? { ...island, cardIds: mergedCardIds } : island
+          ),
+        },
+        { action: "cards_added_to_island", islandId: selectedIsland.id, cardIds: addedCardIds }
+      ),
       t("app.history.island.selected_cards_added")
     );
   }, [applyDocumentChange, document, selectedCardIds, selectedIsland]);
@@ -9115,18 +9152,22 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
 
     const selectedCardIdSet = new Set(selectedCardIds);
     const nextCardIds = selectedIsland.cardIds.filter((cardId) => !selectedCardIdSet.has(cardId));
+    const removedCardIds = selectedIsland.cardIds.filter((cardId) => selectedCardIdSet.has(cardId));
 
-    if (nextCardIds.length === selectedIsland.cardIds.length) {
+    if (removedCardIds.length === 0) {
       return;
     }
 
     applyDocumentChange(
-      {
-        ...document,
-        islands: document.islands.map((island) =>
-          island.id === selectedIsland.id ? { ...island, cardIds: nextCardIds } : island
-        ),
-      },
+      appendStructureDecision(
+        {
+          ...document,
+          islands: document.islands.map((island) =>
+            island.id === selectedIsland.id ? { ...island, cardIds: nextCardIds } : island
+          ),
+        },
+        { action: "cards_removed_from_island", islandId: selectedIsland.id, cardIds: removedCardIds }
+      ),
       t("app.history.island.selected_cards_removed")
     );
   }, [applyDocumentChange, document, selectedCardIds, selectedIsland]);
@@ -12235,6 +12276,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
 
             handleRestoreCardCritiqueHistoryEntry(selectedCard.id, historyEntryId);
           }}
+          onStructureDecisionRationaleChange={handleStructureDecisionRationaleChange}
           onCardMetaChange={(rawSeq, rawSource) => {
             if (!selectedCard) {
               return;
