@@ -90,6 +90,35 @@ describe("validateDocumentV1Strict", () => {
     expect(invalid.errors).toContain("cards[0].holdState: must be 'held' | 'pending' | 'shelved' when provided");
   });
 
+  it("accepts a card critique revision history and rejects malformed entries", () => {
+    const history = [{
+      id: "critique-history-1",
+      createdAt: now,
+      fromCritique: null,
+      toCritique: "first doubt",
+      fromTags: null,
+      toTags: ["feels_off"],
+      changeKind: "manual",
+      note: "why the view changed",
+    }];
+
+    const valid = validateDocumentV1Strict({
+      ...validDocument,
+      cards: [{ ...validDocument.cards[0], critique: "first doubt", critiqueHistory: history }],
+    });
+    expect(valid.ok).toBe(true);
+
+    const invalid = validateDocumentV1Strict({
+      ...validDocument,
+      cards: [{ ...validDocument.cards[0], critiqueHistory: [{ ...history[0], changeKind: "bogus" }] }],
+    });
+    expect(invalid.ok).toBe(false);
+    if (invalid.ok) return;
+    expect(invalid.errors).toContain(
+      "cards[0].critiqueHistory[0].changeKind: must be 'manual' | 'import' | 'rollback' | 'unknown'"
+    );
+  });
+
   it("accepts a shelf entry that points to a shelved card", () => {
     const result = validateDocumentV1Strict({
       ...validDocument,

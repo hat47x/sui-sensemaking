@@ -13,6 +13,18 @@ function addSensitiveDocumentFields(document: DocumentV1): void {
     text: "SECRET_CARD_TEXT",
     critique: "SECRET_CARD_CRITIQUE",
     critiqueTags: ["SECRET_CARD_TAG"],
+    critiqueHistory: [
+      {
+        id: "critique-history-1",
+        createdAt: CREATED_AT,
+        fromCritique: "SECRET_OLD_CRITIQUE",
+        toCritique: "SECRET_NEW_CRITIQUE",
+        fromTags: ["SECRET_OLD_TAG"],
+        toTags: ["SECRET_NEW_TAG"],
+        changeKind: "manual",
+        note: "SECRET_CRITIQUE_NOTE",
+      },
+    ],
     textReviewed: true,
     meta: { seq: 7, source: "SECRET_SOURCE_URL" },
     ka: { voice: "SECRET_INNER_VOICE", value: "SECRET_VALUE" },

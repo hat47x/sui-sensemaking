@@ -32,6 +32,20 @@ export type CardKa = {
   value?: string;
 };
 
+/** SUIPV-RATIONALE-HISTORY-01 (Issue #3175): a human-authored critique revision.
+ * The current critique stays the source of truth; this records the previous
+ * human judgment so a later reader can see why the view changed. */
+export type CritiqueHistoryEntry = {
+  id: string;
+  createdAt: string;
+  fromCritique: string | null;
+  toCritique: string | null;
+  fromTags: string[] | null;
+  toTags: string[] | null;
+  changeKind: "manual" | "import" | "rollback" | "unknown";
+  note?: string;
+};
+
 export type Card = {
   id: string;
   text: string;
@@ -45,6 +59,7 @@ export type Card = {
   sources?: string[];
   critique?: string;
   critiqueTags?: string[];
+  critiqueHistory?: CritiqueHistoryEntry[];
   textReviewed?: boolean;
   /** DOMAIN-EXPR-02: optional hold state. Absent = not held (conventional card). */
   holdState?: HoldState;

@@ -30,6 +30,23 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isCritiqueHistory(value: unknown): boolean {
+  return Array.isArray(value) && value.every((entry) => (
+    isRecord(entry)
+    && typeof entry.id === "string"
+    && typeof entry.createdAt === "string"
+    && (entry.fromCritique === null || typeof entry.fromCritique === "string")
+    && (entry.toCritique === null || typeof entry.toCritique === "string")
+    && (entry.fromTags === null || isStringArray(entry.fromTags))
+    && (entry.toTags === null || isStringArray(entry.toTags))
+    && (entry.changeKind === "manual"
+      || entry.changeKind === "import"
+      || entry.changeKind === "rollback"
+      || entry.changeKind === "unknown")
+    && (entry.note === undefined || typeof entry.note === "string")
+  ));
+}
+
 function parseCard(value: unknown): Card | null {
   if (!isRecord(value) || typeof value.id !== "string" || typeof value.text !== "string" || !isFiniteNumber(value.x) || !isFiniteNumber(value.y)) {
     return null;
@@ -39,6 +56,7 @@ function parseCard(value: unknown): Card | null {
   if (value.sources !== undefined && !isStringArray(value.sources)) return null;
   if (value.critique !== undefined && typeof value.critique !== "string") return null;
   if (value.critiqueTags !== undefined && !isStringArray(value.critiqueTags)) return null;
+  if (value.critiqueHistory !== undefined && !isCritiqueHistory(value.critiqueHistory)) return null;
   if (value.textReviewed !== undefined && typeof value.textReviewed !== "boolean") return null;
 
   // DOMAIN-TRACE-01 (schemas.md §15.3) / DOMAIN-KA-01 (schemas.md §17.2):
