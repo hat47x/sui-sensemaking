@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
     "e2e": "playwright test",
+    "e2e:full": "playwright test && playwright test --config=playwright.perf.config.ts",
+    "e2e:perf": "playwright test --config=playwright.perf.config.ts",
     "e2e:headed": "playwright test --headed",
     "publish:static": "node ./scripts/build_static_publish.mjs",
     "capture:release-screenshots": "node ./scripts/capture_release_screenshots.mjs",
