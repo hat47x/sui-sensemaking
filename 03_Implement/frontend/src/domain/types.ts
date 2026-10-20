@@ -206,6 +206,7 @@ export type Island = {
   imageReviewed?: boolean;
   critique?: string;
   critiqueTags?: string[];
+  critiqueHistory?: CritiqueHistoryEntry[];
   geometry?: IslandGeometry;
   shape?: IslandShape;
   shapeStale?: boolean;

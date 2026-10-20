@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from sui_sensemaking_api.models import Card
+from sui_sensemaking_api.models import Card, Island
 
 
 def _card_payload() -> dict[str, object]:
@@ -39,6 +39,22 @@ def test_card_critique_history_roundtrips() -> None:
     assert dumped["critiqueHistory"][0]["toTags"] == ["feels_off"]
     assert dumped["critiqueHistory"][0]["changeKind"] == "manual"
     assert dumped["critiqueHistory"][0]["note"] == "new material"
+
+
+def test_island_critique_history_roundtrips() -> None:
+    payload = {
+        "id": "i1",
+        "cardIds": ["c1"],
+        "critique": "later island view",
+        "critiqueTags": ["feels_off"],
+        "critiqueHistory": _card_payload()["critiqueHistory"],
+    }
+
+    island = Island.model_validate(payload)
+
+    dumped = island.model_dump(mode="json", exclude_none=True)
+    assert dumped["critiqueHistory"][0]["id"] == "critique-history-1"
+    assert dumped["critiqueHistory"][0]["toCritique"] == "later view"
 
 
 @pytest.mark.parametrize(

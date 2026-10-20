@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Card, DocumentV1 } from "./types";
-import { restoreCardCritiqueHistoryEntry, updateCardCritiqueWithHistory } from "./critique_history_ops";
+import {
+  restoreCardCritiqueHistoryEntry,
+  restoreIslandCritiqueHistoryEntry,
+  updateCardCritiqueWithHistory,
+  updateIslandCritiqueWithHistory,
+} from "./critique_history_ops";
 import { validateDocument } from "../import/schema_validation";
 
 function createDocument(cards: Card[]): DocumentV1 {
@@ -164,5 +169,60 @@ describe("restoreCardCritiqueHistoryEntry", () => {
 
     expect(restoreCardCritiqueHistoryEntry(document, "c1", "missing")).toBe(document);
     expect(restoreCardCritiqueHistoryEntry(document, "missing", "missing")).toBe(document);
+  });
+});
+
+describe("island critique revision history", () => {
+  function createIslandDocument() {
+    const document = createDocument([{ id: "c1", text: "A", x: 0, y: 0 }]);
+    document.islands = [{ id: "i1", cardIds: ["c1"], critique: "first doubt" }];
+    return document;
+  }
+
+  it("records, roundtrips, and restores an island critique revision", () => {
+    const base = createIslandDocument();
+    base.islands[0].critique = undefined;
+    const afterFirst = updateIslandCritiqueWithHistory(
+      base,
+      "i1",
+      { critique: "first doubt" },
+      { changeKind: "manual" }
+    );
+    const afterSecond = updateIslandCritiqueWithHistory(
+      afterFirst,
+      "i1",
+      { critique: "later view" },
+      { changeKind: "manual" }
+    );
+    expect(afterSecond.islands[0].critiqueHistory).toHaveLength(2);
+
+    const reloaded = validateDocument(JSON.parse(JSON.stringify(afterSecond)));
+    expect(reloaded.ok).toBe(true);
+    if (!reloaded.ok) return;
+    expect(reloaded.value.islands[0].critique).toBe("later view");
+
+    const firstEntryId = reloaded.value.islands[0].critiqueHistory?.[0].id;
+    const restored = restoreIslandCritiqueHistoryEntry(reloaded.value, "i1", firstEntryId ?? "");
+
+    expect(restored.islands[0].critique).toBe("first doubt");
+    expect(restored.islands[0].critiqueHistory?.at(-1)?.changeKind).toBe("rollback");
+  });
+
+  it("records island critique tag changes and avoids no-op revisions", () => {
+    const document = createIslandDocument();
+    const withTags = updateIslandCritiqueWithHistory(
+      document,
+      "i1",
+      { critiqueTags: ["feels_off"] },
+      { changeKind: "manual" }
+    );
+    expect(withTags.islands[0].critiqueHistory?.[0]).toMatchObject({
+      fromCritique: "first doubt",
+      fromTags: null,
+      toTags: ["feels_off"],
+    });
+
+    const noOp = updateIslandCritiqueWithHistory(withTags, "i1", { critiqueTags: ["feels_off"] }, { changeKind: "manual" });
+    expect(noOp).toBe(withTags);
   });
 });

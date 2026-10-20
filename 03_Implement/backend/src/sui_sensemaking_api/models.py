@@ -1121,6 +1121,9 @@ class Island(BaseModel):
     imageReviewed: bool | None = Field(default=None, exclude_if=lambda value: value is None)
     critique: str | None = Field(default=None, max_length=CRITIQUE_MAX_LENGTH)
     critiqueTags: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
+    critiqueHistory: list[CritiqueHistoryEntry] | None = Field(
+        default=None, max_length=50, exclude_if=lambda value: value is None
+    )
     geometry: IslandGeometry | None = Field(default=None, exclude_if=lambda value: value is None)
     shape: IslandShape | None = Field(default=None, exclude_if=lambda value: value is None)
     shapeStale: bool | None = Field(default=None, exclude_if=lambda value: value is None)

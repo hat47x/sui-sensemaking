@@ -533,6 +533,7 @@ function validateIsland(item: unknown, index: number, errors: string[]): item is
       "imageReviewed",
       "critique",
       "critiqueTags",
+      "critiqueHistory",
       "geometry",
       "shape",
       "shapeStale",
@@ -602,6 +603,9 @@ function validateIsland(item: unknown, index: number, errors: string[]): item is
     valid = false;
   }
   if (item.critiqueTags !== undefined && !validateStringArray(item.critiqueTags, `${path}.critiqueTags`, errors)) {
+    valid = false;
+  }
+  if (item.critiqueHistory !== undefined && !validateCritiqueHistory(item.critiqueHistory, `${path}.critiqueHistory`, errors)) {
     valid = false;
   }
   if (item.geometry !== undefined && !validateIslandGeometry(item.geometry, `${path}.geometry`, errors)) {

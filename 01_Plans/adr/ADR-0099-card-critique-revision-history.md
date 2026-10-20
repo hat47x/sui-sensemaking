@@ -1,9 +1,9 @@
-# ADR-0099: カードの判断理由を、現在値と改訂履歴に分けて保持する
+# ADR-0099: カードと島の判断理由を、現在値と改訂履歴に分けて保持する
 
 - Status: Accepted
 - Date: 2026-10-20
 - Deciders: Maintainer
-- Scope: `03_Implement/frontend/src/domain/types.ts`、`03_Implement/frontend/src/domain/critique_history_ops.ts`、`03_Implement/frontend/src/App.tsx`、`03_Implement/frontend/src/ui/SidePanel.tsx`、`03_Implement/frontend/src/domain/inquiry_bundle_safe_mode.ts`、`03_Implement/backend/src/sui_sensemaking_api/models.py`、`02_Architecture/schemas.md`
+- Scope: `03_Implement/frontend/src/domain/types.ts`、`03_Implement/frontend/src/domain/critique_history_ops.ts`、`03_Implement/frontend/src/App.tsx`、`03_Implement/frontend/src/ui/SidePanel.tsx`、`03_Implement/frontend/src/domain/inquiry_bundle_safe_mode.ts`、`03_Implement/backend/src/sui_sensemaking_api/models.py`、`02_Architecture/schemas.md`。カードと島の `critique` / `critiqueTags` を対象とする。
 - Related: `ADR-0026`（HITL反復）、`ADR-0041`（CVI）、`ADR-0051`（一括理由追記）、`ADR-0089`（価値の正本）、`ADR-0090`（候補層）
 
 ## 価値への寄与
@@ -29,7 +29,7 @@ Issue #3175 は、この非対称を解消する最小の縦切りを求めた�
 
 ### 1. 現在値は `Card.critique` / `Card.critiqueTags` に残す
 
-履歴は `Card.critiqueHistory?: CritiqueHistoryEntry[]` として追加する。現在値を別の場所へ移さない。したがって、履歴を読まない通常のカード操作・AI入力・共有は従来どおり現在値を使う。
+履歴は `Card.critiqueHistory?: CritiqueHistoryEntry[]` と `Island.critiqueHistory?: CritiqueHistoryEntry[]` として追加する。現在値を別の場所へ移さない。したがって、履歴を読まない通常のカード・島操作、AI入力、共有は従来どおり現在値を使う。カードと島で同じ履歴型を使い、別の履歴体系を増やさない。
 
 ### 2. 変更時だけ、直前の値を履歴へ追加する
 
@@ -59,10 +59,10 @@ Issue #3175 は、この非対称を解消する最小の縦切りを求めた�
 - 履歴を読まない通常操作の重さは変えない。履歴は折りたたみ表示にし、必要なときだけ開く。
 - Documentのoptionalフィールドが1つ増える。既存文書は欠落のまま読める。PydanticモデルとTypeScript型の契約を同期させる。
 - 履歴の上限50件は、長期利用で古い判断が落ちることを意味する。全履歴の保持が必要になった場合は、別の保存境界（append-onlyのdecision record等）をADRで決める。
-- 島・関係・構造操作の判断履歴は、このADRの対象外として残る。
+- 島の違和感メモはカードと同じ履歴型で扱う。関係の要約は既存の `history` を持ち、構造操作（島の作成、カードの追加/除外、保留状態の変更）の判断理由はこのADRの対象外として残る（#3239）。
 
 ## Traceability
 
-- Issues: #3175
+- Issues: #3175, #3239
 - Related: `ADR-0026`, `ADR-0041`, `ADR-0051`, `ADR-0089`, `ADR-0090`
 - Supersedes: なし

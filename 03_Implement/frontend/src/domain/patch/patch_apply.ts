@@ -124,6 +124,7 @@ function parseIsland(value: unknown): Island | null {
   if (value.imageReviewed !== undefined && typeof value.imageReviewed !== "boolean") return null;
   if (value.critique !== undefined && typeof value.critique !== "string") return null;
   if (value.critiqueTags !== undefined && !isStringArray(value.critiqueTags)) return null;
+  if (value.critiqueHistory !== undefined && !isCritiqueHistory(value.critiqueHistory)) return null;
   if (value.shapeStale !== undefined && typeof value.shapeStale !== "boolean") return null;
 
   return value as Island;
