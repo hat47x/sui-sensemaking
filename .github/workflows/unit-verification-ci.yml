@@ -111,5 +111,6 @@ jobs:
         run: |
           npx playwright test \
             e2e/card_critique_history.spec.ts \
+            e2e/card_critique_history_persistence.spec.ts \
             e2e/ce3_patch_workspace.spec.ts \
             --reporter=line
