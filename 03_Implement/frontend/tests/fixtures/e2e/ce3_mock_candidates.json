@@ -28,7 +28,9 @@
     {
       "groupId": "group-beta",
       "targetCardId": "c4",
-      "candidateCardIds": [],
+      "candidateCardIds": [
+        "c6"
+      ],
       "scoreSummary": {
         "min": 0.95,
         "max": 0.95,
@@ -39,7 +41,8 @@
       ],
       "snapshotVersion": "CTR-2B-01-CANDIDATE-GROUP-V1",
       "cardIds": [
-        "c4"
+        "c4",
+        "c6"
       ],
       "mergedTextDraft": "beta",
       "rationale": "deterministic fixture",
@@ -48,7 +51,9 @@
     {
       "groupId": "group-gamma",
       "targetCardId": "c5",
-      "candidateCardIds": [],
+      "candidateCardIds": [
+        "c7"
+      ],
       "scoreSummary": {
         "min": 0.91,
         "max": 0.91,
@@ -59,7 +64,8 @@
       ],
       "snapshotVersion": "CTR-2B-01-CANDIDATE-GROUP-V1",
       "cardIds": [
-        "c5"
+        "c5",
+        "c7"
       ],
       "mergedTextDraft": "gamma",
       "rationale": "deterministic fixture",

@@ -98,4 +98,20 @@ describe("collectMergeCandidates", () => {
       "near_duplicate",
     ]);
   });
+
+  // Issue #3231: unreviewed cards must not stop deterministic local
+  // candidate collection -- the collector is local-only and never sends
+  // card text to a model. SafeMode review gating applies to AI paths.
+  it("collects candidates even when every card is unreviewed", () => {
+    const doc = createDocument([
+      { id: "c1", text: "Needs Follow-Up", x: 0, y: 0, textReviewed: false },
+      { id: "c2", text: "needs follow up", x: 0, y: 0, textReviewed: false },
+    ]);
+
+    const result = collectMergeCandidates(doc);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.cardIds).toEqual(["c1", "c2"]);
+    expect(result[0]?.mergeMethod).toBe("near_duplicate");
+  });
 });

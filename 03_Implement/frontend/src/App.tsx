@@ -3530,41 +3530,54 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     if (!document || isSuggestingMerges) {
       return;
     }
-    if (aiBlockedByUnreviewed()) {
-      return;
-    }
+
+    // Issue #3231: unreviewed cards must not stop deterministic local
+    // merge-candidate collection. `collectMergeCandidates` makes no model
+    // call, so local-only collection is allowed; only the AI-backed remote
+    // request stays blocked (SEC-AI-SAFEMODE-01 guards unreviewed text
+    // leaving the workspace, not local display). `aiBlockedByUnreviewed()`
+    // also sets the "AI requires review first" status message.
+    const isUnreviewedLocalOnly = aiBlockedByUnreviewed();
 
     setIsSuggestingMerges(true);
     setMergeSuggestionError(null);
-    setStatusMessage(t("merge_suggestions.status.collecting"));
+    if (isUnreviewedLocalOnly) {
+      setStatusMessage(t("merge_suggestions.status.local_only_unreviewed"));
+    } else {
+      setStatusMessage(t("merge_suggestions.status.collecting"));
+    }
 
     try {
       const remoteInstruction = mergeSuggestionInstruction.trim() || undefined;
       const localFallback = () => ({ suggestions: collectMergeCandidates(document) });
 
       let result: { suggestions: MergeSuggestion[] };
-      try {
-        result = await runTenantScopedApiRequest(() => suggestMerges(
-          document,
-          remoteInstruction,
-          { tenantSessionContext: verifiedTenantSession },
-        ));
-      } catch (error) {
-        const isApiUnavailable =
-          error instanceof ApiError
-          && (
-            error.status === 404
-            || error.status === 405
-            || error.status === 501
-            || (error.status === 503 && error.code === "provider_unavailable")
-          );
-        const isNetworkUnavailable = error instanceof TypeError;
-
-        if (!isApiUnavailable && !isNetworkUnavailable) {
-          throw error;
-        }
-
+      if (isUnreviewedLocalOnly) {
         result = localFallback();
+      } else {
+        try {
+          result = await runTenantScopedApiRequest(() => suggestMerges(
+            document,
+            remoteInstruction,
+            { tenantSessionContext: verifiedTenantSession },
+          ));
+        } catch (error) {
+          const isApiUnavailable =
+            error instanceof ApiError
+            && (
+              error.status === 404
+              || error.status === 405
+              || error.status === 501
+              || (error.status === 503 && error.code === "provider_unavailable")
+            );
+          const isNetworkUnavailable = error instanceof TypeError;
+
+          if (!isApiUnavailable && !isNetworkUnavailable) {
+            throw error;
+          }
+
+          result = localFallback();
+        }
       }
 
       const latestDecisionByGroup = getLatestMergeSuggestionDecisionByGroup(document.mergeSuggestionDecisions);
@@ -3588,11 +3601,19 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         })
       );
       setMergeSuggestionError(null);
-      setStatusMessage(
-        result.suggestions.length > 0
-          ? t("merge_suggestions.status.ready", { count: result.suggestions.length })
-          : t("merge_suggestions.status.none_found")
-      );
+      if (isUnreviewedLocalOnly) {
+        setStatusMessage(
+          result.suggestions.length > 0
+            ? t("merge_suggestions.status.local_only_ready", { count: result.suggestions.length })
+            : t("merge_suggestions.status.local_only_none_found")
+        );
+      } else {
+        setStatusMessage(
+          result.suggestions.length > 0
+            ? t("merge_suggestions.status.ready", { count: result.suggestions.length })
+            : t("merge_suggestions.status.none_found")
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : t("merge_suggestions.status.failed");
       setMergeSuggestionError(message);
