@@ -137,6 +137,19 @@ semantic encoderやLLMが利用可能な場合でも、
 
 再利用するときは、現在の一次利用仕事と証拠階層へ再接続してから使う。
 
+### 9. ローカル候補の生成とAI送信のレビュー境界を分ける
+
+未レビューのカードがあるとき、決定論的なローカル候補（`domain/merge_candidates.ts` など）の生成まで止めない。
+
+SafeModeのレビュー境界（`SEC-AI-SAFEMODE-01`、`ADR-0068`）が守るのは、未レビュー本文をワークスペースの外へ出す経路である。決定論的な候補生成は、すでに画面に出ている本文を同じ端末内で比較するだけで、外部送信もモデル呼び出しもしない。したがって、未レビュー本文のローカル表示と同じ扱いとし、AI経路だけを未レビュー時に止める。
+
+このとき利用者へ、候補がAI由来かローカル由来かを区別できる状態を示す。
+
+- 未レビュー時にAI経路を止めたこと
+- ローカル候補だけを生成したこと（候補が0件の場合も含む）
+
+候補の内容・採否・表示位置は、AI由来の場合と同じ規則に従う。ローカル候補であることを、候補の意味上の権威や自動採用の根拠にしない。候補の生成元を理由に `human_reviewed` を設定せず、SafeModeの共有・書き出し境界も緩めない。
+
 ## 非目標
 
 - 特定の認知アルゴリズムをこのADRで採用すること
@@ -159,6 +172,6 @@ semantic encoderやLLMが利用可能な場合でも、
 ## Traceability
 
 - Supersedes: `ADR-0028` のフェーズ計画・Issue運用・完了ゲート
-- Related: `ADR-0010`, `ADR-0041`, `ADR-0043`, `ADR-0069`, `ADR-0084`, `ADR-0085`〜`ADR-0089`
+- Related: `ADR-0010`, `ADR-0041`, `ADR-0043`, `ADR-0068`, `ADR-0069`, `ADR-0084`, `ADR-0085`〜`ADR-0089`
 - Related: `00_Prompt/domain.md`, `00_Prompt/ai_sensemaking_execution_procedures.md`
 - Historical exploration: git history of deleted `01_Plans/dogfood/cognitive-assoc-*` and `issue-COGNITIVE-ASSOC-01-*`

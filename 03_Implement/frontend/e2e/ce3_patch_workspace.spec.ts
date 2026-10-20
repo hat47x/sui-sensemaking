@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,22 @@ const fixtureDir = dirname(fileURLToPath(import.meta.url));
 const ce3SuggestionsFixture = JSON.parse(
   readFileSync(resolve(fixtureDir, "../tests/fixtures/e2e/ce3_mock_candidates.json"), "utf-8"),
 ) as { suggestions: unknown[] };
+
+// The document itself is not persisted across a reload (only Advanced UI and
+// query presets are), so scenarios that reload the page re-import it here.
+async function loadDocument(page: Page, doc: unknown): Promise<void> {
+  await page.getByRole("button", { name: /Share & Reproduce|共有と再現/ }).click();
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: /^Load document\.json$|^document\.json を読み込む$/ }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "workspace-doc.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(doc), "utf-8"),
+  });
+  await page.getByRole("button", { name: /Replace current document|現在のドキュメントを置換/ }).click();
+  await expect(page.getByText(DOCUMENT_REPLACED_STATUS)).toBeVisible();
+}
 
 test("CE3 patch workspace supports candidate comparison, preset replay, and rollback recovery", async ({ page }) => {
   await page.route("**/docs/doc_phase1_canvas", async (route) => {
@@ -35,13 +51,6 @@ test("CE3 patch workspace supports candidate comparison, preset replay, and roll
     });
   });
 
-  await page.goto("/");
-  await page.getByRole("button", { name: /Share & Reproduce|共有と再現/ }).click();
-
-  const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: /^Load document\.json$|^document\.json を読み込む$/ }).click();
-  const fileChooser = await fileChooserPromise;
-
   const now = new Date().toISOString();
   const doc = {
     version: 1,
@@ -50,24 +59,22 @@ test("CE3 patch workspace supports candidate comparison, preset replay, and roll
     updatedAt: now,
     transform: { panX: 0, panY: 0, zoom: 1 },
     cards: [
-      { id: "c1", text: "alpha", x: 100, y: 100 },
-      { id: "c2", text: "Alpha", x: 130, y: 120 },
-      { id: "c3", text: "alpha ", x: 160, y: 140 },
-      { id: "c4", text: "beta", x: 500, y: 100 },
-      { id: "c5", text: "gamma", x: 560, y: 120 },
+      { id: "c1", text: "alpha", x: 100, y: 100, textReviewed: true },
+      { id: "c2", text: "Alpha", x: 130, y: 120, textReviewed: true },
+      { id: "c3", text: "alpha ", x: 160, y: 140, textReviewed: true },
+      { id: "c4", text: "beta", x: 500, y: 100, textReviewed: true },
+      { id: "c5", text: "gamma", x: 560, y: 120, textReviewed: true },
+      // MergeSuggestion requires at least two card ids. The fixture's beta and
+      // gamma groups therefore pair each with one near-duplicate card.
+      { id: "c6", text: "beta", x: 530, y: 160, textReviewed: true },
+      { id: "c7", text: "gamma", x: 590, y: 180, textReviewed: true },
     ],
     edges: [],
     islands: [],
   };
 
-  await fileChooser.setFiles({
-    name: "ce3-workspace-doc.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(doc), "utf-8"),
-  });
-
-  await page.getByRole("button", { name: /Replace current document|現在のドキュメントを置換/ }).click();
-  await expect(page.getByText(DOCUMENT_REPLACED_STATUS)).toBeVisible();
+  await page.goto("/");
+  await loadDocument(page, doc);
 
   // Workspace IA: candidate collection moved into the Advanced-gated Work
   // mode panel (QA-MONKEY-11), then into the "Merge selection" tab once
@@ -129,6 +136,7 @@ test("CE3 patch workspace supports candidate comparison, preset replay, and roll
   await expect(page.getByTestId("ce3-failure")).toHaveCount(0);
 
   await page.reload();
+  await loadDocument(page, doc);
   // Advanced UI persists in localStorage, but the Work mode panel itself
   // starts closed after a reload -- reopen it (and reselect the tab, since
   // it always resets to the first/"Diff" tab).
@@ -137,4 +145,55 @@ test("CE3 patch workspace supports candidate comparison, preset replay, and roll
   await page.getByRole("button", { name: /Collect candidates|候補を収集/i }).click();
   await page.getByRole("button", { name: /Run Local CE3 Preset|Local CE3 Preset を実行/ }).click();
   await expect(page.getByTestId("ce3-normalized-query")).toContainText(/filters merge, risk|絞り込み merge, risk/);
+});
+
+test("unreviewed cards still collect deterministic local merge candidates without an AI call", async ({ page }) => {
+  let aiRequested = false;
+  await page.route("**/ai/suggest-merges", async (route) => {
+    aiRequested = true;
+    await route.fulfill({ status: 500, contentType: "application/json", body: "{}" });
+  });
+  await page.route("**/docs/doc_phase1_canvas", async (route) => {
+    const now = new Date().toISOString();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        version: 1,
+        id: "doc_phase1_canvas",
+        createdAt: now,
+        updatedAt: now,
+        transform: { panX: 0, panY: 0, zoom: 1 },
+        cards: [],
+        edges: [],
+        islands: [],
+      }),
+    });
+  });
+
+  const now = new Date().toISOString();
+  await page.goto("/");
+  await loadDocument(page, {
+    version: 1,
+    id: "doc_e2e_unreviewed_merge_candidates",
+    createdAt: now,
+    updatedAt: now,
+    transform: { panX: 0, panY: 0, zoom: 1 },
+    cards: [
+      { id: "c1", text: "Needs Follow-Up", x: 100, y: 100, textReviewed: false },
+      { id: "c2", text: "needs follow up", x: 140, y: 120, textReviewed: false },
+      { id: "c3", text: "unrelated observation", x: 400, y: 100, textReviewed: false },
+    ],
+    edges: [],
+    islands: [],
+  });
+
+  await openAdvancedWorkMode(page);
+  await selectWorkModeTab(page, "merge");
+  await page.getByRole("button", { name: /Collect candidates|候補を収集/i }).click();
+
+  await expect(page.getByTestId("ce3-candidate-select")).toBeEnabled();
+  await expect(page.getByTestId("ce3-candidate-count")).toContainText("(1)");
+  await expect(page.getByText(/without calling the AI|AIは呼び出さず/)).toBeVisible();
+  expect(aiRequested).toBe(false);
 });
