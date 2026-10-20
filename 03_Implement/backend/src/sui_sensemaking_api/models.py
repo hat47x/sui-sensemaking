@@ -968,6 +968,22 @@ class CardKa(BaseModel):
     value: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
+class CritiqueHistoryEntry(BaseModel):
+    # SUIPV-RATIONALE-HISTORY-01 (Issue #3175): previous human critique
+    # revisions. The current Card.critique stays the source of truth; history
+    # is bounded so a long-lived document cannot grow without limit.
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    createdAt: datetime
+    fromCritique: str | None = Field(default=None, max_length=CRITIQUE_MAX_LENGTH)
+    toCritique: str | None = Field(default=None, max_length=CRITIQUE_MAX_LENGTH)
+    fromTags: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
+    toTags: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
+    changeKind: Literal["manual", "import", "rollback", "unknown"]
+    note: str | None = Field(default=None, max_length=CRITIQUE_MAX_LENGTH, exclude_if=lambda value: value is None)
+
+
 class Card(CardBase):
     textReviewed: bool | None = Field(default=None, exclude_if=lambda value: value is None)
     holdState: Literal["held", "pending", "shelved"] | None = Field(
@@ -975,6 +991,9 @@ class Card(CardBase):
     )
     meta: CardMeta | None = Field(default=None, exclude_if=lambda value: value is None)
     ka: CardKa | None = Field(default=None, exclude_if=lambda value: value is None)
+    critiqueHistory: list[CritiqueHistoryEntry] | None = Field(
+        default=None, max_length=50, exclude_if=lambda value: value is None
+    )
 
 
 class Edge(BaseModel):

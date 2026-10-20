@@ -113,6 +113,68 @@ function validateA1TargetRef(value: unknown): boolean {
   return typeof value === "string" && A1_TARGET_REF_PATTERN.test(value);
 }
 
+function validateCritiqueHistory(value: unknown, path: string, errors: string[]): value is unknown[] {
+  if (!Array.isArray(value)) {
+    errors.push(`${path}: must be an array when provided`);
+    return false;
+  }
+
+  let valid = true;
+  value.forEach((entry, index) => {
+    const entryPath = `${path}[${index}]`;
+    if (!isRecord(entry)) {
+      errors.push(`${entryPath}: must be an object`);
+      valid = false;
+      return;
+    }
+
+    hasOnlyKeys(
+      entry,
+      ["id", "createdAt", "fromCritique", "toCritique", "fromTags", "toTags", "changeKind", "note"],
+      entryPath,
+      errors
+    );
+
+    if (!isNonEmptyString(entry.id)) {
+      errors.push(`${entryPath}.id: must be a non-empty string`);
+      valid = false;
+    }
+    if (typeof entry.createdAt !== "string" || !isIsoTimestamp(entry.createdAt)) {
+      errors.push(`${entryPath}.createdAt: must be an ISO timestamp`);
+      valid = false;
+    }
+    for (const field of ["fromCritique", "toCritique"] as const) {
+      const fieldValue = entry[field];
+      if (fieldValue !== null && typeof fieldValue !== "string") {
+        errors.push(`${entryPath}.${field}: must be a string or null`);
+        valid = false;
+      }
+    }
+    for (const field of ["fromTags", "toTags"] as const) {
+      const fieldValue = entry[field];
+      if (fieldValue !== null && (!Array.isArray(fieldValue) || !fieldValue.every((tag) => typeof tag === "string"))) {
+        errors.push(`${entryPath}.${field}: must be an array of strings or null`);
+        valid = false;
+      }
+    }
+    if (
+      entry.changeKind !== "manual"
+      && entry.changeKind !== "import"
+      && entry.changeKind !== "rollback"
+      && entry.changeKind !== "unknown"
+    ) {
+      errors.push(`${entryPath}.changeKind: must be 'manual' | 'import' | 'rollback' | 'unknown'`);
+      valid = false;
+    }
+    if (entry.note !== undefined && typeof entry.note !== "string") {
+      errors.push(`${entryPath}.note: must be a string when provided`);
+      valid = false;
+    }
+  });
+
+  return valid;
+}
+
 function validateCard(item: unknown, index: number, errors: string[]): item is DocumentV1["cards"][number] {
   const path = `cards[${index}]`;
   if (!isRecord(item)) {
@@ -120,7 +182,7 @@ function validateCard(item: unknown, index: number, errors: string[]): item is D
     return false;
   }
 
-  hasOnlyKeys(item, ["id", "text", "x", "y", "claimType", "mergedIntoCardId", "repOf", "canonicalId", "sources", "critique", "critiqueTags", "textReviewed", "holdState", "meta", "ka"], path, errors);
+  hasOnlyKeys(item, ["id", "text", "x", "y", "claimType", "mergedIntoCardId", "repOf", "canonicalId", "sources", "critique", "critiqueTags", "critiqueHistory", "textReviewed", "holdState", "meta", "ka"], path, errors);
 
   let valid = true;
   if (typeof item.id !== "string") {
@@ -169,6 +231,9 @@ function validateCard(item: unknown, index: number, errors: string[]): item is D
     valid = false;
   }
   if (item.critiqueTags !== undefined && !validateStringArray(item.critiqueTags, `${path}.critiqueTags`, errors)) {
+    valid = false;
+  }
+  if (item.critiqueHistory !== undefined && !validateCritiqueHistory(item.critiqueHistory, `${path}.critiqueHistory`, errors)) {
     valid = false;
   }
   if (item.textReviewed !== undefined && typeof item.textReviewed !== "boolean") {

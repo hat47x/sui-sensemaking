@@ -4,6 +4,7 @@ import type {
   CardMeta,
   ContradictionSignalDecision,
   ContradictionSignalReviewStatus,
+  CritiqueHistoryEntry,
   DeterministicTieBreak,
   DocumentV1,
   EvidenceLink,
@@ -172,6 +173,7 @@ function parseCards(value: unknown): Card[] | null {
           : undefined,
       critique: typeof item.critique === "string" ? item.critique : undefined,
       critiqueTags: parseCritiqueTags(item.critiqueTags),
+      critiqueHistory: parseCritiqueHistory(item.critiqueHistory),
       textReviewed: typeof item.textReviewed === "boolean" ? item.textReviewed : undefined,
       holdState:
         item.holdState === "held" || item.holdState === "pending"
@@ -297,6 +299,51 @@ function parseSummaryHistory(value: unknown): SummaryHistoryEntry[] | undefined 
       ...(Array.isArray(item.groundingIds)
         ? { groundingIds: item.groundingIds.filter((id): id is string => typeof id === "string") }
         : {}),
+    });
+  }
+
+  return entries.length > 0 ? entries : undefined;
+}
+
+function parseCritiqueHistory(value: unknown): CritiqueHistoryEntry[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const entries: CritiqueHistoryEntry[] = [];
+  for (const item of value) {
+    if (
+      !isRecord(item)
+      || typeof item.id !== "string"
+      || typeof item.createdAt !== "string"
+      || (item.fromCritique !== null && typeof item.fromCritique !== "string")
+      || (item.toCritique !== null && typeof item.toCritique !== "string")
+      || (item.fromTags !== null && !Array.isArray(item.fromTags))
+      || (item.toTags !== null && !Array.isArray(item.toTags))
+      || (item.changeKind !== "manual"
+        && item.changeKind !== "import"
+        && item.changeKind !== "rollback"
+        && item.changeKind !== "unknown")
+    ) {
+      continue;
+    }
+
+    const fromTags = Array.isArray(item.fromTags)
+      ? item.fromTags.filter((tag): tag is string => typeof tag === "string")
+      : null;
+    const toTags = Array.isArray(item.toTags)
+      ? item.toTags.filter((tag): tag is string => typeof tag === "string")
+      : null;
+
+    entries.push({
+      id: item.id,
+      createdAt: item.createdAt,
+      fromCritique: item.fromCritique,
+      toCritique: item.toCritique,
+      fromTags,
+      toTags,
+      changeKind: item.changeKind,
+      ...(typeof item.note === "string" ? { note: item.note } : {}),
     });
   }
 

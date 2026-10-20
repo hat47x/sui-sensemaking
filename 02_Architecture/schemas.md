@@ -370,6 +370,28 @@ export type Card = {
 
 `holdState`、`meta`、`ka` はすべて任意であり、欠落時は従来の通常カードとして扱う。各フィールドの意味、安全境界、取り込み規則は §14、§15、§17を参照する。
 
+#### 3.2.1 判断理由の改訂履歴（SUIPV-RATIONALE-HISTORY-01）
+
+`Card` は、任意で `critiqueHistory?: CritiqueHistoryEntry[]` を持つ。`critique` と `critiqueTags` の現在値が正本であり、履歴は現在値を置き換えない。人が違和感メモまたは違和感タグを変更したとき、直前の値をこの配列へ追加する。上限は50件とし、超えた分は古いものから落とす。
+
+```ts
+export type CritiqueHistoryEntry = {
+  id: string;
+  createdAt: string; // ISO 8601
+  fromCritique: string | null;
+  toCritique: string | null;
+  fromTags: string[] | null;
+  toTags: string[] | null;
+  changeKind: "manual" | "import" | "rollback" | "unknown";
+  note?: string;
+};
+```
+
+- 履歴はAIで補完しない。AIが生成した理由を人の履歴として自動記録しない。
+- エージェント応答の採用は `changeKind: "import"` とし、人が書いた改訂と区別する。
+- 履歴からの復元は `changeKind: "rollback"` の新しい履歴を追加する。過去の履歴を書き換えない。
+- SafeModeの共有・書き出し投影では、`fromCritique` / `toCritique` / タグ / `note` を墨消しし、ID・時刻・`changeKind` だけを残す。
+
 > 備考：MVPでは `w/h` は固定でもよい。必要になったら追加する。
 
 ### 3.3 Edge

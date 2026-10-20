@@ -1243,6 +1243,8 @@
   "side_panel.critique.note_placeholder": "Optional feedback about this island",
   "side_panel.critique.card_note_placeholder": "Optional feedback about this card",
   "side_panel.critique.tags": "Critique tags",
+  "side_panel.critique.history_with_count": "Critique note history ({count})",
+  "side_panel.critique.no_history": "No revisions yet",
   "side_panel.critique.tag.too_close": "Too close",
   "side_panel.critique.tag.too_far": "Too far",
   "side_panel.critique.tag.not_the_same": "Not the same",

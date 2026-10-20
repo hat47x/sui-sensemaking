@@ -18,6 +18,7 @@ import {
   type Card,
   type CardKa,
   type CardMeta,
+  type CritiqueHistoryEntry,
   type CritiqueInput,
   type DeterministicTieBreak,
   type DocumentV1,
@@ -207,6 +208,7 @@ const CARD_FIELDS = {
   sources: "preserve",
   critique: "redact",
   critiqueTags: "redact",
+  critiqueHistory: "rebuild",
   textReviewed: "preserve",
   holdState: "preserve",
   meta: "rebuild",
@@ -689,6 +691,19 @@ function sanitizeCardKa(ka: CardKa): CardKa {
   };
 }
 
+function sanitizeCritiqueHistoryEntry(entry: CritiqueHistoryEntry): CritiqueHistoryEntry {
+  return {
+    id: entry.id,
+    createdAt: entry.createdAt,
+    fromCritique: entry.fromCritique === null ? null : redact(entry.fromCritique),
+    toCritique: entry.toCritique === null ? null : redact(entry.toCritique),
+    fromTags: entry.fromTags === null ? null : entry.fromTags.map(redact),
+    toTags: entry.toTags === null ? null : entry.toTags.map(redact),
+    changeKind: entry.changeKind,
+    ...(entry.note !== undefined ? { note: redact(entry.note) } : {}),
+  };
+}
+
 function sanitizeCard(card: Card, includeSourceReferences: boolean): Card {
   const meta = card.meta === undefined
     ? undefined
@@ -705,6 +720,9 @@ function sanitizeCard(card: Card, includeSourceReferences: boolean): Card {
     ...(card.sources !== undefined ? { sources: [...card.sources] } : {}),
     ...(card.critique !== undefined ? { critique: redact(card.critique) } : {}),
     ...(card.critiqueTags !== undefined ? { critiqueTags: card.critiqueTags.map(redact) } : {}),
+    ...(card.critiqueHistory !== undefined
+      ? { critiqueHistory: card.critiqueHistory.map(sanitizeCritiqueHistoryEntry) }
+      : {}),
     ...(card.textReviewed !== undefined ? { textReviewed: card.textReviewed } : {}),
     ...(card.holdState !== undefined ? { holdState: card.holdState } : {}),
     ...(meta !== undefined ? { meta } : {}),

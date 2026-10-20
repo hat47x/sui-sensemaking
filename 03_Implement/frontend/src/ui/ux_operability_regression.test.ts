@@ -1096,7 +1096,10 @@ describe("UX Operability regression contracts", () => {
     expect(sidePanelSource).toMatch(/disabled=\{isReadOnly\}/);
     expect(sidePanelSource).toMatch(/import.*ShelfPanel.*from/);
     expect(sidePanelSource).toMatch(/checked=\{selectedCard\.textReviewed === true\}\s+disabled=\{isReadOnly\}/);
-    expect(sidePanelSource).toMatch(/value=\{selectedCard\.critique \?\? ""\}\s+disabled=\{isReadOnly\}/);
+    // The card critique field keeps a local draft and commits on blur so one
+    // judgment change produces one revision history entry, not one per key.
+    expect(sidePanelSource).toMatch(/value=\{cardCritiqueDraft\}\s+disabled=\{isReadOnly\}/);
+    expect(sidePanelSource).toMatch(/onBlur=\{\(\) => \{\s+if \(cardCritiqueDraft !== \(selectedCard\.critique \?\? ""\)\)/);
   });
 
   it("Phase 7: empty-canvas-onboarding-stays-operable", () => {

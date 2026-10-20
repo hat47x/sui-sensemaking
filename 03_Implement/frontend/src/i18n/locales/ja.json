@@ -1243,6 +1243,8 @@
   "side_panel.critique.note_placeholder": "この島についての補足や懸念を入力",
   "side_panel.critique.card_note_placeholder": "このカードについての補足や懸念を入力",
   "side_panel.critique.tags": "違和感タグ",
+  "side_panel.critique.history_with_count": "違和感メモの履歴（{count}）",
+  "side_panel.critique.no_history": "まだ履歴はありません",
   "side_panel.critique.tag.too_close": "近すぎる",
   "side_panel.critique.tag.too_far": "遠すぎる",
   "side_panel.critique.tag.not_the_same": "同じものではない",

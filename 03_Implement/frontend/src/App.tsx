@@ -75,6 +75,7 @@ import {
   type MergeSuggestionDecision,
 } from "./domain/merge_suggestion_decisions";
 import { isSourceCard, Document, DocumentV1, Island, Narrative, type CardKa, type CardMeta, type ContradictionSignalDecision, type ContradictionSignalReviewStatus, type CritiqueInput, type EvidenceLink, type KnownEdgeType, type Point, type RelationSummary, type ReproposalDiff } from "./domain/types";
+import { restoreCardCritiqueHistoryEntry, updateCardCritiqueWithHistory } from "./domain/critique_history_ops";
 import { KNOWN_EDGE_TYPES } from "./domain/types";
 import { answerCardQualityQuestion, beginCardQualityRewrite, cardQualityRestoreTarget, openCardQualityAssist, type CardQualityAssistState, type CardQualityDecision } from "./domain/card_quality";
 import { validateDocument } from "./import/schema_validation";
@@ -5701,35 +5702,37 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
 
-      const nextCritique = rawCritique.length > 0 ? rawCritique : undefined;
-      const nextCards = document.cards.map((card) => {
-        if (card.id !== cardId) {
-          return card;
-        }
-
-        if ((card.critique ?? undefined) === nextCritique) {
-          return card;
-        }
-
-        return {
-          ...card,
-          critique: nextCritique,
-        };
-      });
-
-      const hasChanges = nextCards.some((card, index) => card !== document.cards[index]);
-      if (!hasChanges) {
+      const nextDocument = updateCardCritiqueWithHistory(
+        document,
+        cardId,
+        { critique: rawCritique },
+        { changeKind: "manual" }
+      );
+      if (nextDocument === document) {
         return;
       }
 
-      applyDocumentChange(
-        {
-          ...document,
-          cards: nextCards,
-        },
-        t("app.history.card.critique_updated"),
-        { preserveSuggestionPreview: true }
-      );
+      applyDocumentChange(nextDocument, t("app.history.card.critique_updated"), {
+        preserveSuggestionPreview: true,
+      });
+    },
+    [applyDocumentChange, document]
+  );
+
+  const handleRestoreCardCritiqueHistoryEntry = useCallback(
+    (cardId: string, historyEntryId: string) => {
+      if (!document) {
+        return;
+      }
+
+      const nextDocument = restoreCardCritiqueHistoryEntry(document, cardId, historyEntryId);
+      if (nextDocument === document) {
+        return;
+      }
+
+      applyDocumentChange(nextDocument, t("app.history.card.critique_updated"), {
+        preserveSuggestionPreview: true,
+      });
     },
     [applyDocumentChange, document]
   );
@@ -5935,31 +5938,29 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     // Same safe, non-destructive per-card toggle as the U key (一枚一志):
     // empty -> marker, marker -> empty, authored text -> untouched.
     const marker = t("card_view.critique_quick_flag");
-    const nextCards = document.cards.map((card) => {
+    let nextDocument = document;
+    for (const card of document.cards) {
       if (!selectedCardIdSet.has(card.id)) {
-        return card;
+        continue;
       }
 
       const current = card.critique?.trim() ?? "";
       const next = current.length === 0 ? marker : current === marker ? "" : current;
-      const nextCritique = next.length > 0 ? next : undefined;
-      if ((card.critique ?? undefined) === nextCritique) {
-        return card;
-      }
+      nextDocument = updateCardCritiqueWithHistory(
+        nextDocument,
+        card.id,
+        { critique: next },
+        { changeKind: "manual" }
+      );
+    }
 
-      return { ...card, critique: nextCritique };
-    });
-
-    const hasChanges = nextCards.some((card, index) => card !== document.cards[index]);
-    if (!hasChanges) {
+    if (nextDocument === document) {
       return;
     }
 
-    applyDocumentChange(
-      { ...document, cards: nextCards },
-      t("app.history.card.critique_updated"),
-      { preserveSuggestionPreview: true }
-    );
+    applyDocumentChange(nextDocument, t("app.history.card.critique_updated"), {
+      preserveSuggestionPreview: true,
+    });
   }, [applyDocumentChange, document, selectedCardIds]);
 
   const handleBulkAddCritiqueReason = useCallback(
@@ -5974,21 +5975,29 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       }
 
       const selectedCardIdSet = new Set(selectedCardIds);
-      const nextCards = document.cards.map((card) => {
+      let nextDocument = document;
+      for (const card of document.cards) {
         if (!selectedCardIdSet.has(card.id)) {
-          return card;
+          continue;
         }
 
         const current = card.critique?.trim() ?? "";
         const nextCritique = current.length > 0 ? `${current}\n\n${reason}` : reason;
-        return { ...card, critique: nextCritique };
-      });
+        nextDocument = updateCardCritiqueWithHistory(
+          nextDocument,
+          card.id,
+          { critique: nextCritique },
+          { changeKind: "manual" }
+        );
+      }
 
-      applyDocumentChange(
-        { ...document, cards: nextCards },
-        t("app.history.card.critique_updated"),
-        { preserveSuggestionPreview: true }
-      );
+      if (nextDocument === document) {
+        return;
+      }
+
+      applyDocumentChange(nextDocument, t("app.history.card.critique_updated"), {
+        preserveSuggestionPreview: true,
+      });
     },
     [applyDocumentChange, document, selectedCardIds]
   );
@@ -6208,38 +6217,20 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
 
-      const normalizedNextTags = nextTags.length > 0 ? [...nextTags] : undefined;
-      const nextCards = document.cards.map((card) => {
-        if (card.id !== cardId) {
-          return card;
-        }
-
-        const currentTags = card.critiqueTags ?? [];
-        const tagsChanged =
-          currentTags.length !== nextTags.length || currentTags.some((tag, index) => tag !== nextTags[index]);
-        if (!tagsChanged) {
-          return card;
-        }
-
-        return {
-          ...card,
-          critiqueTags: normalizedNextTags,
-        };
-      });
-
-      const hasChanges = nextCards.some((card, index) => card !== document.cards[index]);
-      if (!hasChanges) {
+      const normalizedNextTags = nextTags.length > 0 ? [...nextTags] : null;
+      const nextDocument = updateCardCritiqueWithHistory(
+        document,
+        cardId,
+        { critiqueTags: normalizedNextTags },
+        { changeKind: "manual" }
+      );
+      if (nextDocument === document) {
         return;
       }
 
-      applyDocumentChange(
-        {
-          ...document,
-          cards: nextCards,
-        },
-        t("app.history.card.critique_tags_updated"),
-        { preserveSuggestionPreview: true }
-      );
+      applyDocumentChange(nextDocument, t("app.history.card.critique_tags_updated"), {
+        preserveSuggestionPreview: true,
+      });
     },
     [applyDocumentChange, document]
   );
@@ -9639,8 +9630,13 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           const cardId = review.targetRef.cardIds?.[0];
           const islandId = review.targetRef.islandId;
           if (cardId) {
-            const nextCards = document.cards.map((card) => (card.id === cardId ? { ...card, critique: text } : card));
-            commitAdoption = () => applyDocumentChange({ ...document, cards: nextCards }, t("app.history.agent_response.critique_imported"));
+            const nextDocument = updateCardCritiqueWithHistory(
+              document,
+              cardId,
+              { critique: text },
+              { changeKind: "import" }
+            );
+            commitAdoption = () => applyDocumentChange(nextDocument, t("app.history.agent_response.critique_imported"));
           } else if (islandId) {
             const nextIslands = document.islands.map((island) => (island.id === islandId ? { ...island, critique: text } : island));
             commitAdoption = () => applyDocumentChange({ ...document, islands: nextIslands }, t("app.history.agent_response.critique_imported"));
@@ -12242,6 +12238,13 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
             }
 
             handleCardCritiqueChange(selectedCard.id, value);
+          }}
+          onRestoreCardCritiqueHistoryEntry={(historyEntryId) => {
+            if (!selectedCard) {
+              return;
+            }
+
+            handleRestoreCardCritiqueHistoryEntry(selectedCard.id, historyEntryId);
           }}
           onCardMetaChange={(rawSeq, rawSource) => {
             if (!selectedCard) {
