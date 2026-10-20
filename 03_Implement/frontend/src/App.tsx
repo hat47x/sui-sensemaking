@@ -1448,6 +1448,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
   const [isViewControlsOpen, setIsViewControlsOpen] = useState(false);
   const [isSharePanelOpen, setIsSharePanelOpen] = useState(false);
   const [isStartPanelVisible, setIsStartPanelVisible] = useState(true);
+  const [isStartPanelExpanded, setIsStartPanelExpanded] = useState(false);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [visibleAggregatedEdges, setVisibleAggregatedEdges] = useState<AggregatedEdgeMeta[]>([]);
   const [isGeneratingRelationSummary, setIsGeneratingRelationSummary] = useState(false);
@@ -7112,7 +7113,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
 
-      if (isStartPanelVisible || isEditableHotkeyTarget(event.target)) {
+      if ((isStartPanelVisible && isStartPanelExpanded) || isEditableHotkeyTarget(event.target)) {
         return;
       }
 
@@ -7126,7 +7127,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [closeCommandPalette, isCommandPaletteOpen, isStartPanelVisible]);
+  }, [closeCommandPalette, isCommandPaletteOpen, isStartPanelVisible, isStartPanelExpanded]);
 
   useEffect(() => {
     // UX-SHORTCUT-01 AC-4 (ADR-0048 D2): "?" opens the shortcut cheatsheet;
@@ -7143,7 +7144,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
 
-      if (isStartPanelVisible || isEditableHotkeyTarget(event.target)) {
+      if ((isStartPanelVisible && isStartPanelExpanded) || isEditableHotkeyTarget(event.target)) {
         return;
       }
 
@@ -7157,7 +7158,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [closeShortcutCheatsheet, isShortcutCheatsheetOpen, isStartPanelVisible]);
+  }, [closeShortcutCheatsheet, isShortcutCheatsheetOpen, isStartPanelVisible, isStartPanelExpanded]);
 
   const uniqueIslands = useMemo(() => {
     const normalizedIslands = (focusedVisibleDocument?.islands ?? []).map((island) => ({
@@ -12655,6 +12656,8 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       />
       {isStartPanelVisible ? (
         <StartPanel
+          expanded={isStartPanelExpanded}
+          onExpandedChange={setIsStartPanelExpanded}
           currentDocumentId={activeDocumentId}
           canReopenCurrent={docEtag === null}
           isDirty={isDirty}

@@ -50,6 +50,7 @@ function buildDocument(cardTexts: string[]): unknown {
 test("first-run panel presents safe document entry choices", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 720 });
   await page.goto("/");
+  await page.locator(START_PANEL).getByRole("button", { name: /^Start work$|^作業を開始$/ }).click();
 
   const startPanel = page.locator(START_PANEL);
   await expect(startPanel).toBeVisible();
@@ -71,6 +72,7 @@ test("first-run panel presents safe document entry choices", async ({ page }) =>
 
 test("first-run panel keeps keyboard focus inside the entry dialog", async ({ page }) => {
   await page.goto("/");
+  await page.locator(START_PANEL).getByRole("button", { name: /^Start work$|^作業を開始$/ }).click();
 
   const startPanel = page.locator(START_PANEL);
   await expect(startPanel).toBeVisible();
@@ -100,6 +102,7 @@ test("first-run panel keeps keyboard focus inside the entry dialog", async ({ pa
 
 test("first-run document file entry opens the validation-before-replace flow", async ({ page }) => {
   await page.goto("/");
+  await page.locator(START_PANEL).getByRole("button", { name: /^Start work$|^作業を開始$/ }).click();
 
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: /文書ファイルを読み込む|Load document file/ }).click();
@@ -137,6 +140,7 @@ test("first-run sample entry opens the sample and exposes selection context", as
   });
 
   await page.goto("/");
+  await page.locator(START_PANEL).getByRole("button", { name: /^Start work$|^作業を開始$/ }).click();
   await expect(page.locator(START_PANEL)).toBeVisible();
   await expect(page.getByRole("button", { name: "インタビュー後、メモがチャットの奥に流れて、見つけ直すのに時間がかかった。" })).toHaveCount(0);
 
@@ -167,6 +171,7 @@ test("read-only first-run entry falls back to the built-in sample when services 
   });
 
   await page.goto("/?locale=en&readOnly=1");
+  await page.locator(START_PANEL).getByRole("button", { name: "Start work" }).click();
 
   const createButton = page.getByRole("button", { name: /Create new document/ });
   const sampleButton = page.getByRole("button", { name: /Open sample/ });
@@ -184,6 +189,7 @@ test("read-only first-run entry falls back to the built-in sample when services 
 
 test("read-only document file entry opens validated content for inspection without unsaved changes", async ({ page }) => {
   await page.goto("/?locale=en&readOnly=1");
+  await page.locator(START_PANEL).getByRole("button", { name: "Start work" }).click();
 
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: /Load document file/ }).click();
@@ -207,6 +213,7 @@ test("read-only document file entry opens validated content for inspection witho
 
 test("first-run panel can create a new document from keyboard activation", async ({ page }) => {
   await page.goto("/");
+  await page.locator(START_PANEL).getByRole("button", { name: /^Start work$|^作業を開始$/ }).click();
 
   const createButton = page.getByRole("button", { name: /新しい文書を作成|Create new document/ });
   await expect(createButton).toBeEnabled();

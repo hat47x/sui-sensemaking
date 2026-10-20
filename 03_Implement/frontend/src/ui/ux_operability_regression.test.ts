@@ -184,7 +184,7 @@ describe("UX Operability regression contracts", () => {
     expect(appSource.match(/data-ui-core-action=/g)).toHaveLength(7);
 
     // AC-3: defers to the OS/browser default while editing text elsewhere.
-    expect(appSource).toContain("isStartPanelVisible || isEditableHotkeyTarget(event.target)");
+    expect(appSource).toContain("(isStartPanelVisible && isStartPanelExpanded) || isEditableHotkeyTarget(event.target)");
 
     // Every registered command calls an EXISTING handler by reference —
     // no new business logic is introduced by the palette itself.
