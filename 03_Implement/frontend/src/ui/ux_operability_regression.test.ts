@@ -1026,8 +1026,11 @@ describe("UX Operability regression contracts", () => {
     const parseBlock = appSource.slice(appSource.indexOf("const handleParseAgentResponse"), parseBlockEnd);
     expect(parseBlock).not.toContain("applyDocumentChange(");
     const adoptBlock = appSource.slice(parseBlockEnd, appSource.indexOf("const handleRejectAgentImportedProposal"));
-    expect(adoptBlock.indexOf("applyDocumentChange(")).toBeLessThan(adoptBlock.indexOf("recordExternalAgentProposalDecision("));
+    // #3228: the change is prepared, the adopt audit is recorded, and only then is the change committed.
+    expect(adoptBlock.indexOf("recordExternalAgentProposalDecision(")).toBeLessThan(adoptBlock.indexOf("commitAdoption();"));
     expect(adoptBlock).toContain('t("agent_response_import.audit_failed_status_message")');
+    expect(adoptBlock).toContain("agent_response_import.adopt_failed_invalid_content_status_message");
+    expect(adoptBlock).toContain("agent_response_import.adopt_failed_patch_rejected_status_message");
     expect(appSource.match(/applyDocumentChange\(\{ \.\.\.document, islands: nextIslands \}, t\("app\.history\.agent_response\.island_title_imported"\)\)/g)).toHaveLength(1);
     expect(appSource).toContain('t("app.history.agent_response.narrative_imported")');
     expect(appSource).toContain('t("app.history.agent_response.patch_imported")');

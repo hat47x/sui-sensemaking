@@ -1536,6 +1536,8 @@
   "agent_response_import.rejected_status_message": "Proposal discarded",
   "agent_response_import.audit_required_status_message": "This decision cannot be audited without complete correlation. Re-run the request from the original task.",
   "agent_response_import.audit_failed_status_message": "The decision could not be recorded, so the document was not changed.",
+  "agent_response_import.adopt_failed_invalid_content_status_message": "The proposal is missing its target or content, so it was not adopted. No decision was recorded and the document was not changed.",
+  "agent_response_import.adopt_failed_patch_rejected_status_message": "The patch does not pass checks against the current document, so it was not adopted. No decision was recorded and the document was not changed.",
   "agent_response_import.duplicate_status_message": "This response has already been imported",
   "agent_response_import.exported_patch_file_status_message": "Patch file exported",
   "side_panel.evidence_gap.title_e004": "Contradictions needing grounding",
