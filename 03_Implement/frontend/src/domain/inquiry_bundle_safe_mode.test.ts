@@ -175,6 +175,16 @@ function addSensitiveDocumentFields(document: DocumentV1): void {
       createdAt: CREATED_AT,
     },
   ];
+  document.structureDecisions = [
+    {
+      id: "structure-decision-1",
+      createdAt: CREATED_AT,
+      action: "island_create",
+      islandId: "island-1",
+      cardIds: [document.cards[0].id],
+      rationale: "SECRET_STRUCTURE_RATIONALE",
+    },
+  ];
   document.patchApplyLog = [
     {
       id: "patch-log-1",

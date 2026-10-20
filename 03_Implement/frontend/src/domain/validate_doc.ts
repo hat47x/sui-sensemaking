@@ -15,6 +15,7 @@ import type {
   ReproposalDiff,
   ReviewAttribution,
   RelationSummary,
+  StructureDecisionRecord,
   VoidEntry,
 } from "./types";
 import { DOCUMENT_DETERMINISTIC_TIE_BREAK_ORDER, KNOWN_EDGE_TYPES, VOID_KINDS } from "./types";
@@ -1320,6 +1321,69 @@ function validateContradictionSignalReviewStatus(value: unknown): value is Contr
   return value === "accepted" || value === "held" || value === "rejected";
 }
 
+function validateStructureDecision(
+  item: unknown,
+  index: number,
+  errors: string[]
+): item is StructureDecisionRecord {
+  const path = `structureDecisions[${index}]`;
+  if (!isRecord(item)) {
+    errors.push(`${path}: must be an object`);
+    return false;
+  }
+
+  hasOnlyKeys(
+    item,
+    ["id", "createdAt", "action", "islandId", "cardIds", "fromValue", "toValue", "rationale"],
+    path,
+    errors
+  );
+
+  let valid = true;
+  if (!isNonEmptyString(item.id)) {
+    errors.push(`${path}.id: must be a non-empty string`);
+    valid = false;
+  }
+  if (typeof item.createdAt !== "string" || !isIsoTimestamp(item.createdAt)) {
+    errors.push(`${path}.createdAt: must be an ISO timestamp`);
+    valid = false;
+  }
+  if (
+    item.action !== "island_create"
+    && item.action !== "cards_added_to_island"
+    && item.action !== "cards_removed_from_island"
+    && item.action !== "hold_state_changed"
+  ) {
+    errors.push(
+      `${path}.action: must be 'island_create' | 'cards_added_to_island' | 'cards_removed_from_island' | 'hold_state_changed'`
+    );
+    valid = false;
+  }
+  if (item.islandId !== undefined && !isNonEmptyString(item.islandId)) {
+    errors.push(`${path}.islandId: must be a non-empty string when provided`);
+    valid = false;
+  }
+  if (!validateStringArray(item.cardIds, `${path}.cardIds`, errors)) {
+    valid = false;
+  } else if (item.cardIds.length === 0) {
+    errors.push(`${path}.cardIds: must contain at least one card id`);
+    valid = false;
+  }
+  for (const field of ["fromValue", "toValue"] as const) {
+    const fieldValue = item[field];
+    if (fieldValue !== undefined && fieldValue !== null && typeof fieldValue !== "string") {
+      errors.push(`${path}.${field}: must be a string or null when provided`);
+      valid = false;
+    }
+  }
+  if (item.rationale !== undefined && typeof item.rationale !== "string") {
+    errors.push(`${path}.rationale: must be a string when provided`);
+    valid = false;
+  }
+
+  return valid;
+}
+
 function validateContradictionSignalDecisionEntry(
   item: unknown,
   index: number,
@@ -1446,6 +1510,7 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
       "patchApplyLog",
       "mergeSuggestionDecisions",
       "contradictionSignalDecisions",
+      "structureDecisions",
       "critiqueInputs",
       "reproposalDiffs",
       "reviewAttribution",
@@ -1684,6 +1749,16 @@ export function validateDocumentV1Strict(value: unknown): ValidateDocumentV1Stri
     } else {
       value.contradictionSignalDecisions.forEach((item, index) => {
         validateContradictionSignalDecisionEntry(item, index, errors);
+      });
+    }
+  }
+
+  if (value.structureDecisions !== undefined) {
+    if (!Array.isArray(value.structureDecisions)) {
+      errors.push("document.structureDecisions: must be an array when provided");
+    } else {
+      value.structureDecisions.forEach((item, index) => {
+        validateStructureDecision(item, index, errors);
       });
     }
   }

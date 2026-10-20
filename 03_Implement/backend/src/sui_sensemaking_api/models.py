@@ -1654,6 +1654,26 @@ class VoidEntry(BaseModel):
     createdAt: datetime
 
 
+class StructureDecisionRecord(BaseModel):
+    # SUIPV-STRUCTURE-HISTORY-01 (Issue #3239): bounded human-facing structure
+    # decisions. This is not a generic audit log.
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    createdAt: datetime
+    action: Literal[
+        "island_create",
+        "cards_added_to_island",
+        "cards_removed_from_island",
+        "hold_state_changed",
+    ]
+    islandId: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    cardIds: list[str] = Field(min_length=1)
+    fromValue: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    toValue: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    rationale: str | None = Field(default=None, max_length=CRITIQUE_MAX_LENGTH, exclude_if=lambda value: value is None)
+
+
 class DocumentV1(BaseModel):
     version: Literal[1]
     id: str
@@ -1683,6 +1703,9 @@ class DocumentV1(BaseModel):
     )
     contradictionSignalDecisions: list[ContradictionSignalDecision] | None = Field(
         default=None, exclude_if=lambda value: value is None
+    )
+    structureDecisions: list[StructureDecisionRecord] | None = Field(
+        default=None, max_length=100, exclude_if=lambda value: value is None
     )
     # sensemaking_technique.md §4 (優先3-1): enumerated structural gaps. Optional; stored
     # only when the user runs void detection.

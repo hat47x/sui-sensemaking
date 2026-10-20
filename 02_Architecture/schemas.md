@@ -644,11 +644,39 @@ export type DocumentV1 = {
   deterministicTieBreak?: DeterministicTieBreak;
   shelf?: ShelfEntry[];
   contradictionSignalDecisions?: ContradictionSignalDecision[];
+  structureDecisions?: StructureDecisionRecord[];
   // sensemaking_technique.md §4 (優先3-1): enumerated structural gaps. Optional; stored
   // only when the user runs void detection.
   voids?: VoidEntry[];
 };
 ```
+
+#### 3.2.2 構造の判断履歴（SUIPV-STRUCTURE-HISTORY-01）
+
+`DocumentV1.structureDecisions?: StructureDecisionRecord[]` は、人間の構造操作のうち、島の作成・カードの追加/除外・保留状態の変更だけを記録する。すべてのUI操作を記録する監査ログではない。上限は100件とし、超えた分は古いものから落とす。
+
+```ts
+export type StructureDecisionRecord = {
+  id: string;
+  createdAt: string; // ISO 8601
+  action:
+    | "island_create"
+    | "cards_added_to_island"
+    | "cards_removed_from_island"
+    | "hold_state_changed";
+  islandId?: string;
+  cardIds: string[]; // 1件以上
+  fromValue?: string | null;
+  toValue?: string | null;
+  rationale?: string;
+};
+```
+
+- `cardIds` は操作に関係したカードを保持し、元カードへ戻る手掛かりにする。
+- `rationale` は操作の時点では任意。後から履歴の行へ追記でき、空にすれば削除する。
+- `rationale` はAIで補完しない。保存・再読込・exportで意味を変えない。
+- SafeModeの共有・書き出し投影では、`rationale` を墨消しし、ID・時刻・action・cardIds・from/toだけを残す。
+- 現在の構造（`islands`、`cards[].holdState`）が正本であり、履歴はそれを置き換えない。
 
 `VoidEntry`は次のとおりです。
 

@@ -349,6 +349,28 @@ export type Narrative = {
   checks?: NarrativeCheck[];
 };
 
+/**
+ * SUIPV-STRUCTURE-HISTORY-01 (Issue #3239): a bounded, human-facing record of
+ * a structure decision. This is not a full audit log: only island creation,
+ * card add/remove, and hold-state changes are recorded.
+ */
+export type StructureDecisionAction =
+  | "island_create"
+  | "cards_added_to_island"
+  | "cards_removed_from_island"
+  | "hold_state_changed";
+
+export type StructureDecisionRecord = {
+  id: string;
+  createdAt: string;
+  action: StructureDecisionAction;
+  islandId?: string;
+  cardIds: string[];
+  fromValue?: string | null;
+  toValue?: string | null;
+  rationale?: string;
+};
+
 export type DocumentV1 = {
   version: 1;
   id: string;
@@ -372,6 +394,8 @@ export type DocumentV1 = {
   deterministicTieBreak?: DeterministicTieBreak;
   /** DOMAIN-EXPR-02: optional shelf — cards set aside without deletion. */
   shelf?: ShelfEntry[];
+  /** SUIPV-STRUCTURE-HISTORY-01: bounded structure decisions with optional rationale. */
+  structureDecisions?: StructureDecisionRecord[];
   /** DOMAIN-EXPR-04 (schemas.md §16): human review decisions on analyzeContradictions() signals. */
   contradictionSignalDecisions?: ContradictionSignalDecision[];
   /** KJ-PROMPT-ALIGN / sensemaking_technique.md §4 (優先3-1): enumerated structural gaps

@@ -63,6 +63,9 @@ const DYNAMIC_KEY_CASES: Record<string, readonly string[]> = {
   "view_controls.ai_provider.outcome.${}": family("view_controls.ai_provider.outcome.", [
     "ok", "disabled", "timeout", "validation", "unavailable", "unknown",
   ]),
+  "structure_action.${}": family("structure_action.", [
+    "island_create", "cards_added_to_island", "cards_removed_from_island", "hold_state_changed",
+  ]),
   "patch_workspace.phase.${}": family("patch_workspace.phase.", [
     "idle", "decision_recorded", "preset_replayed", "rollback_ready", "error",
   ]),
