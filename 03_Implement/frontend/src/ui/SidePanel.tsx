@@ -6,7 +6,7 @@ import { t } from "../i18n/translate";
 import { formatTimestamp } from "../domain/format_timestamp";
 import { CRITIQUE_TAGS, KNOWN_EDGE_TYPES, resolveKnownEdgeType } from "../domain/types";
 import type { EdgeType, KnownEdgeType, StructureDecisionRecord } from "../domain/types";
-import { structureDecisionsForTarget } from "../domain/structure_decisions";
+import { restorableHoldState, structureDecisionsForTarget } from "../domain/structure_decisions";
 import { cardQualityRestoreTarget, currentCardQualityQuestion, type CardQualityAssistState, type CardQualityDecision } from "../domain/card_quality";
 import { DomainStateSummary } from "./DomainStateSummary";
 import type {
@@ -88,6 +88,7 @@ type SidePanelProps = {
   onCardCritiqueChange: (value: string) => void;
   onRestoreCardCritiqueHistoryEntry: (historyEntryId: string) => void;
   onStructureDecisionRationaleChange: (decisionId: string, rationale: string) => void;
+  onRestoreStructureDecisionHoldState: (decisionId: string) => void;
   /** DOMAIN-TRACE-01: raw seq/source input for the selected card (empty = remove). */
   onCardMetaChange: (rawSeq: string, rawSource: string) => void;
   /** DOMAIN-KA-01: raw voice/value input for the selected card (empty = remove). */
@@ -293,10 +294,12 @@ function StructureDecisionRow({
   record,
   isReadOnly,
   onRationaleChange,
+  onRestoreHoldState,
 }: {
   record: StructureDecisionRecord;
   isReadOnly: boolean;
   onRationaleChange: (decisionId: string, rationale: string) => void;
+  onRestoreHoldState: (decisionId: string) => void;
 }) {
   const [draft, setDraft] = useState(record.rationale ?? "");
 
@@ -318,6 +321,16 @@ function StructureDecisionRow({
       </div>
       {record.rationale ? (
         <div style={{ fontSize: 12, color: "#334155", marginTop: 4, whiteSpace: "pre-wrap" }}>{record.rationale}</div>
+      ) : null}
+      {restorableHoldState(record) !== undefined ? (
+        <button
+          type="button"
+          disabled={isReadOnly}
+          onClick={() => onRestoreHoldState(record.id)}
+          style={{ marginTop: 6, width: "100%" }}
+        >
+          {t("side_panel.structure_history.restore_hold_state")}
+        </button>
       ) : null}
       <textarea
         aria-label={t("side_panel.structure_history.rationale_label")}
@@ -352,10 +365,12 @@ function StructureDecisionHistory({
   records,
   isReadOnly,
   onRationaleChange,
+  onRestoreHoldState,
 }: {
   records: StructureDecisionRecord[];
   isReadOnly: boolean;
   onRationaleChange: (decisionId: string, rationale: string) => void;
+  onRestoreHoldState: (decisionId: string) => void;
 }) {
   return (
     <details data-testid="structure-decision-history" style={{ marginTop: 12 }}>
@@ -372,6 +387,7 @@ function StructureDecisionHistory({
               record={record}
               isReadOnly={isReadOnly}
               onRationaleChange={onRationaleChange}
+              onRestoreHoldState={onRestoreHoldState}
             />
           ))
         )}
@@ -391,6 +407,7 @@ export function SidePanel({
   onCardCritiqueChange,
   onRestoreCardCritiqueHistoryEntry,
   onStructureDecisionRationaleChange,
+  onRestoreStructureDecisionHoldState,
   onCardMetaChange,
   onCardKaChange,
   onCardCritiqueTagsChange,
@@ -4708,6 +4725,7 @@ export function SidePanel({
             : []}
           isReadOnly={isReadOnly}
           onRationaleChange={onStructureDecisionRationaleChange}
+          onRestoreHoldState={onRestoreStructureDecisionHoldState}
         />
       ) : null}
     </aside>
