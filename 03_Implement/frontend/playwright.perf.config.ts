@@ -12,15 +12,17 @@ export default defineConfig({
   ],
   timeout: 60_000,
   retries: 0,
+  outputDir: "test-results/perf",
+  reporter: [["list"], ["json", { outputFile: "test-results/reports/perf.json" }]],
   workers: 1,
   use: {
     baseURL: "http://127.0.0.1:4173",
-    trace: "on-first-retry",
+    trace: "off",
   },
   webServer: {
-    command: "node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173",
+    command: "node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173 --strictPort",
     port: 4173,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });
