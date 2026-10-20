@@ -20,11 +20,12 @@ export default defineConfig({
   // Windows host (browserContext.newPage / start-panel timeouts). Three keeps
   // the full suite reproducible without retries; see Issue #3250.
   workers: 3,
-  // A cold Vite server plus four browsers can take longer than 30s to create a
-  // page on Windows. These budgets are for correctness, not latency; the
-  // latency budgets live in the isolated perf config.
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  // A cold Vite server plus concurrent browsers can stall page creation on
+  // Windows (antivirus scanning, dependency pre-bundling). These budgets are
+  // for correctness, not latency; latency budgets live in the isolated perf
+  // config. 120s absorbs a transient stall without retries.
+  timeout: 120_000,
+  expect: { timeout: 15_000 },
   retries: 0,
   use: {
     baseURL: "http://127.0.0.1:4173",
