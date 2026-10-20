@@ -36,13 +36,42 @@ const viewports = [
   { width: 390, height: 720 },
 ] as const;
 
+test("compact first-run panel leaves sample cards visible and expands on demand", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1100, height: 700 });
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  const toggle = panel.getByRole("button", { name: START_PANEL_TITLE });
+  await expect(panel).toHaveAttribute("role", "region");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator('[data-card-id]')).toHaveCount(3);
+  const panelBox = await panel.boundingBox();
+  expect(panelBox).not.toBeNull();
+  await page.screenshot({ path: testInfo.outputPath("compact-start-panel.png") });
+  for (const card of await page.locator('[data-card-id]').all()) {
+    const box = await card.boundingBox();
+    expect(box).not.toBeNull();
+    const overlaps = box!.x < panelBox!.x + panelBox!.width && box!.x + box!.width > panelBox!.x &&
+      box!.y < panelBox!.y + panelBox!.height && box!.y + box!.height > panelBox!.y;
+    expect(overlaps, JSON.stringify({ panel: panelBox, card: box })).toBe(false);
+  }
+  await toggle.click();
+  await expect(panel).toHaveAttribute("role", "dialog");
+  await expect(panel).toHaveAttribute("aria-modal", "true");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.click();
+  await expect(panel).toHaveAttribute("role", "region");
+  await expect(toggle).toBeFocused();
+});
+
 for (const viewport of viewports) {
-  test(`first-run start panel exposes core document entry actions at ${viewport.width}px`, async ({ page }) => {
+  test(`first-run start panel exposes core document entry actions at ${viewport.width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.goto("/?locale=ja");
 
     const panel = page.locator('[data-panel="start-document-entry"]');
     await expect(panel).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`compact-${viewport.width}.png`) });
+    await panel.getByRole("button", { name: START_PANEL_TITLE }).click();
     await expect(panel).toHaveAccessibleName(START_PANEL_TITLE);
     await expect(panel.getByRole("button", { name: START_PANEL_NEW_DOCUMENT })).toBeVisible();
     await expect(panel.getByRole("button", { name: START_PANEL_SAMPLE })).toBeVisible();

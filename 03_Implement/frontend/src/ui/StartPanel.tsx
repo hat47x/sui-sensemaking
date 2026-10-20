@@ -3,6 +3,8 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 import { t } from "../i18n/translate";
 
 type StartPanelProps = {
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
   currentDocumentId: string;
   /** True when the active document is a pack/sample copy that has not been loaded from the server. */
   canReopenCurrent?: boolean;
@@ -54,6 +56,8 @@ const focusableSelector = [
 ].join(",");
 
 export function StartPanel({
+  expanded = true,
+  onExpandedChange,
   currentDocumentId,
   canReopenCurrent = false,
   isDirty,
@@ -77,9 +81,9 @@ export function StartPanel({
   const canOpenRecent = selectedRecentDocumentId.length > 0 && (canReopenCurrent || selectedRecentDocumentId !== currentDocumentId);
 
   useEffect(() => {
-    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(focusableSelector);
+    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(expanded ? '[data-start-close]' : '[data-start-expand]');
     firstFocusable?.focus();
-  }, []);
+  }, [expanded]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "Escape") {
@@ -88,7 +92,7 @@ export function StartPanel({
       return;
     }
 
-    if (event.key !== "Tab") {
+    if (!expanded || event.key !== "Tab") {
       return;
     }
 
@@ -129,14 +133,14 @@ export function StartPanel({
     <section
       ref={panelRef}
       data-panel="start-document-entry"
-      role="dialog"
-      aria-modal="true"
+      role={expanded ? "dialog" : "region"}
+      aria-modal={expanded ? "true" : undefined}
       aria-label={t("start_panel.title")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
       style={{
         position: "absolute",
-        inset: "16px auto auto 16px",
+        inset: expanded ? "16px auto auto 16px" : "8px auto auto 8px",
         zIndex: 20,
         width: "min(560px, calc(100% - 32px))",
         maxHeight: "calc(100% - 32px)",
@@ -146,18 +150,29 @@ export function StartPanel({
         borderRadius: 8,
         backgroundColor: "rgba(255, 255, 255, 0.98)",
         boxShadow: "0 12px 24px rgba(15, 23, 42, 0.14)",
-        padding: 12,
-        display: "grid",
-        gap: 10,
+        padding: expanded ? 12 : 6,
+        display: expanded ? "grid" : "flex",
+        flexWrap: expanded ? undefined : "wrap",
+        alignItems: expanded ? undefined : "center",
+        gap: expanded ? 10 : 4,
       }}
     >
-      <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{t("start_panel.title")}</div>
-          <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{t("start_panel.description")}</div>
+      <div style={{ display: expanded ? "flex" : "contents", alignItems: "start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "grid", gap: 4, minWidth: 0, order: expanded ? undefined : 0 }}>
+          {onExpandedChange ? (
+            <button type="button" data-start-expand aria-expanded={expanded} onClick={() => onExpandedChange(!expanded)}
+              style={{ border: 0, background: "transparent", padding: 0, fontSize: 15, fontWeight: 800, color: "#0f172a", cursor: "pointer", textAlign: "left" }}>
+              {t("start_panel.title")} <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
+            </button>
+          ) : <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{t("start_panel.title")}</div>}
+          {expanded ? <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{t("start_panel.description")}</div> : null}
         </div>
+        {!expanded ? <span style={{ fontSize: 12, color: safeMode ? "#166534" : "#9a3412", order: 2 }}>
+          {safeMode ? t("start_panel.status.safe_mode_on") : t("start_panel.status.safe_mode_off")}
+        </span> : null}
         <button
           type="button"
+          data-start-close
           onClick={onClose}
           aria-label={t("start_panel.close")}
           style={{
@@ -168,13 +183,14 @@ export function StartPanel({
             padding: "4px 8px",
             cursor: "pointer",
             flex: "0 0 auto",
+            order: expanded ? undefined : 3,
           }}
         >
           ×
         </button>
       </div>
 
-      <dl
+      {expanded ? <dl
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(96px, 0.35fr) minmax(0, 1fr)",
@@ -200,35 +216,37 @@ export function StartPanel({
         <dd style={{ margin: 0, color: isReadOnly ? "#9a3412" : "#166534", fontWeight: 700 }}>
           {isReadOnly ? t("start_panel.status.read_only") : t("start_panel.status.editable")}
         </dd>
-      </dl>
+      </dl> : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: expanded ? "repeat(auto-fit, minmax(190px, 1fr))" : "repeat(4, minmax(0, 1fr))", gap: expanded ? 8 : 4, fontSize: expanded ? undefined : 12, flex: expanded ? undefined : "1 1 220px", order: expanded ? undefined : 1 }}>
         <button
           type="button"
           onClick={onCreateNew}
           disabled={!canCreateNew}
-          style={canCreateNew ? startActionStyle : disabledStartActionStyle}
+          aria-label={expanded ? undefined : t("start_panel.action.new")}
+          title={expanded ? undefined : t("start_panel.action.new")}
+          style={{ ...(canCreateNew ? startActionStyle : disabledStartActionStyle), padding: expanded ? 10 : 4 }}
         >
-          <span style={{ fontWeight: 800 }}>{t("start_panel.action.new")}</span>
-          <span style={{ fontSize: 12, color: "#475569" }}>{t("start_panel.action.new_hint")}</span>
+          <span style={{ fontWeight: 800 }}>{t(expanded ? "start_panel.action.new" : "start_panel.compact.new")}</span>
+          {expanded ? <span style={{ fontSize: 12, color: "#475569" }}>{t("start_panel.action.new_hint")}</span> : null}
         </button>
-        <button type="button" onClick={onOpenSample} disabled={isBusy} style={isBusy ? disabledStartActionStyle : startActionStyle}>
-          <span style={{ fontWeight: 800 }}>{t("start_panel.action.sample")}</span>
-          <span style={{ fontSize: 12, color: "#475569" }}>{t("start_panel.action.sample_hint")}</span>
+        <button type="button" onClick={onOpenSample} disabled={isBusy} aria-label={expanded ? undefined : t("start_panel.action.sample")} title={expanded ? undefined : t("start_panel.action.sample")} style={{ ...(isBusy ? disabledStartActionStyle : startActionStyle), padding: expanded ? 10 : 4 }}>
+          <span style={{ fontWeight: 800 }}>{t(expanded ? "start_panel.action.sample" : "start_panel.compact.sample")}</span>
+          {expanded ? <span style={{ fontSize: 12, color: "#475569" }}>{t("start_panel.action.sample_hint")}</span> : null}
         </button>
-        <button type="button" onClick={onLoadDocumentFile} disabled={isBusy} style={isBusy ? disabledStartActionStyle : startActionStyle}>
-          <span style={{ fontWeight: 800 }}>{t("start_panel.action.load_document")}</span>
-          <span style={{ fontSize: 12, color: "#475569" }}>
+        <button type="button" onClick={onLoadDocumentFile} disabled={isBusy} aria-label={expanded ? undefined : t("start_panel.action.load_document")} title={expanded ? undefined : t("start_panel.action.load_document")} style={{ ...(isBusy ? disabledStartActionStyle : startActionStyle), padding: expanded ? 10 : 4 }}>
+          <span style={{ fontWeight: 800 }}>{t(expanded ? "start_panel.action.load_document" : "start_panel.compact.load_document")}</span>
+          {expanded ? <span style={{ fontSize: 12, color: "#475569" }}>
             {t(isReadOnly ? "start_panel.action.load_document_hint_read_only" : "start_panel.action.load_document_hint")}
-          </span>
+          </span> : null}
         </button>
-        <button type="button" onClick={onImportReviewPack} disabled={isBusy} style={isBusy ? disabledStartActionStyle : startActionStyle}>
-          <span style={{ fontWeight: 800 }}>{t("start_panel.action.import_review_pack")}</span>
-          <span style={{ fontSize: 12, color: "#475569" }}>{t("start_panel.action.import_review_pack_hint")}</span>
+        <button type="button" onClick={onImportReviewPack} disabled={isBusy} aria-label={expanded ? undefined : t("start_panel.action.import_review_pack")} title={expanded ? undefined : t("start_panel.action.import_review_pack")} style={{ ...(isBusy ? disabledStartActionStyle : startActionStyle), padding: expanded ? 10 : 4 }}>
+          <span style={{ fontWeight: 800 }}>{t(expanded ? "start_panel.action.import_review_pack" : "start_panel.compact.import_review_pack")}</span>
+          {expanded ? <span style={{ fontSize: 12, color: "#475569" }}>{t("start_panel.action.import_review_pack_hint")}</span> : null}
         </button>
       </div>
 
-      {recentDocumentIds.length > 0 ? (
+      {expanded && recentDocumentIds.length > 0 ? (
         <div style={{ display: "grid", gap: 6, borderTop: "1px solid #e2e8f0", paddingTop: 10 }}>
           <label style={{ display: "grid", gap: 4, fontSize: 12, fontWeight: 700, color: "#334155" }}>
             {t("start_panel.recent.label")}

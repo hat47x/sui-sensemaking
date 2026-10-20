@@ -26,6 +26,16 @@ function buildProps(overrides: Partial<React.ComponentProps<typeof StartPanel>> 
 }
 
 describe("StartPanel", () => {
+  it("keeps primary entry actions and SafeMode visible without a modal when compact", () => {
+    setActiveLocale("en");
+    const html = renderToStaticMarkup(React.createElement(StartPanel, buildProps({ expanded: false, onExpandedChange: vi.fn() })));
+    expect(html).toContain('role="region"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain('aria-modal="true"');
+    expect(html).toContain("Create new document");
+    expect(html).toContain("Open sample");
+    expect(html).toContain("SafeMode: ON");
+  });
   it("shows the first-run document entry actions in Japanese", () => {
     setActiveLocale("ja");
 
