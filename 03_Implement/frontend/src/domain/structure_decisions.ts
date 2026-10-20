@@ -1,4 +1,5 @@
 import type { DocumentV1, StructureDecisionAction, StructureDecisionRecord } from "./types";
+import { updateCardHoldStateAndShelf, type HoldStateSelection } from "./hold_state_ops";
 
 const DEFAULT_STRUCTURE_HISTORY_LIMIT = 100;
 
@@ -86,6 +87,40 @@ export function updateStructureDecisionRationale(
   });
 
   return changed ? { ...document, structureDecisions: next } : document;
+}
+
+const RESTORABLE_HOLD_STATES = new Set<HoldStateSelection>(["active", "held", "pending", "shelved"]);
+
+export function restorableHoldState(record: StructureDecisionRecord): HoldStateSelection | undefined {
+  if (record.action !== "hold_state_changed" || !record.toValue) {
+    return undefined;
+  }
+  return RESTORABLE_HOLD_STATES.has(record.toValue as HoldStateSelection)
+    ? (record.toValue as HoldStateSelection)
+    : undefined;
+}
+
+/**
+ * Restore the hold state recorded as `toValue` for a `hold_state_changed`
+ * decision. This is a manual, single-document change: it does not rewrite the
+ * decision history or restore island membership.
+ */
+export function restoreStructureDecisionHoldState(
+  document: DocumentV1,
+  decisionId: string,
+  restoredAt: string = new Date().toISOString()
+): DocumentV1 {
+  const record = (document.structureDecisions ?? []).find((entry) => entry.id === decisionId);
+  const target = record ? restorableHoldState(record) : undefined;
+  if (!record || target === undefined) {
+    return document;
+  }
+
+  let next = document;
+  for (const cardId of record.cardIds) {
+    next = updateCardHoldStateAndShelf(next, cardId, target, restoredAt);
+  }
+  return next;
 }
 
 export function structureDecisionsForTarget(

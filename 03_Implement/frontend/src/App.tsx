@@ -81,7 +81,11 @@ import {
   updateCardCritiqueWithHistory,
   updateIslandCritiqueWithHistory,
 } from "./domain/critique_history_ops";
-import { appendStructureDecision, updateStructureDecisionRationale } from "./domain/structure_decisions";
+import {
+  appendStructureDecision,
+  restoreStructureDecisionHoldState,
+  updateStructureDecisionRationale,
+} from "./domain/structure_decisions";
 import { KNOWN_EDGE_TYPES } from "./domain/types";
 import { answerCardQualityQuestion, beginCardQualityRewrite, cardQualityRestoreTarget, openCardQualityAssist, type CardQualityAssistState, type CardQualityDecision } from "./domain/card_quality";
 import { validateDocument } from "./import/schema_validation";
@@ -5764,6 +5768,24 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
       }
 
       applyDocumentChange(nextDocument, t("app.history.structure_decision.rationale_updated"), {
+        preserveSuggestionPreview: true,
+      });
+    },
+    [applyDocumentChange, document]
+  );
+
+  const handleRestoreStructureDecisionHoldState = useCallback(
+    (decisionId: string) => {
+      if (!document) {
+        return;
+      }
+
+      const nextDocument = restoreStructureDecisionHoldState(document, decisionId);
+      if (nextDocument === document) {
+        return;
+      }
+
+      applyDocumentChange(nextDocument, t("app.history.structure_decision.hold_state_restored"), {
         preserveSuggestionPreview: true,
       });
     },
@@ -12277,6 +12299,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
             handleRestoreCardCritiqueHistoryEntry(selectedCard.id, historyEntryId);
           }}
           onStructureDecisionRationaleChange={handleStructureDecisionRationaleChange}
+          onRestoreStructureDecisionHoldState={handleRestoreStructureDecisionHoldState}
           onCardMetaChange={(rawSeq, rawSource) => {
             if (!selectedCard) {
               return;

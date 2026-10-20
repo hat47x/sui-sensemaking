@@ -114,5 +114,6 @@ jobs:
             e2e/card_critique_history_persistence.spec.ts \
             e2e/structure_decision_history.spec.ts \
             e2e/structure_decision_persistence.spec.ts \
+            e2e/structure_decision_hold_restore.spec.ts \
             e2e/ce3_patch_workspace.spec.ts \
             --reporter=line
