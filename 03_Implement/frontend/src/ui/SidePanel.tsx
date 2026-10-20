@@ -154,6 +154,7 @@ type SidePanelProps = {
   onExpandAllIslands: () => void;
   onIslandCritiqueChange: (value: string) => void;
   onIslandCritiqueTagsChange: (value: string[]) => void;
+  onRestoreIslandCritiqueHistoryEntry: (historyEntryId: string) => void;
   onAddSelectedCards: () => void;
   onRemoveSelectedCards: () => void;
   onDeleteIsland: () => void;
@@ -353,6 +354,7 @@ export function SidePanel({
   onExpandAllIslands,
   onIslandCritiqueChange,
   onIslandCritiqueTagsChange,
+  onRestoreIslandCritiqueHistoryEntry,
   onAddSelectedCards,
   onRemoveSelectedCards,
   onDeleteIsland,
@@ -490,6 +492,8 @@ export function SidePanel({
   const [expandedSummaryHistoryEntryId, setExpandedSummaryHistoryEntryId] = useState<string | null>(null);
   const [expandedCardCritiqueHistoryEntryId, setExpandedCardCritiqueHistoryEntryId] = useState<string | null>(null);
   const [cardCritiqueDraft, setCardCritiqueDraft] = useState("");
+  const [islandCritiqueDraft, setIslandCritiqueDraft] = useState("");
+  const [expandedIslandCritiqueHistoryEntryId, setExpandedIslandCritiqueHistoryEntryId] = useState<string | null>(null);
   const [relationSummaryDraft, setRelationSummaryDraft] = useState("");
   const [expandedRelationSummaryHistoryEntryId, setExpandedRelationSummaryHistoryEntryId] = useState<string | null>(null);
   const [expandedMergeAuditEntryId, setExpandedMergeAuditEntryId] = useState<string | null>(null);
@@ -538,6 +542,11 @@ export function SidePanel({
     const entries = selectedCard?.critiqueHistory ?? [];
     return [...entries].reverse();
   }, [selectedCard?.critiqueHistory]);
+
+  const islandCritiqueHistoryEntries = useMemo(() => {
+    const entries = selectedIsland?.critiqueHistory ?? [];
+    return [...entries].reverse();
+  }, [selectedIsland?.critiqueHistory]);
 
   const relationSummaryHistoryEntries = useMemo(() => {
     const entries = selectedRelationSummary?.history ?? [];
@@ -624,6 +633,11 @@ export function SidePanel({
     setExpandedCardCritiqueHistoryEntryId(null);
     setCardCritiqueDraft(selectedCard?.critique ?? "");
   }, [selectedCard?.id, selectedCard?.critique]);
+
+  useEffect(() => {
+    setExpandedIslandCritiqueHistoryEntryId(null);
+    setIslandCritiqueDraft(selectedIsland?.critique ?? "");
+  }, [selectedIsland?.id, selectedIsland?.critique]);
 
   useEffect(() => {
     setRelationSummaryDraft(selectedRelationSummary?.text ?? "");
@@ -3088,9 +3102,14 @@ export function SidePanel({
             {t("side_panel.critique.note")}
           </label>
           <textarea
-            value={selectedIsland.critique ?? ""}
+            value={islandCritiqueDraft}
             onChange={(event) => {
-              onIslandCritiqueChange(event.target.value);
+              setIslandCritiqueDraft(event.target.value);
+            }}
+            onBlur={() => {
+              if (islandCritiqueDraft !== (selectedIsland.critique ?? "")) {
+                onIslandCritiqueChange(islandCritiqueDraft);
+              }
             }}
             placeholder={t("side_panel.critique.note_placeholder")}
             rows={4}
@@ -3119,6 +3138,85 @@ export function SidePanel({
               </label>
             ))}
           </div>
+          <details style={{ marginBottom: 10 }} data-testid="island-critique-history">
+            <summary style={{ fontSize: 12, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+              {t("side_panel.critique.history_with_count", { count: islandCritiqueHistoryEntries.length })}
+            </summary>
+            <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+              {islandCritiqueHistoryEntries.length === 0 ? (
+                <div style={{ fontSize: 12, color: "#64748b" }}>{t("side_panel.critique.no_history")}</div>
+              ) : (
+                islandCritiqueHistoryEntries.map((entry) => {
+                  const isExpanded = expandedIslandCritiqueHistoryEntryId === entry.id;
+                  const preview = (entry.toCritique ?? "").slice(0, 80);
+
+                  return (
+                    <div
+                      key={entry.id}
+                      data-critique-history-entry={entry.id}
+                      style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: 8 }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpandedIslandCritiqueHistoryEntryId(isExpanded ? null : entry.id);
+                        }}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          border: "none",
+                          background: "transparent",
+                          padding: 0,
+                          cursor: "pointer",
+                          display: "grid",
+                          gap: 4,
+                        }}
+                      >
+                        <div style={{ fontSize: 11, color: "#64748b" }}>{formatTimestamp(entry.createdAt)}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <span
+                            style={{
+                              borderRadius: 999,
+                              border: "1px solid #cbd5e1",
+                              padding: "1px 7px",
+                              fontSize: 11,
+                              color: "#334155",
+                              backgroundColor: "#f8fafc",
+                              textTransform: "lowercase",
+                            }}
+                          >
+                            {entry.changeKind}
+                          </span>
+                          <span style={{ fontSize: 12, color: "#0f172a" }}>{preview || t("side_panel.empty")}</span>
+                        </div>
+                      </button>
+                      {isExpanded ? (
+                        <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+                          <div style={{ fontSize: 11, color: "#475569" }}>{t("side_panel.history.from")}</div>
+                          <pre style={{ margin: 0, fontSize: 12, backgroundColor: "#f8fafc", borderRadius: 6, padding: 8, whiteSpace: "pre-wrap" }}>
+                            {entry.fromCritique ?? t("side_panel.empty")}
+                          </pre>
+                          <div style={{ fontSize: 11, color: "#475569" }}>{t("side_panel.history.to")}</div>
+                          <pre style={{ margin: 0, fontSize: 12, backgroundColor: "#f8fafc", borderRadius: 6, padding: 8, whiteSpace: "pre-wrap" }}>
+                            {entry.toCritique ?? t("side_panel.empty")}
+                          </pre>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onRestoreIslandCritiqueHistoryEntry(entry.id);
+                            }}
+                            style={{ width: "100%" }}
+                          >
+                            {t("side_panel.history.restore_version")}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </details>
           {providerUnavailableMessage ? (
             <div
               role="alert"

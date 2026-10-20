@@ -75,7 +75,12 @@ import {
   type MergeSuggestionDecision,
 } from "./domain/merge_suggestion_decisions";
 import { isSourceCard, Document, DocumentV1, Island, Narrative, type CardKa, type CardMeta, type ContradictionSignalDecision, type ContradictionSignalReviewStatus, type CritiqueInput, type EvidenceLink, type KnownEdgeType, type Point, type RelationSummary, type ReproposalDiff } from "./domain/types";
-import { restoreCardCritiqueHistoryEntry, updateCardCritiqueWithHistory } from "./domain/critique_history_ops";
+import {
+  restoreCardCritiqueHistoryEntry,
+  restoreIslandCritiqueHistoryEntry,
+  updateCardCritiqueWithHistory,
+  updateIslandCritiqueWithHistory,
+} from "./domain/critique_history_ops";
 import { KNOWN_EDGE_TYPES } from "./domain/types";
 import { answerCardQualityQuestion, beginCardQualityRewrite, cardQualityRestoreTarget, openCardQualityAssist, type CardQualityAssistState, type CardQualityDecision } from "./domain/card_quality";
 import { validateDocument } from "./import/schema_validation";
@@ -6241,35 +6246,37 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
 
-      const nextCritique = rawCritique.length > 0 ? rawCritique : undefined;
-      const nextIslands = document.islands.map((island) => {
-        if (island.id !== islandId) {
-          return island;
-        }
-
-        if ((island.critique ?? undefined) === nextCritique) {
-          return island;
-        }
-
-        return {
-          ...island,
-          critique: nextCritique,
-        };
-      });
-
-      const hasChanges = nextIslands.some((island, index) => island !== document.islands[index]);
-      if (!hasChanges) {
+      const nextDocument = updateIslandCritiqueWithHistory(
+        document,
+        islandId,
+        { critique: rawCritique },
+        { changeKind: "manual" }
+      );
+      if (nextDocument === document) {
         return;
       }
 
-      applyDocumentChange(
-        {
-          ...document,
-          islands: nextIslands,
-        },
-        t("app.history.island.critique_updated"),
-        { preserveSuggestionPreview: true }
-      );
+      applyDocumentChange(nextDocument, t("app.history.island.critique_updated"), {
+        preserveSuggestionPreview: true,
+      });
+    },
+    [applyDocumentChange, document]
+  );
+
+  const handleRestoreIslandCritiqueHistoryEntry = useCallback(
+    (islandId: string, historyEntryId: string) => {
+      if (!document) {
+        return;
+      }
+
+      const nextDocument = restoreIslandCritiqueHistoryEntry(document, islandId, historyEntryId);
+      if (nextDocument === document) {
+        return;
+      }
+
+      applyDocumentChange(nextDocument, t("app.history.island.critique_updated"), {
+        preserveSuggestionPreview: true,
+      });
     },
     [applyDocumentChange, document]
   );
@@ -6281,38 +6288,20 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         return;
       }
 
-      const normalizedNextTags = nextTags.length > 0 ? [...nextTags] : undefined;
-      const nextIslands = document.islands.map((island) => {
-        if (island.id !== islandId) {
-          return island;
-        }
-
-        const currentTags = island.critiqueTags ?? [];
-        const tagsChanged =
-          currentTags.length !== nextTags.length || currentTags.some((tag, index) => tag !== nextTags[index]);
-        if (!tagsChanged) {
-          return island;
-        }
-
-        return {
-          ...island,
-          critiqueTags: normalizedNextTags,
-        };
-      });
-
-      const hasChanges = nextIslands.some((island, index) => island !== document.islands[index]);
-      if (!hasChanges) {
+      const normalizedNextTags = nextTags.length > 0 ? [...nextTags] : null;
+      const nextDocument = updateIslandCritiqueWithHistory(
+        document,
+        islandId,
+        { critiqueTags: normalizedNextTags },
+        { changeKind: "manual" }
+      );
+      if (nextDocument === document) {
         return;
       }
 
-      applyDocumentChange(
-        {
-          ...document,
-          islands: nextIslands,
-        },
-        t("app.history.island.critique_tags_updated"),
-        { preserveSuggestionPreview: true }
-      );
+      applyDocumentChange(nextDocument, t("app.history.island.critique_tags_updated"), {
+        preserveSuggestionPreview: true,
+      });
     },
     [applyDocumentChange, document]
   );
@@ -12456,6 +12445,13 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
             }
 
             handleIslandCritiqueTagsChange(selectedIsland.id, value);
+          }}
+          onRestoreIslandCritiqueHistoryEntry={(historyEntryId) => {
+            if (!selectedIsland) {
+              return;
+            }
+
+            handleRestoreIslandCritiqueHistoryEntry(selectedIsland.id, historyEntryId);
           }}
           onAddSelectedCards={handleAddSelectedCardsToIsland}
           onRemoveSelectedCards={handleRemoveSelectedCardsFromIsland}

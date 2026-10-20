@@ -372,7 +372,7 @@ export type Card = {
 
 #### 3.2.1 判断理由の改訂履歴（SUIPV-RATIONALE-HISTORY-01）
 
-`Card` は、任意で `critiqueHistory?: CritiqueHistoryEntry[]` を持つ。`critique` と `critiqueTags` の現在値が正本であり、履歴は現在値を置き換えない。人が違和感メモまたは違和感タグを変更したとき、直前の値をこの配列へ追加する。上限は50件とし、超えた分は古いものから落とす。
+`Card` と `Island` は、任意で `critiqueHistory?: CritiqueHistoryEntry[]` を持つ。`critique` と `critiqueTags` の現在値が正本であり、履歴は現在値を置き換えない。人が違和感メモまたは違和感タグを変更したとき、直前の値をこの配列へ追加する。上限は50件とし、超えた分は古いものから落とす。
 
 ```ts
 export type CritiqueHistoryEntry = {

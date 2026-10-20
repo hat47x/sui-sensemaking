@@ -256,6 +256,7 @@ const ISLAND_FIELDS = {
   imageReviewed: "omit",
   critique: "redact",
   critiqueTags: "redact",
+  critiqueHistory: "rebuild",
   geometry: "rebuild",
   shape: "rebuild",
   shapeStale: "preserve",
@@ -826,6 +827,9 @@ function sanitizeIsland(island: Island): Island {
       : {}),
     ...(island.critique !== undefined ? { critique: redact(island.critique) } : {}),
     ...(island.critiqueTags !== undefined ? { critiqueTags: island.critiqueTags.map(redact) } : {}),
+    ...(island.critiqueHistory !== undefined
+      ? { critiqueHistory: island.critiqueHistory.map(sanitizeCritiqueHistoryEntry) }
+      : {}),
     ...(island.geometry !== undefined ? { geometry: cloneGeometry(island.geometry) } : {}),
     ...(island.shape !== undefined ? { shape: sanitizeShape(island.shape) } : {}),
     ...(island.shapeStale !== undefined ? { shapeStale: island.shapeStale } : {}),

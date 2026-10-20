@@ -462,6 +462,7 @@ function parseIslands(value: unknown): Island[] {
       imageReviewed: typeof item.imageReviewed === "boolean" ? item.imageReviewed : undefined,
       critique: typeof item.critique === "string" ? item.critique : undefined,
       critiqueTags: parseCritiqueTags(item.critiqueTags),
+      critiqueHistory: parseCritiqueHistory(item.critiqueHistory),
       geometry: normalizedGeometry,
       shape,
       shapeStale: typeof item.shapeStale === "boolean" ? item.shapeStale : undefined,

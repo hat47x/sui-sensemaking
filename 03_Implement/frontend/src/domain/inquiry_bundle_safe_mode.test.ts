@@ -76,6 +76,18 @@ function addSensitiveDocumentFields(document: DocumentV1): void {
       imageReviewed: true,
       critique: "SECRET_ISLAND_CRITIQUE",
       critiqueTags: ["SECRET_ISLAND_TAG"],
+      critiqueHistory: [
+        {
+          id: "island-critique-history-1",
+          createdAt: CREATED_AT,
+          fromCritique: "SECRET_OLD_ISLAND_CRITIQUE",
+          toCritique: "SECRET_NEW_ISLAND_CRITIQUE",
+          fromTags: ["SECRET_OLD_ISLAND_TAG"],
+          toTags: ["SECRET_NEW_ISLAND_TAG"],
+          changeKind: "manual",
+          note: "SECRET_ISLAND_CRITIQUE_NOTE",
+        },
+      ],
       geometry: { type: "rect", x: 10, y: 20, w: 300, h: 200 },
       shape: {
         kind: "rect",

@@ -1,4 +1,4 @@
-import type { Card, CritiqueHistoryEntry, DocumentV1 } from "./types";
+import type { Card, CritiqueHistoryEntry, DocumentV1, Island } from "./types";
 
 const DEFAULT_HISTORY_LIMIT = 50;
 
@@ -133,6 +133,103 @@ export function restoreCardCritiqueHistoryEntry(
   return updateCardCritiqueWithHistory(
     document,
     cardId,
+    {
+      critique: entry.toCritique ?? "",
+      critiqueTags: entry.toTags === null ? null : [...entry.toTags],
+    },
+    { changeKind: "rollback" }
+  );
+}
+
+export type UpdateIslandCritiquePatch = {
+  critique?: string;
+  /** null clears the tags; undefined leaves the current tags unchanged. */
+  critiqueTags?: string[] | null;
+};
+
+/**
+ * Island counterpart of `updateCardCritiqueWithHistory`. Reuses the same
+ * entry shape so cards and islands do not grow separate history schemes.
+ */
+export function updateIslandCritiqueWithHistory(
+  document: DocumentV1,
+  islandId: string,
+  patch: UpdateIslandCritiquePatch,
+  options: UpdateCardCritiqueWithHistoryOptions = {}
+): DocumentV1 {
+  let didChange = false;
+
+  const nextIslands = document.islands.map((island) => {
+    if (island.id !== islandId) {
+      return island;
+    }
+
+    if (patch.critique === undefined && patch.critiqueTags === undefined) {
+      return island;
+    }
+
+    const nextCritique = patch.critique !== undefined
+      ? (patch.critique.length > 0 ? patch.critique : undefined)
+      : island.critique;
+    const nextTags = patch.critiqueTags !== undefined
+      ? (patch.critiqueTags ?? undefined)
+      : island.critiqueTags;
+    const critiqueChanged = (island.critique ?? "") !== (nextCritique ?? "");
+    const tagsChanged = !tagsEqual(island.critiqueTags, nextTags);
+    if (!critiqueChanged && !tagsChanged && options.forceHistoryEntry !== true) {
+      return island;
+    }
+
+    const nextIsland: Island = {
+      ...island,
+      critique: nextCritique,
+      critiqueTags: nextTags,
+    };
+    const newEntry: CritiqueHistoryEntry = {
+      id: createEntryId(),
+      createdAt: options.createdAt ?? new Date().toISOString(),
+      fromCritique: island.critique ?? null,
+      toCritique: nextIsland.critique ?? null,
+      fromTags: normalizeTags(island.critiqueTags),
+      toTags: normalizeTags(nextIsland.critiqueTags),
+      changeKind: options.changeKind ?? "unknown",
+      ...(options.note !== undefined ? { note: options.note } : {}),
+    };
+
+    const historyLimit = options.historyLimit ?? DEFAULT_HISTORY_LIMIT;
+    const nextHistory = [...(island.critiqueHistory ?? []), newEntry];
+    const trimmedHistory =
+      nextHistory.length > historyLimit ? nextHistory.slice(nextHistory.length - historyLimit) : nextHistory;
+
+    didChange = true;
+    return {
+      ...nextIsland,
+      critiqueHistory: trimmedHistory,
+    };
+  });
+
+  if (!didChange) {
+    const islandsUpdated = nextIslands.some((island, index) => island !== document.islands[index]);
+    return islandsUpdated ? { ...document, islands: nextIslands } : document;
+  }
+
+  return { ...document, islands: nextIslands };
+}
+
+export function restoreIslandCritiqueHistoryEntry(
+  document: DocumentV1,
+  islandId: string,
+  entryId: string
+): DocumentV1 {
+  const island = document.islands.find((item) => item.id === islandId);
+  const entry = island?.critiqueHistory?.find((item) => item.id === entryId);
+  if (!island || !entry) {
+    return document;
+  }
+
+  return updateIslandCritiqueWithHistory(
+    document,
+    islandId,
     {
       critique: entry.toCritique ?? "",
       critiqueTags: entry.toTags === null ? null : [...entry.toTags],
