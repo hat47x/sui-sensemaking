@@ -1538,6 +1538,8 @@
   "agent_response_import.rejected_status_message": "提案を破棄しました",
   "agent_response_import.audit_required_status_message": "完全な相関情報がないため、この提案の判断は監査できません。元のタスクから再依頼してください。",
   "agent_response_import.audit_failed_status_message": "判断を記録できなかったため、文書には反映していません。",
+  "agent_response_import.adopt_failed_invalid_content_status_message": "提案の対象か内容が足りないため、採用できませんでした。判断は記録せず、文書も変えていません。",
+  "agent_response_import.adopt_failed_patch_rejected_status_message": "パッチが現在の文書の検査を通らないため、採用できませんでした。判断は記録せず、文書も変えていません。",
   "agent_response_import.duplicate_status_message": "この応答は既に取り込み済みです",
   "agent_response_import.exported_patch_file_status_message": "パッチファイルを書き出しました",
   "side_panel.distribution.title": "分布シグナル ({count})",

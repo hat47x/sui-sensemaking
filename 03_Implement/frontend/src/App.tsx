@@ -9595,21 +9595,10 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
         setStatusMessage(t("agent_response_import.audit_required_status_message"));
         return;
       }
-      try {
-        await runTenantScopedApiRequest(() => recordExternalAgentProposalDecision({
-          docId: document.id,
-          proposalId: review.auditProposalId!,
-          sourceBundleHash: review.sourceBundleHash!,
-          idempotencyKey: `${review.auditProposalId}:adopt`,
-          decision: "adopt",
-          provenanceLevel: "user_presented_unsigned",
-        }, { tenantSessionContext: verifiedTenantSession }));
-      } catch {
-        setStatusMessage(t("agent_response_import.audit_failed_status_message"));
-        return;
-      }
-
-      let adopted = false;
+      // #3228: build the change first, record the audit, then commit it, so an
+      // adopt audit always matches an applied change and a failed audit changes nothing.
+      let commitAdoption: (() => void) | null = null;
+      let adoptFailureMessageKey = "agent_response_import.adopt_failed_invalid_content_status_message";
       switch (review.kind) {
         case "island_title": {
           const islandId = review.targetRef.islandId;
@@ -9618,8 +9607,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           const nextIslands = document.islands.map((island) =>
             island.id === islandId ? { ...island, title, titleReviewed: false } : island
           );
-          applyDocumentChange({ ...document, islands: nextIslands }, t("app.history.agent_response.island_title_imported"));
-          adopted = true;
+          commitAdoption = () => applyDocumentChange({ ...document, islands: nextIslands }, t("app.history.agent_response.island_title_imported"));
           break;
         }
         case "critique":
@@ -9630,12 +9618,10 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           const islandId = review.targetRef.islandId;
           if (cardId) {
             const nextCards = document.cards.map((card) => (card.id === cardId ? { ...card, critique: text } : card));
-            applyDocumentChange({ ...document, cards: nextCards }, t("app.history.agent_response.critique_imported"));
-            adopted = true;
+            commitAdoption = () => applyDocumentChange({ ...document, cards: nextCards }, t("app.history.agent_response.critique_imported"));
           } else if (islandId) {
             const nextIslands = document.islands.map((island) => (island.id === islandId ? { ...island, critique: text } : island));
-            applyDocumentChange({ ...document, islands: nextIslands }, t("app.history.agent_response.critique_imported"));
-            adopted = true;
+            commitAdoption = () => applyDocumentChange({ ...document, islands: nextIslands }, t("app.history.agent_response.critique_imported"));
           }
           break;
         }
@@ -9649,11 +9635,10 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
             createdAt: new Date().toISOString(),
             reviewed: false,
           };
-          applyDocumentChange(
+          commitAdoption = () => applyDocumentChange(
             { ...document, narratives: [...(document.narratives ?? []), nextNarrative] },
             t("app.history.agent_response.narrative_imported")
           );
-          adopted = true;
           break;
         }
         case "merge_candidate": {
@@ -9662,7 +9647,7 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
           const mergeMethod = review.content.mergeMethod;
           if (cardIds.length < 2 || !mergedText || !mergeMethod) break;
           const [targetCardId, ...candidateCardIds] = cardIds;
-          setMergeSuggestions((previous) => [
+          commitAdoption = () => setMergeSuggestions((previous) => [
             ...previous,
             {
               groupId: `agent-response-${review.proposalId}`,
@@ -9679,10 +9664,10 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
               isEdited: false,
             },
           ]);
-          adopted = true;
           break;
         }
         case "patch": {
+          adoptFailureMessageKey = "agent_response_import.adopt_failed_patch_rejected_status_message";
           if (!review.patch || review.patchSignatureMismatch) break;
           const lintResult = lintPatchAgainstCurrentDoc(document, review.patch);
           if (shouldBlockPatchApplyByLint(lintResult)) break;
@@ -9692,15 +9677,31 @@ export default function App({ storageScope, tenantSessionContext }: AppProps = {
             patchTitle: `agent-response:${review.proposalId}`,
             baseDocSignature: `${document.id}:${document.updatedAt}`,
           });
-          applyDocumentChange(loggedDoc, t("app.history.agent_response.patch_imported"));
-          adopted = true;
+          commitAdoption = () => applyDocumentChange(loggedDoc, t("app.history.agent_response.patch_imported"));
           break;
         }
       }
 
-      if (!adopted) {
+      if (!commitAdoption) {
+        setStatusMessage(t(adoptFailureMessageKey));
         return;
       }
+
+      try {
+        await runTenantScopedApiRequest(() => recordExternalAgentProposalDecision({
+          docId: document.id,
+          proposalId: review.auditProposalId!,
+          sourceBundleHash: review.sourceBundleHash!,
+          idempotencyKey: `${review.auditProposalId}:adopt`,
+          decision: "adopt",
+          provenanceLevel: "user_presented_unsigned",
+        }, { tenantSessionContext: verifiedTenantSession }));
+      } catch {
+        setStatusMessage(t("agent_response_import.audit_failed_status_message"));
+        return;
+      }
+
+      commitAdoption();
 
       setAgentImportedProposalReviews((previous) =>
         previous.map((item) => (item.reviewKey === reviewKey ? { ...item, status: "adopted" as const } : item))
