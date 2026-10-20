@@ -142,7 +142,7 @@ export function StartPanel({
         position: "absolute",
         inset: expanded ? "16px auto auto 16px" : "8px auto auto 8px",
         zIndex: 20,
-        width: "min(560px, calc(100% - 32px))",
+        width: "min(560px, calc(100vw - 32px))",
         maxHeight: "calc(100% - 32px)",
         overflow: "auto",
         boxSizing: "border-box",

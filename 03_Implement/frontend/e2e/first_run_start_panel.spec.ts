@@ -70,6 +70,9 @@ for (const viewport of viewports) {
 
     const panel = page.locator('[data-panel="start-document-entry"]');
     await expect(panel).toBeVisible();
+    const compactBox = await panel.boundingBox();
+    expect(compactBox!.width).toBeGreaterThan(300);
+    expect(compactBox!.x + compactBox!.width).toBeLessThanOrEqual(viewport.width);
     await page.screenshot({ path: testInfo.outputPath(`compact-${viewport.width}.png`) });
     await panel.getByRole("button", { name: START_PANEL_TITLE }).click();
     await expect(panel).toHaveAccessibleName(START_PANEL_TITLE);
