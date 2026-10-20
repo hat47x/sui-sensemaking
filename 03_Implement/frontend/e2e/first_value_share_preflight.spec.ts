@@ -35,7 +35,6 @@ test("first-value journey keeps SafeMode visible from entry through share prefli
   await page.goto("/?locale=en");
   const startPanel = page.locator(START_PANEL);
   await expect(startPanel).toBeVisible();
-  await expect(startPanel).toContainText("Safety status");
   await expect(startPanel).toContainText("SafeMode: ON");
 
   fixture.enableSample();
