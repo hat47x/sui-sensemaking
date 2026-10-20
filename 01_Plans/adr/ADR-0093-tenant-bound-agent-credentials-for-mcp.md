@@ -71,7 +71,7 @@ CVI（不変条件）のうち、share/書き出しで未レビュー情報・�
 
 ## Traceability
 
-- Related: `ADR-0054`、`ADR-0059`（D6・D9・D10）、`ADR-0063`（D8）、`ADR-0068`、`ADR-0080`、`ADR-0081`
+- Related: `ADR-0054`、`ADR-0059`（D6・D9・D10）、`ADR-0063`（D8）、`ADR-0068`、`ADR-0080`、`ADR-0081`、`ADR-0098`
 - Derived-from: TEI側の `plan/design/SUI_MIGRATION_EXTENSION_AND_SPLIT_DESIGN_2026-10.md` 付録A（MCP経路の所見）
 
 ## 実装後の訂正（レビュー反映）

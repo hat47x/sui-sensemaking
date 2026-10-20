@@ -377,4 +377,10 @@ describe("buildContextProjection: island title review gate", () => {
       }
     }
   });
+
+  it("returns a reviewed island title even when SafeMode is ON (ADR-0098)", async () => {
+    const projection = await buildContextProjection({ doc: buildDoc(), constraint: "summary", safeMode: true });
+
+    expect(projection.islands).toEqual([{ id: "i1", title: "First island" }]);
+  });
 });
