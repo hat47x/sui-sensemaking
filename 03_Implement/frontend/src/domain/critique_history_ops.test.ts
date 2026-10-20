@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Card, DocumentV1 } from "./types";
 import { restoreCardCritiqueHistoryEntry, updateCardCritiqueWithHistory } from "./critique_history_ops";
+import { validateDocument } from "../import/schema_validation";
 
 function createDocument(cards: Card[]): DocumentV1 {
   return {
@@ -128,6 +129,34 @@ describe("restoreCardCritiqueHistoryEntry", () => {
       toCritique: "first doubt",
       changeKind: "rollback",
     });
+  });
+
+  it("survives a JSON save/reload roundtrip before restoring", () => {
+    const document = createDocument([{ id: "c1", text: "A", x: 0, y: 0 }]);
+    const afterFirst = updateCardCritiqueWithHistory(
+      document,
+      "c1",
+      { critique: "first doubt" },
+      { changeKind: "manual" }
+    );
+    const afterSecond = updateCardCritiqueWithHistory(
+      afterFirst,
+      "c1",
+      { critique: "later view" },
+      { changeKind: "manual" }
+    );
+    const firstEntryId = afterSecond.cards[0].critiqueHistory?.[0].id;
+
+    const reloaded = validateDocument(JSON.parse(JSON.stringify(afterSecond)));
+    expect(reloaded.ok).toBe(true);
+    if (!reloaded.ok) return;
+
+    expect(reloaded.value.cards[0].critique).toBe("later view");
+    expect(reloaded.value.cards[0].critiqueHistory).toHaveLength(2);
+
+    const restored = restoreCardCritiqueHistoryEntry(reloaded.value, "c1", firstEntryId ?? "");
+    expect(restored.cards[0].critique).toBe("first doubt");
+    expect(restored.cards[0].critiqueHistory?.at(-1)?.changeKind).toBe("rollback");
   });
 
   it("is a no-op for an unknown card or history entry", () => {
