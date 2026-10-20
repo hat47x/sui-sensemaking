@@ -11,8 +11,20 @@ export default defineConfig({
     "saas_auth_browser_multi_instance.spec.ts",
     // Needs a real OAuth broker on localhost:9100; run with its own harness.
     "tenant_session_real_backend_multitab.spec.ts",
+    // Budget measurements must not compete with other UI tests for CPU/GPU.
+    // They run alone via playwright.perf.config.ts (`npm run e2e:perf`).
+    "representative_visual_cue_capacity_budget.spec.ts",
+    "responsiveness_performance_budget.spec.ts",
   ],
-  timeout: 30_000,
+  // Playwright's default worker count starves page creation on a 12-logical-CPU
+  // Windows host (browserContext.newPage / start-panel timeouts). Three keeps
+  // the full suite reproducible without retries; see Issue #3250.
+  workers: 3,
+  // A cold Vite server plus four browsers can take longer than 30s to create a
+  // page on Windows. These budgets are for correctness, not latency; the
+  // latency budgets live in the isolated perf config.
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
   retries: 0,
   use: {
     baseURL: "http://127.0.0.1:4173",

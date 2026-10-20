@@ -56,7 +56,9 @@ cd 03_Implement && direnv allow
 | フロントエンドの開発サーバー | `cd 03_Implement/frontend && npm run dev` | UIのローカル確認 |
 | フロントエンドの検証 | `cd 03_Implement/frontend && npm run typecheck && npm run test` | 型と単体テストの確認 |
 | バックエンドの検証 | `cd 03_Implement/backend && ruff check src tests && pytest` | Lintと単体テストの確認 |
-| E2E（UI変更時） | `cd 03_Implement/frontend && npx playwright test` | UIを含む結合の確認 |
+| E2E（UI変更時） | `cd 03_Implement/frontend && npm run e2e` | UIを含む結合の確認（性能予算テストは除く） |
+| E2E（性能予算） | `cd 03_Implement/frontend && npm run e2e:perf` | 性能予算テストだけを単独実行 |
+| E2E（全部） | `cd 03_Implement/frontend && npm run e2e:full` | 機能E2Eの後に性能予算テストを実行 |
 | 統合起動（推奨） | `cd 03_Implement/deploy && docker compose up --build` | web、api、dbを合わせた動作の確認 |
 
 > 注: `pnpm`、`supabase`、`.kiro` 系のコマンドは、本リポジトリの標準の手順ではありません。
