@@ -1,8 +1,8 @@
-# ADR-0101: TEI epistemic projection の transport 方式の判断材料
+# ADR-0101: TEI epistemic projection の transport 方式
 
-- Status: Proposed
+- Status: Accepted（仮承認、2026-10-22）
 - Date: 2026-10-22
-- Deciders: Maintainer（本ADRは判断材料であり、transport の決定は Maintainer が行う）
+- Deciders: Maintainer（2026-10-22 に仮承認。本承認までは仮承認として扱う）
 - Scope: `03_Implement/frontend/src/ui/epistemic_review_model.ts`、`03_Implement/frontend/src/ui/epistemic_projection_adapter.ts`、transport 接続経路（両案に共通の安全境界）
 - Related: `ADR-0089`（価値の正本）、`ADR-0090`（認知支援の候補層と段階昇格）、Issue #3184、SUI PR #3255、TEI #1055（access-aware detail resolver、merged）、TEI #1057（qualification、closed）
 
@@ -54,6 +54,19 @@ TEI サイドが access-aware detail query の HTTP endpoint を追加し、SUI 
 3. **運用と追随**: TEI Reference の更新をどちらが pin して検証するか。fail closed の時点がどちらで発火するか。
 4. **未レビュー本文の派生物の流れ**: 観測スナップショットが HTTP を越えるか否かと、それに付けるレビュー状態による閉止の有無。
 
+## Decision
+
+**案 A（SUI が所有する adapter を、同一信頼境界内でローカル実行する）を採る。**
+
+決定を分ける観点への答えは次のとおり。
+
+1. 信頼境界: 観測スナップショットは SUI を動かすホストの外へ出さない。HTTP で TEI へ送る経路は作らない。
+2. offline・provider=none: 接続先を持たないので、TEI Reference の出力が無い・読めない場合は projection を表示しないだけで、SUI の主要価値は変わらない。
+3. 運用と追随: TEI Reference の版は SUI 側で pin する。版の不一致は、PR #3255 の adapter が fail closed で止める。
+4. 未レビュー本文の派生物: HTTP を越えないため、LLM 送信境界と同じ閉止を新たに設計する必要がない。
+
+理由: TEI Reference は今日 CLI と JSON で提供されており、案 A はそのまま成立する。案 B は、TEI 側の HTTP provider がまだ無く、成立させるには送信境界の設計を新たに要する。案 B は、TEI 側が提供を始めた時点で、本ADRを Supersede して改めて比べる。
+
 ## 非目標
 
 このADRでは決めない事項。
@@ -62,9 +75,9 @@ TEI サイドが access-aware detail query の HTTP endpoint を追加し、SUI 
 - 詳細参照 UI の設計。unavailable / partial / drift indeterminate の fixture-driven な UI 表示固定は、UI wiring の設計と一体で行う。
 - SUI の read-side を `observed*` 意味論へ置き換えること。write-side の `expected*` 楽観同時実行制御は維持する。
 
-## Consequences（決定後に確定する事項）
+## Consequences
 
-- 採択された案の接続経路が ADR として Accepted へ更新され、非目標に置いた wiring の実装が始まる。
+- 案 A の接続経路で、非目標に置いた wiring の実装を始める（Issue #3184）。provider は interface の背後に置き、fixture と、ローカルのファイル・CLI の読み取りを差し替えられるようにする。
 - 採択されなかった案は、TEI 側が提供を始めた場合でも本ADRの選択肢として残る。切り替えが生じた場合は Supersede する。
 - どちらを採っても、上記の共通の制約（fail closed、access ref 拒否、drift 再計算、Document への埋め込み禁止）は transport に依存しない不変条件としてテストで追跡する。
 
