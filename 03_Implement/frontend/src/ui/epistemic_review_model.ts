@@ -540,7 +540,7 @@ function confirmationPresentation(
   }
 }
 
-function statePresentation(state: EpistemicUiState): Pick<EpistemicUiItem, "labelKey" | "tone"> {
+export function statePresentation(state: EpistemicUiState): Pick<EpistemicUiItem, "labelKey" | "tone"> {
   switch (state) {
     case "working-premise":
       return { labelKey: "epistemic.state.working_premise", tone: "info" };
