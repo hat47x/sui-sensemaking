@@ -909,6 +909,19 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
   - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他テナントの対応付けは `404`。
   - `DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`（`agent.revoke`）: その文書の付与だけを取り消す。`204`。
 
+### 2.16 TEI epistemic reference artifact API（ADR-0101 Option A）
+
+ADR-0101は、TEI Assessmentを外部の信頼境界を越えさせないため、SUIが所有するadapterと同一信頼領域内の局所I/O（CLI / JSONファイル群の読み取り）を採択した。この節のendpointは、その局所I/Oの読み出し部品をコントロールプレーンに限って公開するものである。意味の検証は行わず、frontend consumer（`epistemic_review_model.ts` と `epistemic_projection_adapter.ts`）が `contract` / `schema` を別々に検証し、driftを再計算する。
+
+**GET** `/admin/tei-epistemic/artifacts/{artifact_kind}`
+
+- 認可: コントロールプレーンのみ（ADR-0072）。`X-Admin-Api-Key` または provision capabilityを要求し、業務面の `X-API-Key` では通さない。認可に失敗すると、鍵が設定されているかどうかを明かさない `401 control_plane_unauthorized` を返す。
+- `artifact_kind` は `epistemic-assessment`、`epistemic-context`、`epistemic-detail` のみ。許可リスト外や越境の指定は `404 {"code": "unknown_tei_artifact"}` で拒否し、内容を返さない。
+- `SUI_TEI_REFERENCE_DIR` が未設定のときは、`503 {"code": "tei_reference_unconfigured"}` でfail closedする。これが既定で、このendpointの効果は設定した運用に限る。
+- artifactの欠損、読み取り不能、JSONとして正しくない、JSON objectでない場合は、`503 {"code": "tei_reference_unavailable"}` を返す。いずれの場合も、内容を部分的にも返さない。エラーの種類と応答本体の形は固定し、operatorが設定誤りを見分けられるようにする。
+- 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}` を返す。応答は `Cache-Control: no-store`。読み取り専用であり、TEI AssessmentをDocument / Canonical stateへ埋め込まない。
+- テナント業務面への公開は未決である。テナント境界に沿う公開や、利用者ごとの紐付けを設ける場合は、別の判断材料（ADR）で扱う。
+
 ## 3. レスポンス例（概要）
 
 ### 3.1 DocumentV1（レスポンス）

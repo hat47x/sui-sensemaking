@@ -367,6 +367,14 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="SUI_LLM_HIGH_REASONING_MODEL",
     )
+    # ADR-0101 Option A: directory holding locally produced TEI Reference JSON
+    # artifacts. Artifact content is operator-level corpus material, so the
+    # default (unconfigured) keeps the /admin/tei-epistemic endpoints
+    # fail-closed (503) and serves nothing.
+    tei_reference_dir: str | None = Field(
+        default=None,
+        validation_alias="SUI_TEI_REFERENCE_DIR",
+    )
     # OPS-OBSERV-01: no logging configuration existed, so `extra={...}` payloads
     # were silently discarded by the default formatter. These two keys install
     # one.

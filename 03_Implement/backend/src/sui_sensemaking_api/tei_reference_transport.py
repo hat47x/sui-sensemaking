@@ -27,7 +27,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Collection, Literal, Mapping, Union
 
-_TEI_REFERENCE_ARTIFACT_KINDS: frozenset[str] = frozenset(
+#: Artifact kinds reachable through the local-I/O transport. The concrete file
+#: names follow the TEI Reference CLI outputs and are pinned at wiring time;
+#: the read rules and fail-closed reasons below are the stable contract.
+TEI_REFERENCE_ARTIFACT_KINDS: frozenset[str] = frozenset(
     {
         "epistemic-assessment",
         "epistemic-context",
@@ -68,7 +71,7 @@ def read_tei_reference_artifact(
     artifacts_dir: str | Path | None,
     artifact_kind: str,
     *,
-    artifact_kinds: Collection[str] = _TEI_REFERENCE_ARTIFACT_KINDS,
+    artifact_kinds: Collection[str] = TEI_REFERENCE_ARTIFACT_KINDS,
 ) -> TeiReferenceReadResult:
     """Read one TEI Reference JSON artifact from a local directory.
 
