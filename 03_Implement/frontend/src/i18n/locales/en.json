@@ -1925,5 +1925,16 @@
   "epistemic.health.open_review": "Review",
   "epistemic.health.authority_note": "Reviewer candidates do not imply approval authority.",
   "epistemic.health.resolution_unknown": "Resolution coverage cannot be determined",
-  "epistemic.health.resolution_insufficient_sample": "The sample is too small for a ratio-based health decision"
+  "epistemic.health.resolution_insufficient_sample": "The sample is too small for a ratio-based health decision",
+  "epistemic.detail.group_label": "Inspect details display",
+  "epistemic.detail.status.current": "This detail matches the current reading",
+  "epistemic.detail.status.refresh_required_changed": "The projection changed after this detail was resolved. Actions opened from this detail are not reusable.",
+  "epistemic.detail.status.refresh_required_indeterminate": "Whether the state changed after this detail was resolved cannot be confirmed (indeterminate). It is not claimed as a semantic change; refresh the projection before deciding.",
+  "epistemic.detail.status.unavailable_rejected": "This detail failed the safety conditions, so the display is closed (fail closed).",
+  "epistemic.detail.status.unavailable_provider": "The detail provider is unavailable, so the display is closed.",
+  "epistemic.detail.unavailable_note": "Content that does not pass validation is not displayed, even partially.",
+  "epistemic.detail.current_state_label": "Current reading",
+  "epistemic.detail.actions_reusable": "{count} actions opened from this detail can be reused",
+  "epistemic.detail.actions_blocked": "Actions opened from this detail are not reusable. Refresh the projection and check again.",
+  "epistemic.detail.data_only_note": "This detail is displayed as reference data only. It grants neither approval of readings nor operation authority."
 }

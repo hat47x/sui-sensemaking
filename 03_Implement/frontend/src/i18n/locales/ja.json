@@ -1925,5 +1925,16 @@
   "epistemic.health.open_review": "確認する",
   "epistemic.health.authority_note": "確認者候補の表示は、承認権限を意味しません。",
   "epistemic.health.resolution_unknown": "確定状態の比率は判定できません",
-  "epistemic.health.resolution_insufficient_sample": "サンプルが少ないため比率で判定しません"
+  "epistemic.health.resolution_insufficient_sample": "サンプルが少ないため比率で判定しません",
+  "epistemic.detail.group_label": "詳細参照の表示",
+  "epistemic.detail.status.current": "詳細は現在の見立てと一致しています",
+  "epistemic.detail.status.refresh_required_changed": "この詳細の参照後に投影が変化しています。ここから開いた操作の再利用は止めています",
+  "epistemic.detail.status.refresh_required_indeterminate": "参照後に状態が変わったかは確認できません（indeterminate）。変化と断定せず、投影を更新してから判断してください",
+  "epistemic.detail.status.unavailable_rejected": "詳細の内容が安全条件を満たさないため、表示を閉じています（fail closed）",
+  "epistemic.detail.status.unavailable_provider": "詳細の取得元を利用できないため、表示を閉じています",
+  "epistemic.detail.unavailable_note": "検証を通らない内容は、部分的にも表示しません",
+  "epistemic.detail.current_state_label": "現在の見立て",
+  "epistemic.detail.actions_reusable": "この詳細から開いた操作を {count} 件、再利用できます",
+  "epistemic.detail.actions_blocked": "この詳細から開いた操作の再利用は止めています。投影を更新してから、もう一度確認してください",
+  "epistemic.detail.data_only_note": "この詳細は参照データとしてのみ表示します。判断の承認や操作の権限を持ちません"
 }
