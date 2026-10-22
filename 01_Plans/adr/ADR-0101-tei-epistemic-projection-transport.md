@@ -1,6 +1,6 @@
 # ADR-0101: TEI epistemic projection の transport 方式の判断材料
 
-- Status: Proposed
+- Status: Accepted (2026-10-22; Option A: SUI-owned local adapter)
 - Date: 2026-10-22
 - Deciders: Maintainer（本ADRは判断材料であり、transport の決定は Maintainer が行う）
 - Scope: `03_Implement/frontend/src/ui/epistemic_review_model.ts`、`03_Implement/frontend/src/ui/epistemic_projection_adapter.ts`、transport 接続経路（両案に共通の安全境界）
@@ -26,6 +26,14 @@ V3「レビュー」と P-07「self-host/privacy」に関わる。また CVI の
 - detail result の `accessRefs` を拒否する。access ref は opaque な入力としてのみ扱い、認可の権限を出さない。
 - `statementKind=instruction` に prompt control authority を与えない。
 - producer の drift を盲信せず、SUI で current Assessment から drift を再計算する。drift が矛盾すれば fail closed、`indeterminate` を semantic change へ読み替えない。
+
+## Decision
+
+Maintainer は **Option A（SUI が所有する adapter、同一信頼領域内のローカル実行）** を採択する。
+
+- 理由: `SUI_LLM_PROVIDER=none` / offline / self-host の安全不変条件を優先するため、観測スナップショットが信頼領域を越えない経路を既定にする。
+- TEI Reference は CLI / JSON ファイル群のまま SUI バックエンドから局所 I/O で読み、contract/schema の検証と fail-closed を維持する。
+- Option B（TEI HTTP endpoint）は、TEI 側が提供を始めても本 ADR の選択肢として残し、必要に応じて Supersede する。
 
 ## 比較する2つの選択肢
 
