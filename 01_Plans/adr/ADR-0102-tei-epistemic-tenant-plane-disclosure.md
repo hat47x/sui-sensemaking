@@ -1,6 +1,6 @@
 # ADR-0102: TEI epistemic 候補をテナント業務面へ公開するか
 
-- Status: Proposed
+- Status: Accepted (2026-10-23; 案B: 文書単位の紐付けを管理面で登録し、テナント業務面の読み取り endpoint で提供する)
 - Date: 2026-10-22
 - Deciders: Maintainer（本ADRは判断材料であり、公開の有無と方式の決定は Maintainer が行う）
 - Scope: テナント業務面の epistemic 関連 endpoint（本ADRで新設の有無を判断する）と、それと一体の frontend wiring 設計の前提。`03_Implement/frontend/src/ui/`、`03_Implement/backend/src/sui_sensemaking_api/`
@@ -57,6 +57,13 @@ artifact の読み取りではなく、TEI Reference の CLI 実行を SUI バ�
 
 - 紐付けの運用負荷が SUI 側の自動化で減る可能性がある。
 - 実行環境（ホスト負荷、subprocess の安全な起動、失敗時の fail closed を含む transport 実行の設計）が別途要るため、公開の判断と実行の判断を重ねて動かすには大きい。まず案Bの紐付けで実証した後に扱うことができる。
+
+## Decision
+
+Maintainer は **案B（文書単位の紐付けを管理面で登録し、テナント業務面の読み取り endpoint で提供する）** を採択する。
+
+- 理由: ADR-0101 Option A が採択済みであり、transport は同一信頼境界内の局所 I/O に固定されている。利用者の確認導線（#3184 の目的）へ届けるには、テナント業務面の読み取り経路が必要である。案B は既存のテナント認証・文書認可・access control adapter・policy binding を再利用でき、新規の認可モデルを導入せずに済む。案C の subprocess 実行は実行環境の設計を別途要するため、まず案B で紐付けを実証した後に扱う。
+- 非目標: UI wiring の設計の細部（配置、i18n文言）、TEI Reference CLI の subprocess 実行、read 側の `observed*` 意味論への置き換え、自動適用（提案のみ）。
 
 ## 共通の安全不変条件（いずれの案でも緩和しない）
 
