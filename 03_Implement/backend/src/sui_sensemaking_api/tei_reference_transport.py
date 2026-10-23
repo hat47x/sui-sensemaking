@@ -61,6 +61,11 @@ class TeiReferenceReadFailure:
         "not-a-file",
         "invalid-json",
         "not-an-object",
+        "binding-registry-missing",
+        "binding-registry-invalid",
+        "no-binding",
+        "ambiguous-binding",
+        "unknown-bound-artifact",
     ]
 
 
@@ -103,3 +108,72 @@ def read_tei_reference_artifact(
         return TeiReferenceReadFailure(reason="not-an-object")
 
     return TeiReferenceArtifact(payload=loaded)
+
+
+@dataclass(frozen=True)
+class TeiEpistemicBinding:
+    """A provisional binding from a tenant/document to a TEI Reference artifact.
+
+    The binding is recorded by the operator in `epistemic-bindings.json` inside
+    the configured artifacts directory. It never carries artifact content; the
+    artifact itself is read separately through `read_tei_reference_artifact`.
+    """
+
+    artifact_kind: str
+
+
+#: File name of the operator-managed binding registry inside the artifacts dir.
+TEI_EPISTEMIC_BINDINGS_FILE = "epistemic-bindings.json"
+
+
+def read_tei_epistemic_binding(
+    artifacts_dir: str | Path | None,
+    tenant_id: str,
+    doc_id: str,
+) -> TeiEpistemicBinding | TeiReferenceReadFailure:
+    """Resolve which TEI Reference artifact applies to a (tenant, document) pair.
+
+    Provisional implementation for ADR-0102 案B: the operator records bindings
+    in `epistemic-bindings.json` inside `SUI_TEI_REFERENCE_DIR`. The binding
+    registry is read with the same fail-closed rules as artifacts; a missing
+    registry, malformed JSON, no matching entry, an ambiguous (duplicate)
+    entry, or an unknown bound artifact kind all fail closed without leaking
+    content.
+    """
+    if not artifacts_dir:
+        return TeiReferenceReadFailure(reason="unconfigured")
+    if not tenant_id or not doc_id:
+        return TeiReferenceReadFailure(reason="no-binding")
+
+    base = Path(artifacts_dir).resolve()
+    path = (base / TEI_EPISTEMIC_BINDINGS_FILE).resolve()
+    if path.parent != base and base not in path.parents:
+        return TeiReferenceReadFailure(reason="invalid-path")
+    if not path.is_file():
+        return TeiReferenceReadFailure(reason="binding-registry-missing")
+
+    try:
+        raw = path.read_bytes()
+        text = raw.decode("utf-8")
+        loaded = json.loads(text)
+    except (OSError, ValueError):
+        return TeiReferenceReadFailure(reason="binding-registry-invalid")
+    if not isinstance(loaded, dict) or not isinstance(loaded.get("bindings"), list):
+        return TeiReferenceReadFailure(reason="binding-registry-invalid")
+
+    matches = [
+        entry
+        for entry in loaded["bindings"]
+        if isinstance(entry, dict)
+        and entry.get("tenantId") == tenant_id
+        and entry.get("docId") == doc_id
+    ]
+    if len(matches) == 0:
+        return TeiReferenceReadFailure(reason="no-binding")
+    if len(matches) > 1:
+        return TeiReferenceReadFailure(reason="ambiguous-binding")
+
+    artifact_kind = matches[0].get("artifactKind")
+    if artifact_kind not in TEI_REFERENCE_ARTIFACT_KINDS:
+        return TeiReferenceReadFailure(reason="unknown-bound-artifact")
+    return TeiEpistemicBinding(artifact_kind=artifact_kind)

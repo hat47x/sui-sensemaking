@@ -42,6 +42,7 @@ from sui_sensemaking_api.routes.document_access_admin import (
 from sui_sensemaking_api.routes.tei_epistemic_admin import (
     router as tei_epistemic_admin_router,
 )
+from sui_sensemaking_api.routes.tei_epistemic import router as tei_epistemic_router
 from sui_sensemaking_api.routes.inquiry_bundles import router as inquiry_bundles_router
 from sui_sensemaking_api.routes.guest_session import router as guest_session_router
 from sui_sensemaking_api.routes.model_registry import router as model_registry_router
@@ -575,6 +576,9 @@ app.include_router(context_router)
 app.include_router(document_access_admin_router)
 app.include_router(agent_credential_admin_router)
 app.include_router(tei_epistemic_admin_router)
+app.include_router(tei_epistemic_router)
+app.include_router(tei_epistemic_router)
+app.include_router(tei_epistemic_router)
 app.include_router(inquiry_bundles_router)
 app.include_router(model_registry_router)
 app.include_router(session_router)
