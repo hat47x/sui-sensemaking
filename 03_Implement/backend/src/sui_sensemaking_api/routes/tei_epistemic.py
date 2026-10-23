@@ -1,9 +1,8 @@
-"""Tenant-plane surface for TEI epistemic projection (provisional 案B, ADR-0102).
+"""Tenant-plane surface for TEI epistemic projection (ADR-0102 案B, adopted).
 
-ADR-0102 is still in draft and the public exposure policy is not yet decided.
-This route implements the provisional 案B: per-document binding recorded by the
-operator in the artifacts directory, served through the normal tenant/document
-authorization path. It is intentionally thin and reversible:
+ADR-0102 decided to expose TEI epistemic projection on the tenant business
+plane through per-document bindings recorded by the operator. This route
+implements that decision with the smallest reversible surface:
 
 - authorization mirrors `GET /docs/{doc_id}` (`_authorize_request`): tenant
   session, guest session, agent credential, access-control adapter, policy

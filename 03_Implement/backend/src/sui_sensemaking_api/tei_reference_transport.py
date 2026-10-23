@@ -133,12 +133,11 @@ def read_tei_epistemic_binding(
 ) -> TeiEpistemicBinding | TeiReferenceReadFailure:
     """Resolve which TEI Reference artifact applies to a (tenant, document) pair.
 
-    Provisional implementation for ADR-0102 案B: the operator records bindings
-    in `epistemic-bindings.json` inside `SUI_TEI_REFERENCE_DIR`. The binding
-    registry is read with the same fail-closed rules as artifacts; a missing
-    registry, malformed JSON, no matching entry, an ambiguous (duplicate)
-    entry, or an unknown bound artifact kind all fail closed without leaking
-    content.
+    ADR-0102 案B: the operator records bindings in `epistemic-bindings.json`
+    inside `SUI_TEI_REFERENCE_DIR`. The binding registry is read with the same
+    fail-closed rules as artifacts; a missing registry, malformed JSON, no
+    matching entry, an ambiguous (duplicate) entry, or an unknown bound artifact
+    kind all fail closed without leaking content.
     """
     if not artifacts_dir:
         return TeiReferenceReadFailure(reason="unconfigured")
