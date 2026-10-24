@@ -73,6 +73,12 @@ def _write_artifact(directory: Path, name: str, payload: object) -> None:
     (directory / name).write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _write_bound_artifact(directory: Path, tenant_id: str, doc_id: str, name: str, payload: object) -> None:
+    bound = directory / "tenants" / tenant_id / doc_id
+    bound.mkdir(parents=True, exist_ok=True)
+    _write_artifact(bound, name, payload)
+
+
 def _write_bindings(directory: Path, bindings: list[dict]) -> None:
     (directory / "epistemic-bindings.json").write_text(
         json.dumps({"bindings": bindings}), encoding="utf-8"
@@ -113,7 +119,7 @@ def test_no_binding_returns_404(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 def test_bound_artifact_returned_verbatim(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     artifacts = _artifacts_dir(tmp_path)
     monkeypatch.setattr(settings, "tei_reference_dir", str(artifacts))
-    _write_artifact(artifacts, "epistemic-assessment.json", _ASSESSMENT)
+    _write_bound_artifact(artifacts, "local-default", "doc-1", "epistemic-assessment.json", _ASSESSMENT)
     _write_bindings(
         artifacts,
         [{"tenantId": "local-default", "docId": "doc-1", "artifactKind": "epistemic-assessment"}],
@@ -190,3 +196,36 @@ def test_missing_binding_registry_fails_closed(tmp_path: Path, monkeypatch: pyte
         response = client.get("/docs/doc-1/epistemic/projection")
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "tei_reference_unavailable"
+
+def test_operator_corpus_artifact_is_not_served_to_the_tenant_plane(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A binding names only the artifact kind. The operator-level corpus file at
+    # the top of the directory must not be handed to a tenant through it.
+    artifacts = _artifacts_dir(tmp_path)
+    monkeypatch.setattr(settings, "tei_reference_dir", str(artifacts))
+    _write_artifact(artifacts, "epistemic-assessment.json", _ASSESSMENT)
+    _write_bindings(
+        artifacts,
+        [{"tenantId": "local-default", "docId": "doc-1", "artifactKind": "epistemic-assessment"}],
+    )
+    with _client(tmp_path) as client:
+        client.put("/docs/doc-1", json=_sample_payload("doc-1"))
+        response = client.get("/docs/doc-1/epistemic/projection")
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "tei_reference_unavailable"
+    assert "artifact" not in response.json()
+
+
+def test_artifact_bound_to_another_tenant_or_document_is_not_served(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    artifacts = _artifacts_dir(tmp_path)
+    monkeypatch.setattr(settings, "tei_reference_dir", str(artifacts))
+    _write_bound_artifact(artifacts, "other-tenant", "doc-1", "epistemic-assessment.json", _ASSESSMENT)
+    _write_bound_artifact(artifacts, "local-default", "doc-2", "epistemic-assessment.json", _ASSESSMENT)
+    _write_bindings(
+        artifacts,
+        [{"tenantId": "local-default", "docId": "doc-1", "artifactKind": "epistemic-assessment"}],
+    )
+    with _client(tmp_path) as client:
+        client.put("/docs/doc-1", json=_sample_payload("doc-1"))
+        response = client.get("/docs/doc-1/epistemic/projection")
+    assert response.status_code == 503
+    assert "artifact" not in response.json()

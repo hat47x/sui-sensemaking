@@ -13,6 +13,7 @@ from pathlib import Path
 from sui_sensemaking_api.tei_reference_transport import (
     TeiReferenceArtifact,
     TeiReferenceReadFailure,
+    read_bound_tei_reference_artifact,
     read_tei_reference_artifact,
 )
 
@@ -92,3 +93,22 @@ def test_artifact_payload_does_not_escape_directory(tmp_path: Path) -> None:
     result = read_tei_reference_artifact(nested, "epistemic-assessment")
     assert isinstance(result, TeiReferenceArtifact)
     assert result.payload == {"schema": "ok"}
+
+def test_bound_artifact_rejects_identifiers_that_are_not_one_safe_segment(tmp_path: Path) -> None:
+    for tenant_id, doc_id in [("..", "doc-1"), ("t/../x", "doc-1"), ("tenant", "../doc"), ("tenant", ""), ("tenant", "a\\b")]:
+        result = read_bound_tei_reference_artifact(tmp_path, tenant_id, doc_id, "epistemic-assessment")
+        assert isinstance(result, TeiReferenceReadFailure)
+        assert result.reason == "invalid-path"
+
+
+def test_bound_artifact_is_read_only_from_its_own_pair_directory(tmp_path: Path) -> None:
+    (tmp_path / "epistemic-assessment.json").write_text('{"contract": "corpus"}', encoding="utf-8")
+    bound = tmp_path / "tenants" / "tenant-a" / "doc-1"
+    bound.mkdir(parents=True)
+    (bound / "epistemic-assessment.json").write_text('{"contract": "bound"}', encoding="utf-8")
+    result = read_bound_tei_reference_artifact(tmp_path, "tenant-a", "doc-1", "epistemic-assessment")
+    assert isinstance(result, TeiReferenceArtifact)
+    assert result.payload == {"contract": "bound"}
+    other = read_bound_tei_reference_artifact(tmp_path, "tenant-b", "doc-1", "epistemic-assessment")
+    assert isinstance(other, TeiReferenceReadFailure)
+    assert other.reason == "not-a-file"

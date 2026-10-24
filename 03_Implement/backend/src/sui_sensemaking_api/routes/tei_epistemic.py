@@ -10,6 +10,9 @@ implements that decision with the smallest reversible surface:
 - the binding registry and the artifact are read through the fail-closed local
   I/O transport (ADR-0101 Option A). No artifact content is ever returned on
   a failure.
+- the artifact is read from the bound pair's own directory
+  (`tenants/<tenantId>/<docId>/`), never from the operator-level corpus files,
+  so one tenant cannot receive an artifact produced for another.
 - read-only: no write to confirmation / use state / `human_reviewed`.
 - read path only; audit is left to the existing document view audit (not
   duplicated here).
@@ -25,8 +28,8 @@ from sui_sensemaking_api.routes.docs import _authorize_request
 from sui_sensemaking_api.settings import settings
 from sui_sensemaking_api.tei_reference_transport import (
     TeiReferenceReadFailure,
+    read_bound_tei_reference_artifact,
     read_tei_epistemic_binding,
-    read_tei_reference_artifact,
 )
 
 router = APIRouter(prefix="/docs", tags=["docs"])
@@ -70,7 +73,9 @@ def get_document_epistemic_projection(
             detail={"code": code, "message": "TEI epistemic projection is not available."},
         )
 
-    artifact = read_tei_reference_artifact(settings.tei_reference_dir, binding.artifact_kind)
+    artifact = read_bound_tei_reference_artifact(
+        settings.tei_reference_dir, tenant.tenant_id, doc_id, binding.artifact_kind
+    )
     if isinstance(artifact, TeiReferenceReadFailure):
         code, status_code = _failure_code(artifact.reason)
         raise HTTPException(

@@ -23,6 +23,7 @@ fail-closed の規則:
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Collection, Literal, Mapping, Union
@@ -120,6 +121,41 @@ class TeiEpistemicBinding:
     """
 
     artifact_kind: str
+
+
+#: Directory (inside the artifacts dir) that holds tenant-bound artifacts as
+#: `tenants/<tenantId>/<docId>/<kind>.json`. The tenant plane reads only from
+#: here, never the operator-level corpus files at the top of the directory, so a
+#: binding can never hand one tenant an artifact produced for another.
+TEI_TENANT_ARTIFACTS_DIR = "tenants"
+
+_SAFE_PATH_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+
+def _is_safe_path_segment(value: str) -> bool:
+    return bool(_SAFE_PATH_SEGMENT.match(value)) and ".." not in value
+
+
+def read_bound_tei_reference_artifact(
+    artifacts_dir: str | Path | None,
+    tenant_id: str,
+    doc_id: str,
+    artifact_kind: str,
+) -> TeiReferenceReadResult:
+    """Read the artifact bound to one (tenant, document) pair.
+
+    ADR-0102 案B binds (tenant, doc, artifact). The artifact is read from the
+    pair's own directory `tenants/<tenantId>/<docId>/`, so two tenants (or two
+    documents) never share an artifact through a binding. Identifiers that are
+    not a single safe path segment fail closed as `invalid-path`.
+    """
+    if not artifacts_dir:
+        return TeiReferenceReadFailure(reason="unconfigured")
+    if not _is_safe_path_segment(tenant_id) or not _is_safe_path_segment(doc_id):
+        return TeiReferenceReadFailure(reason="invalid-path")
+    base = Path(artifacts_dir).resolve()
+    bound_dir = base / TEI_TENANT_ARTIFACTS_DIR / tenant_id / doc_id
+    return read_tei_reference_artifact(bound_dir, artifact_kind)
 
 
 #: File name of the operator-managed binding registry inside the artifacts dir.
