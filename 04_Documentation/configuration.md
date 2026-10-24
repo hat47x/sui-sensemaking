@@ -143,6 +143,7 @@ export SUI_LLM_PROVIDER=none
 | `SUI_TENANT_CAPABILITY_HTTP_ENDPOINT` | 未設定 | 権限リゾルバーの接続先。HTTPSを使います。ローカルでの検証に限り、ループバックのHTTPも使えます。 |
 | `SUI_TENANT_CAPABILITY_HTTP_API_KEY` | 未設定 | 権限リゾルバー専用のベアラートークン。空でなく、空白と制御文字を含まない値にします。Git、DB、監査ログには保存しません。 |
 | `SUI_TENANT_CAPABILITY_HTTP_TIMEOUT_SECONDS` | `1.5` | 権限リゾルバーのタイムアウト（秒）。0より大きく、30以下にします。 |
+| `SUI_TEI_REFERENCE_DIR` | 未設定 | 生成済みTEI ReferenceのJSON artifactを置くディレクトリ（ADR-0101 Option A）。未設定のとき、`/admin/tei-epistemic` のエンドポイントは無効で、503 `tei_reference_unconfigured` でfail closedします。設定した場合も、エンドポイントはコントロールプレーン認可（`X-Admin-Api-Key` または provision capability）を必要とし、artifactをそのまま返します。内容の解釈や検証は行いません。 |
 | `SUI_ALLOW_JIT_PROVISIONING` | `false` | シングルテナントの転送ヘッダーによる本人識別でだけ、未登録の利用者を自動作成（JIT）してよいかを決めます。`true` なら、利用者、識別子の紐づけ、既定のメンバーシップを作ります。`false` なら、403 `identity_not_provisioned` を返します。`saas-multitenant` では起動時に `false` が必須です。検証済みのJWTやCookieによる経路では、この設定にかかわらず、未登録の利用者を403で拒否します。 |
 | `SUI_SAAS_OAUTH_BROKER_HTTP_AUTHORIZE_ENDPOINT` | 未設定 | OAuthの認可コードフローを始めるURL。認証情報、クエリ、フラグメントを含まないHTTPS、またはループバックのHTTPだけを使えます。`saas-multitenant` では必須で、起動前に検査します。 |
 | `SUI_SAAS_OAUTH_BROKER_HTTP_TOKEN_ENDPOINT` | 未設定 | 認可コードを交換するトークンエンドポイント。認証情報、クエリ、フラグメントを含まないHTTPS、またはループバックのHTTPだけを使えます。起動には必須ではありません。ただしコールバックでは、リダイレクトURI、クライアントID、クライアントシークレットと合わせた4項目がそろっている必要があり、欠けていると503を返します。 |

@@ -909,6 +909,33 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
   - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他テナントの対応付けは `404`。
   - `DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`（`agent.revoke`）: その文書の付与だけを取り消す。`204`。
 
+### 2.16 TEI epistemic reference artifact API（ADR-0101 Option A）
+
+ADR-0101は、TEI Assessmentを外部の信頼境界を越えさせないため、SUIが所有するadapterと同一信頼領域内の局所I/O（CLI / JSONファイル群の読み取り）を採択した。この節のendpointは、その局所I/Oの読み出し部品をコントロールプレーンに限って公開するものである。意味の検証は行わず、frontend consumer（`epistemic_review_model.ts` と `epistemic_projection_adapter.ts`）が `contract` / `schema` を別々に検証し、driftを再計算する。
+
+**GET** `/admin/tei-epistemic/artifacts/{artifact_kind}`
+
+- 認可: コントロールプレーンのみ（ADR-0072）。`X-Admin-Api-Key` または provision capabilityを要求し、業務面の `X-API-Key` では通さない。認可に失敗すると、鍵が設定されているかどうかを明かさない `401 control_plane_unauthorized` を返す。
+- `artifact_kind` は `epistemic-assessment`、`epistemic-context`、`epistemic-detail` のみ。許可リスト外や越境の指定は `404 {"code": "unknown_tei_artifact"}` で拒否し、内容を返さない。
+- `SUI_TEI_REFERENCE_DIR` が未設定のときは、`503 {"code": "tei_reference_unconfigured"}` でfail closedする。これが既定で、このendpointの効果は設定した運用に限る。
+- artifactの欠損、読み取り不能、JSONとして正しくない、JSON objectでない場合は、`503 {"code": "tei_reference_unavailable"}` を返す。いずれの場合も、内容を部分的にも返さない。エラーの種類と応答本体の形は固定し、operatorが設定誤りを見分けられるようにする。
+- 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}` を返す。応答は `Cache-Control: no-store`。読み取り専用であり、TEI AssessmentをDocument / Canonical stateへ埋め込まない。
+- テナント業務面への公開は未決である。テナント境界に沿う公開や、利用者ごとの紐付けを設ける場合は、別の判断材料（ADR）で扱う。
+
+### 2.17 TEI epistemic projection（テナント業務面、provisional 案B, ADR-0102）
+
+ADR-0102 は未決だが、provisional として案B（文書単位の紐付けを管理面で登録し、テナント業務面の読み取り endpoint で提供する）を実装した。紐付けは `SUI_TEI_REFERENCE_DIR` 内の `epistemic-bindings.json` に運用者が記録する。endpoint はテナント認証・文書認可を通し、fail closed を維持する。
+
+**GET** `/docs/{doc_id}/epistemic/projection`
+
+- 認可: `GET /docs/{doc_id}` と同じ `_authorize_request`（テナント認証、ゲストセッション、agent credential、access control adapter、policy binding、anti-enumeration）。agent credential は `_AGENT_ALLOWED_ROUTES` に含まれないため `403 agent_route_not_enabled` で閉じる。
+- `SUI_TEI_REFERENCE_DIR` 未設定: `503 {"code": "tei_reference_unconfigured"}`。
+- 紐付けが無い（registry 不在、または (tenant, doc) に一致する登録なし）: `404 {"code": "epistemic_binding_not_found"}`。registry が壊れている・曖昧（重複）・未知の bound artifact kind も fail closed（registry 壊れは 503、それ以外は 404）。
+- artifact は、紐付けた (tenant, doc) ごとのディレクトリ `SUI_TEI_REFERENCE_DIR/tenants/<tenantId>/<docId>/<artifactKind>.json` からだけ読む。ディレクトリ直下の運用者向けコーパス（`/admin/tei-epistemic` が返すもの）は、業務面では返さない。これにより、紐付けを通して別のテナントや別の文書のために作った artifact を返すことはない。tenantId と docId が安全な一つのパス要素（英数字で始まり、英数字・`.`・`_`・`-` だけ、128文字以内、`..` を含まない）でない場合も fail closed する。
+- bound artifact が読めない（上のディレクトリに無い場合を含む）: `503 {"code": "tei_reference_unavailable"}`。
+- 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}`。`Cache-Control: no-store`。読み取り専用。epistemic データは Document / Canonical state へ保存・埋め込みしない。
+- レスポンス本体は artifact をそのまま返す。contract / schema の検証と drift 再計算は frontend consumer が行う。
+
 ## 3. レスポンス例（概要）
 
 ### 3.1 DocumentV1（レスポンス）
