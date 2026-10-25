@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ツリーとKJキャンバスの独立UI・粘性付き配置 — 設計案</title>
+<style>
+:root{color-scheme:light;--bg:#f5f7f9;--paper:#fff;--ink:#253344;--sub:#526276;--line:#d8e1ea;--accent:#315f82}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.8 -apple-system,BlinkMacSystemFont,"Yu Gothic UI",Meiryo,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:38px 25px 72px;background:var(--paper)}h1{font-size:28px;line-height:1.45}h2{font-size:20px;margin-top:42px;border-bottom:1px solid var(--line);padding-bottom:7px}h3{font-size:16px;margin-top:25px}p,li{margin:8px 0}a{color:var(--accent)}.muted{color:var(--sub)}.lead{font-size:17px}.notice{border-left:4px solid var(--accent);padding:9px 18px;background:#edf3f8}.pane{border:1px solid var(--line);border-radius:9px;padding:15px 18px;margin:15px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}table{border-collapse:collapse;width:100%;margin:15px 0;font-size:14px}th,td{border-bottom:1px solid var(--line);text-align:left;vertical-align:top;padding:9px}th{background:#f0f4f7}code{background:#edf2f7;border-radius:3px;padding:1px 4px}pre{background:#f3f6f8;border-radius:8px;padding:16px;overflow:auto;font-size:13px;line-height:1.6}pre.mermaid{white-space:pre-wrap}svg{max-width:100%}footer{margin-top:36px;border-top:1px solid var(--line);padding-top:16px;color:var(--sub)}@media(max-width:680px){main{padding:24px 16px}.grid{grid-template-columns:1fr}table{font-size:12px}}
+@media print{body{background:white}main{max-width:none;padding:10mm}h2,table{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main>
+<p class="muted">SUI Sensemaking / Architecture candidate / 2026-10-26</p>
+<h1>ツリーとKJキャンバスの独立UI・粘性付き配置</h1>
+<p class="lead">アウトライン／マインドマップで形成した論理的な親子関係を、自由配置のKJキャンバスへ背景の枝として投影する。人が形成した島・相対配置・違和感を保持し、AIと決定論的なレイアウトの協働を可逆に行う。</p>
+<p class="notice"><strong>状態: 設計候補・未採用／未実装。</strong> 既存のDocumentV1、API、SafeMode、semantic kind、review/authority、履歴の意味を変更しない。本書の型名・パラメータ・ダイアグラムは検討用であり、公開契約とみなさない。要求と段階計画は <a href="../01_Plans/hybrid_outline_canvas_layout_plan.md">計画案</a>、一次価値は <a href="../01_Plans/adr/ADR-0089-product-value-canon.md">ADR-0089</a> を参照する。</p>
+<h2>1. 独立した編集面と正本の所在</h2>
+<pre class="mermaid">
+flowchart TB
+  O["アウトラインUI<br/>階層と順序"]
+  M["マインドマップUI<br/>Tree由来の自動配置"]
+  C["KJキャンバスUI<br/>自由なカード位置と島"]
+  T["Tree / Forest<br/>親子とノード同一性（候補）"]
+  L["Canvas Layout<br/>座標・島（既存資産を優先）"]
+  R["背景の枝<br/>Tree + Canvas座標から導出"]
+  O <--> T
+  M <--> T
+  T --> R
+  L --> R
+  C <--> L
+  R -.-> C
+  M -.->|"初回だけ配置候補"| L
+</pre>
+<p>アウトラインとマインドマップは一つのTree/Forestを扱う別表示である。KJキャンバスは同じノードの参照先と座標・島を扱う<strong>独立したUI</strong>。マインドマップの整列は、生成直後のCanvas位置候補として一回利用してよいが、その後にCanvas座標を継続同期しない。</p>
+<table>
+<thead><tr><th>操作</th><th>Tree</th><th>Mind-map位置</th><th>Canvas位置・島</th><th>背景枝</th></tr></thead>
+<tbody>
+<tr><td>Canvasでカードを動かす</td><td>維持</td><td>維持</td><td>明示範囲のみ更新</td><td>現在位置で再描画</td></tr>
+<tr><td>アウトラインで親を変更</td><td>変更</td><td>必要なら再整列</td><td>維持</td><td>新しい親子へ再接続</td></tr>
+<tr><td>Mind-mapの自動整列</td><td>維持</td><td>変更</td><td>維持</td><td>維持</td></tr>
+<tr><td>KJの島を作る・移す</td><td>維持</td><td>維持</td><td>明示操作に従う</td><td>親子の意味は維持</td></tr>
+</tbody>
+</table>
+<p>ツリー枝は <a href="schemas.md">現行Edge</a> の「関連」「対立」「因果」等の意味Relationへ複製せず、Treeの親子関係から導出する読み取り専用の描線とする。複数の親を一つのTreeで許すか、同じノードに複数Treeを許すかはPoCの観測事項。未分類カードは仮の表示ルートを正式な意味親にしない。</p>
+<h2>2. ツリーと島の食い違いを、描画の情報として残す</h2>
+<div class="pane">
+<p><strong>例: 部門別ツリー → 月末集中の島</strong></p>
+<pre>Tree: 営業 ─ 受注確認
+      経理 ─ 締め作業        → KJ島「月末集中」
+      情報システム ─ バッチ</pre>
+<p>異なる祖先に属するカードが同じ島へ集まることは、元の分類軸を再検討する根拠にも、横断的な現象をそのまま表現する根拠にもなり得る。どちらの解釈も候補として扱う。</p>
+</div>
+<p>「異なる祖先から島へ集まる」という<strong>構造上の収束</strong>と、画面上の線が交わる<strong>幾何学上の交差</strong>を区別する。経路の最適化や束ねによって交差が減っても、出所構成を辿れるようにする。線の交差数を最小化することを唯一の目的にはしない。</p>
+<h3>背景枝の描画候補</h3>
+<ul>
+<li>島／背景枝／既存の意味的なEdge／カード／選択オーバーレイの描画順を検討し、カード本文を優先する。背景枝と既存Edgeは識別できる表現にする。</li>
+<li>ルート寄りの幹は太く、葉に向かう枝は細くする。ただし全体の不透明度を低くする。初期試験値の例は幹12px・中間7px・末端2〜3px、透明度6〜15%程度。実画面の可読性で調整し、仕様値として固定しない。</li>
+<li>共通幹の重複描画で濃くならないよう、一つの描画要素へ束ねるかレイヤー単位で透明度を制御する。ズーム別の太さ・密度・アンチエイリアスも評価する。</li>
+<li>カード選択時は祖先経路を強調できる。表示の太さは意味上の重要度・Truth・採用状態ではなく、ツリー上の深さを示すだけである。</li>
+<li>枝の束ねや一時非表示は表示Projectionに限定し、位置・島・Tree・人間の注記を変更しない。</li>
+</ul>
+<h2>3. 代表カードと部分木の折り畳み</h2>
+<p>短いノードラベルは親の文脈を継承して意味を持つ。単語断片を大量のカードとして並べる代わりに、中間ノードを代表表示してよい。表示上の代表カードは元ノードの内容を置き換えず、対象のTree revision・部分木と子孫の参照を保持する。</p>
+<table><thead><tr><th>代表の種類</th><th>権威と保持</th></tr></thead><tbody>
+<tr><td>親のラベルそのもの</td><td>元ノードへの表示参照</td></tr>
+<tr><td>子孫から生成したAI要約</td><td>提案または再生成可能な説明Projection。未解決・反証を省略して確定事実へしない</td></tr>
+<tr><td>人が確認・編集した統合説明</td><td>必要なら別のSynthesis候補。元の子孫と来歴へ戻る</td></tr>
+</tbody></table>
+<p>アウトラインでの折り畳みとCanvasでの折り畳みは独立する。一つの部分木が複数島へ散らばる場合、代表表示を一箇所へ強制して島を壊さず、代表カードから複数島への参照・表示上の代理を使う候補を比較する。表示代理は同じノードの別意味成果物ではない。</p>
+<h2>4. 人の配置を保つ制約付き局所改善</h2>
+<p>AIがすべてのカードのXYを自由生成するより、AIは「どこを、どの意図で、どれほど変更するか」を候補として示し、決定論的なレイアウト処理が移動を解く構成を優先する。アルゴリズムの例:</p>
+<pre>
+入力: 現在の座標 P、Tree T、Island I、人手の明示注記 A、
+      編集可能ID集合 S、固定ID集合 F、変化量制限 B
+出力: 候補座標 P'（採用前は保存しない）
+
+最小化:
+  重なり・読みづらさ
+  + 島内の形状変化
+  + 利用者が示した位置関係の不満
+  + 現在座標からの変化量
+  + カード同士の相対位置の変化量
+
+硬い制約:
+  FとSの外側のカードは不変
+  Treeの親子、カード本文、島の所属、Review、holdは不変
+  P'の変化はBの範囲内（現実の距離定義はPoCで評価）
+</pre>
+<p>座標の粘性と相対位置の粘性を分ける。利用者が島を一括で大胆に移動した直後は、その<strong>移動後の座標</strong>を基準に内部の間隔・重なりだけを整える。枝の交錯が意味のある表現なら保持できる。</p>
+<p>「この二つは近すぎる」「島全体の位置は維持」「この位置は固定」など具体的なコメントは候補制約へ変換できる。一方、「違和感がある」「納得感がある」「理由を言えない」は人間の認知上の信号として保持し、Truth、confidence、human review、意味上の承認へ自動変換しない。特に <a href="../01_Plans/adr/ADR-0090-cognitive-assistance-candidate-layer-and-evidence-promotion.md">ADR-0090</a> の反スコアリング境界を維持する。</p>
+<h3>UI上の二つの制御軸</h3>
+<div class="grid">
+<section class="pane"><strong>変更対象</strong><p>選択カード／島／矩形領域／図全体。対象外は編集不能。固定した位置も編集不能。</p></section>
+<section class="pane"><strong>変更量</strong><p>保持 → 微調整 → 局所整理 → 明示的な大きな再配置。内部スコア係数だけでなく移動量の上限として扱う。</p></section>
+</div>
+<p>操作モードは微調整・共同整理・大胆な再構成の候補とする。スライダー最大でもハード制約を緩めない。人間の一括移動と、AIによる意味を変えない後処理を第一に試す。</p>
+<h2>5. 差分プレビュー、Undo/Redo、指定版からの部分復元</h2>
+<pre class="mermaid">
+flowchart TD
+  U["人の選択と指示"]
+  B["現在Tree/Canvasの版・対象・固定を解決"]
+  P["AIまたは決定論的手続きが操作候補を生成"]
+  V{"範囲・版・安全条件に適合?"}
+  D["差分プレビュー / 採否"]
+  C["一つの編集単位で適用"]
+  H["Undo/Redoと保存版の参照"]
+  R["再指定・修正"]
+  U --> B --> P --> V
+  V -- はい --> D --> C --> H
+  V -- いいえ --> R
+</pre>
+<p>Undo/Redoは同一セッションの操作単位とし、保存・再読込をまたいだ構造判断・人的な違和感の履歴の代用品にはしない。既存の <a href="island_shapes.md">Island shape設計</a> と同様、プレビュー中は保存せず、採用時に一度だけ確定する。</p>
+<p>「ここ以外は前回版へ戻す」は、選択範囲・参照する旧Canvas版・現在Canvas版を解決し、<strong>許可された座標だけ</strong>を旧版から戻す新たな差分操作とする。旧版にないカード、削除されたカード、Tree変更、島の所属、保留判断は別の変更として扱う。意味上の履歴を全体Undoで消去しない。対象が曖昧・消滅・現在版が古い場合は競合を提示する。</p>
+<p>自然言語指示は直接Documentを更新せず、編集範囲・基準版・保持条件・対象IDを持つ操作候補へ変換する。AIへのContextは選択範囲と必要な関係を中心とし、SafeModeに従って外部へ送る。外部モデルが利用できなくても、人による配置、局所整列、Undo/Redoの経路を維持する。</p>
+<h2>6. 現行モデルとの適合と実装前の判断</h2>
+<table><thead><tr><th>既存資産</th><th>利用可能な範囲と注意点</th></tr></thead><tbody>
+<tr><td><a href="schemas.md">DocumentV1 / Card</a></td><td>カードID・座標・本文・hold・critique。Tree identityの正式な永続契約は未実装</td></tr>
+<tr><td>Island / Affiliation</td><td>視覚的包含と横断的所属を区別する。ツリー上の親子に読み替えない</td></tr>
+<tr><td>Edge</td><td>意味的な線を保持する。Tree由来の背景枝を追加のEdgeとして保存しない</td></tr>
+<tr><td>summaryHistory / critiqueHistory</td><td>人が以前に残した見立てへ戻る。座標変更の操作履歴とは別</td></tr>
+<tr><td><a href="sensemaking_semantic_model.md">SUI Semantic Model</a></td><td>Structure / Synthesis / Review / Decisionを区別。将来概念と現行API/型のサポートレベルを混同しない</td></tr>
+<tr><td>SEI・TEIとの連携</td><td>Working Set・一般Tree/Graph/Layoutは将来の接続候補。SUIの初期PoCがそれらの完成を待つ必要はない</td></tr>
+</tbody></table>
+<p>新しいTreeの永続化、Canvas版の保持形式、固定制約、注記の由来、代表テキストのリビジョン、異なるTreeの並存は<strong>未決</strong>である。実験用の独立fixtureから始め、既存DocumentV1変更の必要性、互換性、migration、SafeMode投影、API/TypeScript/Pydanticの整合を確認してから製品契約を決める。</p>
+<h2>7. 最小の検証と反証</h2>
+<table><thead><tr><th>負例・操作</th><th>期待結果</th></tr></thead><tbody>
+<tr><td>人が作った島へ異なる親から3本の枝が入る</td><td>意味のある交錯を残し、Treeと島を自動修正しない</td></tr>
+<tr><td>マインドマップで再整列後、既存Canvasを開く</td><td>Canvasの配置は保持される</td></tr>
+<tr><td>「整えて」とAIが全体を動かそうとする</td><td>範囲と粘性と上限で縮小／拒否し、未採用の候補として提示する</td></tr>
+<tr><td>人が島を一括移動後、微調整を実行</td><td>現在位置と内部形状を優先して余白を改善する</td></tr>
+<tr><td>部分木の中に反証・heldがある</td><td>代表説明から元情報へ戻れる。留保を断定へ変更しない</td></tr>
+<tr><td>前版から選択対象以外を復元</td><td>カード本文・Tree・島の意味は保持し、対象の位置だけ新しいUndo単位で適用</td></tr>
+<tr><td>AI応答中に文書が変更される</td><td>staleな候補の黙示適用を拒否する</td></tr>
+<tr><td>AIなし／SafeMode ONで操作</td><td>人の操作・履歴・基本的整列を維持し、未レビュー情報を外部送信しない</td></tr>
+</tbody></table>
+<p>段階: (1) 独立UIとTree枝・初期座標、(2) 折り畳みと粘性付き局所整形、(3) 型付きAI候補と部分復元、(4) 同じ資料でアウトライン・マインドマップ・KJ・複合を比較。最終的な製品既定への昇格にはADR-0089のT2実務確認が必要。コード試験や合成fixtureだけで利用価値を実証したとは主張しない。</p>
+<footer>提案のみ。要件の扱いは <a href="../01_Plans/hybrid_outline_canvas_layout_plan.md">計画案</a> を参照。GitHub Draft PRの採否で履歴を管理する。</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js"></script>
+<script>
+if (typeof mermaid !== "undefined") {
+  mermaid.initialize({startOnLoad:true,securityLevel:"strict",theme:"neutral"});
+}
+</script>
+</body>
+</html>
