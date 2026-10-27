@@ -308,6 +308,21 @@ export type AuditEventV1 = {
 - 同値判定は `equivalenceKey AND bundleHash` の一致を必須化。
 - `dryRun=true` では `sideEffect="none"` を必須化（安全側で拒否）。
 
+### 1.3 context-projection.v1 の単位digest（ADR-0103）
+
+agent向け投影（MCP `get_context_projection`、実装は `frontend/src/export/context_bundle_projection.ts`）のカードと島は、`digest` を持つ。追加のみで、`schemaVersion` は `context-projection.v1` のまま、`bundleHash` の値も変わらない。
+
+```ts
+type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
+// cards[].digest: ItemDigest | null
+// islands[].digest: ItemDigest | null
+```
+
+- 入力は、投影が返した内容だけのcanonical JSON（`canonicalizeJson`）。カードは `{schema:"context-projection.item-digest.v1", kind:"card", id, text}`、島は `{schema, kind:"island", id, title}`。利用者は受け取った項目から再計算して確かめられる。
+- カードのdigestは、本文が露出した（`textReviewed` が真かつSafeMode OFF）ときだけ値を持つ。伏せた場合（未レビュー、SafeMode ON）は `null`。島のdigestは `titleReviewed` が真のときだけ値を持ち、SafeModeのON/OFFによらず同じ値になる。伏せた内容のdigestは計算も出力もしない。
+- レビュー済みの本文・題名の編集とid変更だけがdigestを変える。位置などのレイアウト、`holdState`、`claimType`、関係線、`evidenceLinks`、`Card.meta.source`、他項目の変更は変えない。
+- 内容の真実性、著者、レビューの証跡は保証しない。`DocumentV1` には保存せず、バックエンドの契約・`test_ts_python_contract_drift.py` の対象型には影響しない。
+
 ## 2. ID・座標系の前提
 
 ### 2.1 ID
