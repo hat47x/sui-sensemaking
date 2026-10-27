@@ -43,6 +43,13 @@ export const CONTEXT_PROJECTION_CONSTRAINTS = [
 
 export type ContextProjectionConstraint = (typeof CONTEXT_PROJECTION_CONSTRAINTS)[number];
 
+/**
+ * ADR-0103: 単位digest。露出した内容だけのcanonical JSON（`item-digest.v1`）のsha256。
+ * 内容が露出していない項目（SafeModeで本文を伏せたカード、未レビューの島の題名）は常にnullで、
+ * 伏せた内容から計算した値は決して出さない。
+ */
+export type ItemDigest = { alg: "sha256"; value: string };
+
 export type ProjectedCard = {
   id: string;
   claimType: string | null;
@@ -55,6 +62,15 @@ export type ProjectedCard = {
   reviewed: boolean;
   /** True when the real text was withheld (unreviewed and/or SafeMode). */
   redacted: boolean;
+  /** ADR-0103: 露出した本文（reviewedかつSafeMode OFF）のdigest。伏せた場合は必ずnull。 */
+  digest: ItemDigest | null;
+};
+
+export type ProjectedIsland = {
+  id: string;
+  title: string;
+  /** ADR-0103: レビュー済みの題名だけのdigest（SafeModeに依存しない）。未レビュー・無題はnull。 */
+  digest: ItemDigest | null;
 };
 
 export type ProjectedRelation = { from: string; to: string; type: string };
@@ -86,7 +102,7 @@ export type ContextProjectionV1 = {
   constraint: ContextProjectionConstraint;
   safeMode: boolean;
   cards: ProjectedCard[];
-  islands: Array<{ id: string; title: string }>;
+  islands: ProjectedIsland[];
   relations: ProjectedRelation[];
   evidence: ProjectedLink[];
   contradictions: ProjectedLink[];
@@ -110,6 +126,24 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("");
+}
+
+export const ITEM_DIGEST_SCHEMA = "context-projection.item-digest.v1";
+
+/**
+ * ADR-0103: 単位digest。入力は種別・id・露出した内容だけ。位置・保留状態・来歴・関係線・
+ * レビューフラグは含めない。呼び出し側は、内容が露出している項目にだけ使う。
+ */
+export async function computeItemDigest(
+  kind: "card" | "island",
+  id: string,
+  exposedContent: string,
+): Promise<ItemDigest> {
+  const payload =
+    kind === "card"
+      ? { schema: ITEM_DIGEST_SCHEMA, kind, id, text: exposedContent }
+      : { schema: ITEM_DIGEST_SCHEMA, kind, id, title: exposedContent };
+  return { alg: "sha256", value: await sha256Hex(canonicalizeJson(payload)) };
 }
 
 function isReviewed(card: DocumentV1["cards"][number]): boolean {
@@ -195,24 +229,37 @@ export async function buildContextProjection(input: ContextProjectionInput): Pro
   for (const card of allCards) {
     if (projectCardText(card, safeMode).redacted) redactedCount += 1;
   }
-  const cards: ProjectedCard[] = allCards
-    .filter((card) => cardIdsInScope.has(card.id))
-    .map((card) => {
-      const reviewed = isReviewed(card);
-      const projected = projectCardText(card, safeMode);
-      return {
-        id: card.id,
-        claimType: card.claimType ?? null,
-        holdState: card.holdState ?? null,
-        text: projected.text,
-        reviewed,
-        redacted: projected.redacted,
-      };
-    });
+  const cards: ProjectedCard[] = await Promise.all(
+    allCards
+      .filter((card) => cardIdsInScope.has(card.id))
+      .map(async (card) => {
+        const reviewed = isReviewed(card);
+        const projected = projectCardText(card, safeMode);
+        return {
+          id: card.id,
+          claimType: card.claimType ?? null,
+          holdState: card.holdState ?? null,
+          text: projected.text,
+          reviewed,
+          redacted: projected.redacted,
+          // ADR-0103: 露出した本文だけをdigest化する。伏せた本文は入力にしない。
+          digest: projected.redacted ? null : await computeItemDigest("card", card.id, projected.text),
+        };
+      }),
+  );
 
-  const islands = [...doc.islands]
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((island) => ({ id: island.id, title: projectIslandTitle(island) }));
+  const islands: ProjectedIsland[] = await Promise.all(
+    [...doc.islands]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map(async (island) => ({
+        id: island.id,
+        title: projectIslandTitle(island),
+        digest:
+          typeof island.title === "string" && island.titleReviewed === true
+            ? await computeItemDigest("island", island.id, island.title)
+            : null,
+      })),
+  );
 
   // Relations are only meaningful when both endpoints are in scope. For
   // summary they are always in scope of the full doc (structure only).
@@ -267,7 +314,8 @@ export async function buildContextProjection(input: ContextProjectionInput): Pro
       redacted: card.redacted,
       text: card.redacted ? null : card.text,
     })),
-    islands,
+    // ADR-0103: digestは露出済みの内容から導出されるため、bundleHashの入力には含めない（既存値を保つ）。
+    islands: islands.map(({ id, title }) => ({ id, title })),
     relations,
     evidence,
     contradictions,
