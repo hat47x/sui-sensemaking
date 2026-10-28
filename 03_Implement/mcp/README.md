@@ -36,6 +36,8 @@ npm start   # runs src/index.ts (transport selected by SUI_MCP_TRANSPORT)
 SUI_MCP_API_BASE_URL=http://127.0.0.1:8000 npm run verify -- [docId] [constraint]
 ```
 
+PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージの `npm ci`・`typecheck`・`test`（Node 20）と、agent認証・OAuth・contextルートのbackendテスト（Python 3.12）を実行する。Postgres RLSの実地matrixはCIの対象外である。
+
 ### 生成AIのMCPクライアントを接続する（設定例）
 
 生成AIのエージェント（Claude Desktop、IDEのMCPクライアントなど）からstdioでこのサーバーを使うには、クライアントのMCPサーバー設定に追加します。先にバックエンドを起動しておく必要があります（`uvicorn sui_sensemaking_api.main:app --port 8000`）。
