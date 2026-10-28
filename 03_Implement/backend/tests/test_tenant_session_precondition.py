@@ -274,6 +274,9 @@ _UNGUARDED_ROUTE_EXEMPTIONS: dict[tuple[str, str], str] = {
     ("PATCH", "/admin/provision/models/{model_id}"): _CONTROL_PLANE_AUTHORIZED,
     ("GET", "/admin/provision/models/tenants/{tenant_id}/allowlist"): _CONTROL_PLANE_AUTHORIZED,
     ("PUT", "/admin/provision/models/tenants/{tenant_id}/allowlist"): _CONTROL_PLANE_AUTHORIZED,
+    # ADR-0101/0102: operator-level TEI reference artifact read (local I/O),
+    # control-plane authorized and not a tenant-scoped resource.
+    ("GET", "/admin/tei-epistemic/artifacts/{artifact_kind}"): _CONTROL_PLANE_AUTHORIZED,
     ("GET", "/session/context"): _TENANT_SESSION_VERSION_SOURCE,
     ("POST", "/session/active-tenant"): _BODY_BORNE_EXPECTED_VERSION,
 }
