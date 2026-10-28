@@ -4,7 +4,7 @@
 - Date: 2026-10-27
 - Deciders: Maintainer（仮承認。後日の本承認で §仮決め を確定する）
 - Scope: `03_Implement/frontend/src/export/context_bundle_projection.ts`（MCPの `get_context_projection` が共有）、`02_Architecture/schemas.md`、`03_Implement/mcp/README.md`、`04_Documentation/mcp_agent_connection.md`
-- Related: `ADR-0054`（外部接続層の段階導入）、`ADR-0056`（カード来歴メタデータの境界）、`ADR-0089`（価値の正本）、`ADR-0093`（agent向け投影）、`ADR-0094`（MCP HTTPのagent認証）、`ADR-0098`（人による自己申告と島の題名の扱い）、Issue #3266、TAI Pleroma issue #67
+- Related: `ADR-0054`（外部接続層の段階導入）、`ADR-0056`（カード来歴メタデータの境界）、`ADR-0089`（価値の正本）、`ADR-0093`（agent資格情報と、許可リスト方式で絞った投影の読み取り）、`ADR-0094`（MCP HTTPのagent認証）、`ADR-0098`（人による自己申告と島の題名の扱い）、Issue #3266、TAI Pleroma issue #67
 
 ## 価値への寄与
 
@@ -21,7 +21,7 @@ V3「レビュー」に寄与する。人がレビューした内容を、外部
 
 `get_context_projection`（`context-projection.v1`）は、投影全体のcanonical JSONから `bundleHash` を、文書のidと更新時刻から `baseDocSignature` を返す。どちらも投影全体または文書全体の版を表す。1枚のカードだけ、あるいは1つの島だけを版固定したい利用者は、無関係なカードの変更でも値が変わってしまうため、これらを使えない。
 
-投影が露出する内容は限られている（ADR-0093、ADR-0098）。
+投影が露出する内容は限られている（許可リストはADR-0093 §6、題名の扱いはADR-0098）。
 
 - カード本文は、`textReviewed` が真でSafeModeがOFFのときだけ返す。それ以外は長さだけを示すプレースホルダにする。
 - 島の題名は、`titleReviewed` が真のときだけ、SafeModeのON/OFFによらず返す。それ以外は `(未レビュー)` にする。
