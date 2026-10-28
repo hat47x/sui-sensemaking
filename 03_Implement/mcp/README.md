@@ -13,6 +13,8 @@ sui-sensemakingの `ContextBundle` の投影を読み取り専用で公開する
 
 **適用範囲（DOGFOOD-05）**: 未レビューのカードは、どの `constraint` でも `cards`、`relations`、`evidence`、`contradictions`、`voids[].cardIds` に現れず、その本文も返しません。`safeMode: false` でも同じです。未レビューのカードは `cards` に含まれず、件数だけが `counts.unreviewed` に出ます（`SEC-CONTEXT-PROJECTION-01` で安全側に拒否）。ただし、島の題名（`islands[].title`）は、レビュー済み（`titleReviewed`）の島の題名だけを返します。未レビューの島の題名は返さず、プレースホルダ `(未レビュー)` で置き換えます。文書の題名は、エージェントには返しません（`documentMetadata.title` は `null`）。レビュー済みの題名は、人が確認した短い見出しとして扱い、`safeMode: true` でも返します（ADR-0098）。ただし、題名が未レビューのカード本文を引用している可能性は残ります。題名をレビュー済みにする人が、引用の有無に責任を持ちます。この経路は、**レビュー済み**の内容を見直して構造化するためのもので、未レビューの資料を最初に探索する用途ではありません。レビュー済みカードの作業状態を尊重したいAIの協働者には、`holdState` のメタデータを返します（DOGFOOD-08）。
 
+**単位digest（ADR-0103）**: `cards[].digest` と `islands[].digest` は、露出した内容だけから計算した `{ "alg": "sha256", "value": "<16進64桁>" }` です。カードは、本文を返したとき（レビュー済みかつ `safeMode: false`）だけ値を持ち、本文を伏せたとき（未レビュー、または `safeMode: true`）は `null` です。島は、題名がレビュー済みのときだけ値を持ち、`safeMode` によらず同じ値です。入力は、カードが `{schema, kind:"card", id, text}`、島が `{schema, kind:"island", id, title}` のcanonical JSON（`schema` は `context-projection.item-digest.v1`）で、受け取った項目から再計算して確かめられます。レビュー済みの本文・題名の編集だけが値を変え、位置、`holdState`、`claimType`、関係線は変えません。内容の真実性や著者は保証しません。`bundleHash` の値はこの追加で変わりません。
+
 リソースもプロンプトも書き込みツールもありません。2つのツールには `readOnlyHint: true` が付いています。`tools/list` の内容（2つのツールだけであること）と、`resources/list` が未対応（`-32601`）であることは、`src/context_projection_tool.test.ts` が固定のスナップショットと照合して固定しています。今後の変更で権限が増えたように見える場合は、このファイルを確認してください。
 
 ## 対象外とすること

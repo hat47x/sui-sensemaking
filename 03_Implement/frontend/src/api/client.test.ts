@@ -547,6 +547,7 @@ const FRONTEND_SRC_ROOT = resolve(__dirname, "..");
 const CLIENT_MODULE_PATH = "api/client.ts";
 const APP_MODULE_PATH = "App.tsx";
 const ADMIN_MODEL_ALLOWLIST_MODULE_PATH = "admin/model_allowlist_api.ts";
+const ADMIN_EPISTEMIC_MODULE_PATH = "admin/epistemic_admin_api.ts";
 const OAUTH_CALLBACK_MODULE_PATH = "session/oauth_callback.ts";
 const TENANT_SCOPED_WRAPPERS = [
   "runTenantScopedApiRequest(() => ",
@@ -731,6 +732,7 @@ describe("tenant session version client coverage contract", () => {
 
     expect([...modulesWithFetch].sort()).toEqual([
       APP_MODULE_PATH,
+      ADMIN_EPISTEMIC_MODULE_PATH,
       ADMIN_MODEL_ALLOWLIST_MODULE_PATH,
       CLIENT_MODULE_PATH,
       OAUTH_CALLBACK_MODULE_PATH,
@@ -756,6 +758,17 @@ describe("tenant session version client coverage contract", () => {
       expect(url).toContain("/admin/provision/models/tenants/");
       expect(url).toContain("/allowlist");
       expect(init).toContain("controlPlaneHeaders");
+      expect(init).toContain('credentials: "same-origin"');
+      expect(init).not.toContain("tenantSessionPreconditionHeaders");
+    }
+
+    // The epistemic admin console is a separate control-plane surface. It
+    // addresses the local-I/O artifact endpoint with the admin credential and
+    // never carries the business-plane tenant-session version.
+    for (const site of fetchCallSites(readFrontendModule(ADMIN_EPISTEMIC_MODULE_PATH))) {
+      const { url, init } = splitRequestArguments(site.args);
+      expect(url).toContain("API_BASE");
+      expect(url).toContain("/admin/tei-epistemic/artifacts/");
       expect(init).toContain('credentials: "same-origin"');
       expect(init).not.toContain("tenantSessionPreconditionHeaders");
     }

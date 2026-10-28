@@ -120,7 +120,7 @@ describe("buildContextProjection: summary constraint", () => {
     // redacted counts the whole document (SEC-CONTEXT-PROJECTION-01): c3 is
     // unreviewed, so it is redacted even with SafeMode OFF.
     expect(projection.counts).toEqual({ reviewed: 3, unreviewed: 1, redacted: 1 });
-    expect(projection.islands).toEqual([{ id: "i1", title: "First island" }]);
+    expect(projection.islands.map(({ id, title }) => ({ id, title }))).toEqual([{ id: "i1", title: "First island" }]);
     expect(projection.relations).toEqual([{ from: "c1", to: "c2", type: "related" }]);
     // summary carries both link structures, but never a link touching an
     // unreviewed card (2026-07-13 gate) -- ev2 (c3 unreviewed) is excluded.
@@ -373,7 +373,7 @@ describe("buildContextProjection: island title review gate", () => {
       for (const safeMode of [true, false]) {
         const projection = await buildContextProjection({ doc, constraint, safeMode });
         expect(JSON.stringify(projection), `${constraint}/${safeMode}`).not.toContain("unreviewed secret title");
-        expect(projection.islands).toEqual([{ id: "i1", title: "(未レビュー)" }]);
+        expect(projection.islands).toEqual([{ id: "i1", title: "(未レビュー)", digest: null }]);
       }
     }
   });
@@ -381,6 +381,89 @@ describe("buildContextProjection: island title review gate", () => {
   it("returns a reviewed island title even when SafeMode is ON (ADR-0098)", async () => {
     const projection = await buildContextProjection({ doc: buildDoc(), constraint: "summary", safeMode: true });
 
-    expect(projection.islands).toEqual([{ id: "i1", title: "First island" }]);
+    expect(projection.islands).toEqual([
+      { id: "i1", title: "First island", digest: { alg: "sha256", value: expect.stringMatching(/^[0-9a-f]{64}$/) } },
+    ]);
   });
+});
+
+// ADR-0103: 単位digest。露出した内容だけを入力にし、伏せた内容は入力にも出力にもしない。
+describe("buildContextProjection: per-item digest (ADR-0103)", () => {
+  const project = (doc: DocumentV1, safeMode: boolean, constraint: ContextProjectionConstraint = "reviewed-only") =>
+    buildContextProjection({ doc, constraint, safeMode });
+  const digestOf = (p: Awaited<ReturnType<typeof project>>, id: string) => p.cards.find((c) => c.id === id)?.digest;
+
+  it("exposes a digest for a reviewed card whose text is exposed, and verifies from the exposed fields", async () => {
+    const p = await project(buildDoc(), false);
+    const d = digestOf(p, "c1");
+    expect(d).toEqual({ alg: "sha256", value: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    const bytes = new TextEncoder().encode(
+      '{"id":"c1","kind":"card","schema":"context-projection.item-digest.v1","text":"reviewed claim one"}',
+    );
+    const hex = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    expect(d?.value).toBe(hex);
+  });
+
+  it("exposes no card digest when the text is withheld (SafeMode ON), and no unreviewed card appears at all", async () => {
+    const p = await project(buildDoc(), true);
+    expect(p.cards.length).toBeGreaterThan(0);
+    for (const card of p.cards) {
+      expect(card.redacted).toBe(true);
+      expect(card.digest).toBeNull();
+    }
+    expect(p.cards.find((c) => c.id === "c3")).toBeUndefined();
+    expect(JSON.stringify(p)).not.toContain("unreviewed draft three");
+  });
+
+  it("changes when reviewed text changes, but not when layout, hold state or edges change", async () => {
+    const base = buildDoc();
+    const before = digestOf(await project(base, false), "c1");
+    const edited = { ...base, cards: base.cards.map((c) => (c.id === "c1" ? { ...c, text: "reviewed claim ONE" } : c)) };
+    expect(digestOf(await project(edited, false), "c1")).not.toEqual(before);
+    expect(digestOf(await project(edited, false), "c2")).toEqual(digestOf(await project(base, false), "c2"));
+    const moved = {
+      ...base,
+      cards: base.cards.map((c) => (c.id === "c1" ? { ...c, x: 999, y: -5, holdState: "held" as const } : c)),
+      edges: [],
+      updatedAt: "2026-08-01T00:00:00.000Z",
+    };
+    expect(digestOf(await project(moved, false), "c1")).toEqual(before);
+  });
+
+  it("is deterministic across runs and independent of the constraint", async () => {
+    const a = await project(buildDoc(), false, "reviewed-only");
+    const b = await project(buildDoc(), false, "reviewed-only");
+    expect(a.cards.map((c) => c.digest)).toEqual(b.cards.map((c) => c.digest));
+    const ev = await project(buildDoc(), false, "evidence");
+    expect(digestOf(ev, "c1")).toEqual(digestOf(a, "c1"));
+  });
+
+  it("does not hash the text of a card that is not exposed (unreviewed text edits change nothing)", async () => {
+    const base = buildDoc();
+    const edited = { ...base, cards: base.cards.map((c) => (c.id === "c3" ? { ...c, text: "different draft" } : c)) };
+    const a = await project(base, false);
+    const b = await project(edited, false);
+    expect(a.cards.map((c) => c.digest)).toEqual(b.cards.map((c) => c.digest));
+    expect(a.bundleHash).toBe(b.bundleHash);
+  });
+
+  it("island digest follows titleReviewed only, identical in SafeMode ON/OFF, null for unreviewed or untitled", async () => {
+    const base = buildDoc();
+    const on = await project(base, true, "summary");
+    const off = await project(base, false, "summary");
+    expect(on.islands[0].digest).toEqual(off.islands[0].digest);
+    expect(on.islands[0].digest).not.toBeNull();
+
+    const renamed = { ...base, islands: [{ ...base.islands[0], title: "Renamed island" }] };
+    expect((await project(renamed, true, "summary")).islands[0].digest).not.toEqual(on.islands[0].digest);
+
+    const unreviewed = { ...base, islands: [{ ...base.islands[0], titleReviewed: false }] };
+    const un = await project(unreviewed, false, "summary");
+    expect(un.islands[0]).toEqual({ id: "i1", title: "(未レビュー)", digest: null });
+    const untitled = { ...base, islands: [{ id: "i1", cardIds: ["c1"] }] } as DocumentV1;
+    expect((await project(untitled, false, "summary")).islands[0].digest).toBeNull();
+  });
+
 });
