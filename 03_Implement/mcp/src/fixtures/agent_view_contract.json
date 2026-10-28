@@ -1,0 +1,178 @@
+{
+  "source": {
+    "version": 1,
+    "id": "doc_agent_contract",
+    "title": "SECRET-DOC-TITLE",
+    "createdAt": "2026-10-29T00:00:00+00:00",
+    "updatedAt": "2026-10-29T00:00:00+00:00",
+    "transform": {
+      "panX": 0,
+      "panY": 0,
+      "zoom": 1
+    },
+    "cards": [
+      {
+        "id": "c1",
+        "text": "reviewed claim one",
+        "x": 0,
+        "y": 0,
+        "claimType": "claim",
+        "textReviewed": true
+      },
+      {
+        "id": "c2",
+        "text": "reviewed claim two",
+        "x": 100,
+        "y": 0,
+        "claimType": "evidence",
+        "textReviewed": true
+      },
+      {
+        "id": "c3",
+        "text": "SECRET-UNREVIEWED-TEXT",
+        "x": 200,
+        "y": 0,
+        "claimType": "unknown",
+        "textReviewed": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "ed1",
+        "fromId": "c1",
+        "toId": "c2",
+        "type": "related"
+      }
+    ],
+    "islands": [
+      {
+        "id": "i-reviewed",
+        "cardIds": [
+          "c1",
+          "c2"
+        ],
+        "title": "reviewed island title",
+        "titleReviewed": true
+      },
+      {
+        "id": "i-unreviewed",
+        "cardIds": [
+          "c3"
+        ],
+        "title": "SECRET-UNREVIEWED-ISLAND-TITLE",
+        "titleReviewed": false
+      },
+      {
+        "id": "i-untitled",
+        "cardIds": []
+      }
+    ],
+    "evidenceLinks": [
+      {
+        "id": "e1",
+        "type": "supports",
+        "fromCardId": "c2",
+        "toCardId": "c1",
+        "note": "SECRET-NOTE",
+        "createdAt": "2026-10-29T00:00:00+00:00"
+      },
+      {
+        "id": "e2",
+        "type": "supports",
+        "fromCardId": "c1",
+        "toCardId": "c3",
+        "note": "SECRET-NOTE",
+        "createdAt": "2026-10-29T00:00:00+00:00"
+      }
+    ],
+    "readingOrder": [
+      "c1",
+      "c2",
+      "c3"
+    ],
+    "narratives": [],
+    "mergeSuggestionDecisions": []
+  },
+  "agentView": {
+    "version": 1,
+    "id": "doc_agent_contract",
+    "createdAt": "2026-10-29T00:00:00+00:00",
+    "updatedAt": "2026-10-29T00:00:00+00:00",
+    "transform": {
+      "panX": 0,
+      "panY": 0,
+      "zoom": 1
+    },
+    "cards": [
+      {
+        "id": "c1",
+        "x": 0,
+        "y": 0,
+        "claimType": "claim",
+        "textReviewed": true,
+        "text": "reviewed claim one"
+      },
+      {
+        "id": "c2",
+        "x": 100,
+        "y": 0,
+        "claimType": "evidence",
+        "textReviewed": true,
+        "text": "reviewed claim two"
+      },
+      {
+        "id": "c3",
+        "x": 200,
+        "y": 0,
+        "claimType": "unknown",
+        "textReviewed": false,
+        "text": ""
+      }
+    ],
+    "edges": [
+      {
+        "id": "ed1",
+        "fromId": "c1",
+        "toId": "c2",
+        "type": "related"
+      }
+    ],
+    "islands": [
+      {
+        "id": "i-reviewed",
+        "cardIds": [
+          "c1",
+          "c2"
+        ],
+        "titleReviewed": true,
+        "title": "reviewed island title"
+      },
+      {
+        "id": "i-unreviewed",
+        "cardIds": [
+          "c3"
+        ],
+        "titleReviewed": false
+      },
+      {
+        "id": "i-untitled",
+        "cardIds": []
+      }
+    ],
+    "evidenceLinks": [
+      {
+        "id": "e1",
+        "type": "supports",
+        "fromCardId": "c2",
+        "toCardId": "c1"
+      },
+      {
+        "id": "e2",
+        "type": "supports",
+        "fromCardId": "c1",
+        "toCardId": "c3"
+      }
+    ],
+    "narratives": []
+  }
+}

@@ -87,4 +87,4 @@ jobs:
             tests/test_agent_oauth_http.py \
             tests/test_agent_oauth_bindings_pk_migration.py \
             tests/test_agent_audit_startup_warning.py \
-            tests/test_context_bundle_routes.py
+            tests/test_context_bundle_routes.py \n            tests/test_agent_view_projection_contract.py
