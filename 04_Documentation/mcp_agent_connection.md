@@ -43,7 +43,32 @@
 2. 文書のidを確認します。文書の一覧は、バックエンドの`GET /docs`で取得できます。一覧の`id`を`docId`に使います。
 3. SafeModeは既定でONです。`safeMode`を省略すると`true`になります。`false`にすると、レビュー済みのカードの本文が返ります。本文を読ませる必要がないかぎり、`true`のままにしてください。
 4. バックエンドがAPIキーを要求する場合は、`SUI_API_KEY`を設定します。
-5. `SUI_RUNTIME_PROFILE`は既定の`local-dev`のまま使います。`saas-multitenant`を指定すると、MCPサーバーは起動を拒否します。
+5. 実行プロファイル`SUI_RUNTIME_PROFILE`は、手元で試すときは既定の`local-dev`のまま使います。複数テナントのSaaS（`saas-multitenant`）に接続するときは、次の「複数テナントのSaaSへ接続する」に従い、Tenant Adminが発行した資格情報を用意します。
+
+## 複数テナントのSaaSへ接続する
+
+`SUI_RUNTIME_PROFILE=saas-multitenant`では、MCPサーバーはAPIキーでの接続を受け付けません。`SUI_API_KEY`を同時に設定すると、起動を拒否します。通信方式ごとに、次の設定が必須です。
+
+- stdio: Tenant Adminが登録したagent資格情報を、環境変数`SUI_MCP_AGENT_CREDENTIAL`に設定します。値は`suiag_`で始まる不透明な文字列です。設定がない場合や接頭辞が違う場合は、起動を拒否します。
+- HTTP: `SUI_MCP_TOKEN_EXCHANGE_ENDPOINT`、`SUI_MCP_TOKEN_EXCHANGE_CLIENT_ID`、`SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET`、`SUI_MCP_TOKEN_EXCHANGE_AUDIENCE`の4つをすべて設定します。MCPサーバーは、呼び出し元のトークンを要求ごとにバックエンド宛てのトークンへ交換して使います（ADR-0094）。この方式では`SUI_MCP_AGENT_CREDENTIAL`を設定できません。
+
+資格情報、クライアントの秘密、交換後のトークンは、設定ファイルやログに書かないでください。設定ファイルを共有する場合は、これらの値を含めないでください。
+
+### 資格情報の登録、失効、更新
+
+資格情報の発行は、接続する側ではなく、そのテナントのTenant Adminが行う作業です。エージェントやMCPサーバーは、自分で資格情報を作れません。接続を依頼する人は、次の内容をTenant Adminに伝えます。
+
+1. `agentId`と`label`を決めます。
+2. 読ませる文書のidを1件から50件まで、明示して列挙します。登録する人が読める文書に限ります。
+3. 有効期限を、タイムゾーンつきで、現在より後かつ90日以内の日時で決めます。
+
+Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格情報の平文は、この登録の応答にだけ出ます。一覧の`GET /tenant-admin/agent-credentials`では、平文もハッシュも見られません。受け取った値はすぐ安全な場所へ保管してください。
+
+- 失効: `POST /tenant-admin/agent-credentials/{agentId}/revoke`で失効します。次の要求から効きます。1つの文書の付与だけを外すときは、`DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`を使います。
+- 更新: 期限の延長や付与の追加はできません。失効後の`agentId`も再登録できないため、新しい`agentId`で登録し直し、MCPサーバーの設定を差し替えます。
+- OAuthトークンで接続する場合は、`POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`で、信頼するIdPの`identityProviderId`と`subject`をagentに結びます。
+
+各APIの条件と応答は、[API仕様のAgent資格情報（§2.15）](../02_Architecture/api.md)が正本です。agent資格情報で通せるのは、`GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit`の4つだけです。付与外の文書は、存在しない文書と区別せず`404`になります。
 
 ## 生成AIサービスへの送信について
 
@@ -88,7 +113,8 @@
 | `SUI_MCP_TRANSPORT` | `stdio` | `stdio`または`http`を指定します。 |
 | `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | 読み取り元のバックエンドのURLです。絶対URLで指定します。 |
 | `SUI_API_KEY` | 未設定 | バックエンドがAPIキーを要求する場合に、`X-API-Key`として送ります。 |
-| `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`、`evaluation`、`enterprise-production`を受け付けます。`saas-multitenant`は起動を拒否します。 |
+| `SUI_RUNTIME_PROFILE` | `local-dev` | `local-dev`、`evaluation`、`enterprise-production`、`saas-multitenant`を受け付けます。`saas-multitenant`はstdioでは`SUI_MCP_AGENT_CREDENTIAL`が必須で、`SUI_API_KEY`とは併用できません。 |
+| `SUI_MCP_AGENT_CREDENTIAL` | 未設定 | `saas-multitenant`で必須です。Tenant Adminが登録した`suiag_`で始まる資格情報です。付与された文書の読み取りだけができます。値を設定ファイルやログへ書かないでください。 |
 
 ## ツール
 
@@ -154,12 +180,23 @@
 | `SUI_MCP_JWKS_URI` | 必須 | 信頼する発行者のJWKSのURLです。署名の検証に使います。 |
 | `SUI_MCP_AUTHORIZATION_SERVERS` | `SUI_MCP_TRUSTED_ISSUER`の値 | `/.well-known/oauth-protected-resource`に載せる一覧です。情報として返すだけで、信頼の根拠にはなりません。 |
 
+`SUI_RUNTIME_PROFILE=saas-multitenant`でHTTP方式を使うときは、バックエンド宛てのトークン交換（RFC 8693）の設定が、次の4つとも必須です。値は設定ファイルやログへ書かないでください。
+
+| 変数 | 既定値 | 役割 |
+| --- | --- | --- |
+| `SUI_MCP_TOKEN_EXCHANGE_ENDPOINT` | 必須 | IdPのトークンエンドポイントです。httpsで指定します（loopbackだけhttpも可）。資格情報やフラグメントは含めません。 |
+| `SUI_MCP_TOKEN_EXCHANGE_CLIENT_ID` | 必須 | 交換のためにIdPへ名乗る、このMCPサーバー自身のOAuthクライアントIDです。 |
+| `SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET` | 必須 | 上のクライアントの秘密です。設定ファイルやログへ書かないでください。 |
+| `SUI_MCP_TOKEN_EXCHANGE_AUDIENCE` | 必須 | 交換後のトークンの宛先です。バックエンドの`SUI_AGENT_OAUTH_AUDIENCE`と一致させます。 |
+
+環境変数の定義は、開発者向けの[MCPサーバーのREADME](../03_Implement/mcp/README.md)を正本とします。この表は、接続する人が必要な範囲を抜き出したものです。
+
 必須の変数が1つでも欠けていると、サーバーは起動を拒否します。
 
 - `/mcp`には、`read:context`スコープを持つ有効なベアラートークンが必要です。
 - 無効なトークンには401、スコープが足りないトークンには403（`insufficient_scope`）を返します。
 - `/.well-known/oauth-protected-resource`は認証なしで応答し、秘密を含みません。
-- このサーバーはトークンを発行しません。信頼する外部の発行者が必要です。
+- このサーバーはトークンを発行しません。信頼する外部の発行者が必要です。`saas-multitenant`では、受け取ったトークンをバックエンド宛てのトークンへ交換する設定も必要です。
 - 1つのIPアドレスからのリクエストは、1分あたり60回に制限されます。
 
 HTTP方式を外部に公開する前に、リポジトリの [THREAT_MODEL.md](../THREAT_MODEL.md) の§6-1を確認してください。
