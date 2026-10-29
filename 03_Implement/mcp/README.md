@@ -15,6 +15,8 @@ sui-sensemakingの `ContextBundle` の投影を読み取り専用で公開する
 
 **単位digest（ADR-0103）**: `cards[].digest` と `islands[].digest` は、露出した内容だけから計算した `{ "alg": "sha256", "value": "<16進64桁>" }` です。カードは、本文を返したとき（レビュー済みかつ `safeMode: false`）だけ値を持ち、本文を伏せたとき（未レビュー、または `safeMode: true`）は `null` です。島は、題名がレビュー済みのときだけ値を持ち、`safeMode` によらず同じ値です。入力は、カードが `{schema, kind:"card", id, text}`、島が `{schema, kind:"island", id, title}` のcanonical JSON（`schema` は `context-projection.item-digest.v1`）で、受け取った項目から再計算して確かめられます。レビュー済みの本文・題名の編集だけが値を変え、位置、`holdState`、`claimType`、関係線は変えません。内容の真実性や著者は保証しません。`bundleHash` の値はこの追加で変わりません。
 
+**`bundleHash` の意味（#3280）**: `bundleHash` は露出内容だけの版ではなく、文書の版（`baseDocSignature` = `<docId>:<updatedAt>`）を含む値です。露出内容が同じでも、文書が保存されて `updatedAt` が進めば変わります。一方、`holdState` は露出されますが入力に含まれないため、`updatedAt` が同じなら `holdState` だけの変更では変わりません。内容だけで版固定したい場合は、単位digestを使ってください。入力と条件は `02_Architecture/schemas.md` §1.4 にあります。
+
 リソースもプロンプトも書き込みツールもありません。2つのツールには `readOnlyHint: true` が付いています。`tools/list` の内容（2つのツールだけであること）と、`resources/list` が未対応（`-32601`）であることは、`src/context_projection_tool.test.ts` が固定のスナップショットと照合して固定しています。今後の変更で権限が増えたように見える場合は、このファイルを確認してください。
 
 ## 対象外とすること

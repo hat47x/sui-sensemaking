@@ -227,6 +227,65 @@ describe("buildContextProjection: invariants across all constraints", () => {
   });
 });
 
+describe("buildContextProjection: bundleHash が変わる条件と変わらない条件（#3280）", () => {
+  // bundleHash は「露出内容だけの版」ではなく「文書の版を含む値」である。
+  // baseDocSignature（`${doc.id}:${doc.updatedAt}`）が入力に入るため、保存で updatedAt が進めば値が変わる。
+  // 内容だけで版固定するには、単位digest（ADR-0103）を使う。
+  const hashOf = (doc: DocumentV1, safeMode = false): Promise<string> =>
+    buildContextProjection({ doc, constraint: "reviewed-only", safeMode }).then((p) => p.bundleHash);
+
+  it("updatedAt だけが進むと、露出内容が同じでも bundleHash は変わる", async () => {
+    const before = buildDoc();
+    const after = { ...buildDoc(), updatedAt: "2026-07-13T00:00:00.000Z" };
+    expect(await hashOf(after)).not.toBe(await hashOf(before));
+  });
+
+  it("updatedAt を保ったままのカード位置の変更では、bundleHash は変わらない", async () => {
+    const moved = buildDoc();
+    moved.cards = moved.cards.map((card) => (card.id === "c1" ? { ...card, x: 999, y: 999 } : card));
+    expect(await hashOf(moved)).toBe(await hashOf(buildDoc()));
+  });
+
+  it("holdState だけの変更は、updatedAt が同じなら bundleHash に現れない（検出は updatedAt に依存する）", async () => {
+    const held = buildDoc();
+    held.cards = held.cards.map((card) => (card.id === "c1" ? { ...card, holdState: "held" as const } : card));
+    const projection = await buildContextProjection({ doc: held, constraint: "reviewed-only", safeMode: false });
+    // holdState は投影には露出するが、hashPayload には含まれない。
+    expect(projection.cards.find((card) => card.id === "c1")?.holdState).toBe("held");
+    expect(await hashOf(held)).toBe(await hashOf(buildDoc()));
+    // 保存で updatedAt が進めば、値は変わる。
+    expect(await hashOf({ ...held, updatedAt: "2026-07-13T00:00:00.000Z" })).not.toBe(await hashOf(buildDoc()));
+  });
+
+  it("レビュー済みの島の題名を直すと、updatedAt が同じでも bundleHash は変わる（SafeModeに依存しない）", async () => {
+    const renamed = buildDoc();
+    renamed.islands = renamed.islands.map((island) => ({ ...island, title: "Renamed island" }));
+    for (const safeMode of [false, true]) {
+      expect(await hashOf(renamed, safeMode), `safeMode=${safeMode}`).not.toBe(await hashOf(buildDoc(), safeMode));
+    }
+  });
+
+  it("未レビューの島の題名の編集は、updatedAt が同じなら bundleHash を変えない（本文は露出していない）", async () => {
+    const base = buildDoc();
+    base.islands = base.islands.map((island) => ({ ...island, titleReviewed: false }));
+    const edited = buildDoc();
+    edited.islands = edited.islands.map((island) => ({ ...island, titleReviewed: false, title: "Secret rename" }));
+    expect(await hashOf(edited)).toBe(await hashOf(base));
+  });
+
+  it("単位digestは updatedAt に依存せず、露出内容だけで決まる", async () => {
+    const before = await buildContextProjection({ doc: buildDoc(), constraint: "reviewed-only", safeMode: false });
+    const after = await buildContextProjection({
+      doc: { ...buildDoc(), updatedAt: "2026-07-13T00:00:00.000Z" },
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    expect(after.bundleHash).not.toBe(before.bundleHash);
+    expect(after.cards.map((card) => card.digest)).toEqual(before.cards.map((card) => card.digest));
+    expect(after.islands.map((island) => island.digest)).toEqual(before.islands.map((island) => island.digest));
+  });
+});
+
 describe("buildContextProjection: work-state metadata (DOGFOOD-08)", () => {
   it("projects holdState even in SafeMode (metadata, not text)", async () => {
     const doc = buildDoc();

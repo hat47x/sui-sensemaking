@@ -146,7 +146,7 @@ Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格
 - `voids`: 空白の`id`、`kind`、`resolved`、`cardIds`、`islandIds`
 - `narrativeChecks`: 物語の検査の`id`、`counts`、`issueDirections`
 - `counts`: `reviewed`、`unreviewed`、`redacted`。いずれも文書全体の数です。
-- `bundleHash`: 同じ入力と同じ文書から計算されるハッシュです。READMEでは、同じ入力で同じ値になることを確認項目にしています。
+- `bundleHash`: 同じ入力と同じ文書から計算されるハッシュです。READMEでは、同じ入力で同じ値になることを確認項目にしています。露出した内容だけの版ではなく、文書の版（`baseDocSignature`、つまり文書の`id`と`updatedAt`）を含みます。露出内容が同じでも、文書が保存されて`updatedAt`が進めば値が変わります。内容だけで版固定したいときは、カードと島の単位digest（`digest`）を使ってください。入力と変わる条件は`02_Architecture/schemas.md`の§1.4にあります。
 - `documentMetadata`: 文書の`id`、`lifecycle_state`、`updated_at`。エージェントには`title`と`created_by`を返さないため、この2つは`null`です。取得できなかった場合も`null`です。文書一覧の最初のページ（既定で500件）に含まれない文書も`null`になります。
 
 点数や順位の項目は、この結果に含まれません。
