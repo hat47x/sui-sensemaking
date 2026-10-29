@@ -95,6 +95,24 @@ cd 03_Implement/backend
 
 このE2Eは、ローカルの監査の出力先と、`SUI_AUDIT_TRANSPORT=http` を設定してマイグレーション済みのバックエンドを起動します。`SUI_AUDIT_ALLOW_IN_SAFE_MODE=1` も設定します。MCPの読み取りはsafeMode=trueなので、これがないとディスパッチャがセーフモードのイベントを捨てるためです。そこへ `verify_mcp.ts` を実行し、読み取った文書について `channel="mcp"`、`operation=query` のイベントを出力先が受け取ったことを確かめます。
 
+### agent資格情報の結合検証（saas-multitenant、stdio）
+
+`npm run verify:agent-e2e` は、管理APIでの資格情報の登録から、MCPの実プロセスによる投影の取得、失効後の401までを1回で確かめます。バックエンドは `backend/scripts/serve_agent_mcp_e2e_backend.py` が、一時のSQLiteと合成の文書で立てます。実在の資料と本番の資格情報は使いません。
+
+```bash
+# 03_Implement/mcp で。backendの依存（pip install -e ".[test]"）を入れたPythonを指定する。
+SUI_E2E_PYTHON=../backend/.venv/bin/python npm run verify:agent-e2e
+```
+
+確かめる内容は、次のとおりです。
+
+- 付与した文書の投影が返り、未レビューのカードのid、本文、関係線、島の題名、文書の題名が出ない。
+- 付与外の文書、存在しない文書、他テナントの文書は、docIdを除いて同じ応答になる。
+- 失効の次の要求で、同じMCPプロセスが401を受ける。別のagentIdの資格情報には影響しない。
+- 監査eventの主体が `agent` で、資格情報と本文を含まない。
+
+この検証は、PostgresとIdPを使いません。テーブルごとのRLSは `test_agent_credential_postgres_rls.py`、OAuthのトークン交換は `http_server_exchange.test.ts` が担当します。CIでは `mcp-agent-auth-ci.yml` の `agent-mcp-e2e` ジョブが実行します。
+
 ### 通信方式の選択
 
 | Variable | Default | Purpose |

@@ -11,7 +11,8 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "verify": "tsx scripts/verify_mcp.ts"
+    "verify": "tsx scripts/verify_mcp.ts",
+    "verify:agent-e2e": "tsx scripts/verify_agent_credential_e2e.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",

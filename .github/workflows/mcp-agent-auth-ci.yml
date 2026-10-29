@@ -90,3 +90,40 @@ jobs:
             tests/test_agent_audit_startup_warning.py \
             tests/test_context_bundle_routes.py \
             tests/test_agent_view_projection_contract.py
+
+  # agent資格情報の登録 -> MCP実プロセスの投影取得 -> 失効までの結合検証（#3283）。
+  # 一時のSQLiteと合成の文書だけを使う。PostgresとIdPは要らない。
+  agent-mcp-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: 対象版を取得
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Node.js 20を用意
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: 03_Implement/mcp/package-lock.json
+
+      - name: Python 3.12を用意
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: MCPの依存を固定版で導入
+        working-directory: 03_Implement/mcp
+        run: npm ci --no-audit --no-fund
+
+      - name: バックエンドの依存を導入
+        working-directory: 03_Implement/backend
+        run: python -m pip install -e '.[test]'
+
+      - name: 結合検証を実行
+        working-directory: 03_Implement/mcp
+        env:
+          SUI_E2E_PYTHON: python
+        run: npm run verify:agent-e2e
