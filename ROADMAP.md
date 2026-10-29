@@ -16,6 +16,8 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 次の機能は、実装済みです。KJ法のキャンバス、島、関係、保留、SafeModeでの共有と書き出し、インポートの堅牢化、外部のAIとの提案のやり取り、LLMの入力の中間表現（`AI-IR-PROJECTION` が完了）。カードと島の違和感メモは、現在値と改訂履歴を分けて保持し、以前の見立てへ戻せます（`ADR-0099`）。島の作成・カードの追加/除外・保留状態の変更は、現在の構造とは別の履歴として残り、後から理由を追記できます（`ADR-0100`）。
 
+外部のAIエージェントへの読み取り専用の接続も実装済みです。`03_Implement/mcp` のMCPサーバーは、`get_context_projection` で文書の文脈の投影を、`get_proposal_status` でAI提案の状態を返します。書き込みのツールはありません。エージェントは、テナントに結び付いた資格情報（`ADR-0093`）か、OAuthのトークン交換（`ADR-0094`）で認証します。投影は、カードと島の単位ごとのdigestを持ち、単位で版を照合できます（`ADR-0103`）。TEIのepistemic reference artifactは、読み取り専用のAPIで渡せます（`ADR-0101`、`ADR-0102`）。接続手順は [`mcp_agent_connection.md`](04_Documentation/mcp_agent_connection.md) にあります。
+
 ## 未完の作業と、次の作業
 
 1. **`check-narrative` の規模への対応**: 現在は全量を送る。DeepSeek（`deepseek-flash`）で、300カード・30島の全量を合成データで測った（2026-10-09）。入力はプロバイダ報告値で約10万トークン（20回ずつの評価は、物語が全カードに触れる形で約4.7万トークン）、APIが報告する文脈長は1,048,576トークンで、全量は収まる。1回は約3〜8秒、約0.03ドル（ピーク時の上限見積もり）だった。ただし、島を1つだけ物語から欠いた入力では、思考モードの影響が大きい。`scripts/evaluate_check_narrative_omission.py` で20回ずつ測ると、DeepSeek（`deepseek-flash`）は思考モード `enabled` で20回中20回検出し（Wilson下限0.84）、欠かさない対照20回のうち誤検出は2回だった。無料枠の OpenRouter の `nvidia/nemotron-3-super-120b-a12b:free` は、`enabled` で20回中11回（下限0.34、誤検出0）、`disabled` で0回だった。無料モデルは最終判断の基準（下限0.8）を満たさず、最終判断には使わない。分割は要らないと判断し、最終判断のタスクは既定で思考モード有効にした（`SUI_DEEPSEEK_THINKING_TASK_MAP` でタスク別に上書きできる。管理者がタスクの種類ごとに個別設定する仕組みは今後の課題）。ローカルのOllama（qwen3.5:4b、GPUなし）は、他の処理と競合するCPUで約1万トークンの入力に15分以上かかり、全量の検証には使えなかった。
@@ -27,6 +29,8 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 5. **文化的体系を参照した認知支援の段階計画**: SUIの一次価値への寄与から、①根拠へ戻って理解を見直す、②異論・保留を残して別の構造を比べる、③理解の差を次の観察と再開へ引き継ぐ、の順で[計画案](01_Plans/cognitive_cultural_validation_plan.md)へ取り込む。利用場面、最小範囲、受入条件を具体化済み。第2計画では四句分別・ジャイナの条件付け・易の仮の反転を選択可能な操作として試す。実務の有用性は未確認であり、通常の方法と同等の問いを比較に含め、同じ摩擦と認知増分がT2で再現した範囲から実装へ進める。体系にもとづく深掘りは[発想資料](02_Architecture/cognitive_cultural_ideation.html#depth-cases)で継続する。
    - 追加した計画範囲: [表札の射程と残余](01_Plans/cognitive_cultural_validation_plan.md#product-label-scope)、[発言の根拠と解釈](01_Plans/cognitive_cultural_validation_plan.md#product-statement-basis)、[文脈から補った条件の比較](01_Plans/cognitive_cultural_validation_plan.md#product-inherited-context)、[不明点を残した停止・再開](01_Plans/cognitive_cultural_validation_plan.md#product-inquiry-stop)の順で具体化した。原文・元カードへの回帰と異論の非破壊を先行させ、既存の表札・根拠・比較・引継ぎを使う最小差分から試す。発想資料の深掘り例を4件から8件へ増やし、文化的な由来と対象側で確認すべき範囲を分けた。
    - 次は[表札から元カードへ戻る実務試行](01_Plans/cognitive_cultural_validation_plan.md#first-practical-trial)を行い、[残った不足から実装範囲を絞る](01_Plans/cognitive_cultural_validation_plan.md#next-implementation-scope)。既存の違和感メモ・構造の判断履歴へ接続し、履歴の上限とSafeModeでの共有範囲を区別する。第2計画では[華厳由来の全体と部分の比較](01_Plans/cognitive_cultural_validation_plan.md#product-whole-part)を深め、同じカードの役割の変化と原文に残る違いを比べる。実務試行は未実施であり、新しい製品機能の採用は確定していない。
+
+6. **外部agent連携の判断待ち**: 実装前に、人間の判断が要る項目をIssueに分けて残している。agent連携の段階2（提案のingest）への着手（#3271）、ナラティブ本文の外部参照（#3270）、島の所属カードと関係線の版固定（#3268）、出典への参照（#3285）、矛盾リンクの確認状態（#3302）、資格情報の期限延長・付与の追加・回転（#3286）、TEI epistemic projectionを外部agentへ渡すか（#3297）。いずれも未決で、判断が出るまで契約を広げない。
 
 機能の追加より、価値と認知の増分の確認を優先します。実際に使って、同じ摩擦が再現したものから、実装に昇格させます。
 
