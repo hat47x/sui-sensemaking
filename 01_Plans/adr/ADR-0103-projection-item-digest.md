@@ -41,7 +41,7 @@ digestの入力は、投影が実際に返した内容だけから作る。利�
 - カード: `{"schema":"context-projection.item-digest.v1","kind":"card","id":<カードid>,"text":<露出した本文>}`
 - 島: `{"schema":"context-projection.item-digest.v1","kind":"island","id":<島id>,"title":<露出した題名>}`
 
-シリアライズには、投影の `bundleHash` と同じ `canonicalizeJson`（キーを辞書順に並べた、空白なしのJSON）を使い、UTF-8のバイト列にsha256をかける。
+シリアライズには、投影の `bundleHash` と同じ `canonicalizeJson`（キーを辞書順に並べた、空白なしのJSON）を使い、UTF-8のバイト列にsha256をかける。キーの順序はUTF-16コード単位の昇順、文字列は生のUTF-8（`"`、`\`、U+0000〜U+001F だけをエスケープ）である。詳細と固定値のテストベクトルは `02_Architecture/schemas.md` §1.3 にある（#3282）。
 
 ### 2. 形式
 

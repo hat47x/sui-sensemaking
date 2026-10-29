@@ -256,7 +256,7 @@ export type HilRsDocSyncCheckV1 = {
 `bundleHash` 契約（`CE1-HASH-DET-IF` / bundleHash関連節）
 1. `ContextBundle` から `generatedAt` / `traceId` / `providerLatencyMs` など非決定論フィールドを除外する。
 2. 配列順序は `selected=id asc`, `relations=(type,from,to) asc`, `evidence=cardId asc`, `contradictions=(weight desc,id asc)` に正規化する。
-3. オブジェクトキーはUTF-8バイト列辞書順で整列し正規JSONを生成する。
+3. オブジェクトキーはUTF-16コード単位の昇順（実装 `canonicalizeJson` の `compareCodeUnitString`。RFC 8785 のキー順と同じ）で整列し、空白なしの正規JSONを生成する。文字列は生のUTF-8で出し、規則の詳細は §1.3 に従う。
 4. `sha256(canonical_json)` を16進小文字で出力し `bundleHash` とする。
 5. `ContextQuery` も同一規則で正規化し、`queryCanonicalHash` を算出する。
 6. 検証の判定は `sameQuery && sameBundle`（`queryCanonicalHash` 一致かつ `bundleHash` 一致）を必須とし、`sameQuery && !sameBundle` は安全側で拒否する。
@@ -321,6 +321,23 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - 入力は、投影が返した内容だけのcanonical JSON（`canonicalizeJson`）。カードは `{schema:"context-projection.item-digest.v1", kind:"card", id, text}`、島は `{schema, kind:"island", id, title}`。利用者は受け取った項目から再計算して確かめられる。
 - カードのdigestは、本文が露出した（`textReviewed` が真かつSafeMode OFF）ときだけ値を持つ。伏せた場合（未レビュー、SafeMode ON）は `null`。島のdigestは `titleReviewed` が真のときだけ値を持ち、SafeModeのON/OFFによらず同じ値になる。伏せた内容のdigestは計算も出力もしない。
 - レビュー済みの本文・題名の編集とid変更だけがdigestを変える。位置などのレイアウト、`holdState`、`claimType`、関係線、`evidenceLinks`、`Card.meta.source`、他項目の変更は変えない。
+- シリアライズの規則（`canonicalizeJson`、#3282）。他言語で再計算する実装は、次のとおりに揃える。
+  - 文字列は、生のUTF-8で出す。日本語、サロゲートペア（BMP外の文字）、`<`、`>`、`&`、U+2028、U+2029、U+007F は、エスケープしない。エスケープするのは `"`（`\"`）、`\`（`\`）、U+0000〜U+001F だけである。U+0008、U+0009、U+000A、U+000C、U+000D は `\b`、`\t`、`\n`、`\f`、`\r`、それ以外の制御文字は小文字16進の `\u00xx` とする。
+  - オブジェクトのキーは、UTF-16コード単位の昇順に並べる（RFC 8785 の規則と同じ）。単位digestのキーはASCIIだけなので、`id`、`kind`、`schema`、`text`（島は `title`）の順になる。
+  - 空白は入れない。配列は与えた順のままとする。単位digestの入力に数値は含まれない。
+  - 落とし穴: pythonの `json.dumps` は既定（`ensure_ascii=True`）で日本語を `\uXXXX` に変換するため、値が食い違う。`ensure_ascii=False, sort_keys=True, separators=(",", ":")` を指定する。Goの `encoding/json` は既定で `<`、`>`、`&`、U+2028、U+2029 をエスケープするため、`SetEscapeHTML(false)` を使い、U+2028、U+2029 は別途エスケープしないようにする。
+- 固定値テストベクトル。sha256は、下のcanonical文字列のUTF-8バイト列にかけた小文字16進である（`frontend/src/export/context_bundle_projection.test.ts` の「固定値テストベクトル」と同じ）。
+
+  | 内容 | `kind` / `id` | canonical文字列 | sha256 |
+  |---|---|---|---|
+  | 日本語 | card / c1 | `{"id":"c1","kind":"card","schema":"context-projection.item-digest.v1","text":"顧客は価格より納期を重視する"}` | `0328e2fc99629dfb7fc35a1653a98d9290832e6d3d2154fc69185a1c6e1bca78` |
+  | 引用符とバックスラッシュ（本文 `He said "ok" and \ left`） | card / c2 | `{"id":"c2","kind":"card","schema":"context-projection.item-digest.v1","text":"He said \"ok\" and \ left"}` | `ab0e5a70abf6d178503b0d2abd6bb8873910403112874553c84c9c79e7fb35de` |
+  | 改行とタブ（本文は「1行目」LF「2行目」TAB「末尾」） | card / c3 | `{"id":"c3","kind":"card","schema":"context-projection.item-digest.v1","text":"1行目\n2行目\t末尾"}` | `847f4c8522060cb31122ab1af5c4cafa514e800d4f7c9ed6630ff13fe83102b4` |
+  | 制御文字（本文は `a` U+0001 `b` U+001F `c` U+007F `d`。U+007Fは生のまま） | card / c4 | `{"id":"c4","kind":"card","schema":"context-projection.item-digest.v1","text":"a\u0001b\u001fc` + U+007F + `d"}` | `bc42a81d747db863abdfee36b5d5532a116f4261bdf3bfe91d18df81ba67018d` |
+  | サロゲートペア、`<` `>` `&`、U+2028（本文は後述。すべて生のUTF-8） | card / c5 | 本文を上のとおり、規則どおりに出したもの | `fc9e97f8cd458a8c1fce3812c92aeedfbc499dbf0cc270aed28187faa9f57876` |
+  | 島 | island / i1 | `{"id":"i1","kind":"island","schema":"context-projection.item-digest.v1","title":"納期と価格の島"}` | `d35d386a239c6cfe76f7ee729fd32980367c4344ed9323e1b3c3e749d660b8fb` |
+
+  c5の本文は、文字列としては `笑顔😀と<b>&amp;`（U+2028）`終` である。
 - 内容の真実性、著者、レビューの証跡は保証しない。`DocumentV1` には保存せず、バックエンドの契約・`test_ts_python_contract_drift.py` の対象型には影響しない。
 
 ### 1.4 context-projection.v1 の `bundleHash` と `baseDocSignature`（#3280）
