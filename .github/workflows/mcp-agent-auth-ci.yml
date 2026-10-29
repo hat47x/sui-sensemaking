@@ -3,7 +3,8 @@ name: SUI MCPとagent認証の回帰検証
 # 読み取り専用MCP（03_Implement/mcp）とagent認証・context投影経路の後退を、PRで機械的に止める。
 # MCPはfrontendのexport/domainを相対パスで取り込む独立パッケージのため、取り込み元の変更でも起動する。
 # backendは全テスト（235ファイル超）ではなく、agent認証・OAuth・contextルートの代表サブセットに限る。
-# Postgres RLSの実地matrix（test_agent_credential_postgres_rls.py）は実DBが要るため対象外とし、手元の手順に残す。
+# Postgres RLSの実地matrix（test_agent_credential_postgres_rls.py）は実DBが要るため対象外とする。手順は 03_Implement/backend/README.md の
+# 「テナントRLSの実地のテスト行列」にある。CIにPostgresのサービスコンテナを足すかは未決（#3284）。
 on:
   pull_request:
     branches: [main]
