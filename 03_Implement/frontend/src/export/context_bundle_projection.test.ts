@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { DocumentV1 } from "../domain/types";
+import { canonicalizeJson } from "../domain/patch/patch_fingerprint";
 import {
   buildContextProjection,
+  computeItemDigest,
   CONTEXT_PROJECTION_CONSTRAINTS,
   type ContextProjectionConstraint,
 } from "./context_bundle_projection";
@@ -384,6 +386,103 @@ describe("buildContextProjection: island title review gate", () => {
     expect(projection.islands).toEqual([
       { id: "i1", title: "First island", digest: { alg: "sha256", value: expect.stringMatching(/^[0-9a-f]{64}$/) } },
     ]);
+  });
+});
+
+// #3282: 単位digestの固定値テストベクトル。再計算規則（生のUTF-8、`"` `\` と制御文字だけをエスケープ、
+// キー順はUTF-16コード単位順）を、実装言語に依存せず照合できる形で固定する。
+// 期待値は、python（`json.dumps(sort_keys=True, separators=(",", ":"), ensure_ascii=False)` のsha256）でも
+// 同じ値になることを確認している。pythonの既定（`ensure_ascii=True`）では日本語の値が食い違う。
+describe("computeItemDigest: 固定値テストベクトル（#3282）", () => {
+  const sha256Hex = async (text: string): Promise<string> => {
+    const bytes = new TextEncoder().encode(text);
+    return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  };
+  const vectors: Array<{
+    name: string;
+    kind: "card" | "island";
+    id: string;
+    content: string;
+    canonical: string;
+    sha256: string;
+  }> = [
+    {
+      name: "日本語（エスケープしない）",
+      kind: "card",
+      id: "c1",
+      content: "顧客は価格より納期を重視する",
+      canonical:
+        '{"id":"c1","kind":"card","schema":"context-projection.item-digest.v1","text":"顧客は価格より納期を重視する"}',
+      sha256: "0328e2fc99629dfb7fc35a1653a98d9290832e6d3d2154fc69185a1c6e1bca78",
+    },
+    {
+      name: "引用符とバックスラッシュ",
+      kind: "card",
+      id: "c2",
+      content: 'He said "ok" and \\ left',
+      canonical:
+        '{"id":"c2","kind":"card","schema":"context-projection.item-digest.v1","text":"He said \\"ok\\" and \\\\ left"}',
+      sha256: "ab0e5a70abf6d178503b0d2abd6bb8873910403112874553c84c9c79e7fb35de",
+    },
+    {
+      name: "改行とタブ（短い表記 \n \t）",
+      kind: "card",
+      id: "c3",
+      content: "1行目\n2行目\t末尾",
+      canonical:
+        '{"id":"c3","kind":"card","schema":"context-projection.item-digest.v1","text":"1行目\\n2行目\\t末尾"}',
+      sha256: "847f4c8522060cb31122ab1af5c4cafa514e800d4f7c9ed6630ff13fe83102b4",
+    },
+    {
+      name: "制御文字（U+0001とU+001Fは小文字16進の6文字表記、U+007Fは生のまま）",
+      kind: "card",
+      id: "c4",
+      content: "a\u0001b\u001fc\u007fd",
+      canonical:
+        '{"id":"c4","kind":"card","schema":"context-projection.item-digest.v1","text":"a\\u0001b\\u001fc\u007fd"}',
+      sha256: "bc42a81d747db863abdfee36b5d5532a116f4261bdf3bfe91d18df81ba67018d",
+    },
+    {
+      name: "サロゲートペア（U+1F600）、< > &、U+2028（すべて生のUTF-8）",
+      kind: "card",
+      id: "c5",
+      content: "笑顔\u{1F600}と<b>&amp;\u2028終",
+      canonical:
+        '{"id":"c5","kind":"card","schema":"context-projection.item-digest.v1","text":"笑顔\u{1F600}と<b>&amp;\u2028終"}',
+      sha256: "fc9e97f8cd458a8c1fce3812c92aeedfbc499dbf0cc270aed28187faa9f57876",
+    },
+    {
+      name: "島（title キー）",
+      kind: "island",
+      id: "i1",
+      content: "納期と価格の島",
+      canonical:
+        '{"id":"i1","kind":"island","schema":"context-projection.item-digest.v1","title":"納期と価格の島"}',
+      sha256: "d35d386a239c6cfe76f7ee729fd32980367c4344ed9323e1b3c3e749d660b8fb",
+    },
+  ];
+
+  for (const vector of vectors) {
+    it(`${vector.name}: 実装の値、canonical文字列のsha256、期待値が一致する`, async () => {
+      const digest = await computeItemDigest(vector.kind, vector.id, vector.content);
+      expect(digest).toEqual({ alg: "sha256", value: vector.sha256 });
+      expect(await sha256Hex(vector.canonical)).toBe(vector.sha256);
+    });
+  }
+
+  it("日本語を6文字表記にエスケープした入力は別の値になる（pythonの既定 ensure_ascii=True との食い違いを検出する）", async () => {
+    const escaped =
+      '{"id":"c1","kind":"card","schema":"context-projection.item-digest.v1","text":"\\u9867\\u5ba2\\u306f\\u4fa1\\u683c\\u3088\\u308a\\u7d0d\\u671f\\u3092\\u91cd\\u8996\\u3059\\u308b"}';
+    expect(await sha256Hex(escaped)).toBe("5f04624e14b783bc6b5d48362fdd37e7f1cc6f2b1cdf25ba1c274b251b40dfb2");
+    expect(await sha256Hex(escaped)).not.toBe(vectors[0].sha256);
+  });
+
+  it("canonicalizeJson は BMP 外の文字を含むキーを UTF-16 コード単位順に並べる", () => {
+    // U+FF5E（BMP、全角チルダ）と U+1F600（BMP外、サロゲート D83D DE00）。
+    // UTF-16コード単位順では D83D < FF5E、UTF-8バイト列順・コードポイント順では U+FF5E < U+1F600。
+    expect(canonicalizeJson({ "\uFF5E": 1, "\u{1F600}": 2 })).toBe('{"\u{1F600}":2,"\uFF5E":1}');
   });
 });
 
