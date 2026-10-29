@@ -323,6 +323,22 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - レビュー済みの本文・題名の編集とid変更だけがdigestを変える。位置などのレイアウト、`holdState`、`claimType`、関係線、`evidenceLinks`、`Card.meta.source`、他項目の変更は変えない。
 - 内容の真実性、著者、レビューの証跡は保証しない。`DocumentV1` には保存せず、バックエンドの契約・`test_ts_python_contract_drift.py` の対象型には影響しない。
 
+### 1.4 context-projection.v1 の `bundleHash` と `baseDocSignature`（#3280）
+
+`bundleHash` は、投影に露出した内容だけの版ではなく、文書の版を含む値である。内容だけで版固定するときは、§1.3 の単位digestを使う。
+
+- `baseDocSignature` は `` `${doc.id}:${doc.updatedAt}` `` の文字列である。`bundleHash` の入力に含まれる。
+- `bundleHash` は、次の入力のcanonical JSON（`canonicalizeJson`）のsha256（小文字16進64桁）である。`schemaVersion`、`docId`、`baseDocSignature`、`constraint`、`safeMode`、`cards`（`id`、`claimType`、`reviewed`、`redacted`、露出した本文。伏せた本文は `null`）、`islands`（`id`と、レビュー済みでなければ伏せた題名）、`relations`、`evidence`、`contradictions`、`counts`、`voids`、`narrativeChecks`。単位digestは入力に含めない。
+- 値が変わる条件は次のとおり。
+  - 文書が保存されて `updatedAt` が進んだとき。露出内容が1文字も変わらなくても変わる。カードの移動、無関係なカードの追加、`holdState` の変更を含む。
+  - 露出する本文、レビュー済みの島の題名、関係線、根拠・矛盾の関係、`counts`、`voids`、`narrativeChecks` が変わったとき。
+  - `constraint` または `safeMode` が変わったとき。
+- 値が変わらない条件は次のとおり。同じ `updatedAt` のまま、カードの位置だけが変わったとき。伏せた本文や未レビューの島の題名だけが変わったとき。
+- `holdState` は投影に露出する項目だが、`bundleHash` の入力には含まれない。同じ `updatedAt` のまま `holdState` だけが変わっても値は変わらない。通常は保存で `updatedAt` が進むため検出できるが、`bundleHash` 単独の保証ではない。
+- 内容だけの版固定には、`cards[].digest` と `islands[].digest`（§1.3）を使う。`updatedAt` にも `holdState` にも依存しない。
+- `docSignature` という語は、`baseDocSignature` と同じ値を指す略称としてだけ使う。独立した項目ではない。
+- 実装は `frontend/src/export/context_bundle_projection.ts`、条件は同じ階層の `context_bundle_projection.test.ts`（「bundleHash が変わる条件と変わらない条件」）で固定している。`updatedAt` を入力から外す、露出内容だけの値を別項目として足す、といった変更は、既存の `bundleHash` の値を変えるか契約を広げるため、ADRと `schemaVersion` の扱いを決めてから行う（未決）。
+
 ## 2. ID・座標系の前提
 
 ### 2.1 ID
