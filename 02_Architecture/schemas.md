@@ -353,7 +353,7 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - 値が変わらない条件は次のとおり。同じ `updatedAt` のまま、カードの位置だけが変わったとき。伏せた本文や未レビューの島の題名だけが変わったとき。
 - `holdState` は投影に露出する項目だが、`bundleHash` の入力には含まれない。同じ `updatedAt` のまま `holdState` だけが変わっても値は変わらない。通常は保存で `updatedAt` が進むため検出できるが、`bundleHash` 単独の保証ではない。
 - 内容だけの版固定には、`cards[].digest` と `islands[].digest`（§1.3）を使う。`updatedAt` にも `holdState` にも依存しない。
-- `docSignature` という語は、`baseDocSignature` と同じ値を指す略称としてだけ使う。独立した項目ではない。
+- 版固定には `baseDocSignature`（`<docId>:<updatedAt>`、版を含む）を使う。`ViewMetadataV1` の `docSignature`（§8.1）は別の項目で、文書のidだけ（idがなければ `title-<hash>`、文書がなければ `"unknown"`）を持ち、`updatedAt` を含まない。したがって `docSignature` は版固定には使えない。外部の記録で版を固定するときは、`docSignature` ではなく `baseDocSignature` と書く。
 - 実装は `frontend/src/export/context_bundle_projection.ts`、条件は同じ階層の `context_bundle_projection.test.ts`（「bundleHash が変わる条件と変わらない条件」）で固定している。`updatedAt` を入力から外す、露出内容だけの値を別項目として足す、といった変更は、既存の `bundleHash` の値を変えるか契約を広げるため、ADRと `schemaVersion` の扱いを決めてから行う（未決）。
 
 ## 2. ID・座標系の前提
@@ -892,7 +892,7 @@ export type Visibility = "Public" | "Unlisted" | "Org" | "Restricted";
 export type ViewMetadataV1 = {
   version: "1";
   generatedAt: string;
-  docSignature: string;
+  docSignature: string; // 文書のidだけで、版（updatedAt）を含まない。版固定は §1.4 の baseDocSignature を使う
   visibility: Visibility; // 互換読込時の既定: "Restricted"
   camera: { panX: number; panY: number; zoom: number };
   viewState: { /* 既存定義 */ };
