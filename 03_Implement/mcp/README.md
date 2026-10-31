@@ -130,6 +130,7 @@ SUI_E2E_PYTHON=../backend/.venv/bin/python npm run verify:agent-e2e
 | `SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET` | unset | 同上。上のクライアントの秘密。設定ファイルやログへ書き込まない。このプロセスが持つ秘密は、これだけである（トークンの発行や登録はしない）。 |
 | `SUI_MCP_TOKEN_EXCHANGE_AUDIENCE` | unset | 同上。交換後のトークンの宛先（backend）。バックエンドの `SUI_AGENT_OAUTH_AUDIENCE` と一致させる。4つは、すべて同時に設定する。 |
 | `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | Backend base URL this process fetches `GET /docs/{id}` from. Not the frontend's browser-relative `SUI_FRONTEND_API_BASE` -- this process runs outside the frontend's nginx proxy and needs an absolute URL. |
+| `SUI_MCP_REQUEST_TIMEOUT_MS` | `10000` | バックエンドへの取得1回あたりの待ち時間の上限（ミリ秒、100から120000）。範囲外・不正な値は既定値に戻る。超過は「timeout」として `isError` で返る。200で返った本文が `DocumentV1` の最低限の形（`version`が1、`id`、`cards`・`edges`・`islands`が配列）を満たさないときは、投影を作らず「unexpected response shape」で返る。401・403・5xxは、`HTTP <status>` の後ろの分類で区別できる（資格情報や応答本文は含めない）。 |
 | `SUI_API_KEY` | unset | Sent as `X-API-Key` when the backend requires it. The browser client relies on same-origin proxying instead; this standalone process must send it itself. |
 
 接続後、stdoutはMCPのJSON-RPCストリーム専用です。ほかのものは一切書き込まないでください。診断はすべてstderrへ出します。これは、stdioで配備しない場合も含め、通信方式によらず同じ扱いです。

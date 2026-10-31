@@ -181,6 +181,7 @@ MCPサーバー（読み取り専用の外部接続）が読む環境変数で�
 | --- | --- | --- | --- | --- |
 | `SUI_MCP_TRANSPORT` | `stdio` | 不要 | いいえ | `stdio` または `http`。`http` のときだけ下のHTTP用キーが必須になる。 |
 | `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | 不要 | いいえ | このプロセスが `GET /docs/{id}` を取得するバックエンドの絶対URL。フロントエンドの `SUI_FRONTEND_API_BASE` とは別。 |
+| `SUI_MCP_REQUEST_TIMEOUT_MS` | `10000` | 不要 | いいえ | バックエンドへの文書・提案状態の取得1回あたりの待ち時間の上限（ミリ秒、100から120000）。範囲外・数値でない値は既定値に戻し、無制限にはしない。上限を超えると、タイムアウトとして `isError` で返す。 |
 | `SUI_MCP_AGENT_CREDENTIAL` | 未設定 | `saas-multitenant` のstdioで必須 | はい | Tenant Adminが登録した、テナントと文書に束縛された資格情報（`suiag_` で始まる）。`SUI_API_KEY` とは同時に設定できない。 |
 | `SUI_MCP_HTTP_HOST` | `127.0.0.1` | 不要 | いいえ | HTTP通信の待ち受けホスト。 |
 | `SUI_MCP_HTTP_PORT` | `8787` | 不要 | いいえ | HTTP通信の待ち受けポート。 |
