@@ -23,9 +23,18 @@ import re
 import sys
 from pathlib import Path
 
+# Windowsの既定コードページ(cp932)では、出力の矢印(U+2194)で UnicodeEncodeError になる。
+# 出力はUTF-8に固定し、PYTHONUTF8を付けなくても最後まで走らせる。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 BACKEND_SRC = REPO_ROOT / "03_Implement" / "backend" / "src" / "sui_sensemaking_api"
 FRONTEND_SRC = REPO_ROOT / "03_Implement" / "frontend" / "src"
+MCP_SRC = REPO_ROOT / "03_Implement" / "mcp" / "src"
 ARCH_DIR = REPO_ROOT / "02_Architecture"
 
 API_MD = ARCH_DIR / "api.md"
@@ -117,7 +126,9 @@ if API_MD.exists():
 
     # Extract documented endpoints from api.md (both `METHOD /path` and
     # **METHOD** `/path` formats).
-    API_DOC_RE = re.compile(r'`(GET|POST|PUT|DELETE|PATCH)\s+(/\S+)`')
+    # パスは閉じのバッククォートで切る。「`POST /x`（`perm`）」のように同じ語の中に
+    # 別のコード片が続く書式でも、パスが後続のバッククォートまで伸びないようにする。
+    API_DOC_RE = re.compile(r'`(GET|POST|PUT|DELETE|PATCH)\s+(/[^\s`]+)`')
     API_DOC_BOLD_RE = re.compile(r"\*\*(GET|POST|PUT|DELETE|PATCH)\*\*\s+`(/\S+)`")
     doc_endpoints: set[tuple[str, str]] = set()
     for pattern in (API_DOC_RE, API_DOC_BOLD_RE):
@@ -159,6 +170,26 @@ if RUNTIME_REGISTRY.exists():
                 warn(f"SUI_* env var '{var}' not mentioned in runtime_parameter_registry.md")
 
         print(f"  Code env vars: {len(code_env_vars)}")
+
+    # MCPサーバーが読む SUI_* も対象にする(settings.py の validation_alias には現れない)。
+    # テストと、末尾が「_」の接頭辞だけの文字列は除く。
+    MCP_ENV_VAR_RE = re.compile(r"\bSUI_[A-Z0-9]+(?:_[A-Z0-9]+)*\b")
+    mcp_env_vars: set[str] = set()
+    if MCP_SRC.exists():
+        for ts_file in MCP_SRC.rglob("*.ts"):
+            if ".test." in ts_file.name or ts_file.name.endswith(".d.ts"):
+                continue
+            try:
+                ts_text = ts_file.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            mcp_env_vars.update(MCP_ENV_VAR_RE.findall(ts_text))
+        for var in sorted(mcp_env_vars - code_env_vars if settings_py.exists() else mcp_env_vars):
+            if var not in registry_content:
+                warn(f"SUI_* env var '{var}' (MCP) not mentioned in runtime_parameter_registry.md")
+        print(f"  MCP env vars: {len(mcp_env_vars)}")
+    else:
+        warn("mcp/src not found — skipping MCP env var check")
 else:
     warn("runtime_parameter_registry.md not found — skipping env var check")
 

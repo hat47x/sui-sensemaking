@@ -100,6 +100,16 @@ MVPの実装境界では、クライアントがIDを指定して **PUT** `/docs
 - 検証エラー：400
 - `reviewAttribution.reviewState` が `human_reviewed` のとき、サーバが検査するのは `reviewerRef` と認証主体（`actor_ref`）が一致することだけである。一致しないとき、または認証主体がないときは403を返す。`human_reviewed` という申告が人の実際の判断に基づくかは、サーバでは検証しない。
 
+**POST** `/docs/{doc_id}/action-commit`
+
+- 位置づけ: TEI Action v1の封筒を受ける、SUI側の参照用の受け口（カードの移動 `sui.move` だけ）。通常のSUIの配備では無効で、`app.state.sui_native_action_v1_enabled` が `True` のときだけ動く。本体のコードにこの値を立てる経路はなく、TEI Hostの経路・認証済みセッション・版固定の結合試験が揃うまで有効にしない前提である（実装コメントと同じ）。無効のときは `404 action_denied`。
+- リクエスト: `X-TEI-Action: commit` ヘッダーと `Content-Type: application/json` が必須。本文は64KiB以下で、重複キーを拒否する。`{protocolVersion: "1", applicationID: "sui", resourceID, actionID: "sui.move", expectedRevision, payload: {cardId, x, y}}`。未知のキーは拒否し、`resourceID` はパスの `doc_id` と一致させる。`expectedRevision` は、現在の文書から計算した64桁の小文字16進のETag値で、`PUT /docs/{doc_id}` の `If-Match` と同じ計算である。テナントや利用者は本文に含めない。サーバーが認証済みの要求から決める。
+- `Origin` が付く場合は、有効なスキームとホストに一致しなければならない。付かない呼び出し（TEIの参照用Go transportなど）は許す。
+- 認可: 書き込みとして文書単位の認可を通す（SafeModeは常に有効で扱う）。`X-Read-Only: 1`（または `true`）が付くと、認可アダプタの有無によらず `403 action_denied` で変更しない。
+- 成功: `200` で `{protocolVersion: "1", revision}` を返し、新しい版を `ETag` ヘッダーにも載せる。`Cache-Control: no-store`。同じトランザクションで版の先頭（revision head）を比較して保存し、`PUT /docs/{doc_id}` と同じ文書のサイズ・カード数の上限を守る。レビューの帰属（`reviewAttribution`）は変えない。保存後に `apply` の監査イベント（`actionId: "sui.move"`）を送る。送信に失敗しても成功を取り消さない。
+- エラー: すべて `{protocolVersion: "1", error: <code>}` の封筒を、FastAPIの `detail` に入れず本文の直下に返す。`400 invalid_action` / `invalid_payload`、`403 action_denied` / `request_origin_denied`、`404 action_denied`（無効、または他テナント・読めない文書。区別しない）、`409 revision_conflict`、`413 invalid_action` / `invalid_payload`、`415 unsupported_content_type`、`423 action_denied`（アーカイブ済み）、`500 execution_failed`（保存済みの文書が現行の検証を通らない、または欠落なく書き戻せない）。
+- 契約の根拠は実装（`routes/docs.py` の `post_sui_card_move_action`）。TEI側の契約はTEIの文書が正本である。この経路は、版固定や再観測の前提としてTAIから参照される面に近いが、現時点では有効化されておらず、実際のTEI Hostとの結合は未検証である。
+
 ---
 
 ### 2.4 Document監査イベント（FB-RM-PUB-05 / CE4）
@@ -813,6 +823,14 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 **GET** `/session/callback`
 
 - AC-1（ADR-0074）: OAuthコールバック。codeを交換し、JWKS検証の経路でトークンを検証してサーバー所有の認証セッションcookieを発行する（ブラウザ向けリダイレクト）。
+
+**POST** `/session/guest/redeem`
+
+- ADR-0080（IdP非依存のゲスト受入）の、一度きりの招待を交換する経路。ホストが作った不透明な `state` と、信頼済みの本人確認の資格情報（`identityCredential`）を渡すと、ゲストのセッションcookie（`Sui-Sensemaking-Guest-Session`）を発行する。ゲストは、メンバーの認証セッションとは別の主体である。
+- リクエスト: `{state, identityCredential}`（`state` は16〜256文字、`identityCredential` は1〜8192文字、未知のキーは拒否）。テナントと主体は本文に無く、`state` からだけ復元する。
+- 成功: `200` で `{status: "redeemed"}`。`Cache-Control: no-store`。cookieは `HttpOnly`・`SameSite=Strict`・`Path=/`・12時間、`Secure` は実行プロファイルに従う。
+- 失敗: `401 guest_redeem_invalid`（state不正・使用済み・失効・本人確認の不一致。理由は区別しない）、`503 guest_redeem_unavailable`（受入の状態保管・検証アダプタ・鍵が未設定）、`503 guest_identity_verification_unavailable`（検証アダプタ側の障害）、`503 guest_redeem_persistence_failed`（保存の失敗）。
+- この経路は、ホストがstateを発行し、ゲスト専用の検証アダプタを組み込んだ配備でだけ動く。公開APIとして常時使える経路としては扱わない（api.mdに載せるか別文書に置くかは、Issue #3308の未決。ここでは実装の事実だけを記す）。
 
 **POST** `/admin/provision/identity-providers`
 
