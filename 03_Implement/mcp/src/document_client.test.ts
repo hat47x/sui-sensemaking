@@ -1,13 +1,19 @@
 import { authHeaders } from "./auth_headers.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_REQUEST_TIMEOUT_MS,
   DocumentFetchError,
+  DocumentFetchTimeoutError,
   DocumentNotFoundError,
+  DocumentShapeError,
   fetchDocument,
   fetchDocumentMetadata,
   loadDocumentClientConfigFromEnv,
+  resolveRequestTimeoutMs,
   validateMcpRuntimeProfile,
 } from "./document_client.js";
+
+const VALID_DOC = { version: 1, id: "doc1", cards: [], edges: [], islands: [] };
 
 function mockResponse(status: number, body: unknown): Response {
   return {
@@ -150,16 +156,16 @@ describe("fetchDocument", () => {
   });
 
   it("requests GET /docs/{id} against the configured base URL", async () => {
-    const fetchSpy = vi.fn(async () => mockResponse(200, { id: "doc1", version: 1 }));
+    const fetchSpy = vi.fn(async () => mockResponse(200, VALID_DOC));
     vi.stubGlobal("fetch", fetchSpy);
 
     await fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1");
 
-    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc1", { headers: {}, redirect: "error" });
+    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc1", { headers: {}, redirect: "error", signal: expect.any(AbortSignal) });
   });
 
   it("sends X-API-Key when configured (the browser client never does; this is a separate process)", async () => {
-    const fetchSpy = vi.fn(async () => mockResponse(200, { id: "doc1", version: 1 }));
+    const fetchSpy = vi.fn(async () => mockResponse(200, VALID_DOC));
     vi.stubGlobal("fetch", fetchSpy);
 
     await fetchDocument({ baseUrl: "http://127.0.0.1:8000", apiKey: "secret-key" }, "doc1");
@@ -167,16 +173,17 @@ describe("fetchDocument", () => {
     expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc1", {
       headers: { "X-API-Key": "secret-key" },
       redirect: "error",
+      signal: expect.any(AbortSignal),
     });
   });
 
   it("URL-encodes the docId", async () => {
-    const fetchSpy = vi.fn(async () => mockResponse(200, {}));
+    const fetchSpy = vi.fn(async () => mockResponse(200, VALID_DOC));
     vi.stubGlobal("fetch", fetchSpy);
 
     await fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc with space");
 
-    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc%20with%20space", { headers: {}, redirect: "error" });
+    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs/doc%20with%20space", { headers: {}, redirect: "error", signal: expect.any(AbortSignal) });
   });
 
   it("throws DocumentNotFoundError on 404", async () => {
@@ -191,8 +198,56 @@ describe("fetchDocument", () => {
     await expect(fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1")).rejects.toThrow(DocumentFetchError);
   });
 
+  it("distinguishes 401, 403, 5xx in the error text without leaking a body", async () => {
+    const cases: Array<[number, string]> = [
+      [401, "unauthorized"],
+      [403, "forbidden"],
+      [503, "backend error"],
+    ];
+    for (const [status, label] of cases) {
+      vi.stubGlobal("fetch", vi.fn(async () => mockResponse(status, { detail: "secret-body" })));
+      const error = await fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1").catch((e: Error) => e);
+      expect(error).toBeInstanceOf(DocumentFetchError);
+      expect((error as Error).message).toContain(`HTTP ${status}`);
+      expect((error as Error).message).toContain(label);
+      expect((error as Error).message).not.toContain("secret-body");
+    }
+  });
+
+  it("raises DocumentFetchTimeoutError when the request is aborted by the timeout", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }),
+    );
+    await expect(fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1")).rejects.toThrow(
+      DocumentFetchTimeoutError,
+    );
+  });
+
+  it.each([
+    ["an HTML error page parsed as a string", "<html>502</html>"],
+    ["a non-1 version", { ...VALID_DOC, version: 2 }],
+    ["a missing id", { ...VALID_DOC, id: undefined }],
+    ["cards that are not an array", { ...VALID_DOC, cards: {} }],
+    ["islands that are missing", { ...VALID_DOC, islands: undefined }],
+    ["null", null],
+  ])("rejects %s with DocumentShapeError", async (_label, body) => {
+    vi.stubGlobal("fetch", vi.fn(async () => mockResponse(200, body)));
+    await expect(fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1")).rejects.toThrow(DocumentShapeError);
+  });
+
+  it("rejects a 200 whose body is not JSON with DocumentShapeError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ status: 200, ok: true, json: async () => { throw new SyntaxError("Unexpected token <"); } }) as unknown as Response),
+    );
+    await expect(fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1")).rejects.toThrow(DocumentShapeError);
+  });
+
   it("returns the parsed document body on success", async () => {
-    const body = { id: "doc1", version: 1, cards: [] };
+    const body = { ...VALID_DOC, cards: [{ id: "c1" }] };
     vi.stubGlobal("fetch", vi.fn(async () => mockResponse(200, body)));
     const result = await fetchDocument({ baseUrl: "http://127.0.0.1:8000" }, "doc1");
     expect(result).toEqual(body);
@@ -214,7 +269,7 @@ describe("fetchDocumentMetadata", () => {
 
     const metadata = await fetchDocumentMetadata({ baseUrl: "http://127.0.0.1:8000" }, "doc1");
 
-    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs", { headers: {}, redirect: "error" });
+    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs", { headers: {}, redirect: "error", signal: expect.any(AbortSignal) });
     expect(metadata).toEqual(list[0]);
   });
 
@@ -224,5 +279,16 @@ describe("fetchDocumentMetadata", () => {
 
     vi.stubGlobal("fetch", vi.fn(async () => new Response("not json", { status: 200 })));
     expect(await fetchDocumentMetadata({ baseUrl: "http://127.0.0.1:8000" }, "doc1")).toBeNull();
+  });
+});
+
+describe("resolveRequestTimeoutMs (#3312)", () => {
+  it("defaults when unset and reads SUI_MCP_REQUEST_TIMEOUT_MS", () => {
+    expect(resolveRequestTimeoutMs({})).toBe(DEFAULT_REQUEST_TIMEOUT_MS);
+    expect(resolveRequestTimeoutMs({ SUI_MCP_REQUEST_TIMEOUT_MS: "2500" })).toBe(2500);
+  });
+
+  it.each(["0", "-5", "abc", "1.5", "99", "999999999", ""])("falls back to the default for %j (never unbounded)", (raw) => {
+    expect(resolveRequestTimeoutMs({ SUI_MCP_REQUEST_TIMEOUT_MS: raw })).toBe(DEFAULT_REQUEST_TIMEOUT_MS);
   });
 });

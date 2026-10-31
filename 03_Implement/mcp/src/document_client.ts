@@ -90,27 +90,97 @@ export class DocumentNotFoundError extends Error {
   }
 }
 
+/** 失敗の切り分け用の短い分類。TAI Pleroma等が接続失敗を記録するときに、認証切れ・付与外・障害を区別できるようにする。 */
+function describeHttpStatus(status: number): string {
+  if (status === 401) return "unauthorized: credential missing, expired or rejected";
+  if (status === 403) return "forbidden: not granted for this document";
+  if (status === 429) return "rate limited";
+  if (status >= 500) return "backend error";
+  return "unexpected status";
+}
+
 export class DocumentFetchError extends Error {
   constructor(public readonly docId: string, public readonly status: number) {
-    super(`Failed to fetch document ${docId}: HTTP ${status}`);
+    super(`Failed to fetch document ${docId}: HTTP ${status} (${describeHttpStatus(status)})`);
     this.name = "DocumentFetchError";
   }
+}
+
+/** バックエンド呼び出しの待ち時間の上限（#3312）。接続を保持したまま応答しない場合にツール呼び出しが待ち続けないようにする。 */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+const MIN_REQUEST_TIMEOUT_MS = 100;
+const MAX_REQUEST_TIMEOUT_MS = 120_000;
+
+/** `SUI_MCP_REQUEST_TIMEOUT_MS` を読む。未設定・不正・範囲外のときは既定値へ戻す（無制限にはしない）。 */
+export function resolveRequestTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.SUI_MCP_REQUEST_TIMEOUT_MS?.trim();
+  if (!raw || !/^\d+$/.test(raw)) return DEFAULT_REQUEST_TIMEOUT_MS;
+  const value = Number(raw);
+  if (value < MIN_REQUEST_TIMEOUT_MS || value > MAX_REQUEST_TIMEOUT_MS) return DEFAULT_REQUEST_TIMEOUT_MS;
+  return value;
+}
+
+/** タイムアウトで中断された。資格情報の値や応答本文は含めない。 */
+export class DocumentFetchTimeoutError extends Error {
+  constructor(public readonly docId: string, public readonly timeoutMs: number) {
+    super(`Failed to fetch document ${docId}: timeout after ${timeoutMs}ms (backend did not respond)`);
+    this.name = "DocumentFetchTimeoutError";
+  }
+}
+
+/** 200で返った本文が DocumentV1 の最低限の形を満たさない。この場合は投影を作らない。 */
+export class DocumentShapeError extends Error {
+  constructor(public readonly docId: string, public readonly reason: string) {
+    super(`Failed to fetch document ${docId}: unexpected response shape (${reason})`);
+    this.name = "DocumentShapeError";
+  }
+}
+
+function isAbortLike(error: unknown): boolean {
+  return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+}
+
+/** `DocumentV1` の最低限の形（version、id、cards、edges、islands）を検査する。満たさないときは理由を返す。 */
+export function describeDocumentShapeProblem(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return "body is not an object";
+  const record = body as Record<string, unknown>;
+  if (record.version !== 1) return "version is not 1";
+  if (typeof record.id !== "string" || record.id.length === 0) return "id is not a non-empty string";
+  for (const key of ["cards", "edges", "islands"]) {
+    if (!Array.isArray(record[key])) return `${key} is not an array`;
+  }
+  return null;
 }
 
 export async function fetchDocument(config: DocumentClientConfig, docId: string): Promise<DocumentV1> {
   const url = `${config.baseUrl}/docs/${encodeURIComponent(docId)}`;
   const headers: Record<string, string> = authHeaders(config);
+  const timeoutMs = resolveRequestTimeoutMs();
 
-  const response = await fetch(url, { headers, redirect: "error" });
+  let body: unknown;
+  try {
+    const response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
 
-  if (response.status === 404) {
-    throw new DocumentNotFoundError(docId);
+    if (response.status === 404) {
+      throw new DocumentNotFoundError(docId);
+    }
+    if (!response.ok) {
+      throw new DocumentFetchError(docId, response.status);
+    }
+    try {
+      body = await response.json();
+    } catch (error) {
+      if (isAbortLike(error)) throw error;
+      throw new DocumentShapeError(docId, "body is not valid JSON");
+    }
+  } catch (error) {
+    if (isAbortLike(error)) throw new DocumentFetchTimeoutError(docId, timeoutMs);
+    throw error;
   }
-  if (!response.ok) {
-    throw new DocumentFetchError(docId, response.status);
-  }
 
-  return (await response.json()) as DocumentV1;
+  const problem = describeDocumentShapeProblem(body);
+  if (problem) throw new DocumentShapeError(docId, problem);
+  return body as DocumentV1;
 }
 
 // ADR-0073 / 第2反復: the document's row lifecycle metadata (creator and
@@ -133,7 +203,7 @@ export async function fetchDocumentMetadata(
   const headers: Record<string, string> = authHeaders(config);
 
   try {
-    const response = await fetch(url, { headers, redirect: "error" });
+    const response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.timeout(resolveRequestTimeoutMs()) });
     if (!response.ok) {
       return null; // metadata is advisory — the content fetch remains authoritative
     }
@@ -166,7 +236,14 @@ export async function fetchProposalStatus(
   const url = `${config.baseUrl}/ai/proposals/status?docId=${encodeURIComponent(docId)}`;
   const headers: Record<string, string> = authHeaders(config);
 
-  const response = await fetch(url, { headers, redirect: "error" });
+  const timeoutMs = resolveRequestTimeoutMs();
+  let response: Response;
+  try {
+    response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
+  } catch (error) {
+    if (isAbortLike(error)) throw new DocumentFetchTimeoutError(docId, timeoutMs);
+    throw error;
+  }
   if (!response.ok) {
     throw new DocumentFetchError(docId, response.status);
   }
