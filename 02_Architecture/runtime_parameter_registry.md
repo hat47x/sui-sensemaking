@@ -173,6 +173,28 @@
 | `SUI_AGENT_CREDENTIAL_HASH_KEY` | 未設定 | 外部agentの不透明な資格情報を保存前にHMAC-SHA256でハッシュ化するキー（`ADR-0093`、64文字の小文字16進 = 32バイト）。セッション用のキーとは別にしてあり、片方の更新がもう片方を無効にしない。未設定なら、agent資格情報の登録と認証は使えない（安全側）。更新すると、発行済みの資格情報がすべて無効になる | direct | 秘密値 | 未設定でagentの登録が503になること、キー変更で発行済みの資格情報が401になることを確認する |
 | `SUI_AGENT_OAUTH_AUDIENCE` | 未設定 | トークン交換（RFC 8693）で得たagent用トークンが持つべき `aud`（`ADR-0094`）。IdP登録簿の行を増やさず、既存の発行者の行で署名を検証したうえで、この値と完全一致する `aud` だけを受け付ける。メンバーのログイン用やゲスト用のトークンは、`aud` が違うので、agentとして通らない。未設定なら、OAuth経路は使えない（安全側） | direct | 非秘密 | 未設定でOAuth経路が503になること、別の `aud` のトークンが401になることを確認する |
 
+## MCP server keys（`03_Implement/mcp`）
+
+MCPサーバー（読み取り専用の外部接続）が読む環境変数です。キー・既定値・必須条件・秘密か否かはこの表を基準にし、設定の手順と背景は `03_Implement/mcp/README.md` を参照します。値を設定ファイルやログへ書き込みません。`SUI_RUNTIME_PROFILE` と `SUI_API_KEY` は、上の表と同じ意味でMCPも読みます。
+
+| Key | Default | 必須条件 | Secret | Purpose / Probe |
+| --- | --- | --- | --- | --- |
+| `SUI_MCP_TRANSPORT` | `stdio` | 不要 | いいえ | `stdio` または `http`。`http` のときだけ下のHTTP用キーが必須になる。 |
+| `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | 不要 | いいえ | このプロセスが `GET /docs/{id}` を取得するバックエンドの絶対URL。フロントエンドの `SUI_FRONTEND_API_BASE` とは別。 |
+| `SUI_MCP_AGENT_CREDENTIAL` | 未設定 | `saas-multitenant` のstdioで必須 | はい | Tenant Adminが登録した、テナントと文書に束縛された資格情報（`suiag_` で始まる）。`SUI_API_KEY` とは同時に設定できない。 |
+| `SUI_MCP_HTTP_HOST` | `127.0.0.1` | 不要 | いいえ | HTTP通信の待ち受けホスト。 |
+| `SUI_MCP_HTTP_PORT` | `8787` | 不要 | いいえ | HTTP通信の待ち受けポート。 |
+| `SUI_MCP_RESOURCE_URL` | なし | HTTP通信で必須 | いいえ | このサーバー自身のリソース識別子（RFC 8707）。発行されるトークンの `aud` と一致させる。 |
+| `SUI_MCP_TRUSTED_ISSUER` | なし | HTTP通信で必須 | いいえ | トークンの `iss` と完全一致で照合する信頼済みの発行者。 |
+| `SUI_MCP_JWKS_URI` | なし | HTTP通信で必須 | いいえ | 信頼済みの発行者の署名検証用JWKSのURL。 |
+| `SUI_MCP_AUTHORIZATION_SERVERS` | `SUI_MCP_TRUSTED_ISSUER` の値 | 不要 | いいえ | `/.well-known/oauth-protected-resource`（RFC 9728）で告知するカンマ区切りの一覧。信頼の根拠にはならない。 |
+| `SUI_MCP_TOKEN_EXCHANGE_ENDPOINT` | 未設定 | `saas-multitenant` のHTTP通信で必須（以下4つは同時に設定） | いいえ | IdPのトークンエンドポイント（RFC 8693）。https（loopbackのみhttp可）で、資格情報やフラグメントを含めない。 |
+| `SUI_MCP_TOKEN_EXCHANGE_CLIENT_ID` | 未設定 | 同上 | いいえ | 交換のためにIdPへ名乗る、このMCPサーバーのOAuthクライアントID。 |
+| `SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET` | 未設定 | 同上 | はい | 上のクライアントの秘密。このプロセスが持つ秘密はこれだけである。 |
+| `SUI_MCP_TOKEN_EXCHANGE_AUDIENCE` | 未設定 | 同上 | いいえ | 交換後のトークンの宛先。バックエンドの `SUI_AGENT_OAUTH_AUDIENCE` と一致させる。 |
+
+欠けた必須キーは、起動時に安全側で拒否します（認証なし・ワイルドカード信頼へは戻りません）。非秘密の確認は、`SUI_MCP_API_BASE_URL=... npm run verify`（`03_Implement/mcp`）で行います。整合は `python scripts/check_contract_drift.py`（`03_Implement/backend`）が、`03_Implement/mcp/src` の `SUI_*` について確認します。
+
 ## Compose and frontend build keys
 
 | Key | Default | Purpose |
