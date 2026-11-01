@@ -92,6 +92,22 @@ describe("buildContextProjection: evidence vs contradiction scoping", () => {
     expect(projection.cards.map((card) => card.id).sort()).toEqual(["c2", "c4"]);
   });
 
+  it("does not expose Card.meta or source, and meta changes do not change bundleHash (ADR-0105)", async () => {
+    const doc = buildDoc();
+    const base = await buildContextProjection({ doc, constraint: "reviewed-only", safeMode: false });
+
+    doc.cards = doc.cards.map((card) =>
+      card.id === "c1"
+        ? { ...card, meta: { seq: 7, source: "https://internal.example/records/row-42" } }
+        : card,
+    );
+    const withSource = await buildContextProjection({ doc, constraint: "reviewed-only", safeMode: false });
+
+    expect(withSource.cards.find((card) => card.id === "c1")).not.toHaveProperty("meta");
+    expect(JSON.stringify(withSource)).not.toContain("internal.example");
+    expect(withSource.bundleHash).toBe(base.bundleHash);
+  });
+
   it("does not expose contradictionState or note, and a resolved link keeps the same shape and bundleHash (ADR-0104)", async () => {
     const doc = buildDoc();
     const base = await buildContextProjection({ doc, constraint: "contradiction", safeMode: false });
