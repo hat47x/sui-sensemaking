@@ -53,6 +53,13 @@ test("the SidePanel can load and display the tenant TEI epistemic projection", a
               reasons: [],
             },
           ],
+          reviewRequests: [
+            {
+              assertionId: "a1",
+              targetBinding: "exact",
+              reasons: ["AI_ORIGIN_UNREVIEWED"],
+            },
+          ],
           health: { level: "healthy", viewMetadataState: "complete" },
           authorityLimits: [
             "assessment-does-not-assert-objective-truth",
@@ -88,10 +95,19 @@ test("the SidePanel can load and display the tenant TEI epistemic projection", a
   await expect(panel.getByRole("group", { name: "Epistemic status: a1" })).toBeVisible();
   await expect(panel.getByText("Loaded 1 epistemic status item(s)")).toBeVisible();
 
-  await panel.getByRole("button", { name: "Confirm" }).click();
+  const queue = panel.getByTestId("epistemic-review-queue");
+  await expect(queue).toContainText("Review queue (1)");
+  await expect(queue).toContainText("assertion-review: assertion:a1");
+
+  await panel.getByRole("button", { name: "Confirm", exact: true }).click();
   const intent = panel.getByTestId("epistemic-review-intent");
   await expect(intent).toBeVisible();
   await expect(intent).toContainText('"operation": "confirm"');
   await expect(intent).toContainText('"assertionId": "a1"');
+
+  await panel.getByRole("button", { name: "Bulk confirm preview", exact: true }).click();
+  const bulk = panel.getByTestId("epistemic-bulk-preview");
+  await expect(bulk).toBeVisible();
+  await expect(bulk).toContainText('"ok": true');
   await expect(panel.getByText("Display only. Confirmation changes are not saved.")).toBeVisible();
 });
