@@ -30,6 +30,18 @@
 - 文書のAI提案ごとに、`proposalId`、`proposalKind`、`origin`、`status`（`proposed`、`accepted`、`rejected`、`held`）、`sourceBundleHash`、作成日時、決定日時。
 - `sourceBundleHash` は提案の生成時点の文脈バンドルのハッシュです。`accepted` などは、その生成時点のバンドルに対する人間の判断であり、現在の文書の内容への受理を意味しません。文書が編集された後に古い判断が残っていても、現在の版への受理として読まないでください。現在の版は、`GET /docs/{doc_id}` の `updatedAt` と `baseDocSignature` で別に確認します。`decidedAt` は最後に判断を記録した時刻です（#3311）。
 
+## TAI SCN-001での版固定
+
+TAIのように、レビュー済みの投影を読んで版を固定する場合は、次の3つを組にして記録します。
+
+- `baseDocSignature`（`<docId>:<updatedAt>`）: 文書全体の版。
+- `bundleHash`: 露出した投影全体の決定的なsha256。単位digestは入力に含みません。
+- `cards[].digest` / `islands[].digest`: 露出したカード本文・島の題名の単位digest。伏せた場合は`null`です。
+
+`bundleHash`だけではカード単位の同一性を復元できず、`baseDocSignature`だけでは内容の同一性を保証できません。3つを組にして、再観測の前後を照合します。
+
+TAIは、レビュー済みのカードと島の題名だけを読みます。ナラティブ本文、TEI投影、agentからの提案POSTは使いません。資格情報はTenant AdminのAPIで人間が発行し、TAIが自分で発行することはできません（ADR-0115）。
+
 ## エージェントが読めないもの
 
 - 未レビューのカードの本文。
