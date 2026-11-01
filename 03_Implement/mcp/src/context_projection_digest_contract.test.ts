@@ -114,6 +114,22 @@ describe("MCPツール出力のdigest（ADR-0103）", () => {
     expect(after.cards.map((c) => c.digest)).toEqual(before.cards.map((c) => c.digest));
     expect(after.bundleHash).toBe(before.bundleHash);
   });
+
+  it("reviewed本文の編集はbundleHashとそのカードのdigestを変える", async () => {
+    const doc = structuredClone(fixture.agentView) as {
+      cards: Array<{ id: string; text: string }>;
+    };
+    const before = await callProjection(doc, { safeMode: false });
+    const c1 = doc.cards.find((card) => card.id === "c1");
+    if (c1) c1.text = "edited reviewed claim one";
+    const after = await callProjection(doc, { safeMode: false });
+
+    const digest = (projection: Projection, id: string) =>
+      projection.cards.find((card) => card.id === id)?.digest;
+    expect(after.bundleHash).not.toBe(before.bundleHash);
+    expect(digest(after, "c1")).not.toEqual(digest(before, "c1"));
+    expect(digest(after, "c2")).toEqual(digest(before, "c2"));
+  });
 });
 
 describe("agent向け文書（許可リスト適用後）から作った投影", () => {
