@@ -111,7 +111,7 @@ SUI_E2E_PYTHON=../backend/.venv/bin/python npm run verify:agent-e2e
 - 失効の次の要求で、同じMCPプロセスが401を受ける。別のagentIdの資格情報には影響しない。
 - 監査eventの主体が `agent` で、資格情報と本文を含まない。
 
-この検証は、PostgresとIdPを使いません。テーブルごとのRLSは `test_agent_credential_postgres_rls.py`、OAuthのトークン交換は `http_server_exchange.test.ts` が担当します。CIでは `mcp-agent-auth-ci.yml` の `agent-mcp-e2e` ジョブが実行します。
+この検証は、PostgresとIdPを使いません。テーブルごとのRLSは `test_agent_credential_postgres_rls.py`、OAuthのトークン交換は `http_server_exchange.test.ts` が担当します。CIでは、RLSを `mcp-agent-auth-ci.yml` の `backend-postgres-rls` ジョブ、OAuthを `mcp-package` ジョブが実行します。
 
 ### 通信方式の選択
 

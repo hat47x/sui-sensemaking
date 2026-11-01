@@ -341,7 +341,7 @@ export SUI_RUN_PG_RLS_TESTS=1
 pytest -q tests/test_agent_credential_postgres_rls.py
 ```
 
-このテストはCIでは実行しません（`.github/workflows/mcp-agent-auth-ci.yml` と `unit-verification-ci.yml` は実DBを持たないため、`SUI_RUN_PG_RLS_TESTS` が無く、テストは skip されます）。Postgresのサービスコンテナを使うCIジョブを足すかは未決です（#3284）。資格情報や付与の表、またはそのRLSを変える変更では、手元で上のコマンドを実行してください。
+このテストは、`.github/workflows/mcp-agent-auth-ci.yml` の `backend-postgres-rls` ジョブが、Postgres 16のサービスコンテナと上の2ロールを作って実行します（#3284）。手元で確かめるときも、上のコマンドをそのまま使えます。CIでは `test_document_access_rls_postgres.py` と `test_agent_credential_postgres_rls.py` の両方を実行します。
 
 認証フェデレーションのLevel 2（モックのSP/IdP）を実行する場合。
 
