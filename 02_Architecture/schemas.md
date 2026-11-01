@@ -322,6 +322,7 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - 入力は、投影が返した内容だけのcanonical JSON（`canonicalizeJson`）。カードは `{schema:"context-projection.item-digest.v1", kind:"card", id, text}`、島は `{schema, kind:"island", id, title}`。利用者は受け取った項目から再計算して確かめられる。
 - カードのdigestは、本文が露出した（`textReviewed` が真かつSafeMode OFF）ときだけ値を持つ。伏せた場合（未レビュー、SafeMode ON）は `null`。島のdigestは `titleReviewed` が真のときだけ値を持ち、SafeModeのON/OFFによらず同じ値になる。伏せた内容のdigestは計算も出力もしない。
 - レビュー済みの本文・題名の編集とid変更だけがdigestを変える。位置などのレイアウト、`holdState`、`claimType`、関係線、`evidenceLinks`、`Card.meta.source`、他項目の変更は変えない。
+- 島のdigestは、所属カード（`cardIds`）と親島（`parentIslandId`）を含めない。所属の変更は、文書の `baseDocSignature` と `bundleHash` で扱う（ADR-0107）。`updatedAt` を進めない保存で所属だけを変えた場合は、`bundleHash` でも検出できない残存リスクがある（#3299）。
 - シリアライズの規則（`canonicalizeJson`、#3282）。他言語で再計算する実装は、次のとおりに揃える。
   - 文字列は、生のUTF-8で出す。日本語、サロゲートペア（BMP外の文字）、`<`、`>`、`&`、U+2028、U+2029、U+007F は、エスケープしない。エスケープするのは `"`（`\"`）、`\`（`\`）、U+0000〜U+001F だけである。U+0008、U+0009、U+000A、U+000C、U+000D は `\b`、`\t`、`\n`、`\f`、`\r`、それ以外の制御文字は小文字16進の `\u00xx` とする。
   - オブジェクトのキーは、UTF-16コード単位の昇順に並べる（RFC 8785 の規則と同じ）。単位digestのキーはASCIIだけなので、`id`、`kind`、`schema`、`text`（島は `title`）の順になる。

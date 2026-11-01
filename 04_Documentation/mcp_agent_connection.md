@@ -147,8 +147,8 @@ Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格
 
 - `schemaVersion`（`context-projection.v1`）、`docId`、`constraint`、`safeMode`、`baseDocSignature`（文書のidと更新時刻）
 - `cards`: 含まれたカードの`id`、`claimType`、`holdState`（`held`、`pending`、`shelved`、または`null`）、`text`、`reviewed`、`redacted`、`digest`。カードの`meta`（出典`source`と通し番号`seq`を含む）は返しません（ADR-0105）。
-- `islands`: 島の`id`、`title`、`digest`
-- `digest`: 露出した本文または題名から計算したsha256（`{ "alg": "sha256", "value": ... }`）です。カードは本文を返したときだけ値を持ち、伏せたときは`null`です。島はレビュー済みの題名だけ値を持ちます。レビュー済みの本文や題名を編集すると値が変わり、位置や関係線の変更では変わりません。内容の真実性は保証しません（ADR-0103）。
+- `islands`: 島の`id`、`title`、`digest`。所属カードの一覧は返しません。
+- `digest`: 露出した本文または題名から計算したsha256（`{ "alg": "sha256", "value": ... }`）です。カードは本文を返したときだけ値を持ち、伏せたときは`null`です。島はレビュー済みの題名だけ値を持ちます。レビュー済みの本文や題名を編集すると値が変わり、位置や関係線の変更では変わりません。島の所属カードや親島の変更でも変わりません。所属の変化は、文書の`baseDocSignature`と`bundleHash`で扱います（ADR-0103、ADR-0107）。内容の真実性は保証しません。
 - `relations`、`evidence`、`contradictions`: 関係線と、根拠・矛盾の関係。`contradictions` は `from` と `to` だけで、人が付けた確認状態（`contradictionState`）と注記（`note`）は含みません（ADR-0104）。`resolved` の矛盾も同じ形で残ります。
 - `voids`: 空白の`id`、`kind`、`resolved`、`cardIds`、`islandIds`
 - `narrativeChecks`: 物語の検査の`id`、`counts`、`issueDirections`。ナラティブの題名と本文は返しません（ADR-0106）
