@@ -389,6 +389,7 @@ PRのCI（`.github/workflows/unit-verification-ci.yml`）は、契約ドリフ�
 ```bash
 # PRのCIと同じ安全系サブセット
 python scripts/check_contract_drift.py
+python -m ruff check src tests
 python -m pytest -q \
   tests/test_ts_python_contract_drift.py \
   tests/test_critique_history_model.py \

@@ -1,5 +1,5 @@
 {
-  description = "sui-sensemaking project toolchain (Node 20, Python 3.12, Ruff)";
+  description = "sui-sensemaking project toolchain (Node 22, Python 3.12, Ruff)";
 
   # Single pinned input. The exact nixpkgs revision is locked in flake.lock so every
   # contributor and CI gets identical tool versions.
@@ -21,13 +21,13 @@
           # `nix develop` from the repo root drops you into this shell.
           default = pkgs.mkShell {
             # The single source of truth for the project's local toolchain.
-            # - nodejs_20: matches frontend/Dockerfile (node:20-alpine); provides node/npm/npx.
+            # - nodejs_22: matches frontend/Dockerfile (node:22-alpine); provides node/npm/npx.
             # - python312: matches backend/Dockerfile (python:3.12-slim); supports `python -m venv`.
-            # - ruff: backend lint (`ruff check src tests`); not a pyproject dependency.
+            # - ruff: backend lint (`ruff check src tests`); also pinned in the backend test extra.
             # Docker is provided by the host (Docker Desktop / WSL integration), not here.
             # Playwright e2e needs extra browser setup; see 03_Implement/README.md.
             packages = [
-              pkgs.nodejs_20
+              pkgs.nodejs_22
               pkgs.python312
               pkgs.ruff
             ];
