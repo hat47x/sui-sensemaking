@@ -961,6 +961,14 @@ def get_document(
     else:
         response.headers["ETag"] = _format_etag(_compute_etag(doc_row.payload_json))
 
+    # #3276: SafeMode does not redact reviewed text on the agent path. Record
+    # whether this response actually exposed reviewed text, instead of always
+    # claiming safe_mode=True (which could hide the event from an audit sink
+    # configured with SUI_AUDIT_ALLOW_IN_SAFE_MODE=false).
+    reviewed_text_exposed = access_request.auth.provider == "agent_credential" and any(
+        isinstance(card, dict) and bool(card.get("text")) for card in payload.get("cards", [])
+    )
+
     dispatcher = getattr(request.app.state, "audit_dispatcher", None)
     if dispatcher is not None:
         dispatcher.emit(
@@ -968,11 +976,12 @@ def get_document(
                 event_type="view",
                 tenant_id=tenant.tenant_id,
                 doc_id=doc_id,
-                safe_mode=True,
+                safe_mode=not reviewed_text_exposed,
                 actor_ref=_audit_actor_ref(request, access_request),
                 principal_kind=_audit_principal_kind(access_request),
                 metadata={
                     "route": f"/docs/{doc_id}",
+                    "reviewedTextExposed": reviewed_text_exposed,
                     "method": "GET",
                     "action": access_request.action,
                     "decision_allow": decision.allow,
