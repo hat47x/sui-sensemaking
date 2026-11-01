@@ -5,7 +5,7 @@
 
 ## Nix開発環境（プロジェクト標準）
 
-ローカルのツールチェーン（Node 20、Python 3.12、Ruff）は、`03_Implement/flake.nix` でまとめて管理します。バージョンは `03_Implement/flake.lock` で固定されるので、全員が同じ環境になります。フロントエンドとバックエンドのDockerfile（`node:20-alpine`、`python:3.12-slim`）とも揃えています。
+ローカルのツールチェーン（Node 22、Python 3.12、Ruff）は、`03_Implement/flake.nix` でまとめて管理します。バージョンは `03_Implement/flake.lock` で固定されるので、全員が同じ環境になります。フロントエンドとバックエンドのDockerfile（`node:22-alpine`、`python:3.12-slim`）とも揃えています。
 
 1. Nixを導入します（WSL2とsystemdの環境で確認済みです。flakesが既定で有効になるDeterminate Systems版を勧めます。`sudo` のパスワード入力を求められます）。
 

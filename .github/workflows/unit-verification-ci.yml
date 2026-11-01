@@ -49,6 +49,7 @@ jobs:
           SUI_LLM_PROVIDER: none
         run: |
           python scripts/check_contract_drift.py
+          python -m ruff check src tests
           python -m pytest -q \
             tests/test_ts_python_contract_drift.py \
             tests/test_critique_history_model.py \

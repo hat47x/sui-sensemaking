@@ -5,7 +5,7 @@
   "description": "Read-only MCP server exposing sui-sensemaking ContextBundle projections over stdio or streamable-HTTP + OAuth 2.1 resource-server auth (EXT-CONN-01 subslices B/C, ADR-0054 stage 1). Independent package: not part of any npm/yarn workspace, shares no dependency or lockfile with 03_Implement/frontend.",
   "type": "module",
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "scripts": {
     "start": "tsx src/index.ts",

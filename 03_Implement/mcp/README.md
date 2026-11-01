@@ -34,11 +34,11 @@ npm start   # runs src/index.ts (transport selected by SUI_MCP_TRANSPORT)
 
 # Client-based verification (generative-AI path; requires running backend).
 # Run via tsx (npm run verify) — the script imports a .ts module and uses TS
-# `as` syntax, which plain Node 20 rejects:
+# `as` syntax, which plain Node rejects:
 SUI_MCP_API_BASE_URL=http://127.0.0.1:8000 npm run verify -- [docId] [constraint]
 ```
 
-PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージの `npm ci`・`typecheck`・`test`（Node 20）と、agent認証・OAuth・contextルートのbackendテスト（Python 3.12）を実行する。Postgres RLSの実地matrixはCIの対象外である。
+PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージの `npm ci`・`typecheck`・`test`（Node 22）と、agent認証・OAuth・contextルートのbackendテスト（Python 3.12）を実行する。Postgres RLSの実地matrixはCIの対象外である。
 
 ### 生成AIのMCPクライアントを接続する（設定例）
 
