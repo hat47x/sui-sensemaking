@@ -9,6 +9,7 @@ import {
   buildEpistemicInspectionSummary,
   buildEpistemicReviewIntent,
   buildEpistemicReviewQueue,
+  buildEpistemicReviewRequestIntent,
   buildEpistemicUiItems,
   type EpistemicProjectionInput,
   type EpistemicUiAction,
@@ -103,6 +104,8 @@ export function EpistemicReviewPanel({
         intent = buildEpistemicReviewIntent(item, "withdraw");
       } else if (action === "mark-hypothesis") {
         intent = buildEpistemicClassificationIntent(item);
+      } else if (action === "request-review") {
+        intent = buildEpistemicReviewRequestIntent(item);
       } else {
         setIntentText("");
         setActionError(t("epistemic.panel.action_not_wired"));
