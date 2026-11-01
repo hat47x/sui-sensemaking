@@ -4,6 +4,7 @@ import { inspectIslandTitle } from "../domain/island_title_quality";
 import { t } from "../i18n/translate";
 
 import { EpistemicReviewPanel } from "./EpistemicReviewPanel";
+import { RelatedCandidatesPanel } from "./RelatedCandidatesPanel";
 import { formatTimestamp } from "../domain/format_timestamp";
 import { CRITIQUE_TAGS, KNOWN_EDGE_TYPES, resolveKnownEdgeType } from "../domain/types";
 import type { EdgeType, KnownEdgeType, StructureDecisionRecord } from "../domain/types";
@@ -1457,6 +1458,9 @@ export function SidePanel({
         </div>
       ) : null}
       {document ? <EpistemicReviewPanel docId={document.id} /> : null}
+      {document && selectedCard ? (
+        <RelatedCandidatesPanel document={document} focusCardId={selectedCard.id} />
+      ) : null}
       <section
         data-panel="selection-context"
         aria-label={t("side_panel.context.title")}
