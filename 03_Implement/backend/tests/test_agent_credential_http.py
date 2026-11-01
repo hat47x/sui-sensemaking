@@ -356,9 +356,10 @@ def test_derived_read_routes_stay_closed_to_agents(env) -> None:
         client.get("/docs/shared-doc/merge-decision-logs/by-group/group-1", headers=headers),
         client.get("/docs/shared-doc/merge-decision-logs/restore/v1", headers=headers),
         client.get("/docs/shared-doc/similar-candidate-groups", headers=headers),
+        client.get("/docs/shared-doc/epistemic/projection", headers=headers),
     ]
 
-    assert [r.status_code for r in closed] == [403, 403, 403]
+    assert [r.status_code for r in closed] == [403, 403, 403, 403]
     assert {r.json()["detail"]["code"] for r in closed} == {"agent_route_not_enabled"}
 
 

@@ -4,9 +4,10 @@ ADR-0102 decided to expose TEI epistemic projection on the tenant business
 plane through per-document bindings recorded by the operator. This route
 implements that decision with the smallest reversible surface:
 
-- authorization mirrors `GET /docs/{doc_id}` (`_authorize_request`): tenant
-  session, guest session, agent credential, access-control adapter, policy
-  binding, anti-enumeration.
+- authorization reuses `_authorize_request`: tenant session, guest session,
+  access-control adapter, policy binding, anti-enumeration. Agent credentials
+  are not in `_AGENT_ALLOWED_ROUTES`, so they get
+  `403 agent_route_not_enabled`.
 - the binding registry and the artifact are read through the fail-closed local
   I/O transport (ADR-0101 Option A). No artifact content is ever returned on
   a failure.
