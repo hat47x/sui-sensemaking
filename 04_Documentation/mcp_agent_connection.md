@@ -146,7 +146,7 @@ Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格
 - `voids`: 空白の`id`、`kind`、`resolved`、`cardIds`、`islandIds`
 - `narrativeChecks`: 物語の検査の`id`、`counts`、`issueDirections`
 - `counts`: `reviewed`、`unreviewed`、`redacted`。いずれも文書全体の数です。
-- `bundleHash`: 同じ入力と同じ文書から計算されるハッシュです。READMEでは、同じ入力で同じ値になることを確認項目にしています。露出した内容だけの版ではなく、文書の版（`baseDocSignature`、つまり文書の`id`と`updatedAt`）を含みます。露出内容が同じでも、文書が保存されて`updatedAt`が進めば値が変わります。ただし`updatedAt`はクライアントが送る値で、サーバーは採番も単調増加の検証もしません。そのため、この版の成分はサーバーが保証する値ではありません。内容だけで版固定したいときは、カードと島の単位digest（`digest`）を使ってください。入力と変わる条件、および`holdState`など入力に含まれない項目の残存リスクは、`02_Architecture/schemas.md`の§1.4にあります。
+- `bundleHash`: 同じ入力と同じ文書から計算されるハッシュです。この値はMCP投影専用で、CE-1の `POST /context/bundle` が返す `bundleHash` とは入力も実装言語も異なり、一致しません。外部の記録では「投影の `bundleHash`」と区別してください。READMEでは、同じ入力で同じ値になることを確認項目にしています。露出した内容だけの版ではなく、文書の版（`baseDocSignature`、つまり文書の`id`と`updatedAt`）を含みます。露出内容が同じでも、文書が保存されて`updatedAt`が進めば値が変わります。ただし`updatedAt`はクライアントが送る値で、サーバーは採番も単調増加の検証もしません。そのため、この版の成分はサーバーが保証する値ではありません。内容だけで版固定したいときは、カードと島の単位digest（`digest`）を使ってください。入力と変わる条件、および`holdState`など入力に含まれない項目の残存リスクは、`02_Architecture/schemas.md`の§1.4にあります。
 
   なお、書き出しのview.jsonにある`docSignature`は、`baseDocSignature`とは別の項目です。文書のidだけを持ち、`updatedAt`を含まないため、版固定には使えません（`02_Architecture/schemas.md`の§1.4と§8.1）。
 - `documentMetadata`: 文書の`id`、`lifecycle_state`、`updated_at`。エージェントには`title`と`created_by`を返さないため、この2つは`null`です。取得できなかった場合も`null`です。文書一覧の最初のページ（既定で500件）に含まれない文書も`null`になります。
