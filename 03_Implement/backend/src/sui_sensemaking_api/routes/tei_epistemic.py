@@ -63,6 +63,17 @@ def get_document_epistemic_projection(
         safe_mode=True,
         read_only=True,
     )
+    if access_request.auth.provider == "agent_credential":
+        # #3296 / ADR-0093追記: keep this route closed to agent credentials even
+        # if a future change to _AGENT_ALLOWED_ROUTES would otherwise reach the
+        # binding lookup. The response must not reveal whether a binding exists.
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "agent_route_not_enabled",
+                "message": "This route is not available to agent credentials.",
+            },
+        )
 
     binding = read_tei_epistemic_binding(
         settings.tei_reference_dir, tenant.tenant_id, doc_id
