@@ -9,7 +9,7 @@ sui-sensemakingの `ContextBundle` の投影を読み取り専用で公開する
 読み取り専用のツールを2つ公開します。
 
 1. `get_context_projection({ docId, constraint, safeMode? })`。フロントエンドの投影の中核である `buildContextProjection` を呼びます。`constraint` は `reviewed-only | evidence | contradiction | summary` のいずれかです。`safeMode` は省略すると `true`（安全な既定値）になります。
-2. `get_proposal_status({ docId })`。文書のCE4提案のライフサイクルを返します。AIの各提案が、まだ提案のみのまま（`status=proposed`）か、人間が決定した（`accepted | rejected | held`、`decidedAt` つき）かが分かります。生成AIの検証役は、提案が自動適用されていないことと、人間の決定の経緯を、何も変更せずに確認できます。
+2. `get_proposal_status({ docId })`。文書のCE4提案のライフサイクルを返します。AIの各提案が、まだ提案のみのまま（`status=proposed`）か、人間が決定した（`accepted | rejected | held`、`decidedAt` つき）かが分かります。生成AIの検証役は、提案が自動適用されていないことと、人間の決定の経緯を、何も変更せずに確認できます。`accepted` は提案生成時の `sourceBundleHash` に対する判断で、現在の文書への受理ではありません。現在の版は `GET /docs/{id}` の `baseDocSignature` で別に確認してください（#3311）。
 
 **適用範囲（DOGFOOD-05）**: 未レビューのカードは、どの `constraint` でも `cards`、`relations`、`evidence`、`contradictions`、`voids[].cardIds` に現れず、その本文も返しません。`safeMode: false` でも同じです。未レビューのカードは `cards` に含まれず、件数だけが `counts.unreviewed` に出ます（`SEC-CONTEXT-PROJECTION-01` で安全側に拒否）。ただし、島の題名（`islands[].title`）は、レビュー済み（`titleReviewed`）の島の題名だけを返します。未レビューの島の題名は返さず、プレースホルダ `(未レビュー)` で置き換えます。文書の題名は、エージェントには返しません（`documentMetadata.title` は `null`）。レビュー済みの題名は、人が確認した短い見出しとして扱い、`safeMode: true` でも返します（ADR-0098）。ただし、題名が未レビューのカード本文を引用している可能性は残ります。題名をレビュー済みにする人が、引用の有無に責任を持ちます。カードの `meta`（出典 `source` と通し番号 `seq` を含む）は返しません。出典は内部情報を含み得るため、投影には明示トグルがなく、既定では出さないと決めています（ADR-0105）。この経路は、**レビュー済み**の内容を見直して構造化するためのもので、未レビューの資料を最初に探索する用途ではありません。レビュー済みカードの作業状態を尊重したいAIの協働者には、`holdState` のメタデータを返します（DOGFOOD-08）。
 
