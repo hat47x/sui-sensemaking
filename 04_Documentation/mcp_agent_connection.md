@@ -65,7 +65,14 @@
 Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格情報の平文は、この登録の応答にだけ出ます。一覧の`GET /tenant-admin/agent-credentials`では、平文もハッシュも見られません。受け取った値はすぐ安全な場所へ保管してください。
 
 - 失効: `POST /tenant-admin/agent-credentials/{agentId}/revoke`で失効します。次の要求から効きます。1つの文書の付与だけを外すときは、`DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`を使います。
-- 更新: 期限の延長や付与の追加はできません。失効後の`agentId`も再登録できないため、新しい`agentId`で登録し直し、MCPサーバーの設定を差し替えます。
+- 更新: 期限の延長、付与の追加、資格情報の回転の専用APIはありません。更新は、新しい`agentId`での再登録として行います（#3286の決定）。手順は次のとおりです。
+  1. Tenant Adminが、新しい`agentId`と、新しく読ませる文書の一覧、新しい期限で登録します。
+  2. 新しい資格情報の平文を、MCPサーバーの`SUI_MCP_AGENT_CREDENTIAL`へ設定します。
+  3. 新しい接続で読み取りが成功することを確かめます。
+  4. 旧`agentId`を`POST /tenant-admin/agent-credentials/{agentId}/revoke`で失効させ、旧資格情報を破棄します。
+  - 変わるもの: `agentId`、資格情報の平文、MCPサーバーの設定、監査eventの`actorRefHash`（新しい`agentId`から作るため）。監査の履歴は旧`agentId`の記録とは連続しません。
+  - 変わらないもの: 文書の内容、人が設定した`human_reviewed`、文書の監査event。付与の範囲は新しい登録で列挙し直すため、同じ範囲を維持するには同じ文書idを指定します。
+  - 期限の延長や付与の追加を専用APIにしない理由は、権限と期間の変更を、登録時と同じ明示的な列挙と監査の単位に保つためです。回転も同じ手順を使います。
 - OAuthトークンで接続する場合は、`POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`で、信頼するIdPの`identityProviderId`と`subject`をagentに結びます。
 
 各APIの条件と応答は、[API仕様のAgent資格情報（§2.15）](../02_Architecture/api.md)が正本です。agent資格情報で通せるのは、`GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit`の4つだけです。付与外の文書は、存在しない文書と区別せず`404`になります。
