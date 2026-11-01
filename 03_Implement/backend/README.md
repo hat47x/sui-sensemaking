@@ -323,7 +323,7 @@ alembic upgrade head
 pytest -m postgres
 ```
 
-テナントRLSの実地のテスト行列は、マイグレーションの所有者とは別の、実行用のロールで実行します。実行用のロールには、対象スキーマの通常のDML権限を付与し、superuser属性と`BYPASSRLS`は付与しないでください。同じ資格情報や、RLSを迂回できるロールでは、テストが失敗します。
+テナントRLSの実地のテスト行列は、マイグレーションの所有者とは別の、実行用のロールで実行します。実行用のロールには、対象スキーマの通常のDML権限を付与し、superuser属性と`BYPASSRLS`は付与しないでください。同じ資格情報や、RLSを迂回できるロールでは、テストが失敗します。実行にはPostgresドライバーが要るため、`python -m pip install -e '.[test,postgres]'` で依存を入れます。
 
 ```bash
 export SUI_DATABASE_URL="postgresql+psycopg://migration_owner:...@localhost:5432/sui_sensemaking"

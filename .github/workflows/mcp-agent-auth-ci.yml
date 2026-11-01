@@ -122,7 +122,7 @@ jobs:
 
       - name: バックエンドの依存を導入
         working-directory: 03_Implement/backend
-        run: python -m pip install -e '.[test]'
+        run: python -m pip install -e '.[test,postgres]'
 
       - name: RLS用のロールと既定権限を作る
         env:
