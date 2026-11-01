@@ -40,6 +40,64 @@ const ALLOWED_INTENT_FIELDS = [
   "expectedReviewLogSequence",
 ] as const;
 
+const INTENT_KINDS = new Set(["review-event", "classification-change", "review-request"]);
+const INTENT_OPERATIONS = new Set(["confirm", "reject", "withdraw"]);
+const TARGET_BINDINGS = new Set([
+  "not-required",
+  "exact",
+  "reanchored",
+  "ambiguous",
+  "detached",
+]);
+const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/;
+
+function isValidIntent(intent: Record<string, unknown>): boolean {
+  if (typeof intent.assertionId !== "string" || intent.assertionId.trim().length === 0) {
+    return false;
+  }
+  if (intent.source !== undefined && intent.source !== "human-ui") {
+    return false;
+  }
+  if (intent.kind !== undefined && !INTENT_KINDS.has(intent.kind as string)) {
+    return false;
+  }
+  if (intent.operation !== undefined && !INTENT_OPERATIONS.has(intent.operation as string)) {
+    return false;
+  }
+  if (intent.statementKind !== undefined && intent.statementKind !== "hypothesis") {
+    return false;
+  }
+  if (
+    intent.expectedMeaningFingerprint !== undefined
+    && !SHA256_PATTERN.test(String(intent.expectedMeaningFingerprint))
+  ) {
+    return false;
+  }
+  if (
+    intent.expectedReviewSubjectFingerprint !== undefined
+    && !SHA256_PATTERN.test(String(intent.expectedReviewSubjectFingerprint))
+  ) {
+    return false;
+  }
+  if (
+    intent.expectedTargetBinding !== undefined
+    && !TARGET_BINDINGS.has(intent.expectedTargetBinding as string)
+  ) {
+    return false;
+  }
+  if (
+    intent.expectedReviewLogSequence !== undefined
+    && (
+      typeof intent.expectedReviewLogSequence !== "number"
+      || !Number.isInteger(intent.expectedReviewLogSequence)
+      || intent.expectedReviewLogSequence < 0
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function sanitizeEntry(value: unknown): EpistemicOutboxEntry | null {
   if (!isRecord(value)) {
     return null;
@@ -51,7 +109,7 @@ function sanitizeEntry(value: unknown): EpistemicOutboxEntry | null {
   if (typeof recordedAt !== "string" || recordedAt.trim().length === 0) {
     return null;
   }
-  if (!isRecord(intent) || typeof intent.assertionId !== "string") {
+  if (!isRecord(intent) || !isValidIntent(intent)) {
     return null;
   }
   const sanitizedIntent: Record<string, unknown> = {};

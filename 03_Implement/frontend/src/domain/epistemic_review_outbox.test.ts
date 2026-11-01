@@ -84,6 +84,22 @@ describe("epistemic review outbox", () => {
     expect(loaded.intent).not.toHaveProperty("narrative");
   });
 
+  it("rejects tampered intent bindings instead of storing them", () => {
+    const base = entry("a1");
+
+    for (const intent of [
+      { ...base.intent, expectedMeaningFingerprint: "not-a-fingerprint" },
+      { ...base.intent, kind: "unknown-kind" },
+      { ...base.intent, operation: "delete" },
+      { ...base.intent, expectedReviewLogSequence: -1 },
+      { ...base.intent, expectedTargetBinding: "elsewhere" },
+    ]) {
+      const storage = memoryStorage();
+      appendEpistemicOutbox({ ...base, intent }, storage);
+      expect(loadEpistemicOutbox(storage)).toEqual([]);
+    }
+  });
+
   it("clears the outbox and tolerates unavailable storage", () => {
     const storage = memoryStorage();
     appendEpistemicOutbox(entry("a1"), storage);
