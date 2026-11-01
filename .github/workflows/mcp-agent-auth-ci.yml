@@ -130,6 +130,7 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U postgres -d sui_rls -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE migration_owner LOGIN PASSWORD 'migration_owner';
+          ALTER ROLE migration_owner BYPASSRLS;
           CREATE ROLE sui_runtime LOGIN PASSWORD 'sui_runtime';
           GRANT ALL PRIVILEGES ON DATABASE sui_rls TO migration_owner;
           GRANT CREATE, USAGE ON SCHEMA public TO migration_owner;
