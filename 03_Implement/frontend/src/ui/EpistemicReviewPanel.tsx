@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 
 import { t } from "../i18n/translate";
+import {
+  appendEpistemicOutbox,
+  clearEpistemicOutbox,
+  loadEpistemicOutbox,
+} from "../domain/epistemic_review_outbox";
 import { EpistemicHealthAlert } from "./EpistemicHealthAlert";
 import { EpistemicReviewStatus } from "./EpistemicReviewStatus";
 import {
@@ -41,6 +46,7 @@ export function EpistemicReviewPanel({
   const [inspectionText, setInspectionText] = useState("");
   const [bulkPreview, setBulkPreview] = useState("");
   const [actionError, setActionError] = useState("");
+  const [outboxCount, setOutboxCount] = useState(() => loadEpistemicOutbox().length);
 
   const canLoad = Boolean(docId) && !busy;
 
@@ -74,6 +80,11 @@ export function EpistemicReviewPanel({
     } finally {
       setBusy(false);
     }
+  }
+
+  function clearOutbox() {
+    clearEpistemicOutbox();
+    setOutboxCount(0);
   }
 
   function previewBulkConfirm() {
@@ -112,6 +123,15 @@ export function EpistemicReviewPanel({
         return;
       }
       setIntentText(JSON.stringify(intent, null, 2));
+      if (docId) {
+        setOutboxCount(
+          appendEpistemicOutbox({
+            docId,
+            recordedAt: new Date().toISOString(),
+            intent: intent as Record<string, unknown>,
+          }).length,
+        );
+      }
     } catch (intentError) {
       setIntentText("");
       setActionError(
@@ -239,6 +259,19 @@ export function EpistemicReviewPanel({
             {inspectionText}
           </pre>
         </>
+      ) : null}
+      {outboxCount > 0 ? (
+        <div style={{ marginTop: 8 }}>
+          <p data-testid="epistemic-outbox-count" style={{ fontSize: 10, color: "#475569", margin: 0 }}>
+            {t("epistemic.panel.outbox_count", { count: outboxCount })}
+          </p>
+          <button type="button" onClick={clearOutbox} style={{ fontSize: 10, marginTop: 2 }}>
+            {t("epistemic.panel.outbox_clear")}
+          </button>
+          <p style={{ fontSize: 10, color: "#94a3b8", margin: "2px 0 0" }}>
+            {t("epistemic.panel.outbox_note")}
+          </p>
+        </div>
       ) : null}
       <p style={{ fontSize: 10, color: "#94a3b8", margin: "6px 0 0" }}>
         {t("epistemic.panel.read_only")}

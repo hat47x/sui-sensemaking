@@ -110,6 +110,9 @@ test("the SidePanel can load and display the tenant TEI epistemic projection", a
   await expect(intent).toBeVisible();
   await expect(intent).toContainText('"operation": "confirm"');
   await expect(intent).toContainText('"assertionId": "a1"');
+  await expect(panel.getByTestId("epistemic-outbox-count")).toContainText(
+    "1 intent(s) held on this device",
+  );
 
   await panel.getByRole("button", { name: "Bulk confirm preview", exact: true }).click();
   const bulk = panel.getByTestId("epistemic-bulk-preview");
