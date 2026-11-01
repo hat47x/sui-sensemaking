@@ -190,6 +190,18 @@ try {
   );
   const safe = await projection(client, "doc-granted", true);
   check(!safe.isError && !safe.text.includes("E2E-REVIEWED-TEXT"), "safeMode=true ではカード本文が返らない");
+  const safeParsed = JSON.parse(safe.text) as {
+    baseDocSignature?: string;
+    cards?: Array<{ digest?: { alg?: string; value?: string } | null }>;
+  };
+  check(
+    safeParsed.baseDocSignature === parsed.baseDocSignature,
+    "safeMode=true でも baseDocSignature は同じ",
+  );
+  check(
+    (safeParsed.cards ?? []).every((card) => card.digest === null),
+    "safeMode=true ではカードのdigestがnullになる",
+  );
   const repeat = await projection(client, "doc-granted", false);
   check(
     (JSON.parse(repeat.text) as { bundleHash?: string }).bundleHash === parsed.bundleHash,

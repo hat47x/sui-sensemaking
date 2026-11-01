@@ -56,6 +56,7 @@ sui-sensemakingでは、既定でAI機能と外部連携を無効にしていま
 | インポートと書き出し、比較結果の再現性を理解する | [正規化と決定論](canonicalization.md) |
 | Copilotなどの定額課金型AIエージェントとの依頼・応答を取り込む | [外部エージェント連携ワークフロー](external_agent_workflow.md) |
 | 生成AIエージェントに文書の情報を読み取り専用で渡す（MCP） | [生成AIエージェントをMCPで接続する](mcp_agent_connection.md) |
+| TAIから接続し、レビュー済み投影の版を固定して再観測する | [TAI接続spikeの手順](tai_agent_connection.md) |
 
 ## 困ったとき
 
