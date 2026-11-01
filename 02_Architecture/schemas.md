@@ -354,6 +354,21 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - `holdState` は投影に露出する項目だが、`bundleHash` の入力には含まれない。同じ `updatedAt` のまま `holdState` だけが変わっても値は変わらない。通常は保存で `updatedAt` が進むため検出できるが、`bundleHash` 単独の保証ではない。
 - 内容だけの版固定には、`cards[].digest` と `islands[].digest`（§1.3）を使う。`updatedAt` にも `holdState` にも依存しない。
 - 版固定には `baseDocSignature`（`<docId>:<updatedAt>`、版を含む）を使う。`ViewMetadataV1` の `docSignature`（§8.1）は別の項目で、文書のidだけ（idがなければ `title-<hash>`、文書がなければ `"unknown"`）を持ち、`updatedAt` を含まない。したがって `docSignature` は版固定には使えない。外部の記録で版を固定するときは、`docSignature` ではなく `baseDocSignature` と書く。
+- `bundleHash` の入力は、次のcanonical JSON（キーをUTF-16コード単位順に並べ、区切りに空白を入れない）のsha256である。`cards` は投影に含まれたカードだけを持ち、`claimType` は未指定なら `null`、伏せた本文は `null` にする。`islands` は `id` と `title` だけを持ち、未レビューの題名は `(未レビュー)` にする。`voids` の `cardIds` はレビュー済みのidだけを残し、空なら項目自体を省く。`narrativeChecks` の `issueDirections` は `direction` がある issue だけを並べる。
+
+```json
+{"baseDocSignature":"doc-vector-1:2026-08-01T00:00:00.000Z","cards":[{"claimType":"claim","id":"c1","redacted":false,"reviewed":true,"text":"日本語の本文\n二行目 \"quote\""},{"claimType":null,"id":"c3","redacted":false,"reviewed":true,"text":"third"}],"constraint":"reviewed-only","contradictions":[],"counts":{"redacted":1,"reviewed":2,"unreviewed":1},"docId":"doc-vector-1","evidence":[],"islands":[{"id":"i1","title":"島の題名"},{"id":"i2","title":"(未レビュー)"}],"narrativeChecks":[{"counts":{"aMissingInB":1,"bMissingInA":2},"id":"chk1","issueDirections":["b_missing_in_a"]}],"relations":[{"from":"c1","to":"c3","type":"related"}],"safeMode":false,"schemaVersion":"context-projection.v1","voids":[{"cardIds":["c1"],"id":"v1","islandIds":["i1"],"kind":"unintegrated_card","resolved":false}]}
+```
+
+- 上の入力に対応する固定値は次のとおり。`updatedAt` の書式（`Z` と `+00:00`）が違えば、同じ内容でも値が変わる。テストは `context_bundle_projection.test.ts` の「bundleHash 固定値テストベクトル（#3298）」にある。
+
+| `updatedAt` | `safeMode` | `bundleHash` |
+|---|---|---|
+| `2026-08-01T00:00:00.000Z` | `false` | `644c8810751c4c4dcff3d1fad94dbd207f1b97fb92beccdcdb2fd26e6419b301` |
+| `2026-08-01T00:00:00.000Z` | `true` | `4da85435b23fd489e24c89e5c5266bf8c8f5f62004e2557fbca67291c2196ea0` |
+| `2026-08-01T00:00:00+00:00` | `false` | `c742c2105d5070cf39da8d7af2bd212799b43f1197c95e8eb6d4c5f39c92522d` |
+| `2026-08-01T00:00:00+00:00` | `true` | `738c618b092785d42165200e8f8f0c0da6d3b510a3d7b4be6294beddecab8879` |
+
 - 実装は `frontend/src/export/context_bundle_projection.ts`、条件は同じ階層の `context_bundle_projection.test.ts`（「bundleHash が変わる条件と変わらない条件」）で固定している。`updatedAt` を入力から外す、露出内容だけの値を別項目として足す、といった変更は、既存の `bundleHash` の値を変えるか契約を広げるため、ADRと `schemaVersion` の扱いを決めてから行う（未決）。
 
 ## 2. ID・座標系の前提

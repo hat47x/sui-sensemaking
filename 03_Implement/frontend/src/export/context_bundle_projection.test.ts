@@ -545,6 +545,114 @@ describe("computeItemDigest: 固定値テストベクトル（#3282）", () => {
   });
 });
 
+// #3298: bundleHash 自体の固定値テストベクトル。他言語が hashPayload を再計算できるよう、
+// 最小の DocumentV1 と constraint / safeMode / updatedAt の書式ごとの期待値を固定する。
+// 期待値は python の json.dumps(sort_keys=True, separators=(",", ":"), ensure_ascii=False) の
+// sha256 でも同じ値になることを確認している。
+function buildBundleHashVectorDoc(updatedAt: string): DocumentV1 {
+  return {
+    version: 1,
+    id: "doc-vector-1",
+    title: "bundle hash vector",
+    createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt,
+    transform: { panX: 0, panY: 0, zoom: 1 },
+    cards: [
+      { id: "c1", text: '日本語の本文\n二行目 "quote"', x: 0, y: 0, claimType: "claim", textReviewed: true },
+      { id: "c2", text: "未レビューの秘密", x: 100, y: 0, claimType: "unknown", textReviewed: false },
+      { id: "c3", text: "third", x: 200, y: 0, textReviewed: true },
+    ],
+    edges: [{ id: "e1", fromId: "c1", toId: "c3", type: "related" }],
+    islands: [
+      { id: "i1", cardIds: ["c1"], title: "島の題名", titleReviewed: true },
+      { id: "i2", cardIds: ["c2"], title: "未レビュー島", titleReviewed: false },
+    ],
+    readingOrder: ["c1", "c2", "c3"],
+    narratives: [
+      {
+        id: "n1",
+        title: "narrative",
+        text: "body",
+        reviewed: true,
+        checks: [
+          {
+            id: "chk1",
+            createdAt: "2026-08-01T00:00:00.000Z",
+            kind: "consistency",
+            counts: { bMissingInA: 2, aMissingInB: 1 },
+            issues: [
+              {
+                severity: "warn",
+                message: "missing counterpart",
+                direction: "b_missing_in_a",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    evidenceLinks: [
+      { id: "ev1", type: "supports", fromCardId: "c1", toCardId: "c3", createdAt: "2026-08-01T00:00:00.000Z" },
+      { id: "ev2", type: "contradicts", fromCardId: "c1", toCardId: "c2", createdAt: "2026-08-01T00:00:00.000Z" },
+    ],
+    voids: [
+      {
+        id: "v1",
+        kind: "unintegrated_card",
+        title: "void",
+        detail: "detail",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        resolved: false,
+        cardIds: ["c1", "c2"],
+        islandIds: ["i1"],
+      },
+    ],
+    mergeSuggestionDecisions: [],
+  };
+}
+
+describe("buildContextProjection: bundleHash 固定値テストベクトル（#3298）", () => {
+  const cases = [
+    {
+      updatedAt: "2026-08-01T00:00:00.000Z",
+      safeMode: false,
+      expected: "644c8810751c4c4dcff3d1fad94dbd207f1b97fb92beccdcdb2fd26e6419b301",
+    },
+    {
+      updatedAt: "2026-08-01T00:00:00.000Z",
+      safeMode: true,
+      expected: "4da85435b23fd489e24c89e5c5266bf8c8f5f62004e2557fbca67291c2196ea0",
+    },
+    {
+      updatedAt: "2026-08-01T00:00:00+00:00",
+      safeMode: false,
+      expected: "c742c2105d5070cf39da8d7af2bd212799b43f1197c95e8eb6d4c5f39c92522d",
+    },
+    {
+      updatedAt: "2026-08-01T00:00:00+00:00",
+      safeMode: true,
+      expected: "738c618b092785d42165200e8f8f0c0da6d3b510a3d7b4be6294beddecab8879",
+    },
+  ];
+
+  for (const vector of cases) {
+    it(`updatedAt=${vector.updatedAt} / safeMode=${vector.safeMode} の期待値`, async () => {
+      const projection = await buildContextProjection({
+        doc: buildBundleHashVectorDoc(vector.updatedAt),
+        constraint: "reviewed-only",
+        safeMode: vector.safeMode,
+      });
+
+      expect(projection.baseDocSignature).toBe(`doc-vector-1:${vector.updatedAt}`);
+      expect(projection.bundleHash).toBe(vector.expected);
+    });
+  }
+
+  it("updatedAt の書式が違えば、同じ内容でも bundleHash が変わる", () => {
+    expect(cases[0].expected).not.toBe(cases[2].expected);
+  });
+});
+
 // ADR-0103: 単位digest。露出した内容だけを入力にし、伏せた内容は入力にも出力にもしない。
 describe("buildContextProjection: per-item digest (ADR-0103)", () => {
   const project = (doc: DocumentV1, safeMode: boolean, constraint: ContextProjectionConstraint = "reviewed-only") =>
