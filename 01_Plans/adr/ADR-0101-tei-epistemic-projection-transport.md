@@ -4,7 +4,7 @@
 - Date: 2026-10-22
 - Deciders: Maintainer（本ADRは判断材料であり、transport の決定は Maintainer が行う）
 - Scope: `03_Implement/frontend/src/ui/epistemic_review_model.ts`、`03_Implement/frontend/src/ui/epistemic_projection_adapter.ts`、transport 接続経路（両案に共通の安全境界）
-- Related: `ADR-0089`（価値の正本）、`ADR-0090`（認知支援の候補層と段階昇格）、Issue #3184、SUI PR #3255、TEI #1055（access-aware detail resolver、merged）、TEI #1057（qualification、closed）
+- Related: `ADR-0089`（価値の正本）、`ADR-0090`（認知支援の候補層と段階昇格）、`ADR-0111`（外部認知インターフェースの上位課題）、Issue #3184、SUI PR #3255、TEI #1055（access-aware detail resolver、merged）、TEI #1057（qualification、closed）
 
 ## 価値への寄与
 

@@ -4,7 +4,7 @@
 - Date: 2026-11-01
 - Deciders: Maintainer（PoC優先の指示にもとづく再編成）
 - Scope: `01_Plans/adr/`、epistemic review、COGNITIVE-ASSOC-01、Issue #3346
-- Related: `ADR-0067`（三要素分析法）、`ADR-0089`（価値の正本）、`ADR-0101`（TEI transport）、`ADR-0109`（T8 retrieval-only）、Issue #3346
+- Related: `ADR-0067`（三要素分析法）、`ADR-0089`（価値の正本）、`ADR-0101`（TEI transport）、`ADR-0109`（T8 retrieval-only）、`ADR-0111`（外部認知インターフェースの上位課題）、Issue #3346
 
 ## 価値への寄与
 
