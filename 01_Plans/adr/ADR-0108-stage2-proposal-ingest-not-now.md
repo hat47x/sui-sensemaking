@@ -4,7 +4,7 @@
 - Date: 2026-11-01
 - Deciders: Maintainer（Issue #3271 の自律作業として決定）
 - Scope: MCPの読み取り専用境界、`02_Architecture/api.md`、`03_Implement/mcp/README.md`
-- Related: `ADR-0054`（外部接続層の段階導入）、`ADR-0093`（agent資格情報）、`ADR-0103`（単位digest）、Issue #3271、TAI Pleroma issue #67
+- Related: `ADR-0054`（外部接続層の段階導入）、`ADR-0093`（agent資格情報）、`ADR-0103`（単位digest）、`ADR-0111`（外部認知インターフェースの上位課題）、Issue #3271、TAI Pleroma issue #67
 
 ## 価値への寄与
 
