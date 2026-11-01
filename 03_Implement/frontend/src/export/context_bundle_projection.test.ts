@@ -92,6 +92,36 @@ describe("buildContextProjection: evidence vs contradiction scoping", () => {
     expect(projection.cards.map((card) => card.id).sort()).toEqual(["c2", "c4"]);
   });
 
+  it("does not expose narrative title or text, and their edits do not change bundleHash (ADR-0106)", async () => {
+    const doc = buildDoc();
+    doc.narratives = [
+      {
+        id: "n1",
+        title: "INTERNAL-NARRATIVE-TITLE",
+        text: "INTERNAL-NARRATIVE-BODY",
+        reviewed: true,
+        checks: [
+          {
+            id: "chk1",
+            createdAt: "2026-08-01T00:00:00.000Z",
+            kind: "consistency",
+            counts: { bMissingInA: 2, aMissingInB: 1 },
+            issues: [],
+          },
+        ],
+      },
+    ];
+    const first = await buildContextProjection({ doc, constraint: "summary", safeMode: false });
+    expect(JSON.stringify(first)).not.toContain("INTERNAL-NARRATIVE");
+    expect(first.narrativeChecks).toEqual([
+      { id: "chk1", counts: { bMissingInA: 2, aMissingInB: 1 }, issueDirections: [] },
+    ]);
+
+    doc.narratives[0] = { ...doc.narratives[0], title: "CHANGED-TITLE", text: "CHANGED-BODY" };
+    const second = await buildContextProjection({ doc, constraint: "summary", safeMode: false });
+    expect(second.bundleHash).toBe(first.bundleHash);
+  });
+
   it("does not expose Card.meta or source, and meta changes do not change bundleHash (ADR-0105)", async () => {
     const doc = buildDoc();
     const base = await buildContextProjection({ doc, constraint: "reviewed-only", safeMode: false });
