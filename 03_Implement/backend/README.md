@@ -379,3 +379,32 @@ tests/scripts/run_auth_level2.sh
 - `fallback_to_none`
 
 これらは `extra={...}` で渡され、`SUI_LOG_JSON=true`（既定）のときは、JSONの1行として出力されます。OPS-OBSERV-01より前はログの設定がなく、`logging.Formatter` の既定の書式は `extra` を出力しないため、**上記の項目は実際には出力されていませんでした**。出力レベルは `SUI_LOG_LEVEL` で変更できます。すべてのリクエストには `X-Request-Id` が付き、ログ行の `requestId` フィールドと突き合わせられます。
+
+## テストとCIの分担
+
+PRのCI（`.github/workflows/unit-verification-ci.yml`）は、契約ドリフトと、安全不変条件に直接関係するテストだけを実行します。対象は、SafeMode、リクエスト本文の保護、agent資格情報、監査、提案の人間判断、LLM入力IRです。
+
+選ばれなかったテストは、`.github/workflows/backend-full-nightly.yml` が毎日まとめて実行します。PRのCI時間を抑えつつ、全件の後退を翌日までに検出するための分担です。
+
+```bash
+# PRのCIと同じ安全系サブセット
+python scripts/check_contract_drift.py
+python -m pytest -q \
+  tests/test_ts_python_contract_drift.py \
+  tests/test_critique_history_model.py \
+  tests/test_ai_safemode.py \
+  tests/test_request_body_safety.py \
+  tests/test_context_bundle_routes.py \
+  tests/test_agent_credential_http.py \
+  tests/test_docs_access_control_integration.py \
+  tests/test_docs_tenant_isolation_surfaces.py \
+  tests/test_audit.py \
+  tests/test_docs_audit_integration.py \
+  tests/test_ce2_proposal_api.py \
+  tests/test_llm_input_ir.py \
+  tests/test_external_agent_proposal_api.py \
+  tests/test_reviewer_ref_resolver.py
+
+# 全件（定期実行と同じ）
+python -m pytest -q
+```
