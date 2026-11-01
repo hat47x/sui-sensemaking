@@ -30,6 +30,7 @@ from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.models import Base, DocumentRow, TenantRow
 from sui_sensemaking_api.routes.ai import router as ai_router
 from sui_sensemaking_api.routes.docs import router as docs_router
+from sui_sensemaking_api.routes.tei_epistemic import router as tei_epistemic_router
 
 TIMESTAMP = "2026-10-09T00:00:00+00:00"
 HASH_KEY = b"agent-credential-test-key-0123456789"
@@ -202,6 +203,7 @@ def env(tmp_path) -> Iterator[dict]:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(docs_router)
     app.include_router(ai_router)
+    app.include_router(tei_epistemic_router)
     spy = SpyDispatcher()
     app.state.agent_credential_hash_key = HASH_KEY
     app.state.access_control_adapter = None
