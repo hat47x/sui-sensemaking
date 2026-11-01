@@ -942,13 +942,13 @@ ADR-0101は、TEI Assessmentを外部の信頼境界を越えさせないため�
 - 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}` を返す。応答は `Cache-Control: no-store`。読み取り専用であり、TEI AssessmentをDocument / Canonical stateへ埋め込まない。
 - テナント業務面への公開は未決である。テナント境界に沿う公開や、利用者ごとの紐付けを設ける場合は、別の判断材料（ADR）で扱う。
 
-### 2.17 TEI epistemic projection（テナント業務面、provisional 案B, ADR-0102）
+### 2.17 TEI epistemic projection（テナント業務面、案B、ADR-0102 採択済み）
 
-ADR-0102 は未決だが、provisional として案B（文書単位の紐付けを管理面で登録し、テナント業務面の読み取り endpoint で提供する）を実装した。紐付けは `SUI_TEI_REFERENCE_DIR` 内の `epistemic-bindings.json` に運用者が記録する。endpoint はテナント認証・文書認可を通し、fail closed を維持する。
+ADR-0102 は案B（文書単位の紐付けを管理面で登録し、テナント業務面の読み取り endpoint で提供する）を採択した。紐付けは `SUI_TEI_REFERENCE_DIR` 内の `epistemic-bindings.json` に運用者が記録する。endpoint はテナント認証・文書認可を通し、fail closed を維持する。
 
 **GET** `/docs/{doc_id}/epistemic/projection`
 
-- 認可: `GET /docs/{doc_id}` と同じ `_authorize_request`（テナント認証、ゲストセッション、agent credential、access control adapter、policy binding、anti-enumeration）。agent credential は `_AGENT_ALLOWED_ROUTES` に含まれないため `403 agent_route_not_enabled` で閉じる。
+- 認可: `GET /docs/{doc_id}` と同じ `_authorize_request`（テナント認証、ゲストセッション、agent credential、access control adapter、policy binding、anti-enumeration）。agent credential は `_AGENT_ALLOWED_ROUTES` に含まれないため `403 agent_route_not_enabled` で閉じる。ゲストセッションは、その文書の読み取りが許可されている場合だけ返す。ゲスト専用の追加許可はない。
 - `SUI_TEI_REFERENCE_DIR` 未設定: `503 {"code": "tei_reference_unconfigured"}`。
 - 紐付けが無い（registry 不在、または (tenant, doc) に一致する登録なし）: `404 {"code": "epistemic_binding_not_found"}`。registry が壊れている・曖昧（重複）・未知の bound artifact kind も fail closed（registry 壊れは 503、それ以外は 404）。
 - artifact は、紐付けた (tenant, doc) ごとのディレクトリ `SUI_TEI_REFERENCE_DIR/tenants/<tenantId>/<docId>/<artifactKind>.json` からだけ読む。ディレクトリ直下の運用者向けコーパス（`/admin/tei-epistemic` が返すもの）は、業務面では返さない。これにより、紐付けを通して別のテナントや別の文書のために作った artifact を返すことはない。tenantId と docId が安全な一つのパス要素（英数字で始まり、英数字・`.`・`_`・`-` だけ、128文字以内、`..` を含まない）でない場合も fail closed する。

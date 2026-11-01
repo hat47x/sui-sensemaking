@@ -4,9 +4,10 @@ ADR-0102 decided to expose TEI epistemic projection on the tenant business
 plane through per-document bindings recorded by the operator. This route
 implements that decision with the smallest reversible surface:
 
-- authorization mirrors `GET /docs/{doc_id}` (`_authorize_request`): tenant
-  session, guest session, agent credential, access-control adapter, policy
-  binding, anti-enumeration.
+- authorization reuses `_authorize_request`: tenant session, guest session,
+  access-control adapter, policy binding, anti-enumeration. Agent credentials
+  are not in `_AGENT_ALLOWED_ROUTES`, so they get
+  `403 agent_route_not_enabled`.
 - the binding registry and the artifact are read through the fail-closed local
   I/O transport (ADR-0101 Option A). No artifact content is ever returned on
   a failure.
@@ -62,6 +63,17 @@ def get_document_epistemic_projection(
         safe_mode=True,
         read_only=True,
     )
+    if access_request.auth.provider == "agent_credential":
+        # #3296 / ADR-0093追記: keep this route closed to agent credentials even
+        # if a future change to _AGENT_ALLOWED_ROUTES would otherwise reach the
+        # binding lookup. The response must not reveal whether a binding exists.
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "agent_route_not_enabled",
+                "message": "This route is not available to agent credentials.",
+            },
+        )
 
     binding = read_tei_epistemic_binding(
         settings.tei_reference_dir, tenant.tenant_id, doc_id

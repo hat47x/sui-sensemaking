@@ -30,6 +30,7 @@ from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.models import Base, DocumentRow, TenantRow
 from sui_sensemaking_api.routes.ai import router as ai_router
 from sui_sensemaking_api.routes.docs import router as docs_router
+from sui_sensemaking_api.routes.tei_epistemic import router as tei_epistemic_router
 
 TIMESTAMP = "2026-10-09T00:00:00+00:00"
 HASH_KEY = b"agent-credential-test-key-0123456789"
@@ -202,6 +203,7 @@ def env(tmp_path) -> Iterator[dict]:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(docs_router)
     app.include_router(ai_router)
+    app.include_router(tei_epistemic_router)
     spy = SpyDispatcher()
     app.state.agent_credential_hash_key = HASH_KEY
     app.state.access_control_adapter = None
@@ -356,9 +358,10 @@ def test_derived_read_routes_stay_closed_to_agents(env) -> None:
         client.get("/docs/shared-doc/merge-decision-logs/by-group/group-1", headers=headers),
         client.get("/docs/shared-doc/merge-decision-logs/restore/v1", headers=headers),
         client.get("/docs/shared-doc/similar-candidate-groups", headers=headers),
+        client.get("/docs/shared-doc/epistemic/projection", headers=headers),
     ]
 
-    assert [r.status_code for r in closed] == [403, 403, 403]
+    assert [r.status_code for r in closed] == [403, 403, 403, 403]
     assert {r.json()["detail"]["code"] for r in closed} == {"agent_route_not_enabled"}
 
 

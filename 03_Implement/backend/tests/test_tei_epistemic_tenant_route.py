@@ -1,4 +1,4 @@
-"""Tenant-plane TEI epistemic projection endpoint (provisional 案B, ADR-0102).
+"""Tenant-plane TEI epistemic projection endpoint (案B, ADR-0102 採択済み).
 
 The endpoint reuses the document read authorization path and the fail-closed
 local-I/O transport. It never returns artifact content on a failure and never
@@ -10,17 +10,20 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
+from sui_sensemaking_api.access_control import AccessDecision
 from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.main import app
-from sui_sensemaking_api.models import Base
+from sui_sensemaking_api.models import Base, DocumentRow, TenantRow
 from sui_sensemaking_api.settings import settings
+from sui_sensemaking_api.tenant_context import TenantContext
 
 _BASE = "/docs/{doc_id}/epistemic/projection"
 
@@ -90,6 +93,73 @@ _ASSESSMENT = {
     "schema": "tei.reference.epistemic-assessment/v0",
     "assessments": [],
 }
+
+
+@dataclass
+class _MutableTenantResolver:
+    tenant_id: str
+
+    def resolve(self, *, db: Session, user_id: str | None, claim: object = None) -> TenantContext:  # noqa: ARG002
+        return TenantContext(
+            tenant_id=self.tenant_id,
+            membership_id=f"membership-{self.tenant_id}",
+            resolved_by="verified_claim",
+        )
+
+
+class _AllowAllAdapter:
+    name = "allow-all"
+
+    def authorize(self, request):  # noqa: ANN001, ARG002
+        return AccessDecision(allow=True)
+
+
+@contextmanager
+def _tenant_client(tmp_path: Path) -> Iterator[tuple[TestClient, _MutableTenantResolver]]:
+    engine = create_engine(f"sqlite:///{tmp_path}/tei-tenant-isolation.sqlite3")
+    session_local = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    Base.metadata.create_all(bind=engine)
+
+    with session_local() as db:
+        for tenant_id in ("tenant-a", "tenant-b"):
+            db.add(
+                TenantRow(
+                    id=tenant_id,
+                    display_name=tenant_id,
+                    lifecycle_state="active",
+                    created_at="2026-02-11T00:00:00Z",
+                    updated_at="2026-02-11T00:00:00Z",
+                )
+            )
+            db.add(
+                DocumentRow(
+                    tenant_id=tenant_id,
+                    id="doc-1",
+                    version=1,
+                    updated_at="2026-02-11T00:00:00Z",
+                    payload_json=json.dumps(_sample_payload("doc-1")),
+                )
+            )
+        db.commit()
+
+    def _get_test_db():
+        db = session_local()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    resolver = _MutableTenantResolver(tenant_id="tenant-a")
+    app.dependency_overrides[get_db] = _get_test_db
+    try:
+        with TestClient(app) as client:
+            client.app.state.tenant_context_resolver = resolver
+            client.app.state.access_control_adapter = _AllowAllAdapter()
+            yield client, resolver
+    finally:
+        app.dependency_overrides.clear()
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
 
 
 @pytest.fixture(autouse=True)
@@ -213,6 +283,25 @@ def test_operator_corpus_artifact_is_not_served_to_the_tenant_plane(tmp_path: Pa
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "tei_reference_unavailable"
     assert "artifact" not in response.json()
+
+
+def test_binding_of_another_tenant_is_not_served(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    artifacts = _artifacts_dir(tmp_path)
+    monkeypatch.setattr(settings, "tei_reference_dir", str(artifacts))
+    _write_bound_artifact(artifacts, "tenant-a", "doc-1", "epistemic-assessment.json", _ASSESSMENT)
+    _write_bindings(
+        artifacts,
+        [{"tenantId": "tenant-a", "docId": "doc-1", "artifactKind": "epistemic-assessment"}],
+    )
+    with _tenant_client(tmp_path) as (client, resolver):
+        resolver.tenant_id = "tenant-a"
+        own = client.get("/docs/doc-1/epistemic/projection")
+        resolver.tenant_id = "tenant-b"
+        other = client.get("/docs/doc-1/epistemic/projection")
+
+    assert own.status_code == 200
+    assert other.status_code == 404
+    assert other.json()["detail"]["code"] == "epistemic_binding_not_found"
 
 
 def test_artifact_bound_to_another_tenant_or_document_is_not_served(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -405,7 +405,8 @@ python -m pytest -q \
   tests/test_llm_input_ir.py \
   tests/test_external_agent_proposal_api.py \
   tests/test_reviewer_ref_resolver.py \
-  tests/test_settings_env_prefix_migration.py
+  tests/test_settings_env_prefix_migration.py \
+  tests/test_tei_epistemic_tenant_route.py
 
 # 全件（定期実行と同じ）
 python -m pytest -q
