@@ -236,7 +236,7 @@ def test_same_doc_id_resolves_only_inside_the_credentials_tenant(env) -> None:
 
     # 文書の題名は agent へ返さない。同じ docId でも、tenant ごとの内容で区別する。
     assert a.json()["title"] is None and b.json()["title"] is None
-    assert len(a.json()["cards"]) == 3
+    assert {card["id"] for card in a.json()["cards"]} == {"c-reviewed"}
     assert b.json()["cards"] == []
     assert a_to_b_only.status_code == 404
     assert b_to_a_only.status_code == 404
