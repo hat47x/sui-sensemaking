@@ -260,6 +260,7 @@ export type HilRsDocSyncCheckV1 = {
 4. `sha256(canonical_json)` を16進小文字で出力し `bundleHash` とする。
 5. `ContextQuery` も同一規則で正規化し、`queryCanonicalHash` を算出する。
 6. 検証の判定は `sameQuery && sameBundle`（`queryCanonicalHash` 一致かつ `bundleHash` 一致）を必須とし、`sameQuery && !sameBundle` は安全側で拒否する。
+   - この `bundleHash` はCE-1の `POST /context/bundle` 専用である。MCP投影（§1.4）の `bundleHash` とは入力も実装言語も異なり、値は一致しない。二つを同じ欄で比較・照合しない。監査eventで `channel=mcp` のときは、`bundleHash` に投影の値が入る（`api.md` §2.4）。
 7. 検証の自己修復は最大3回までとし、4回目相当は停止する（推測継続禁止）。
 
 #### CE2-LOW-RISK-AI-ASSIST
@@ -341,6 +342,8 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - 内容の真実性、著者、レビューの証跡は保証しない。`DocumentV1` には保存せず、バックエンドの契約・`test_ts_python_contract_drift.py` の対象型には影響しない。
 
 ### 1.4 context-projection.v1 の `bundleHash` と `baseDocSignature`（#3280）
+
+この節の `bundleHash` は、MCPの読み取り専用投影（`context-projection.v1`）専用である。CE-1の `POST /context/bundle` が返す `bundleHash`（§CE1）とは、入力・実装言語・値がすべて別である。混同を避けるため、外部の記録では「投影の `bundleHash`」と明記する。両者を同じ欄で比較・照合しない。
 
 `bundleHash` は、投影に露出した内容だけの版ではなく、文書の版を含む値である。内容だけで版固定するときは、§1.3 の単位digestを使う。
 

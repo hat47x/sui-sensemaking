@@ -132,8 +132,8 @@ Document本体の標準CRUDとは別に、共有・コンテキスト操作の�
 - リクエストボディ
   - `operation: "query" | "bundle" | "proposal" | "apply"`
   - `safeMode: boolean`
-  - `equivalenceKey: <64hex>`
-  - `bundleHash: <64hex>`
+  - `equivalenceKey: <64hex>`（`channel=mcp` ではMCPの `queryCanonicalHash`。CE-1の `queryCanonicalHash` とは別の定義）
+  - `bundleHash: <64hex>`（`channel=mcp` では投影の `bundleHash`。CE-1の `bundleHash` とは別の定義で、値は一致しない）
   - `sourceBundleHash?: <64hex> | mock:<64hex>`
   - `queryHash?: string`
   - `dryRun: boolean`
