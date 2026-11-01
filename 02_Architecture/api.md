@@ -608,7 +608,9 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 **GET** `/ai/proposals/status`
 
 - 文書ごとのCE4読み取り専用proposalライフサイクル状態を返す。クエリ: `docId`（テナント単位の事前条件必須）。
-- レスポンス: `ProposalStatusResponse`（`proposalId`・`proposalKind`・`origin`・各proposalの判定状態など）。
+- レスポンス: `ProposalStatusResponse.proposals[]` は、`proposalId`、`proposalKind`、`origin`（`internal` / `external_agent`）、`status`（`proposed` / `accepted` / `rejected` / `held`）、`sourceBundleHash`、`createdAt`、`decidedAt` を持つ。
+- `sourceBundleHash` は、提案を生成したときのCE-1の文脈バンドルのハッシュである。`status=accepted` などは、その生成時点のバンドルに対する人間の判断を表し、現在の文書の内容への受理を意味しない。文書が編集された後に古い判断が残っていても、現在の版への受理として読まない。現在の版は、`GET /docs/{doc_id}` の `updatedAt` と `baseDocSignature` で別に確認する（#3311）。
+- `decidedAt` は、最後に判断を記録した時刻である。`held` から `accepted` / `rejected` へ進めた場合は、その最後の判断時刻になる。`proposed` のときは `null`。
 - 生成AI（MCP/API経由）が、proposalが依然提案のみか、人間が判定済み（accepted/rejected/held）かを検証するための追跡手段。読み取り専用契約（`action="read"`）で、proposalや判定を一切書き込まない。
 
 **POST** `/ai/external-tasks/register`

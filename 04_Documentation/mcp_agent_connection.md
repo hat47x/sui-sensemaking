@@ -28,6 +28,7 @@
 `get_proposal_status`で読めるものは次のとおりです。
 
 - 文書のAI提案ごとに、`proposalId`、`proposalKind`、`origin`、`status`（`proposed`、`accepted`、`rejected`、`held`）、`sourceBundleHash`、作成日時、決定日時。
+- `sourceBundleHash` は提案の生成時点の文脈バンドルのハッシュです。`accepted` などは、その生成時点のバンドルに対する人間の判断であり、現在の文書の内容への受理を意味しません。文書が編集された後に古い判断が残っていても、現在の版への受理として読まないでください。現在の版は、`GET /docs/{doc_id}` の `updatedAt` と `baseDocSignature` で別に確認します。`decidedAt` は最後に判断を記録した時刻です（#3311）。
 
 ## エージェントが読めないもの
 
