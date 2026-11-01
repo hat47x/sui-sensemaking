@@ -41,7 +41,8 @@ V3「レビュー」とV4「共有と学習」に寄与する。外部のAI、TE
 |---|---|---|---|---|
 | 読み取り投影 | 外部 → SUIの投影を読む | MCPの2ツール、TEI投影の表示 | なし | レビュー済みだけ。未レビューは件数のみ。 |
 | handoff | 外部の意味状態 → SUIのoutbox | TEI intentのoutbox | なし（SUIの確認済みにしない） | 識別子とfingerprintだけ。本文を保存しない。 |
-| 提案ingest | 外部 → SUIの提案 | 未実装（`ADR-0108`） | 提案のみ。自動適用しない | 受信面の認可、監査、undoを新しいADRで決める。 |
+| 提案ingest（メタデータ） | 外部 → SUIの提案登録 | 実装済み（`/ai/external-proposals/register`、content-free） | 提案のみ。自動適用しない | 本文を保存しない。認可・監査・undoは`ADR-0112`。 |
+| 提案ingest（本文） | 外部 → SUIの提案本文 | 未実装 | 提案のみ。自動適用しない | 保存先、保持期間、SafeMode、監査を新しいADRで決める。 |
 | 送信（LLM provider） | SUI → 外部LLM | 実装済み（LLM入力IR、`ADR-0069`） | 提案生成のみ | 入力IRで構造を制御する。SafeModeと`SUI_LLM_PROVIDER=none`でも主要価値が成立する。 |
 | 送信（TEI） | SUI → 外部TEI | 未実装 | なし | 送信先、認証、監査、再送を新しいADRで決める。 |
 
