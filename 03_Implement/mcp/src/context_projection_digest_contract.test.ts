@@ -16,6 +16,7 @@ const fixture = JSON.parse(
 
 type Digest = { alg: string; value: string } | null;
 type Projection = {
+  baseDocSignature: string;
   bundleHash: string;
   safeMode: boolean;
   cards: Array<{ id: string; text: string; redacted: boolean; digest: Digest }>;
@@ -65,6 +66,25 @@ describe("MCPツール出力のdigest（ADR-0103）", () => {
       expect(card.redacted).toBe(true);
       expect(card.digest).toBeNull();
     }
+  });
+
+  it("agent viewでもreviewedカードのdigestとbaseDocSignatureが揃う", async () => {
+    const p = await callProjection(fixture.agentView, { safeMode: false });
+
+    expect(p.baseDocSignature).toBe("doc_agent_contract:2026-10-29T00:00:00+00:00");
+    expect(p.cards.map((card) => card.id)).toEqual(["c1", "c2"]);
+    for (const card of p.cards) {
+      expect(card.redacted).toBe(false);
+      expect(card.digest).toMatchObject({
+        alg: "sha256",
+        value: expect.stringMatching(/^[0-9a-f]{64}$/),
+      });
+    }
+    expect(p.islands.find((island) => island.id === "i-reviewed")?.digest).toMatchObject({
+      alg: "sha256",
+    });
+    expect(p.cards.map((card) => card.id)).not.toContain("c3");
+    expect(JSON.stringify(p)).not.toContain("SECRET-UNREVIEWED");
   });
 
   it("島のdigestは、レビュー済みの題名にだけ付き、SafeModeに依存しない", async () => {
