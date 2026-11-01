@@ -113,7 +113,7 @@ flowchart LR
 | handoff（outbox） | `epistemic_review_outbox.test.ts` の allowlist・型検証テスト | カード本文・ナラティブを保存せず、改ざんされたbindingを拒否する |
 | handoff（パネル） | `epistemic_review_panel.spec.ts` | intentを保存せず、`human_reviewed`へ書き込まない |
 | 読み取り投影（tenant） | `test_binding_of_another_tenant_is_not_served` | 他テナントのartifactを返さない |
-| 認知支援（retrieval-only） | `affinity_candidates.test.ts`、`RelatedCandidatesPanel.test.ts` | 決定論的で、関係や統合を自動適用しない |
+| 認知支援（retrieval-only） | `affinity_candidates.test.ts`、`RelatedCandidatesPanel.test.ts` | 決定論的で、関係や統合を自動適用しない。read-onlyでは未レビュー候補を除外する |
 | 送信（未実装） | `test_projection_has_no_write_or_send_route` | 書込み・送信routeを開かない |
 
 ### 9. TEI送信に進む条件

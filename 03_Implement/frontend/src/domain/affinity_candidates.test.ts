@@ -59,6 +59,18 @@ describe("rankAffinityCandidates", () => {
     expect(candidate.score).toBe(0.3);
   });
 
+  it("excludes unreviewed candidates in read-only contexts", () => {
+    const doc = documentWith([
+      card("focus", "alpha beta", { textReviewed: true }),
+      card("reviewed", "alpha beta", { textReviewed: true }),
+      card("draft", "alpha beta", { textReviewed: false }),
+    ]);
+
+    const ranked = rankAffinityCandidates(doc, "focus", { reviewedOnly: true });
+
+    expect(ranked.map((candidate) => candidate.cardId)).toEqual(["reviewed"]);
+  });
+
   it("is deterministic for equal scores and respects the limit", () => {
     const doc = documentWith([
       card("focus", "alpha"),

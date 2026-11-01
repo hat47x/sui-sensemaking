@@ -14,6 +14,8 @@ export type AffinityCandidate = {
 export type RankAffinityOptions = {
   limit?: number;
   minScore?: number;
+  /** Read-only/shared contexts must not surface unreviewed candidate text. */
+  reviewedOnly?: boolean;
 };
 
 const DEFAULT_LIMIT = 5;
@@ -132,6 +134,7 @@ export function rankAffinityCandidates(
   }
   const limit = Math.max(1, Math.min(20, options.limit ?? DEFAULT_LIMIT));
   const minScore = Math.max(0, options.minScore ?? DEFAULT_MIN_SCORE);
+  const reviewedOnly = options.reviewedOnly ?? false;
   const focusTokens = tokenizeForAffinity(focus.text);
   const islands = islandIdsByCard(document);
   const focusIslands = islands.get(focus.id) ?? new Set<string>();
@@ -139,6 +142,9 @@ export function rankAffinityCandidates(
   const candidates: AffinityCandidate[] = [];
   for (const card of document.cards) {
     if (card.id === focus.id) {
+      continue;
+    }
+    if (reviewedOnly && card.textReviewed !== true) {
       continue;
     }
     const cardTokens = tokenizeForAffinity(card.text);

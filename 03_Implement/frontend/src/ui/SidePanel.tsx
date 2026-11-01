@@ -1459,7 +1459,11 @@ export function SidePanel({
       ) : null}
       {document ? <EpistemicReviewPanel docId={document.id} /> : null}
       {document && selectedCard ? (
-        <RelatedCandidatesPanel document={document} focusCardId={selectedCard.id} />
+        <RelatedCandidatesPanel
+          document={document}
+          focusCardId={selectedCard.id}
+          reviewedOnly={isReadOnly}
+        />
       ) : null}
       <section
         data-panel="selection-context"
