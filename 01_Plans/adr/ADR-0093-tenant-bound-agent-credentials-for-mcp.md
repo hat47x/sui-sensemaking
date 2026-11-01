@@ -86,6 +86,18 @@ CVI（不変条件）のうち、share/書き出しで未レビュー情報・�
 - **監査 event は主体の区分を持つ。** 閲覧などの監査 event に、固定項目 `principalKind`（`member` / `guest` / `agent`）を加える。区分は、検証済みの認証経路から決め、header の申告は使わない。`actorRefHash` は区分を含まない指紋なので、人間と非人間を記録だけで区別するために必要になる。責任を持つ人間への追跡は、資格情報と付与の行に残る登録者・付与者で行い、監査 event には載せない（仮決め。運用で不足が分かったら見直す）。
 
 - **agent の監査を残すための運用条件。** 監査の外部出力は既定で無効（`SUI_AUDIT_EXPORT_ENABLED=false`）で、SafeMode の event は `SUI_AUDIT_ALLOW_IN_SAFE_MODE` が真でないと送られない。agent の読み取りは SafeMode の event なので、既定の設定では、agent の操作は外部に記録されない。agent を有効にする環境では、両方を有効にする（仮決め。event は本文・題名・トークンを含まない固定の metadata なので、SafeMode でも出して差し支えないと見立てている）。この条件は、起動時に警告する（`saas-multitenant` で agent の設定があり、両方の設定が揃っていないとき。起動は止めない。既存の運用を壊さないための仮決めで、拒否に強めるかは未決）。
+
+## 追記（2026-11-01）: TEI epistemic projection は agent 経路に開かない
+
+`GET /docs/{doc_id}/epistemic/projection`（ADR-0102）は、agent 資格情報の許可リストに加えない。現在どおり `403 agent_route_not_enabled` で閉じる（#3297）。
+
+理由は次のとおり。
+
+- この応答は、TEI の判定（statement kind、context compatibility、use state など）を含む。人が確認したカード本文と島の題名だけを返す `GET /docs/{doc_id}` の許可リストとは、露出する内容の性質が違う。
+- バックエンドは artifact をそのまま返し、SafeMode に応じた伏せ字を行わない。agent 経路へ開く前に、SafeMode と判定項目の関係を決める必要がある。
+- 付与は文書単位で、binding も (tenant, doc) 単位なので整合は取れるが、agent が TEI の判定を人の確認なしに提案へ使う経路（段階2、#3271）はまだ決めていない。
+
+TEI 投影を agent に渡す必要が出たときは、許可リストへの追加、SafeMode の扱い、MCP のツール形状（既存の `get_context_projection` に含めるか別ツールにするか）、監査を、別の ADR と Issue で決める。利用者の資格情報で読む現在の経路は変えない。
 - **管理操作も監査 event に載せる。** 登録・失効・付与の取消・OAuth 対応付けの結び/外しは、成功したときに `agent_admin` の event を出す（操作者は `member`、metadata は操作の種類と `agentId` だけ。トークン、OAuth の subject は含めない）。文書に紐づかない操作の `docId` は `-`。`agent_admin` の event は SafeMode に依存しないが、外部出力が無効なら送られない（上記の運用条件に従う）。仮決め。
 
 **この訂正が保証しないこと。**ログに資格情報が出ないことは、`03_Implement/backend/tests/test_agent_credential_log_hygiene.py` で検査する。これは試験の範囲の保証であり、本番の監視基盤の出力までは確かめない。

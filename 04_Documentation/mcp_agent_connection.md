@@ -75,7 +75,7 @@ Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格
   - 期限の延長や付与の追加を専用APIにしない理由は、権限と期間の変更を、登録時と同じ明示的な列挙と監査の単位に保つためです。回転も同じ手順を使います。
 - OAuthトークンで接続する場合は、`POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`で、信頼するIdPの`identityProviderId`と`subject`をagentに結びます。
 
-各APIの条件と応答は、[API仕様のAgent資格情報（§2.15）](../02_Architecture/api.md)が正本です。agent資格情報で通せるのは、`GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit`の4つだけです。付与外の文書は、存在しない文書と区別せず`404`になります。
+各APIの条件と応答は、[API仕様のAgent資格情報（§2.15）](../02_Architecture/api.md)が正本です。agent資格情報で通せるのは、`GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit`の4つだけです。付与外の文書は、存在しない文書と区別せず`404`になります。TEIのepistemic projection（`GET /docs/{doc_id}/epistemic/projection`）は、判定項目を含み、バックエンドでSafeModeの伏せ字を行わないため、agent経路には開いていません（`403 agent_route_not_enabled`）。必要な場合は、利用者の資格情報で読む経路を使ってください。
 
 ## 生成AIサービスへの送信について
 
