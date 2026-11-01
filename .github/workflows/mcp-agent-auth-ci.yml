@@ -3,8 +3,8 @@ name: SUI MCPとagent認証の回帰検証
 # 読み取り専用MCP（03_Implement/mcp）とagent認証・context投影経路の後退を、PRで機械的に止める。
 # MCPはfrontendのexport/domainを相対パスで取り込む独立パッケージのため、取り込み元の変更でも起動する。
 # backendは全テスト（235ファイル超）ではなく、agent認証・OAuth・contextルートの代表サブセットに限る。
-# Postgres RLSの実地matrix（test_agent_credential_postgres_rls.py）は実DBが要るため対象外とする。手順は 03_Implement/backend/README.md の
-# 「テナントRLSの実地のテスト行列」にある。CIにPostgresのサービスコンテナを足すかは未決（#3284）。
+# Postgres RLSの実地matrixは、Postgresサービスコンテナを使う backend-postgres-rls ジョブで実行する（#3284）。
+# 手元の手順は 03_Implement/backend/README.md の「テナントRLSの実地のテスト行列」にある。
 on:
   pull_request:
     branches: [main]
@@ -90,6 +90,68 @@ jobs:
             tests/test_agent_audit_startup_warning.py \
             tests/test_context_bundle_routes.py \
             tests/test_agent_view_projection_contract.py
+
+  # ADR-0093: agent資格情報の表が、PostgresのFORCE RLSでtenantごとに閉じていることを実DBで確かめる（#3284）。
+  backend-postgres-rls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sui_rls
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: 対象版を取得
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Python 3.12を用意
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: バックエンドの依存を導入
+        working-directory: 03_Implement/backend
+        run: python -m pip install -e '.[test,postgres]'
+
+      - name: RLS用のロールと既定権限を作る
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d sui_rls -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE migration_owner LOGIN PASSWORD 'migration_owner';
+          ALTER ROLE migration_owner BYPASSRLS;
+          CREATE ROLE sui_runtime LOGIN PASSWORD 'sui_runtime';
+          GRANT ALL PRIVILEGES ON DATABASE sui_rls TO migration_owner;
+          GRANT CREATE, USAGE ON SCHEMA public TO migration_owner;
+          GRANT USAGE ON SCHEMA public TO sui_runtime;
+          ALTER DEFAULT PRIVILEGES FOR ROLE migration_owner IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sui_runtime;
+          ALTER DEFAULT PRIVILEGES FOR ROLE migration_owner IN SCHEMA public
+            GRANT USAGE, SELECT ON SEQUENCES TO sui_runtime;
+          SQL
+
+      - name: RLS実地テスト
+        working-directory: 03_Implement/backend
+        env:
+          SUI_DATABASE_URL: postgresql+psycopg://migration_owner:migration_owner@127.0.0.1:5432/sui_rls
+          SUI_TEST_POSTGRES_RUNTIME_DATABASE_URL: postgresql+psycopg://sui_runtime:sui_runtime@127.0.0.1:5432/sui_rls
+          SUI_RUN_PG_RLS_TESTS: '1'
+          SUI_LLM_PROVIDER: none
+        run: |
+          python -m pytest -q \
+            tests/test_document_access_rls_postgres.py \
+            tests/test_agent_credential_postgres_rls.py
 
   # agent資格情報の登録 -> MCP実プロセスの投影取得 -> 失効までの結合検証（#3283）。
   # 一時のSQLiteと合成の文書だけを使う。PostgresとIdPは要らない。
