@@ -4,8 +4,11 @@ import { t } from "../i18n/translate";
 import { EpistemicHealthAlert } from "./EpistemicHealthAlert";
 import { EpistemicReviewStatus } from "./EpistemicReviewStatus";
 import {
+  buildEpistemicClassificationIntent,
+  buildEpistemicReviewIntent,
   buildEpistemicUiItems,
   type EpistemicProjectionInput,
+  type EpistemicUiAction,
   type EpistemicUiItem,
 } from "./epistemic_review_model";
 import { fetchEpistemicProjection } from "./epistemic_projection_api";
@@ -30,6 +33,8 @@ export function EpistemicReviewPanel({
   const [items, setItems] = useState<EpistemicUiItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [intentText, setIntentText] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const canLoad = Boolean(docId) && !busy;
 
@@ -51,9 +56,34 @@ export function EpistemicReviewPanel({
     } catch (loadError) {
       setProjection(null);
       setItems([]);
+      setIntentText("");
       setError(loadError instanceof Error ? loadError.message : t("epistemic.panel.error"));
     } finally {
       setBusy(false);
+    }
+  }
+
+  function handleAction(item: EpistemicUiItem, action: EpistemicUiAction) {
+    setActionError("");
+    try {
+      let intent: unknown;
+      if (action === "confirm" || action === "reject") {
+        intent = buildEpistemicReviewIntent(item, action);
+      } else if (action === "withdraw-confirmation") {
+        intent = buildEpistemicReviewIntent(item, "withdraw");
+      } else if (action === "mark-hypothesis") {
+        intent = buildEpistemicClassificationIntent(item);
+      } else {
+        setIntentText("");
+        setActionError(t("epistemic.panel.action_not_wired"));
+        return;
+      }
+      setIntentText(JSON.stringify(intent, null, 2));
+    } catch (intentError) {
+      setIntentText("");
+      setActionError(
+        intentError instanceof Error ? intentError.message : t("epistemic.panel.intent_error"),
+      );
     }
   }
 
@@ -75,12 +105,40 @@ export function EpistemicReviewPanel({
         <ul style={{ listStyle: "none", padding: 0, margin: "6px 0 0", display: "grid", gap: 6 }}>
           {items.map((item) => (
             <li key={item.assertionId}>
-              <EpistemicReviewStatus item={item} onAction={() => {}} showActions={false} />
+              <EpistemicReviewStatus
+                item={item}
+                onAction={(action) => handleAction(item, action)}
+              />
             </li>
           ))}
         </ul>
       ) : projection ? (
         <p style={{ fontSize: 11, color: "#64748b", margin: "6px 0" }}>{t("epistemic.panel.empty")}</p>
+      ) : null}
+      {actionError ? (
+        <p style={{ fontSize: 11, color: "#991b1b", margin: "6px 0" }}>{actionError}</p>
+      ) : null}
+      {intentText ? (
+        <>
+          <p style={{ fontSize: 10, color: "#475569", margin: "6px 0 0" }}>
+            {t("epistemic.panel.intent_preview")}
+          </p>
+          <pre
+            data-testid="epistemic-review-intent"
+            style={{
+              margin: "4px 0 0",
+              padding: 6,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 6,
+              fontSize: 10,
+              overflowX: "auto",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {intentText}
+          </pre>
+        </>
       ) : null}
       <p style={{ fontSize: 10, color: "#94a3b8", margin: "6px 0 0" }}>
         {t("epistemic.panel.read_only")}
