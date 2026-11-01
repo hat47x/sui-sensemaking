@@ -99,6 +99,12 @@ test("the SidePanel can load and display the tenant TEI epistemic projection", a
   await expect(queue).toContainText("Review queue (1)");
   await expect(queue).toContainText("assertion-review: assertion:a1");
 
+  await panel.getByRole("button", { name: "Details", exact: true }).click();
+  const inspection = panel.getByTestId("epistemic-inspection-summary");
+  await expect(inspection).toBeVisible();
+  await expect(inspection).toContainText('"targetBinding": "exact"');
+  await expect(inspection).toContainText('"metadataState": "complete"');
+
   await panel.getByRole("button", { name: "Confirm", exact: true }).click();
   const intent = panel.getByTestId("epistemic-review-intent");
   await expect(intent).toBeVisible();

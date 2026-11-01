@@ -6,6 +6,7 @@ import { EpistemicReviewStatus } from "./EpistemicReviewStatus";
 import {
   buildBulkConfirmIntents,
   buildEpistemicClassificationIntent,
+  buildEpistemicInspectionSummary,
   buildEpistemicReviewIntent,
   buildEpistemicReviewQueue,
   buildEpistemicUiItems,
@@ -36,6 +37,7 @@ export function EpistemicReviewPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [intentText, setIntentText] = useState("");
+  const [inspectionText, setInspectionText] = useState("");
   const [bulkPreview, setBulkPreview] = useState("");
   const [actionError, setActionError] = useState("");
 
@@ -65,6 +67,7 @@ export function EpistemicReviewPanel({
       setProjection(null);
       setItems([]);
       setIntentText("");
+      setInspectionText("");
       setBulkPreview("");
       setError(loadError instanceof Error ? loadError.message : t("epistemic.panel.error"));
     } finally {
@@ -87,6 +90,12 @@ export function EpistemicReviewPanel({
   function handleAction(item: EpistemicUiItem, action: EpistemicUiAction) {
     setActionError("");
     try {
+      if (action === "inspect-details") {
+        setIntentText("");
+        setInspectionText(JSON.stringify(buildEpistemicInspectionSummary(item), null, 2));
+        return;
+      }
+      setInspectionText("");
       let intent: unknown;
       if (action === "confirm" || action === "reject") {
         intent = buildEpistemicReviewIntent(item, action);
@@ -203,6 +212,28 @@ export function EpistemicReviewPanel({
             }}
           >
             {intentText}
+          </pre>
+        </>
+      ) : null}
+      {inspectionText ? (
+        <>
+          <p style={{ fontSize: 10, color: "#475569", margin: "6px 0 0" }}>
+            {t("epistemic.panel.inspection_label")}
+          </p>
+          <pre
+            data-testid="epistemic-inspection-summary"
+            style={{
+              margin: "4px 0 0",
+              padding: 6,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 6,
+              fontSize: 10,
+              overflowX: "auto",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {inspectionText}
           </pre>
         </>
       ) : null}
