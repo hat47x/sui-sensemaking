@@ -34,7 +34,7 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
    - 追加した計画範囲: [表札の射程と残余](01_Plans/cognitive_cultural_validation_plan.md#product-label-scope)、[発言の根拠と解釈](01_Plans/cognitive_cultural_validation_plan.md#product-statement-basis)、[文脈から補った条件の比較](01_Plans/cognitive_cultural_validation_plan.md#product-inherited-context)、[不明点を残した停止・再開](01_Plans/cognitive_cultural_validation_plan.md#product-inquiry-stop)の順で具体化した。原文・元カードへの回帰と異論の非破壊を先行させ、既存の表札・根拠・比較・引継ぎを使う最小差分から試す。発想資料の深掘り例を4件から8件へ増やし、文化的な由来と対象側で確認すべき範囲を分けた。
    - 次は[表札から元カードへ戻る実務試行](01_Plans/cognitive_cultural_validation_plan.md#first-practical-trial)を行い、[残った不足から実装範囲を絞る](01_Plans/cognitive_cultural_validation_plan.md#next-implementation-scope)。既存の違和感メモ・構造の判断履歴へ接続し、履歴の上限とSafeModeでの共有範囲を区別する。第2計画では[華厳由来の全体と部分の比較](01_Plans/cognitive_cultural_validation_plan.md#product-whole-part)を深め、同じカードの役割の変化と原文に残る違いを比べる。実務試行は未実施であり、新しい製品機能の採用は確定していない。
 
-6. **外部agent連携の判断**: 主要な未決は決着した。段階2の提案ingestは必要性が観測されるまで作らない（`ADR-0108`）。TEI epistemic projectionのtransportはSUI所有のローカルadapterとする（`ADR-0101`）。TEIの確認状態はSUIの`human_reviewed`へ写さず、intentのoutboxをhandoff境界とする（`ADR-0110`）。残るのは、outboxをTEIへ送る必要が生じたときの送信ADRと、実利用者による操作検証（#3346）である。
+6. **外部agent連携の判断**: 主要な未決は決着した。段階2の提案ingestは必要性が観測されるまで作らない（`ADR-0108`）。境界だけを先に宣言し、認可・未レビュー・監査・undoの条件を固定した（`ADR-0112`）。TEI epistemic projectionのtransportはSUI所有のローカルadapterとする（`ADR-0101`）。TEIの確認状態はSUIの`human_reviewed`へ写さず、intentのoutboxをhandoff境界とする（`ADR-0110`）。残るのは、outboxをTEIへ送る必要が生じたときの送信ADRと、実利用者による操作検証（#3346）である。
 
 機能の追加より、価値と認知の増分の確認を優先します。実際に使って、同じ摩擦が再現したものから、実装に昇格させます。
 
