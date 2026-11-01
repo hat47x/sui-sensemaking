@@ -4,7 +4,7 @@
 - Date: 2026-11-01
 - Deciders: Maintainer（PoC優先の指示にもとづく暫定判断）
 - Scope: `03_Implement/frontend/src/domain/affinity_candidates.ts`、`03_Implement/frontend/src/ui/RelatedCandidatesPanel.tsx`、COGNITIVE-ASSOC-01
-- Related: `ADR-0090`（認知支援候補層）、`ADR-0111`（外部認知インターフェースの上位課題）、Issue #3157、Issue #3156（T8事前登録）、PR #3344
+- Related: `ADR-0090`（認知支援候補層）、`ADR-0111`（外部認知インターフェースの上位課題）、`ADR-0113`（T8の証拠条件と判断閾値）、Issue #3157、Issue #3156（T8事前登録）、PR #3344
 
 ## 価値への寄与
 
