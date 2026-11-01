@@ -92,6 +92,24 @@ describe("buildContextProjection: evidence vs contradiction scoping", () => {
     expect(projection.cards.map((card) => card.id).sort()).toEqual(["c2", "c4"]);
   });
 
+  it("does not expose contradictionState or note, and a resolved link keeps the same shape and bundleHash (ADR-0104)", async () => {
+    const doc = buildDoc();
+    const base = await buildContextProjection({ doc, constraint: "contradiction", safeMode: false });
+
+    doc.evidenceLinks = (doc.evidenceLinks ?? []).map((link) =>
+      link.id === "ev3"
+        ? { ...link, contradictionState: "resolved", note: "person decided this is an exception" }
+        : link,
+    );
+    const withState = await buildContextProjection({ doc, constraint: "contradiction", safeMode: false });
+
+    expect(withState.contradictions).toEqual([{ from: "c4", to: "c2" }]);
+    expect(withState.contradictions).toEqual(base.contradictions);
+    expect(withState.bundleHash).toBe(base.bundleHash);
+    expect(JSON.stringify(withState.contradictions)).not.toContain("resolved");
+    expect(JSON.stringify(withState.contradictions)).not.toContain("person decided");
+  });
+
   it("excludes a contradicts link entirely when either endpoint is unreviewed (2026-07-13 gate) -- not merely text-redacted", async () => {
     const projection = await buildContextProjection({ doc: buildDoc(), constraint: "contradiction", safeMode: false });
 
