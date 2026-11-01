@@ -1900,6 +1900,7 @@
   "epistemic.panel.queue_title": "レビュー待ち（{count}）",
   "epistemic.panel.bulk_preview": "一括確認のプレビュー",
   "epistemic.panel.bulk_preview_label": "一括確認の結果（保存されません）",
+  "epistemic.panel.inspection_label": "詳細（対象・metadata・期限）",
   "epistemic.status.group_label": "認識状態: {assertionId}",
   "epistemic.state.working_premise": "作業前提",
   "epistemic.state.candidate": "候補",

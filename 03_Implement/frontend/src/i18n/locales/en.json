@@ -1900,6 +1900,7 @@
   "epistemic.panel.queue_title": "Review queue ({count})",
   "epistemic.panel.bulk_preview": "Bulk confirm preview",
   "epistemic.panel.bulk_preview_label": "Bulk confirmation result (not saved)",
+  "epistemic.panel.inspection_label": "Details (target, metadata, validity)",
   "epistemic.status.group_label": "Epistemic status: {assertionId}",
   "epistemic.state.working_premise": "Working premise",
   "epistemic.state.candidate": "Candidate",
