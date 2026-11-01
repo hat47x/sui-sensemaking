@@ -167,6 +167,20 @@ def _admin_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "admin_api_key", "tei-epistemic-admin-key")
 
 
+def test_projection_has_no_write_or_send_route(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "tei_reference_dir", str(_artifacts_dir(tmp_path)))
+    with _client(tmp_path) as client:
+        for method in ("post", "put", "patch", "delete"):
+            response = getattr(client, method)("/docs/doc-1/epistemic/projection")
+            assert response.status_code not in (200, 201, 202, 204), method
+        assert client.post("/docs/doc-1/epistemic/detail", json={}).status_code not in (
+            200,
+            201,
+            202,
+            204,
+        )
+
+
 def test_unconfigured_directory_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "tei_reference_dir", None)
     with _client(tmp_path) as client:
