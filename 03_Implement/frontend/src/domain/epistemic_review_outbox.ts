@@ -28,6 +28,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+const ALLOWED_INTENT_FIELDS = [
+  "assertionId",
+  "source",
+  "kind",
+  "operation",
+  "statementKind",
+  "expectedMeaningFingerprint",
+  "expectedReviewSubjectFingerprint",
+  "expectedTargetBinding",
+  "expectedReviewLogSequence",
+] as const;
+
 function sanitizeEntry(value: unknown): EpistemicOutboxEntry | null {
   if (!isRecord(value)) {
     return null;
@@ -42,10 +54,16 @@ function sanitizeEntry(value: unknown): EpistemicOutboxEntry | null {
   if (!isRecord(intent) || typeof intent.assertionId !== "string") {
     return null;
   }
+  const sanitizedIntent: Record<string, unknown> = {};
+  for (const field of ALLOWED_INTENT_FIELDS) {
+    if (intent[field] !== undefined) {
+      sanitizedIntent[field] = intent[field];
+    }
+  }
   return {
     docId,
     recordedAt,
-    intent: { ...intent },
+    intent: sanitizedIntent,
   };
 }
 

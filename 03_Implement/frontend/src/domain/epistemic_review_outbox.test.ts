@@ -65,6 +65,25 @@ describe("epistemic review outbox", () => {
     );
   });
 
+  it("drops fields outside the handoff allowlist", () => {
+    const storage = memoryStorage();
+    const unsafe = {
+      ...entry("a1"),
+      intent: {
+        ...entry("a1").intent,
+        cardText: "secret source text",
+        narrative: "secret narrative",
+      },
+    };
+
+    appendEpistemicOutbox(unsafe, storage);
+    const [loaded] = loadEpistemicOutbox(storage);
+
+    expect(loaded.intent.assertionId).toBe("a1");
+    expect(loaded.intent).not.toHaveProperty("cardText");
+    expect(loaded.intent).not.toHaveProperty("narrative");
+  });
+
   it("clears the outbox and tolerates unavailable storage", () => {
     const storage = memoryStorage();
     appendEpistemicOutbox(entry("a1"), storage);
