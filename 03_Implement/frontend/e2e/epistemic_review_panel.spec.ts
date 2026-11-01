@@ -87,5 +87,11 @@ test("the SidePanel can load and display the tenant TEI epistemic projection", a
 
   await expect(panel.getByRole("group", { name: "Epistemic status: a1" })).toBeVisible();
   await expect(panel.getByText("Loaded 1 epistemic status item(s)")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Confirm" }).click();
+  const intent = panel.getByTestId("epistemic-review-intent");
+  await expect(intent).toBeVisible();
+  await expect(intent).toContainText('"operation": "confirm"');
+  await expect(intent).toContainText('"assertionId": "a1"');
   await expect(panel.getByText("Display only. Confirmation changes are not saved.")).toBeVisible();
 });
