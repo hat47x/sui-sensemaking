@@ -236,7 +236,7 @@ def test_same_doc_id_resolves_only_inside_the_credentials_tenant(env) -> None:
 
     # 文書の題名は agent へ返さない。同じ docId でも、tenant ごとの内容で区別する。
     assert a.json()["title"] is None and b.json()["title"] is None
-    assert len(a.json()["cards"]) == 3
+    assert {card["id"] for card in a.json()["cards"]} == {"c-reviewed"}
     assert b.json()["cards"] == []
     assert a_to_b_only.status_code == 404
     assert b_to_a_only.status_code == 404
@@ -366,7 +366,9 @@ def test_unreviewed_card_text_is_withheld_from_agents(env) -> None:
     body = env["client"].get("/docs/shared-doc", headers=_h(env["token_a"])).json()
     texts = {card["id"]: card["text"] for card in body["cards"]}
 
-    assert texts == {"c-reviewed": "REVIEWED-TEXT", "c-unreviewed": "", "c-unknown": ""}
+    assert texts == {"c-reviewed": "REVIEWED-TEXT"}
+    assert "c-unreviewed" not in json.dumps(body)
+    assert "c-unknown" not in json.dumps(body)
     assert "SECRET" not in json.dumps(body)
 
 
@@ -395,7 +397,12 @@ def test_only_reviewed_text_and_allowed_structure_reach_agents(env) -> None:
     # 確認済みの本文と構造は出る。
     titles = {island["id"]: island.get("title") for island in body["islands"]}
     assert titles == {"i-reviewed": "REVIEWED-ISLAND-TITLE", "i-unreviewed": None}
-    assert [link["id"] for link in body["evidenceLinks"]] == ["e1"]
+    # 未レビューのカードidは、カード・関係線・根拠リンク・島の所属のどこにも出ない。
+    assert {card["id"] for card in body["cards"]} == {"c-reviewed"}
+    assert {edge["id"] for edge in body["edges"]} == set()
+    assert body["evidenceLinks"] == []
+    islands_by_id = {island["id"]: island for island in body["islands"]}
+    assert islands_by_id["i-unreviewed"]["cardIds"] == []
     assert body["narratives"][0]["checks"][0]["issues"][0]["direction"] == "a_missing_in_b"
 
 

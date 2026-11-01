@@ -693,20 +693,34 @@ def _agent_document_view(payload: dict) -> dict:
     """agent主体に返す文書。許可した構造項目だけを写し、本文は確認済みのものに限る。
 
     許可リスト方式なので、将来 DocumentV1 に本文を含む項目が増えても、ここへ明示するまで
-    agent へは出ない。人が確認していないカード本文・島の題名は空にする。文書の題名、島の
-    要約、関係の要約、ナラティブ本文、根拠リンクの注記、void の題名・詳細などは返さない。
-    カードや島のidと構造は残す（投影の件数と整合を保つため）。ADR-0093。
+    agent へは出ない。人が確認していないカードは、本文だけでなくidも含めて返さない。その
+    カードを端点とする関係線・根拠リンク、島の所属、void の所属からも除く。文書の題名、
+    島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、void の題名・詳細などは返さない。
+    未レビューの島の題名は返さないが、島自体は残す（MCP投影と同じ扱い）。ADR-0093、#3275。
     """
 
     def _list(name: str) -> list:
         value = payload.get(name)
         return value if isinstance(value, list) else []
 
+    # #3275: match the MCP projection gate. An unreviewed card's id must not
+    # reach an agent through cards, edges, evidence links, island membership, or
+    # void membership, even though its text is already withheld.
+    all_cards = _list("cards")
+    reviewed_card_ids = {
+        card["id"]
+        for card in all_cards
+        if isinstance(card, dict)
+        and isinstance(card.get("id"), str)
+        and card.get("textReviewed") is True
+    }
+
     cards = []
-    for card in _list("cards"):
+    for card in all_cards:
+        if not isinstance(card, dict) or card.get("id") not in reviewed_card_ids:
+            continue
         view = _pick(card, _AGENT_CARD_FIELDS)
-        reviewed = isinstance(card, dict) and card.get("textReviewed") is True
-        view["text"] = card.get("text", "") if reviewed else ""
+        view["text"] = card.get("text", "")
         cards.append(view)
 
     islands = []
@@ -715,24 +729,53 @@ def _agent_document_view(payload: dict) -> dict:
         reviewed = isinstance(island, dict) and island.get("titleReviewed") is True
         if reviewed and isinstance(island.get("title"), str):
             view["title"] = island["title"]
+        if "cardIds" in view and isinstance(view["cardIds"], list):
+            view["cardIds"] = [card_id for card_id in view["cardIds"] if card_id in reviewed_card_ids]
+        if "placardCardId" in view and view["placardCardId"] not in reviewed_card_ids:
+            view.pop("placardCardId", None)
         islands.append(view)
+
+    def _edge_is_visible(edge: object) -> bool:
+        return (
+            isinstance(edge, dict)
+            and edge.get("fromId") in reviewed_card_ids
+            and edge.get("toId") in reviewed_card_ids
+        )
+
+    def _link_is_visible(link: object) -> bool:
+        return (
+            isinstance(link, dict)
+            and link.get("fromCardId") in reviewed_card_ids
+            and link.get("toCardId") in reviewed_card_ids
+        )
 
     view: dict = {
         **_pick(payload, ("version", "id", "createdAt", "updatedAt", "transform")),
         "cards": cards,
-        "edges": [_pick(edge, _AGENT_EDGE_FIELDS) for edge in _list("edges")],
+        "edges": [_pick(edge, _AGENT_EDGE_FIELDS) for edge in _list("edges") if _edge_is_visible(edge)],
         "islands": islands,
     }
     if "evidenceLinks" in payload:
         view["evidenceLinks"] = [
-            _pick(link, _AGENT_EVIDENCE_LINK_FIELDS) for link in _list("evidenceLinks")
+            _pick(link, _AGENT_EVIDENCE_LINK_FIELDS)
+            for link in _list("evidenceLinks")
+            if _link_is_visible(link)
         ]
     if "voids" in payload:
         # 題名と詳細は必須項目なので、印だけを入れて形を保つ。
-        view["voids"] = [
-            {**_pick(void, _AGENT_VOID_FIELDS), "title": _AGENT_WITHHELD, "detail": _AGENT_WITHHELD}
-            for void in _list("voids")
-        ]
+        void_views = []
+        for void in _list("voids"):
+            void_view = {
+                **_pick(void, _AGENT_VOID_FIELDS),
+                "title": _AGENT_WITHHELD,
+                "detail": _AGENT_WITHHELD,
+            }
+            if isinstance(void_view.get("cardIds"), list):
+                void_view["cardIds"] = [
+                    card_id for card_id in void_view["cardIds"] if card_id in reviewed_card_ids
+                ]
+            void_views.append(void_view)
+        view["voids"] = void_views
     if "narratives" in payload:
         view["narratives"] = [
             {
