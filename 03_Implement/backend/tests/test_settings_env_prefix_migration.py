@@ -112,7 +112,10 @@ def _env_keys(text: str) -> set[str]:
 def _public_registry_env_keys() -> set[str]:
     text = RUNTIME_REGISTRY_DOC.read_text(encoding="utf-8")
     public_text = text.split("以下は製品ランタイムの公開設定ではなく", maxsplit=1)[0]
-    return _env_keys(public_text)
+    # SUI_MCP_* belongs to the separate read-only MCP process, not the backend
+    # runtime that 04_Documentation/configuration.md documents. The registry is
+    # the source for both, so exclude the MCP keys from this comparison.
+    return {key for key in _env_keys(public_text) if not key.startswith("SUI_MCP_")}
 
 
 def test_settings_uses_prefixed_key(monkeypatch) -> None:  # type: ignore[no-untyped-def]
