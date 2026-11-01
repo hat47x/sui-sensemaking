@@ -139,7 +139,7 @@ stdioの段階では、待ち受けのポートを開かず、外部から到達
 - 付与外の文書と、他テナントの文書と、存在しない文書は、区別できない404で返す。リクエストのヘッダーやクエリでテナントを指定しても、DBスコープは決まらない（`test_agent_credential_http.py`）。他のテナントの資格情報や付与が見えないことは、表のPostgres RLSに依存する（`test_agent_credential_postgres_rls.py`。実DBが要るため、既定ではskipされ、CIでも実行されない。#3284）。
 - トークン交換のJWTは、バックエンドが署名、発行者、audience、有効期限を自分で検証する。対応付け（`agent_oauth_bindings`）と登録済みのIdPの対応が、テナントとagentを決める。クレームの値は要求であって権限として扱わない。`Sui-Sensemaking-Agent-Credential` と同時に送ると400にする。MCP宛てのトークンはバックエンドへ渡さない（ADR-0094、`test_agent_oauth_http.py`）。
 - agent向けの文書は、許可リスト方式の出力 `_agent_document_view` だけを返す。確認していないカード本文、島の題名・要約、関係の要約、ナラティブ、根拠リンクの注記、voidの本文、文書の題名は出さない（ADR-0093、`test_agent_view_projection_contract.py`）。agentには書き込み、export、archive、AI実行、提案の決定を許さない。
-- 監査の主体は、`x-actor-ref` ヘッダーではなく、検証済みの `agent:<agentId>` から決める。監査eventにはテナントを持たせ、本文、題名、トークンは含めない。`context-audit` は、資格情報のテナントと文書に束縛した範囲だけ受け付ける。
+- 監査の主体は、`x-actor-ref` ヘッダーではなく、検証済みの `agent:<agentId>` から決める。監査eventにはテナントを持たせ、本文、題名、トークンは含めない。`context-audit` は、資格情報のテナントと文書に束縛した範囲だけ受け付ける。ただし、この経路の `bundleHash` と `safeMode` はagentの申告値である。サーバーは形式だけを検査し、実際に返した投影と突き合わせない。eventの `metadata` には `recordedBy="agent_report"` と `serverVerified=false` を付け、サーバーが観測した読み取りと区別する。agentは、読んでいない文書についても任意の値で記録を作れる。
 
 **残存するリスク**
 

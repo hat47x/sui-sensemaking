@@ -1698,6 +1698,11 @@ def post_context_audit(
                         getattr(request.app.state, "access_control_adapter", None), "name", "none"
                     ),
                     "traceId": access_request.auth.trace_id,
+                    # #3294: these values are the agent's report, not a
+                    # server-observed read. Keep them, but mark the source so
+                    # an audit consumer cannot mistake them for evidence.
+                    "recordedBy": "agent_report",
+                    "serverVerified": False,
                     "operation": payload.operation,
                     "equivalenceKey": payload.equivalenceKey,
                     "bundleHash": payload.bundleHash,

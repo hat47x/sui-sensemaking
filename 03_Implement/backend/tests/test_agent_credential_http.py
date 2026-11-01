@@ -443,6 +443,30 @@ def test_audit_event_carries_tenant_and_agent_but_no_content_or_token(env) -> No
     assert "REVIEWED-TEXT" not in repr(event)
 
 
+def test_context_audit_marks_agent_reported_values_as_unverified(env) -> None:
+    # #3294: context-audit の bundleHash / safeMode は agent の申告値である。
+    # 任意の64桁16進を受け付ける代わりに、監査eventで申告であることを示す。
+    body = {
+        "operation": "query",
+        "safeMode": True,
+        "equivalenceKey": "a" * 64,
+        "bundleHash": "b" * 64,
+        "command": "context-query",
+        "channel": "mcp",
+    }
+    response = env["client"].post(
+        "/docs/shared-doc/context-audit", json=body, headers=_h(env["token_a"])
+    )
+    assert response.status_code == 200, response.text
+
+    event = env["spy"].events[-1]
+    assert event.eventType == "query"
+    assert event.metadata["recordedBy"] == "agent_report"
+    assert event.metadata["serverVerified"] is False
+    assert event.metadata["bundleHash"] == "b" * 64
+    assert event.safeMode is True
+
+
 def test_the_raw_token_is_never_persisted_or_echoed(env) -> None:
     with env["factory"]() as db:
         index = db.scalars(
