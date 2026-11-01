@@ -1902,6 +1902,7 @@
   "epistemic.panel.intent_error": "intentを生成できませんでした。",
   "epistemic.panel.action_not_wired": "この操作はPoCではまだ接続されていません。",
   "epistemic.panel.outbox_count": "{count}件のintentを端末内に保留中",
+  "epistemic.panel.outbox_export": "handoff JSONを書き出す",
   "epistemic.panel.outbox_clear": "端末内の保留を消去",
   "epistemic.panel.outbox_note": "Documentやhuman_reviewedへは書き込みません。",
   "epistemic.panel.queue_title": "レビュー待ち（{count}）",

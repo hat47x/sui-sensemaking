@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  EPISTEMIC_OUTBOX_EXPORT_CONTRACT,
   EPISTEMIC_OUTBOX_KEY,
   EPISTEMIC_OUTBOX_LIMIT,
   appendEpistemicOutbox,
   clearEpistemicOutbox,
   loadEpistemicOutbox,
+  serializeEpistemicOutbox,
 } from "./epistemic_review_outbox";
 
 function memoryStorage(initial: Record<string, string> = {}) {
@@ -98,6 +100,27 @@ describe("epistemic review outbox", () => {
       appendEpistemicOutbox({ ...base, intent }, storage);
       expect(loadEpistemicOutbox(storage)).toEqual([]);
     }
+  });
+
+  it("serializes a handoff file with the same validation as local storage", () => {
+    const valid = entry("a1");
+    const tampered = {
+      ...entry("a2"),
+      intent: { ...entry("a2").intent, expectedMeaningFingerprint: "not-a-fingerprint" },
+    };
+
+    const text = serializeEpistemicOutbox([valid, tampered], "2026-11-01T00:00:00.000Z");
+    const parsed = JSON.parse(text) as {
+      contract: string;
+      exportedAt: string;
+      entries: Array<{ intent: Record<string, unknown> }>;
+    };
+
+    expect(parsed.contract).toBe(EPISTEMIC_OUTBOX_EXPORT_CONTRACT);
+    expect(parsed.exportedAt).toBe("2026-11-01T00:00:00.000Z");
+    expect(parsed.entries).toHaveLength(1);
+    expect(parsed.entries[0].intent.assertionId).toBe("a1");
+    expect(parsed.entries[0].intent).not.toHaveProperty("cardText");
   });
 
   it("clears the outbox and tolerates unavailable storage", () => {

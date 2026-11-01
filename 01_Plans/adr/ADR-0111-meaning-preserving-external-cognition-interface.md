@@ -4,7 +4,7 @@
 - Date: 2026-11-01
 - Deciders: Maintainer（上位課題の設定とPoC優先の指示にもとづく）
 - Scope: `01_Plans/adr/`、`ROADMAP.md`、MCP、TEI epistemic projection、COGNITIVE-ASSOC-01、agent連携
-- Related: `ADR-0089`、`ADR-0093`、`ADR-0101`、`ADR-0102`、`ADR-0103`、`ADR-0108`、`ADR-0109`、`ADR-0110`、`ADR-0112`、`ADR-0113`
+- Related: `ADR-0089`、`ADR-0093`、`ADR-0101`、`ADR-0102`、`ADR-0103`、`ADR-0108`、`ADR-0109`、`ADR-0110`、`ADR-0112`、`ADR-0113`、`ADR-0114`
 
 ## 価値への寄与
 

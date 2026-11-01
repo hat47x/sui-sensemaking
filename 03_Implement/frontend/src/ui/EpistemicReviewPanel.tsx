@@ -5,6 +5,7 @@ import {
   appendEpistemicOutbox,
   clearEpistemicOutbox,
   loadEpistemicOutbox,
+  serializeEpistemicOutbox,
 } from "../domain/epistemic_review_outbox";
 import { EpistemicHealthAlert } from "./EpistemicHealthAlert";
 import { EpistemicReviewStatus } from "./EpistemicReviewStatus";
@@ -85,6 +86,20 @@ export function EpistemicReviewPanel({
   function clearOutbox() {
     clearEpistemicOutbox();
     setOutboxCount(0);
+  }
+
+  function exportOutbox() {
+    const entries = loadEpistemicOutbox();
+    if (entries.length === 0) {
+      return;
+    }
+    const payload = serializeEpistemicOutbox(entries, new Date().toISOString());
+    const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "sui-epistemic-handoff.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   function previewBulkConfirm() {
@@ -265,6 +280,9 @@ export function EpistemicReviewPanel({
           <p data-testid="epistemic-outbox-count" style={{ fontSize: 10, color: "#475569", margin: 0 }}>
             {t("epistemic.panel.outbox_count", { count: outboxCount })}
           </p>
+          <button type="button" onClick={exportOutbox} style={{ fontSize: 10, marginTop: 2 }}>
+            {t("epistemic.panel.outbox_export")}
+          </button>
           <button type="button" onClick={clearOutbox} style={{ fontSize: 10, marginTop: 2 }}>
             {t("epistemic.panel.outbox_clear")}
           </button>
