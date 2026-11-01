@@ -796,4 +796,19 @@ describe("buildContextProjection: per-item digest (ADR-0103)", () => {
     expect((await project(untitled, false, "summary")).islands[0].digest).toBeNull();
   });
 
+  it("island digest does not change when cardIds change, and membership is not exposed (ADR-0107)", async () => {
+    const base = buildDoc();
+    const before = await project(base, false, "summary");
+
+    const changed = {
+      ...base,
+      islands: [{ ...base.islands[0], cardIds: ["c1"], parentIslandId: "i-parent" }],
+    } as DocumentV1;
+    const after = await project(changed, false, "summary");
+
+    expect(after.islands[0].digest).toEqual(before.islands[0].digest);
+    expect(after.islands[0]).not.toHaveProperty("cardIds");
+    expect(after.islands[0]).not.toHaveProperty("parentIslandId");
+  });
+
 });
