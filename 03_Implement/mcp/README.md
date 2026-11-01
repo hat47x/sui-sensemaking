@@ -84,7 +84,7 @@ PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージ�
 
 解釈の規則です。`not_found` や `error` を伴う `isError` の結果は、対象の文書が存在しないことを示す**有効なシグナル**であり、MCP経路の失敗ではありません。通信は動き、リクエストはサーバーに届き、失敗は分類されています。
 
-上の `mcp-context-read.v1` のローカル記録に加えて、**成功した**読み取りはすべて、バックエンドの `POST /docs/{id}/context-audit`（CE-4）エンドポイントに `channel="mcp"` で報告されます（`operation=query`、`command=context-query`、`equivalenceKey=queryCanonicalHash`、`bundleHash=projection.bundleHash`、`safeMode`、`dryRun=true`、`sideEffect=none`）。報告は `src/audit_log.ts` の `emitContextAuditEvent` が行います。これで、以前あったチャネル列挙の欠落が解消されました。MCP経由の読み取りも、api、cli、guiの呼び出しと同じバックエンドの監査証跡で追跡できます。報告は**ベストエフォート**です。同期的なローカル記録が読み取りの相関になるため、CE-4のPOSTが失敗しても、成功した読み取りがエラーになることはありません（構造化された警告をstderrに出します）。バックエンドがその読み取りを受け取ったことを確かめたい生成AIの検証役は、配備先の監査の出力先を直接照合してください。`verify_mcp.ts` 自体が検証するのは読み取り経路で、出力先への配送ではありません。
+上の `mcp-context-read.v1` のローカル記録に加えて、**成功した**読み取りはすべて、バックエンドの `POST /docs/{id}/context-audit`（CE-4）エンドポイントに `channel="mcp"` で報告されます（`operation=query`、`command=context-query`、`equivalenceKey=queryCanonicalHash`、`bundleHash=projection.bundleHash`、`safeMode`、`dryRun=true`、`sideEffect=none`）。報告は `src/audit_log.ts` の `emitContextAuditEvent` が行います。これで、以前あったチャネル列挙の欠落が解消されました。MCP経由の読み取りも、api、cli、guiの呼び出しと同じバックエンドの監査証跡で追跡できます。報告は**ベストエフォート**です。同期的なローカル記録が読み取りの相関になるため、CE-4のPOSTが失敗しても、成功した読み取りがエラーになることはありません（構造化された警告をstderrに出します）。バックエンドがその読み取りを受け取ったことを確かめたい生成AIの検証役は、配備先の監査の出力先を直接照合してください。ただし、このPOSTの `bundleHash` と `safeMode` はMCPプロセスの申告値で、バックエンドが返した内容を再計算したものではありません。監査eventの `metadata` は `recordedBy="agent_report"`、`serverVerified=false` を持つので、サーバーが観測した読み取りとは区別できます。読み取りの事実そのものの証跡には使えません。`verify_mcp.ts` 自体が検証するのは読み取り経路で、出力先への配送ではありません。
 
 連鎖の全体（MCPの読み取り、CE-4の `channel="mcp"` イベント、バックエンド、設定したHTTP監査の出力先）を一度の自己完結した実行で検証するには、ドッグフードのE2Eを使います。
 
