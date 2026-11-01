@@ -41,7 +41,9 @@ jobs:
 
       - name: バックエンドの依存を導入
         working-directory: 03_Implement/backend
-        run: python -m pip install -e '.[test]'
+        run: |
+          python -m pip install -r requirements-test.lock
+          python -m pip install --no-deps -e .
 
       - name: 型契約と判断履歴モデルを検証
         working-directory: 03_Implement/backend

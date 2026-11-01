@@ -380,6 +380,39 @@ tests/scripts/run_auth_level2.sh
 
 これらは `extra={...}` で渡され、`SUI_LOG_JSON=true`（既定）のときは、JSONの1行として出力されます。OPS-OBSERV-01より前はログの設定がなく、`logging.Formatter` の既定の書式は `extra` を出力しないため、**上記の項目は実際には出力されていませんでした**。出力レベルは `SUI_LOG_LEVEL` で変更できます。すべてのリクエストには `X-Request-Id` が付き、ログ行の `requestId` フィールドと突き合わせられます。
 
+## 依存の固定
+
+実行時依存は `requirements.lock`、テスト込みの依存は `requirements-test.lock` に固定しています。どちらも Python 3.12 で `pyproject.toml` の extra から生成した `pip freeze --exclude-editable` の結果です。CIとDockerはこのファイルを使い、ビルドのたびに新しい版を解決しません。
+
+```bash
+# CI・テスト（[test,postgres]）
+python -m pip install -r requirements-test.lock
+python -m pip install --no-deps -e .
+
+# Docker・実行時（[postgres]）
+python -m pip install -r requirements.lock
+python -m pip install --no-deps .
+```
+
+依存を更新するときは、新しい一時venvで extra を入れ直し、テストを通してからロックを作り直します。
+
+```bash
+python3.12 -m venv .venv-lock
+. .venv-lock/bin/activate
+pip install --upgrade pip
+pip install -e '.[test,postgres]'
+pip freeze --exclude-editable > requirements-test.lock
+deactivate
+
+python3.12 -m venv .venv-runtime
+. .venv-runtime/bin/activate
+pip install --upgrade pip
+pip install -e '.[postgres]'
+pip freeze --exclude-editable > requirements.lock
+```
+
+更新時は、安全系サブセットと全件テスト（下記）を実行してください。ロックに含まれる版を変えると、`cryptography` や `pyjwt` など認証・暗号に関わる依存も変わるためです。
+
 ## テストとCIの分担
 
 PRのCI（`.github/workflows/unit-verification-ci.yml`）は、契約ドリフトと、安全不変条件に直接関係するテストだけを実行します。対象は、SafeMode、リクエスト本文の保護、agent資格情報、監査、提案の人間判断、LLM入力IRです。
