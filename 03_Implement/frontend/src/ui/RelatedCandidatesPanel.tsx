@@ -7,6 +7,8 @@ import type { Document } from "../domain/types";
 type RelatedCandidatesPanelProps = {
   document: Document;
   focusCardId: string;
+  /** Read-only/shared contexts exclude unreviewed candidates. */
+  reviewedOnly?: boolean;
 };
 
 /**
@@ -16,10 +18,14 @@ type RelatedCandidatesPanelProps = {
  * model, no network, no document change. It only surfaces candidates for a
  * human to inspect.
  */
-export function RelatedCandidatesPanel({ document, focusCardId }: RelatedCandidatesPanelProps) {
+export function RelatedCandidatesPanel({
+  document,
+  focusCardId,
+  reviewedOnly = false,
+}: RelatedCandidatesPanelProps) {
   const candidates = useMemo(
-    () => rankAffinityCandidates(document, focusCardId, { limit: 3 }),
-    [document, focusCardId],
+    () => rankAffinityCandidates(document, focusCardId, { limit: 3, reviewedOnly }),
+    [document, focusCardId, reviewedOnly],
   );
   const cardsById = useMemo(
     () => new Map(document.cards.map((card) => [card.id, card])),

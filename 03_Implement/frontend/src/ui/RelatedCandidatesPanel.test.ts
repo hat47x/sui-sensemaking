@@ -6,8 +6,8 @@ import { setActiveLocale } from "../i18n/translate";
 import type { Card, Document } from "../domain/types";
 import { RelatedCandidatesPanel } from "./RelatedCandidatesPanel";
 
-function card(id: string, text: string): Card {
-  return { id, text, x: 0, y: 0 };
+function card(id: string, text: string, extra: Partial<Card> = {}): Card {
+  return { id, text, x: 0, y: 0, ...extra };
 }
 
 function documentWith(cards: Card[], islands: Document["islands"] = []): Document {
@@ -42,6 +42,24 @@ describe("RelatedCandidatesPanel", () => {
     expect(html).toContain("顧客の課題を分類する");
     expect(html).toContain("学習モデルは使っていません");
     expect(html).not.toContain(">追加<");
+  });
+
+  it("hides unreviewed candidates in read-only mode", () => {
+    const document = documentWith([
+      card("a", "顧客の課題を整理する", { textReviewed: true }),
+      card("b", "顧客の課題を分類する", { textReviewed: false }),
+    ]);
+
+    const html = renderToStaticMarkup(
+      createElement(RelatedCandidatesPanel, {
+        document,
+        focusCardId: "a",
+        reviewedOnly: true,
+      }),
+    );
+
+    expect(html).toContain("関連候補は見つかりませんでした");
+    expect(html).not.toContain("顧客の課題を分類する");
   });
 
   it("shows an empty state when no candidate is close enough", () => {
