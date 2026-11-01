@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test, type Page } from "@playwright/test";
 import { buildFirstMeaningfulMapDocument } from "./helpers/product_value_fixtures";
 
@@ -113,6 +115,21 @@ test("the SidePanel can load and display the tenant TEI epistemic projection", a
   await expect(panel.getByTestId("epistemic-outbox-count")).toContainText(
     "1 intent(s) held on this device",
   );
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    panel.getByRole("button", { name: "Export handoff JSON", exact: true }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("sui-epistemic-handoff.json");
+  const downloadedPath = await download.path();
+  expect(downloadedPath).toBeTruthy();
+  const exported = JSON.parse(await readFile(downloadedPath as string, "utf8")) as {
+    contract: string;
+    entries: Array<{ intent: Record<string, unknown> }>;
+  };
+  expect(exported.contract).toBe("sui.epistemic-review-outbox/v1");
+  expect(exported.entries[0].intent.operation).toBe("confirm");
+  expect(exported.entries[0].intent).not.toHaveProperty("cardText");
 
   await panel.getByRole("button", { name: "Bulk confirm preview", exact: true }).click();
   const bulk = panel.getByTestId("epistemic-bulk-preview");

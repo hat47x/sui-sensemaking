@@ -188,3 +188,29 @@ export function clearEpistemicOutbox(storage: StorageLike | null = defaultStorag
 
 export const EPISTEMIC_OUTBOX_KEY = STORAGE_KEY;
 export const EPISTEMIC_OUTBOX_LIMIT = MAX_ENTRIES;
+export const EPISTEMIC_OUTBOX_EXPORT_CONTRACT = "sui.epistemic-review-outbox/v1";
+
+/**
+ * Serialize a handoff file for human-mediated TEI transfer.
+ *
+ * The export never adds fields: it reuses the same allowlist/type validation as
+ * local storage, so a tampered or legacy entry cannot smuggle card text into a
+ * file. Sending the file to TEI remains an explicit human action.
+ */
+export function serializeEpistemicOutbox(
+  entries: EpistemicOutboxEntry[],
+  exportedAt: string,
+): string {
+  const sanitized = entries
+    .map((entry) => sanitizeEntry(entry))
+    .filter((entry): entry is EpistemicOutboxEntry => Boolean(entry));
+  return JSON.stringify(
+    {
+      contract: EPISTEMIC_OUTBOX_EXPORT_CONTRACT,
+      exportedAt,
+      entries: sanitized,
+    },
+    null,
+    2,
+  );
+}

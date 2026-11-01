@@ -1902,6 +1902,7 @@
   "epistemic.panel.intent_error": "Could not generate the intent.",
   "epistemic.panel.action_not_wired": "This action is not wired in the PoC yet.",
   "epistemic.panel.outbox_count": "{count} intent(s) held on this device",
+  "epistemic.panel.outbox_export": "Export handoff JSON",
   "epistemic.panel.outbox_clear": "Clear local intents",
   "epistemic.panel.outbox_note": "Nothing is written to the document or human_reviewed.",
   "epistemic.panel.queue_title": "Review queue ({count})",
