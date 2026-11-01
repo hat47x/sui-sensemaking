@@ -1434,9 +1434,16 @@ ADR-0048 D3改訂（2026-07-03）採択分。加算原則に従い、全フィ�
 
 ### 15.6 参照
 
-- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3改訂）
+- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3改訂）、`ADR-0105-source-reference-not-in-projection.md`
 - Issue: `DOMAIN-TRACE-01-serial-number-and-source-provenance`, `CARD-META-UI-01-card-provenance-metadata-ui-boundary`（主体メタの上位境界）
 - フロントエンド: `03_Implement/frontend/src/domain/types.ts` (カード.meta)
+
+### 15.7 外部agent投影での扱い（ADR-0105）
+
+- 外部投影（`context-projection.v1`、MCPの `get_context_projection`）の `cards` は、`meta` を出さない。`seq` と `source` のどちらも含めない。
+- 出典は内部情報を含み得る。本文がレビュー済みでも、出典の安全性はレビューされていない。本文のレビュー状態を、出典の露出許可として流用しない。
+- 出典が必要な場合は、人が「出典参照を含める」をONにした書き出し（§15.4）を使う。投影には明示トグルがないため、既定では出さない。
+- 単位digest（§1.3）の入力にも `meta` を含めない。
 
 ## 16. DOMAIN-EXPR-04 加算スキーマ拡張: 矛盾シグナルのレビュー決定（2026-07-08）
 
