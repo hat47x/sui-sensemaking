@@ -446,6 +446,10 @@ def test_audit_event_carries_tenant_and_agent_but_no_content_or_token(env) -> No
     assert event.actorRefHash == sha256(b"agent:agent-a").hexdigest()[:24]
     assert event.actorRefHash != sha256(b"spoofed-user").hexdigest()[:24]
     assert event.principalKind == "agent"
+    # #3276: レビュー済み本文を返した読み取りは、safe_mode=True と偽らず、
+    # 実際に本文を露出したことを監査に残す。
+    assert event.safeMode is False
+    assert event.metadata["reviewedTextExposed"] is True
     assert env["token_a"] not in repr(event)
     assert "REVIEWED-TEXT" not in repr(event)
 

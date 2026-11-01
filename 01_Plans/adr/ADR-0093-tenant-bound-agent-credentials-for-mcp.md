@@ -83,6 +83,7 @@ CVI（不変条件）のうち、share/書き出しで未レビュー情報・�
 - **資格情報の系統を混ぜない。** agent の資格情報（不透明・OAuth）と、利用者の資格情報（cookie・ヘッダー）を同じ要求で送ると、`400 agent_credential_conflict` で閉じる。どの主体として扱うかを曖昧にしないため。
 - **agent への応答は共有キャッシュに残さない。** agent の応答は `Cache-Control: private, no-store` とし、資格情報のヘッダーで `Vary` を付ける。ETag は返さない。保存された全文のハッシュは、伏せた項目の変更や内容の一致を示す手掛かりになるため。`created_by`（内部のユーザーID）も返さない。
 - **未レビューのカードidは agent 向け文書にも出さない。** `GET /docs/{doc_id}` は、未レビューのカードを `cards` から除き、そのカードを端点とする `edges`・`evidenceLinks`、島の `cardIds`・`placardCardId`、void の `cardIds` からも除く。MCP 投影のゲート（両端がレビュー済み）と同じ規則に揃える（#3275）。以前は件数の整合のために id を残していたが、id から未レビューのカードの存在が分かるため、安全側を優先する。
+- **agent 経路の SafeMode は、未レビュー本文のゲートであり、レビュー済み本文の伏せ字ではない。** `GET /docs/{doc_id}` は、agent 資格情報の付与範囲として、レビュー済みのカード本文を返す。MCP の `safeMode: true` は、それより厳しくカード本文を伏せるクライアント側の既定であり、バックエンドの読み取りを認可する条件ではない。監査 event は、実際にレビュー済み本文を返したとき `safe_mode=false` と `metadata.reviewedTextExposed=true` を記録する。固定の `safe_mode=true` にすると、既定の監査設定（`SUI_AUDIT_ALLOW_IN_SAFE_MODE=false`）で event が捨てられ、露出の事実が残らないため（#3276）。
 - **agent の監査は読み取りの記録だけ。** agent が送れる context-audit は、MCP の `context-query` だけとする。提案・適用の監査は作れない。CE-4 の完全性の追跡は、人間の経路の提案→適用の連鎖のためのものなので、agent の読み取り監査はそこに加えない。
 - **監査 event は主体の区分を持つ。** 閲覧などの監査 event に、固定項目 `principalKind`（`member` / `guest` / `agent`）を加える。区分は、検証済みの認証経路から決め、header の申告は使わない。`actorRefHash` は区分を含まない指紋なので、人間と非人間を記録だけで区別するために必要になる。責任を持つ人間への追跡は、資格情報と付与の行に残る登録者・付与者で行い、監査 event には載せない（仮決め。運用で不足が分かったら見直す）。
 
