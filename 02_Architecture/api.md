@@ -923,6 +923,7 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 - **登録・失効（Tenant Admin）**: `/tenant-admin/agent-credentials` で管理する。通常の利用者と同じ信頼済みSaaS セッションと `tenantSessionVersion` を要求し、テナント管理者向けの権限を独立して確認する。
   - `POST /tenant-admin/agent-credentials`（`agent.register`）: `{agentId, label, expiresAt, docIds}`。有効期限は、タイムゾーンつきで、未来かつ90日以内。付与する文書は1〜50件で、明示して列挙する。`201` で、`credential`（トークン平文）を**この応答でだけ**返す。`Cache-Control: no-store`。同じ `agentId` は、失効後も再登録できない（`409 agent_credential_exists`）。付与する文書は、登録者本人が読める文書に限る。読めない文書、存在しない文書、他テナントの文書は区別せず `404 document_not_found` で、何も作らない。
   - `GET /tenant-admin/agent-credentials`（`agent.register` または `agent.revoke`）: 自テナントの資格情報と、有効な付与の `docIds`。トークンもそのハッシュも返さない。
+  - 期限の延長、付与の追加、回転の専用APIは提供しない。これらは新しい `agentId` での再登録として行い、旧 `agentId` を失効させる。監査の主体は新しい `agentId` になるため、旧 `agentId` の履歴とは連続しない（`04_Documentation/mcp_agent_connection.md`）。
   - `POST /tenant-admin/agent-credentials/{agentId}/revoke`（`agent.revoke`）: 次の要求から効く。冪等で `204`。他テナントの `agentId` は `404`。
   - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`（`agent.register`）: `{identityProviderId, subject}` を agent に結ぶ。このテナントが `tenant_identity_providers` で信頼する、有効なIdPの行が無ければ `404 identity_provider_not_found`（存在しないIdPと区別しない）。すでに結ばれていれば `409`（どのテナントの agent かは示さない）。`identityProviderId` と `subject` は、前後に空白があれば `422`。一覧の `oauthBindings` に出る。
   - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他テナントの対応付けは `404`。
