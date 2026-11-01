@@ -151,7 +151,7 @@ Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格
 - `digest`: 露出した本文または題名から計算したsha256（`{ "alg": "sha256", "value": ... }`）です。カードは本文を返したときだけ値を持ち、伏せたときは`null`です。島はレビュー済みの題名だけ値を持ちます。レビュー済みの本文や題名を編集すると値が変わり、位置や関係線の変更では変わりません。内容の真実性は保証しません（ADR-0103）。
 - `relations`、`evidence`、`contradictions`: 関係線と、根拠・矛盾の関係。`contradictions` は `from` と `to` だけで、人が付けた確認状態（`contradictionState`）と注記（`note`）は含みません（ADR-0104）。`resolved` の矛盾も同じ形で残ります。
 - `voids`: 空白の`id`、`kind`、`resolved`、`cardIds`、`islandIds`
-- `narrativeChecks`: 物語の検査の`id`、`counts`、`issueDirections`
+- `narrativeChecks`: 物語の検査の`id`、`counts`、`issueDirections`。ナラティブの題名と本文は返しません（ADR-0106）
 - `counts`: `reviewed`、`unreviewed`、`redacted`。いずれも文書全体の数です。
 - `bundleHash`: 同じ入力と同じ文書から計算されるハッシュです。この値はMCP投影専用で、CE-1の `POST /context/bundle` が返す `bundleHash` とは入力も実装言語も異なり、一致しません。外部の記録では「投影の `bundleHash`」と区別してください。READMEでは、同じ入力で同じ値になることを確認項目にしています。露出した内容だけの版ではなく、文書の版（`baseDocSignature`、つまり文書の`id`と`updatedAt`）を含みます。露出内容が同じでも、文書が保存されて`updatedAt`が進めば値が変わります。ただし`updatedAt`はクライアントが送る値で、サーバーは採番も単調増加の検証もしません。そのため、この版の成分はサーバーが保証する値ではありません。内容だけで版固定したいときは、カードと島の単位digest（`digest`）を使ってください。入力と変わる条件、および`holdState`など入力に含まれない項目の残存リスクは、`02_Architecture/schemas.md`の§1.4にあります。
 

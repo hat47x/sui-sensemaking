@@ -350,6 +350,7 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - `baseDocSignature` は `` `${doc.id}:${doc.updatedAt}` `` の文字列である。`bundleHash` の入力に含まれる。
 - `bundleHash` は、次の入力のcanonical JSON（`canonicalizeJson`）のsha256（小文字16進64桁）である。`schemaVersion`、`docId`、`baseDocSignature`、`constraint`、`safeMode`、`cards`（`id`、`claimType`、`reviewed`、`redacted`、露出した本文。伏せた本文は `null`）、`islands`（`id`と、レビュー済みでなければ伏せた題名）、`relations`、`evidence`、`contradictions`、`counts`、`voids`、`narrativeChecks`。単位digestは入力に含めない。
 - `contradictions` は `{from, to}` だけを持ち、`contradictionState` と `note` は投影にも `bundleHash` の入力にも含めない（ADR-0104）。`resolved` の矛盾も `unconfirmed` と同じ形で残す。
+- `narratives` の `title` と `text` は、投影にも `bundleHash` の入力にも含めない。投影が返すのは `narrativeChecks`（`id`、`counts`、`issueDirections`）だけである（ADR-0106）。
 - 値が変わる条件は次のとおり。
   - 文書が保存されて `updatedAt` が進んだとき。露出内容が1文字も変わらなくても変わる。カードの移動、無関係なカードの追加、`holdState` の変更を含む。
   - 露出する本文、レビュー済みの島の題名、関係線、根拠・矛盾の関係、`counts`、`voids`、`narrativeChecks` が変わったとき。

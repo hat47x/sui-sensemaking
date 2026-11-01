@@ -63,7 +63,7 @@ PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージ�
 この経路を使うAIエージェント向けの注意点です。
 - ツールは2つで、どちらも読み取り専用です。`get_context_projection({ docId, constraint, safeMode })` と `get_proposal_status({ docId })` です。
 - **未レビューのカードは、どの `constraint` でも公開しません**（安全側に拒否します。上の適用範囲を参照）。レビュー済みの内容に使ってください。`holdState` のメタデータから、保留、未確定、棚上げのカードが分かります（DOGFOOD-08）。
-- 投影には、生成AIが検証できる構造の状態も含まれます。`voids`（kind、resolved、cardIds、islandIds。KJ-VOIDS-01）と `narrativeChecks`（A/Bの向きと件数。KJ-AB-CROSS-CHECK-01）です。どちらもSafeModeで安全に扱えます（カードの本文も、課題のメッセージも含みません）。
+- 投影には、生成AIが検証できる構造の状態も含まれます。`voids`（kind、resolved、cardIds、islandIds。KJ-VOIDS-01）と `narrativeChecks`（A/Bの向きと件数。KJ-AB-CROSS-CHECK-01）です。どちらもSafeModeで安全に扱えます（カードの本文も、課題のメッセージも含みません）。ナラティブの題名と本文は返しません（ADR-0106）。
 - HTTPとOAuth 2.1のリソースサーバーで使うには、`SUI_MCP_TRANSPORT=http` と必須のOAuth用の環境変数を設定します（下の「通信方式の選択」を参照）。トークンは、設定した信頼済みの発行者が発行し、`read:context` スコープを持つ必要があります。
 
 ### 生成AIによる検証の手順
