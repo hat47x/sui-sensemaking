@@ -42,16 +42,17 @@ V3「レビュー」とV4「共有と学習」に寄与する。外部のAI、TE
 | 読み取り投影 | 外部 → SUIの投影を読む | MCPの2ツール、TEI投影の表示 | なし | レビュー済みだけ。未レビューは件数のみ。 |
 | handoff | 外部の意味状態 → SUIのoutbox | TEI intentのoutbox | なし（SUIの確認済みにしない） | 識別子とfingerprintだけ。本文を保存しない。 |
 | 提案ingest | 外部 → SUIの提案 | 未実装（`ADR-0108`） | 提案のみ。自動適用しない | 受信面の認可、監査、undoを新しいADRで決める。 |
-| 送信 | SUI → 外部 | 未実装 | なし | 送信先、認証、監査、再送を新しいADRで決める。 |
+| 送信（LLM provider） | SUI → 外部LLM | 実装済み（LLM入力IR、`ADR-0069`） | 提案生成のみ | 入力IRで構造を制御する。SafeModeと`SUI_LLM_PROVIDER=none`でも主要価値が成立する。 |
+| 送信（TEI） | SUI → 外部TEI | 未実装 | なし | 送信先、認証、監査、再送を新しいADRで決める。 |
 
-四類型は、同じ境界判定を共有する。類型ごとに新しい安全モデルを作らない。
+四類型は、同じ境界判定を共有する。類型ごとに新しい安全モデルを作らない。LLM providerとTEIは、どちらも「送信」に属するが、送信先と目的が違うため別の行にする。
 
 ```mermaid
 flowchart LR
   E["外部AI・TEI・TAI・MCP"] --> R["読み取り投影"]
   E --> H["handoff outbox"]
   E -.-> P["提案ingest（未実装）"]
-  S["SUIの意味形成"] -.-> X["送信（未実装）"]
+  S["SUIの意味形成"] -.-> X["送信（LLM既存・TEI未実装）"]
   R --> S
   H --> S
 ```
@@ -113,6 +114,19 @@ flowchart LR
 | 読み取り投影（tenant） | `test_binding_of_another_tenant_is_not_served` | 他テナントのartifactを返さない |
 | 認知支援（retrieval-only） | `affinity_candidates.test.ts`、`RelatedCandidatesPanel.test.ts` | 決定論的で、関係や統合を自動適用しない |
 | 送信（未実装） | `test_projection_has_no_write_or_send_route` | 書込み・送信routeを開かない |
+
+### 9. TEI送信に進む条件
+
+TEIへの送信は、次のすべてが揃うまで作らない。
+
+1. T2の実利用で、outboxの手動受け渡しでは足りないhandoffが3回以上観測される。
+2. 送信先のTEI endpointと、受信側のcontract/schemaが固定されている。
+3. `tenantId + docId` 単位の認可、監査event、再送、重複排除の方式が決まっている。
+4. 送るデータclass（識別子、fingerprint、本文の有無）と、未レビュー・秘密の扱いが決まっている。
+5. 利用者が明示的に送信を選び、既定では送らない。
+6. 新しいADRで、`api.md`の契約と実装範囲を固定する。
+
+T8の判断条件は`ADR-0113`、TAI・agentの提案ingestの条件は`ADR-0112`に従う。
 
 ## Three-Element Verification（自己適用）
 
