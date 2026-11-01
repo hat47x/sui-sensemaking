@@ -150,15 +150,32 @@ try {
   const granted = await projection(client, "doc-granted", false);
   check(!granted.isError, "付与した文書の get_context_projection が成功する");
   const parsed = JSON.parse(granted.text) as {
+    baseDocSignature?: string;
     bundleHash?: string;
-    cards?: Array<{ id: string; text?: string }>;
-    islands?: Array<{ id: string; title?: string }>;
+    cards?: Array<{ id: string; text?: string; digest?: { alg?: string; value?: string } | null }>;
+    islands?: Array<{ id: string; title?: string; digest?: { alg?: string; value?: string } | null }>;
   };
   check(typeof parsed.bundleHash === "string" && parsed.bundleHash.length > 0, "bundleHashが返る");
+  check(
+    typeof parsed.baseDocSignature === "string" && parsed.baseDocSignature.startsWith("doc-granted:"),
+    "baseDocSignatureが文書全体の版として返る",
+  );
   const cardIds = (parsed.cards ?? []).map((card) => card.id).sort();
   check(
     cardIds.join(",") === "c-reviewed,c-reviewed-2",
     `レビュー済みのカード2件だけが返る（実際: ${cardIds.join(",")}）`,
+  );
+  for (const card of parsed.cards ?? []) {
+    check(
+      card.digest?.alg === "sha256" && /^[0-9a-f]{64}$/.test(card.digest?.value ?? ""),
+      `${card.id} の単位digestが返る`,
+    );
+  }
+  check(
+    (parsed.islands ?? []).some(
+      (island) => island.digest?.alg === "sha256" && /^[0-9a-f]{64}$/.test(island.digest.value),
+    ),
+    "レビュー済みの島の単位digestが返る",
   );
   check(granted.text.includes("E2E-REVIEWED-TEXT"), "safeMode=false でレビュー済みの本文が返る");
 
