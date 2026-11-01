@@ -102,6 +102,17 @@ flowchart LR
 3. 未レビューの読み取り露出と、`human_reviewed`の自動設定が、テストで否定されている。
 4. T8、TEI送信、TAIの提案ingestのそれぞれに、次に判断する条件が書かれている。
 
+### 8. 境界を支えるテスト
+
+| 境界 | テスト | 固定する内容 |
+|---|---|---|
+| 読み取り投影（agent） | `test_unreviewed_card_text_is_withheld_from_agents`、`test_only_reviewed_text_and_allowed_structure_reach_agents` | 未レビューの本文とIDを返さない |
+| 読み取り投影（派生route） | `test_derived_read_routes_stay_closed_to_agents` | TEI投影を含む派生routeをagentへ開かない |
+| handoff（outbox） | `epistemic_review_outbox.test.ts` の allowlist テスト | カード本文・ナラティブを保存しない |
+| handoff（パネル） | `epistemic_review_panel.spec.ts` | intentを保存せず、`human_reviewed`へ書き込まない |
+| 読み取り投影（tenant） | `test_binding_of_another_tenant_is_not_served` | 他テナントのartifactを返さない |
+| 認知支援（retrieval-only） | `affinity_candidates.test.ts`、`RelatedCandidatesPanel.test.ts` | 決定論的で、関係や統合を自動適用しない |
+
 ## Three-Element Verification（自己適用）
 
 | 次元 | このADRでの主張 | 他次元への制約 |
