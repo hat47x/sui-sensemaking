@@ -75,10 +75,6 @@ class FromArtifactTest(unittest.TestCase):
             from_artifact(artifact(affiliations=affiliations))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ToDocumentV1PayloadTest(unittest.TestCase):
     def test_builds_documentv1_shape(self):
         document = from_artifact(ARTIFACT)
@@ -103,3 +99,7 @@ class ToDocumentV1PayloadTest(unittest.TestCase):
         document = from_artifact(ARTIFACT)
         with self.assertRaises(ProjectionError):
             to_documentv1_payload(document, transform={"kind": "test"}, created_at="", updated_at="t")
+
+
+if __name__ == "__main__":
+    unittest.main()
