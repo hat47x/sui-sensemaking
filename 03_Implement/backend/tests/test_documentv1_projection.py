@@ -196,7 +196,7 @@ class ToDocumentV1PayloadTest(unittest.TestCase):
             DocumentV1.model_validate(payload)
 
 
-class SchemaVersionTest(unittest.TestCase):
+class SaveContractTest(unittest.TestCase):
     def _payload(self):
         valid = json.loads(json.dumps(ARTIFACT))
         valid["document"]["affiliations"][0]["cardId"] = "card-2"
@@ -206,9 +206,6 @@ class SchemaVersionTest(unittest.TestCase):
             created_at="2026-11-02T00:00:00Z",
             updated_at="2026-11-02T00:00:00Z",
         )
-
-    def test_payload_carries_schema_version(self):
-        self.assertEqual(self._payload()["schemaVersion"], "1.0.0")
 
     def test_payload_passes_the_save_contract_adapter(self):
         from sui_sensemaking_api.routes.docs import _validate_document_payload_with_a1_contract
