@@ -29,6 +29,7 @@ class ProjectedCard:
     claim_type: str | None = None
     hold_state: str | None = None
     text_reviewed: bool | None = None
+    sources: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -96,6 +97,14 @@ def _optional_bool(value: object, field: str) -> bool | None:
     return value
 
 
+def _optional_text_list(value: object, field: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise ProjectionError(f"{field} must be an array when present")
+    return tuple(_text(item, f"{field}[]") for item in value)
+
+
 def _optional_text(value: object, field: str) -> str | None:
     if value is None:
         return None
@@ -149,6 +158,7 @@ def from_artifact(payload: Mapping[str, Any]) -> ProjectedDocument:
                 claim_type=_optional_choice(item.get("claimType"), "card.claimType", CLAIM_TYPES),
                 hold_state=_optional_choice(item.get("holdState"), "card.holdState", HOLD_STATES),
                 text_reviewed=_optional_bool(item.get("textReviewed"), "card.textReviewed"),
+                sources=_optional_text_list(item.get("sources"), "card.sources"),
             )
         )
     if not cards:
@@ -261,6 +271,8 @@ def to_documentv1_payload(
             item["holdState"] = card.hold_state
         if card.text_reviewed is not None:
             item["textReviewed"] = card.text_reviewed
+        if card.sources:
+            item["sources"] = list(card.sources)
         cards.append(item)
 
     islands = []
