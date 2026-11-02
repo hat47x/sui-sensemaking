@@ -12,6 +12,8 @@ from typing import Any, Mapping, Sequence
 
 PROJECTION_SCHEMA = "tai.reference.tei-documentv1-projection/v0"
 KINDS = ("card", "island")
+CLAIM_TYPES = ("fact", "claim", "hypothesis", "unknown")
+HOLD_STATES = ("held", "pending", "shelved")
 
 
 class ProjectionError(ValueError):
@@ -78,6 +80,30 @@ def _number(value: object, field: str) -> float:
     return float(value)
 
 
+def _optional_choice(value: object, field: str, choices: Sequence[str]) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or value not in choices:
+        raise ProjectionError(f"{field} must be one of {', '.join(choices)} when present")
+    return value
+
+
+def _optional_bool(value: object, field: str) -> bool | None:
+    if value is None:
+        return None
+    if not isinstance(value, bool):
+        raise ProjectionError(f"{field} must be a boolean when present")
+    return value
+
+
+def _optional_text(value: object, field: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ProjectionError(f"{field} must be a string when present")
+    return value
+
+
 def _as_list(value: object, field: str) -> Sequence[Any]:
     if not isinstance(value, list):
         raise ProjectionError(f"{field} must be an array")
@@ -120,9 +146,9 @@ def from_artifact(payload: Mapping[str, Any]) -> ProjectedDocument:
                 text=_text(item.get("text"), "card.text") if item.get("text") != "" else "",
                 x=_number(item.get("x"), "card.x"),
                 y=_number(item.get("y"), "card.y"),
-                claim_type=item.get("claimType"),
-                hold_state=item.get("holdState"),
-                text_reviewed=item.get("textReviewed"),
+                claim_type=_optional_choice(item.get("claimType"), "card.claimType", CLAIM_TYPES),
+                hold_state=_optional_choice(item.get("holdState"), "card.holdState", HOLD_STATES),
+                text_reviewed=_optional_bool(item.get("textReviewed"), "card.textReviewed"),
             )
         )
     if not cards:
@@ -139,7 +165,7 @@ def from_artifact(payload: Mapping[str, Any]) -> ProjectedDocument:
                     _text(card_id, "island.cardIds[]")
                     for card_id in _as_list(item.get("cardIds"), "island.cardIds")
                 ),
-                title=item.get("title"),
+                title=_optional_text(item.get("title"), "island.title"),
             )
         )
 
