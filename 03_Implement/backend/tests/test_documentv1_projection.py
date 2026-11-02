@@ -214,5 +214,34 @@ class SaveContractTest(unittest.TestCase):
         self.assertEqual(validated.id, "doc-1")
 
 
+class SourcesTest(unittest.TestCase):
+    def _artifact(self):
+        artifact = json.loads(json.dumps(ARTIFACT))
+        artifact["document"]["affiliations"][0]["cardId"] = "card-2"
+        artifact["document"]["cards"][0]["sources"] = ["src-1", "src-2"]
+        return artifact
+
+    def test_reads_sources(self):
+        document = from_artifact(self._artifact())
+        self.assertEqual(document.cards[0].sources, ("src-1", "src-2"))
+        self.assertEqual(document.cards[1].sources, ())
+
+    def test_payload_carries_sources(self):
+        payload = to_documentv1_payload(
+            from_artifact(self._artifact()),
+            transform=TRANSFORM,
+            created_at="2026-11-02T00:00:00Z",
+            updated_at="2026-11-02T00:00:00Z",
+        )
+        self.assertEqual(payload["cards"][0]["sources"], ["src-1", "src-2"])
+        self.assertNotIn("sources", payload["cards"][1])
+
+    def test_rejects_non_array_sources(self):
+        artifact = self._artifact()
+        artifact["document"]["cards"][0]["sources"] = "src-1"
+        with self.assertRaises(ValueError):
+            from_artifact(artifact)
+
+
 if __name__ == "__main__":
     unittest.main()
