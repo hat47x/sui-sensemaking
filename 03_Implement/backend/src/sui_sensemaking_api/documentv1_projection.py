@@ -67,6 +67,7 @@ class ProjectedDocument:
     contract_id: str
     contract_version: str
     tei_commit: str
+    reading_order: tuple[str, ...] = ()
 
 
 def _text(value: object, field: str) -> str:
@@ -242,6 +243,7 @@ def from_artifact(payload: Mapping[str, Any]) -> ProjectedDocument:
         contract_id=contract_id,
         contract_version=contract_version,
         tei_commit=tei_commit,
+        reading_order=_optional_text_list(meta.get("readingOrder"), "document.readingOrder"),
     )
 
 
@@ -304,6 +306,8 @@ def to_documentv1_payload(
     }
     if document.title is not None:
         payload["title"] = document.title
+    if document.reading_order:
+        payload["readingOrder"] = list(document.reading_order)
     if document.affiliations:
         payload["affiliations"] = [
             {"id": item.id, "cardId": item.card_id, "islandId": item.island_id}
