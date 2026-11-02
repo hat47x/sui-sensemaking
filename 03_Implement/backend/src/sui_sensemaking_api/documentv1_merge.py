@@ -12,8 +12,27 @@ from typing import Any, Mapping
 
 from sui_sensemaking_api.documentv1_projection import (
     ProjectedDocument,
+    ProjectionError,
     to_documentv1_payload,
 )
+
+
+def validate_existing_document(existing: Mapping[str, Any]) -> None:
+    """Reject an existing document that DocumentV1 would not accept.
+
+    A merge preserves fields the projection does not carry, so an invalid
+    existing document stays invalid after the merge. Validate before merging.
+    """
+    from pydantic import ValidationError
+
+    from sui_sensemaking_api.models import DocumentV1
+
+    try:
+        DocumentV1.model_validate(existing)
+    except ValidationError as exc:
+        errors = exc.errors()
+        message = errors[0].get("msg", "existing document is invalid") if errors else str(exc)
+        raise ProjectionError(f"existing document is not a valid DocumentV1: {message}") from exc
 
 
 def _merge_items(
