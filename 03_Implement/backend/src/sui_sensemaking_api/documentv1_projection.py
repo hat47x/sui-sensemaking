@@ -271,7 +271,6 @@ def to_documentv1_payload(
         islands.append(item)
 
     payload: dict[str, Any] = {
-        "schemaVersion": "1.0.0",
         "version": 1,
         "id": document.id,
         "createdAt": created_at,
