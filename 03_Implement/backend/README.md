@@ -323,7 +323,7 @@ alembic upgrade head
 pytest -m postgres
 ```
 
-テナントRLSの実地のテスト行列は、マイグレーションの所有者とは別の、実行用のロールで実行します。実行用のロールには、対象スキーマの通常のDML権限を付与し、superuser属性と`BYPASSRLS`は付与しないでください。同じ資格情報や、RLSを迂回できるロールでは、テストが失敗します。
+テナントRLSの実地のテスト行列は、マイグレーションの所有者とは別の、実行用のロールで実行します。実行用のロールには、対象スキーマの通常のDML権限を付与し、superuser属性と`BYPASSRLS`は付与しないでください。同じ資格情報や、RLSを迂回できるロールでは、テストが失敗します。マイグレーション所有者は、テストの前提データを作るため`BYPASSRLS`を持ってかまいません。CIの`backend-postgres-rls`ジョブは、その構成を再現します。実行にはPostgresドライバーが要るため、`python -m pip install -e '.[test,postgres]'` で依存を入れます。
 
 ```bash
 export SUI_DATABASE_URL="postgresql+psycopg://migration_owner:...@localhost:5432/sui_sensemaking"
@@ -341,7 +341,7 @@ export SUI_RUN_PG_RLS_TESTS=1
 pytest -q tests/test_agent_credential_postgres_rls.py
 ```
 
-このテストはCIでは実行しません（`.github/workflows/mcp-agent-auth-ci.yml` と `unit-verification-ci.yml` は実DBを持たないため、`SUI_RUN_PG_RLS_TESTS` が無く、テストは skip されます）。Postgresのサービスコンテナを使うCIジョブを足すかは未決です（#3284）。資格情報や付与の表、またはそのRLSを変える変更では、手元で上のコマンドを実行してください。
+このテストは、`.github/workflows/mcp-agent-auth-ci.yml` の `backend-postgres-rls` ジョブが、Postgres 16のサービスコンテナと上の2ロールを作って実行します（#3284）。手元で確かめるときも、上のコマンドをそのまま使えます。CIでは `test_document_access_rls_postgres.py` と `test_agent_credential_postgres_rls.py` の両方を実行します。
 
 認証フェデレーションのLevel 2（モックのSP/IdP）を実行する場合。
 
@@ -379,3 +379,68 @@ tests/scripts/run_auth_level2.sh
 - `fallback_to_none`
 
 これらは `extra={...}` で渡され、`SUI_LOG_JSON=true`（既定）のときは、JSONの1行として出力されます。OPS-OBSERV-01より前はログの設定がなく、`logging.Formatter` の既定の書式は `extra` を出力しないため、**上記の項目は実際には出力されていませんでした**。出力レベルは `SUI_LOG_LEVEL` で変更できます。すべてのリクエストには `X-Request-Id` が付き、ログ行の `requestId` フィールドと突き合わせられます。
+
+## 依存の固定
+
+実行時依存は `requirements.lock`、テスト込みの依存は `requirements-test.lock` に固定しています。どちらも Python 3.12 で `pyproject.toml` の extra から生成した `pip freeze --exclude-editable` の結果です。CIとDockerはこのファイルを使い、ビルドのたびに新しい版を解決しません。
+
+```bash
+# CI・テスト（[test,postgres]）
+python -m pip install -r requirements-test.lock
+python -m pip install --no-deps -e .
+
+# Docker・実行時（[postgres]）
+python -m pip install -r requirements.lock
+python -m pip install --no-deps .
+```
+
+依存を更新するときは、新しい一時venvで extra を入れ直し、テストを通してからロックを作り直します。
+
+```bash
+python3.12 -m venv .venv-lock
+. .venv-lock/bin/activate
+pip install --upgrade pip
+pip install -e '.[test,postgres]'
+pip freeze --exclude-editable > requirements-test.lock
+deactivate
+
+python3.12 -m venv .venv-runtime
+. .venv-runtime/bin/activate
+pip install --upgrade pip
+pip install -e '.[postgres]'
+pip freeze --exclude-editable > requirements.lock
+```
+
+更新時は、安全系サブセットと全件テスト（下記）を実行してください。ロックに含まれる版を変えると、`cryptography` や `pyjwt` など認証・暗号に関わる依存も変わるためです。
+
+## テストとCIの分担
+
+PRのCI（`.github/workflows/unit-verification-ci.yml`）は、契約ドリフトと、安全不変条件に直接関係するテストだけを実行します。対象は、SafeMode、リクエスト本文の保護、agent資格情報、監査、提案の人間判断、LLM入力IRです。
+
+選ばれなかったテストは、`.github/workflows/backend-full-nightly.yml` が毎日まとめて実行します。PRのCI時間を抑えつつ、全件の後退を翌日までに検出するための分担です。
+
+```bash
+# PRのCIと同じ安全系サブセット
+python scripts/check_contract_drift.py
+python -m ruff check src tests
+python -m pytest -q \
+  tests/test_ts_python_contract_drift.py \
+  tests/test_critique_history_model.py \
+  tests/test_ai_safemode.py \
+  tests/test_request_body_safety.py \
+  tests/test_context_bundle_routes.py \
+  tests/test_agent_credential_http.py \
+  tests/test_docs_access_control_integration.py \
+  tests/test_docs_tenant_isolation_surfaces.py \
+  tests/test_audit.py \
+  tests/test_docs_audit_integration.py \
+  tests/test_ce2_proposal_api.py \
+  tests/test_llm_input_ir.py \
+  tests/test_external_agent_proposal_api.py \
+  tests/test_reviewer_ref_resolver.py \
+  tests/test_settings_env_prefix_migration.py \
+  tests/test_tei_epistemic_tenant_route.py
+
+# 全件（定期実行と同じ）
+python -m pytest -q
+```

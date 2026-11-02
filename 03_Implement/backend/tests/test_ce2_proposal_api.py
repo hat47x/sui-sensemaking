@@ -264,6 +264,13 @@ def test_record_proposal_decision_allows_held_then_terminal_and_rejects_later_ch
     assert accepted.status_code == 200
     assert rejected.status_code == 409
 
+    status = client.get("/ai/proposals/status", params={"docId": "doc-1"})
+    assert status.status_code == 200, status.text
+    item = next(p for p in status.json()["proposals"] if p["proposalId"] == "proposal-1")
+    assert item["status"] == "accepted"
+    assert item["decidedAt"] is not None
+    assert item["sourceBundleHash"] == "a" * 64
+
 
 def test_record_proposal_decision_requires_existing_document(sqlite_client) -> None:
     client, _ = sqlite_client

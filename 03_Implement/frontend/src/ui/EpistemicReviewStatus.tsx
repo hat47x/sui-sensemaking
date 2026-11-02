@@ -5,6 +5,8 @@ type EpistemicReviewStatusProps = {
   item: EpistemicUiItem;
   onAction: (action: EpistemicUiAction) => void;
   compact?: boolean;
+  /** PoC surfaces may show the status without offering a write action yet. */
+  showActions?: boolean;
 };
 
 const ACTION_LABEL_KEY: Readonly<Record<EpistemicUiAction, string>> = Object.freeze({
@@ -55,6 +57,7 @@ export function EpistemicReviewStatus({
   item,
   onAction,
   compact = false,
+  showActions = true,
 }: EpistemicReviewStatusProps) {
   const actions = item.actions.filter((action) =>
     compact
@@ -85,7 +88,7 @@ export function EpistemicReviewStatus({
       {item.inferredContextUsed ? (
         <span style={{ fontSize: 11, color: "#64748b" }}>{t("epistemic.hint.inferred_context")}</span>
       ) : null}
-      {actions.map((action) => (
+      {showActions ? actions.map((action) => (
         <button
           key={action}
           type="button"
@@ -102,7 +105,7 @@ export function EpistemicReviewStatus({
         >
           {t(ACTION_LABEL_KEY[action])}
         </button>
-      ))}
+      )) : null}
     </div>
   );
 }

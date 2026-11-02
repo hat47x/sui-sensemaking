@@ -30,6 +30,7 @@ from sui_sensemaking_api.db import get_db
 from sui_sensemaking_api.models import Base, DocumentRow, TenantRow
 from sui_sensemaking_api.routes.ai import router as ai_router
 from sui_sensemaking_api.routes.docs import router as docs_router
+from sui_sensemaking_api.routes.tei_epistemic import router as tei_epistemic_router
 
 TIMESTAMP = "2026-10-09T00:00:00+00:00"
 HASH_KEY = b"agent-credential-test-key-0123456789"
@@ -202,6 +203,7 @@ def env(tmp_path) -> Iterator[dict]:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(docs_router)
     app.include_router(ai_router)
+    app.include_router(tei_epistemic_router)
     spy = SpyDispatcher()
     app.state.agent_credential_hash_key = HASH_KEY
     app.state.access_control_adapter = None
@@ -236,7 +238,7 @@ def test_same_doc_id_resolves_only_inside_the_credentials_tenant(env) -> None:
 
     # 文書の題名は agent へ返さない。同じ docId でも、tenant ごとの内容で区別する。
     assert a.json()["title"] is None and b.json()["title"] is None
-    assert len(a.json()["cards"]) == 3
+    assert {card["id"] for card in a.json()["cards"]} == {"c-reviewed"}
     assert b.json()["cards"] == []
     assert a_to_b_only.status_code == 404
     assert b_to_a_only.status_code == 404
@@ -356,9 +358,10 @@ def test_derived_read_routes_stay_closed_to_agents(env) -> None:
         client.get("/docs/shared-doc/merge-decision-logs/by-group/group-1", headers=headers),
         client.get("/docs/shared-doc/merge-decision-logs/restore/v1", headers=headers),
         client.get("/docs/shared-doc/similar-candidate-groups", headers=headers),
+        client.get("/docs/shared-doc/epistemic/projection", headers=headers),
     ]
 
-    assert [r.status_code for r in closed] == [403, 403, 403]
+    assert [r.status_code for r in closed] == [403, 403, 403, 403]
     assert {r.json()["detail"]["code"] for r in closed} == {"agent_route_not_enabled"}
 
 
@@ -366,7 +369,9 @@ def test_unreviewed_card_text_is_withheld_from_agents(env) -> None:
     body = env["client"].get("/docs/shared-doc", headers=_h(env["token_a"])).json()
     texts = {card["id"]: card["text"] for card in body["cards"]}
 
-    assert texts == {"c-reviewed": "REVIEWED-TEXT", "c-unreviewed": "", "c-unknown": ""}
+    assert texts == {"c-reviewed": "REVIEWED-TEXT"}
+    assert "c-unreviewed" not in json.dumps(body)
+    assert "c-unknown" not in json.dumps(body)
     assert "SECRET" not in json.dumps(body)
 
 
@@ -395,7 +400,12 @@ def test_only_reviewed_text_and_allowed_structure_reach_agents(env) -> None:
     # 確認済みの本文と構造は出る。
     titles = {island["id"]: island.get("title") for island in body["islands"]}
     assert titles == {"i-reviewed": "REVIEWED-ISLAND-TITLE", "i-unreviewed": None}
-    assert [link["id"] for link in body["evidenceLinks"]] == ["e1"]
+    # 未レビューのカードidは、カード・関係線・根拠リンク・島の所属のどこにも出ない。
+    assert {card["id"] for card in body["cards"]} == {"c-reviewed"}
+    assert {edge["id"] for edge in body["edges"]} == set()
+    assert body["evidenceLinks"] == []
+    islands_by_id = {island["id"]: island for island in body["islands"]}
+    assert islands_by_id["i-unreviewed"]["cardIds"] == []
     assert body["narratives"][0]["checks"][0]["issues"][0]["direction"] == "a_missing_in_b"
 
 
@@ -439,8 +449,36 @@ def test_audit_event_carries_tenant_and_agent_but_no_content_or_token(env) -> No
     assert event.actorRefHash == sha256(b"agent:agent-a").hexdigest()[:24]
     assert event.actorRefHash != sha256(b"spoofed-user").hexdigest()[:24]
     assert event.principalKind == "agent"
+    # #3276: レビュー済み本文を返した読み取りは、safe_mode=True と偽らず、
+    # 実際に本文を露出したことを監査に残す。
+    assert event.safeMode is False
+    assert event.metadata["reviewedTextExposed"] is True
     assert env["token_a"] not in repr(event)
     assert "REVIEWED-TEXT" not in repr(event)
+
+
+def test_context_audit_marks_agent_reported_values_as_unverified(env) -> None:
+    # #3294: context-audit の bundleHash / safeMode は agent の申告値である。
+    # 任意の64桁16進を受け付ける代わりに、監査eventで申告であることを示す。
+    body = {
+        "operation": "query",
+        "safeMode": True,
+        "equivalenceKey": "a" * 64,
+        "bundleHash": "b" * 64,
+        "command": "context-query",
+        "channel": "mcp",
+    }
+    response = env["client"].post(
+        "/docs/shared-doc/context-audit", json=body, headers=_h(env["token_a"])
+    )
+    assert response.status_code == 200, response.text
+
+    event = env["spy"].events[-1]
+    assert event.eventType == "query"
+    assert event.metadata["recordedBy"] == "agent_report"
+    assert event.metadata["serverVerified"] is False
+    assert event.metadata["bundleHash"] == "b" * 64
+    assert event.safeMode is True
 
 
 def test_the_raw_token_is_never_persisted_or_echoed(env) -> None:

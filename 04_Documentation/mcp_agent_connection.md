@@ -28,6 +28,19 @@
 `get_proposal_status`で読めるものは次のとおりです。
 
 - 文書のAI提案ごとに、`proposalId`、`proposalKind`、`origin`、`status`（`proposed`、`accepted`、`rejected`、`held`）、`sourceBundleHash`、作成日時、決定日時。
+- `sourceBundleHash` は提案の生成時点の文脈バンドルのハッシュです。`accepted` などは、その生成時点のバンドルに対する人間の判断であり、現在の文書の内容への受理を意味しません。文書が編集された後に古い判断が残っていても、現在の版への受理として読まないでください。現在の版は、`GET /docs/{doc_id}` の `updatedAt` と `baseDocSignature` で別に確認します。`decidedAt` は最後に判断を記録した時刻です（#3311）。
+
+## TAI SCN-001での版固定
+
+TAIのように、レビュー済みの投影を読んで版を固定する場合は、次の3つを組にして記録します。
+
+- `baseDocSignature`（`<docId>:<updatedAt>`）: 文書全体の版。
+- `bundleHash`: 露出した投影全体の決定的なsha256。単位digestは入力に含みません。
+- `cards[].digest` / `islands[].digest`: 露出したカード本文・島の題名の単位digest。伏せた場合は`null`です。
+
+`bundleHash`だけではカード単位の同一性を復元できず、`baseDocSignature`だけでは内容の同一性を保証できません。3つを組にして、再観測の前後を照合します。
+
+TAIは、レビュー済みのカードと島の題名だけを読みます。ナラティブ本文、TEI投影、agentからの提案POSTは使いません。資格情報はTenant AdminのAPIで人間が発行し、TAIが自分で発行することはできません（ADR-0115）。
 
 ## エージェントが読めないもの
 
@@ -65,10 +78,17 @@
 Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格情報の平文は、この登録の応答にだけ出ます。一覧の`GET /tenant-admin/agent-credentials`では、平文もハッシュも見られません。受け取った値はすぐ安全な場所へ保管してください。
 
 - 失効: `POST /tenant-admin/agent-credentials/{agentId}/revoke`で失効します。次の要求から効きます。1つの文書の付与だけを外すときは、`DELETE /tenant-admin/agent-credentials/{agentId}/documents/{docId}`を使います。
-- 更新: 期限の延長や付与の追加はできません。失効後の`agentId`も再登録できないため、新しい`agentId`で登録し直し、MCPサーバーの設定を差し替えます。
+- 更新: 期限の延長、付与の追加、資格情報の回転の専用APIはありません。更新は、新しい`agentId`での再登録として行います（#3286の決定）。手順は次のとおりです。
+  1. Tenant Adminが、新しい`agentId`と、新しく読ませる文書の一覧、新しい期限で登録します。
+  2. 新しい資格情報の平文を、MCPサーバーの`SUI_MCP_AGENT_CREDENTIAL`へ設定します。
+  3. 新しい接続で読み取りが成功することを確かめます。
+  4. 旧`agentId`を`POST /tenant-admin/agent-credentials/{agentId}/revoke`で失効させ、旧資格情報を破棄します。
+  - 変わるもの: `agentId`、資格情報の平文、MCPサーバーの設定、監査eventの`actorRefHash`（新しい`agentId`から作るため）。監査の履歴は旧`agentId`の記録とは連続しません。
+  - 変わらないもの: 文書の内容、人が設定した`human_reviewed`、文書の監査event。付与の範囲は新しい登録で列挙し直すため、同じ範囲を維持するには同じ文書idを指定します。
+  - 期限の延長や付与の追加を専用APIにしない理由は、権限と期間の変更を、登録時と同じ明示的な列挙と監査の単位に保つためです。回転も同じ手順を使います。
 - OAuthトークンで接続する場合は、`POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`で、信頼するIdPの`identityProviderId`と`subject`をagentに結びます。
 
-各APIの条件と応答は、[API仕様のAgent資格情報（§2.15）](../02_Architecture/api.md)が正本です。agent資格情報で通せるのは、`GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit`の4つだけです。付与外の文書は、存在しない文書と区別せず`404`になります。
+各APIの条件と応答は、[API仕様のAgent資格情報（§2.15）](../02_Architecture/api.md)が正本です。agent資格情報で通せるのは、`GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit`の4つだけです。付与外の文書は、存在しない文書と区別せず`404`になります。TEIのepistemic projection（`GET /docs/{doc_id}/epistemic/projection`）は、判定項目を含み、バックエンドでSafeModeの伏せ字を行わないため、agent経路には開いていません（`403 agent_route_not_enabled`）。必要な場合は、利用者の資格情報で読む経路を使ってください。なお、MCPの`safeMode: true`はカード本文を伏せますが、`GET /docs/{doc_id}`はagent資格情報の付与範囲としてレビュー済み本文を返します。SafeModeは未レビュー本文のゲートであり、レビュー済み本文の伏せ字ではありません（ADR-0093、#3276）。
 
 ## 生成AIサービスへの送信について
 
@@ -139,14 +159,14 @@ Tenant Adminは`POST /tenant-admin/agent-credentials`で登録します。資格
 結果は、JSONをテキストにしたものです。主な項目は次のとおりです。
 
 - `schemaVersion`（`context-projection.v1`）、`docId`、`constraint`、`safeMode`、`baseDocSignature`（文書のidと更新時刻）
-- `cards`: 含まれたカードの`id`、`claimType`、`holdState`（`held`、`pending`、`shelved`、または`null`）、`text`、`reviewed`、`redacted`、`digest`
-- `islands`: 島の`id`、`title`、`digest`
-- `digest`: 露出した本文または題名から計算したsha256（`{ "alg": "sha256", "value": ... }`）です。カードは本文を返したときだけ値を持ち、伏せたときは`null`です。島はレビュー済みの題名だけ値を持ちます。レビュー済みの本文や題名を編集すると値が変わり、位置や関係線の変更では変わりません。内容の真実性は保証しません（ADR-0103）。
-- `relations`、`evidence`、`contradictions`: 関係線と、根拠・矛盾の関係
+- `cards`: 含まれたカードの`id`、`claimType`、`holdState`（`held`、`pending`、`shelved`、または`null`）、`text`、`reviewed`、`redacted`、`digest`。カードの`meta`（出典`source`と通し番号`seq`を含む）は返しません（ADR-0105）。
+- `islands`: 島の`id`、`title`、`digest`。所属カードの一覧は返しません。
+- `digest`: 露出した本文または題名から計算したsha256（`{ "alg": "sha256", "value": ... }`）です。カードは本文を返したときだけ値を持ち、伏せたときは`null`です。島はレビュー済みの題名だけ値を持ちます。レビュー済みの本文や題名を編集すると値が変わり、位置や関係線の変更では変わりません。島の所属カードや親島の変更でも変わりません。所属の変化は、文書の`baseDocSignature`と`bundleHash`で扱います（ADR-0103、ADR-0107）。内容の真実性は保証しません。
+- `relations`、`evidence`、`contradictions`: 関係線と、根拠・矛盾の関係。`contradictions` は `from` と `to` だけで、人が付けた確認状態（`contradictionState`）と注記（`note`）は含みません（ADR-0104）。`resolved` の矛盾も同じ形で残ります。
 - `voids`: 空白の`id`、`kind`、`resolved`、`cardIds`、`islandIds`
-- `narrativeChecks`: 物語の検査の`id`、`counts`、`issueDirections`
+- `narrativeChecks`: 物語の検査の`id`、`counts`、`issueDirections`。ナラティブの題名と本文は返しません（ADR-0106）
 - `counts`: `reviewed`、`unreviewed`、`redacted`。いずれも文書全体の数です。
-- `bundleHash`: 同じ入力と同じ文書から計算されるハッシュです。READMEでは、同じ入力で同じ値になることを確認項目にしています。露出した内容だけの版ではなく、文書の版（`baseDocSignature`、つまり文書の`id`と`updatedAt`）を含みます。露出内容が同じでも、文書が保存されて`updatedAt`が進めば値が変わります。内容だけで版固定したいときは、カードと島の単位digest（`digest`）を使ってください。入力と変わる条件は`02_Architecture/schemas.md`の§1.4にあります。
+- `bundleHash`: 同じ入力と同じ文書から計算されるハッシュです。この値はMCP投影専用で、CE-1の `POST /context/bundle` が返す `bundleHash` とは入力も実装言語も異なり、一致しません。外部の記録では「投影の `bundleHash`」と区別してください。READMEでは、同じ入力で同じ値になることを確認項目にしています。露出した内容だけの版ではなく、文書の版（`baseDocSignature`、つまり文書の`id`と`updatedAt`）を含みます。露出内容が同じでも、文書が保存されて`updatedAt`が進めば値が変わります。ただし`updatedAt`はクライアントが送る値で、サーバーは採番も単調増加の検証もしません。そのため、この版の成分はサーバーが保証する値ではありません。内容だけで版固定したいときは、カードと島の単位digest（`digest`）を使ってください。入力と変わる条件、および`holdState`など入力に含まれない項目の残存リスクは、`02_Architecture/schemas.md`の§1.4にあります。
 
   なお、書き出しのview.jsonにある`docSignature`は、`baseDocSignature`とは別の項目です。文書のidだけを持ち、`updatedAt`を含まないため、版固定には使えません（`02_Architecture/schemas.md`の§1.4と§8.1）。
 - `documentMetadata`: 文書の`id`、`lifecycle_state`、`updated_at`。エージェントには`title`と`created_by`を返さないため、この2つは`null`です。取得できなかった場合も`null`です。文書一覧の最初のページ（既定で500件）に含まれない文書も`null`になります。

@@ -16,6 +16,7 @@ const fixture = JSON.parse(
 
 type Digest = { alg: string; value: string } | null;
 type Projection = {
+  baseDocSignature: string;
   bundleHash: string;
   safeMode: boolean;
   cards: Array<{ id: string; text: string; redacted: boolean; digest: Digest }>;
@@ -67,6 +68,25 @@ describe("MCPツール出力のdigest（ADR-0103）", () => {
     }
   });
 
+  it("agent viewでもreviewedカードのdigestとbaseDocSignatureが揃う", async () => {
+    const p = await callProjection(fixture.agentView, { safeMode: false });
+
+    expect(p.baseDocSignature).toBe("doc_agent_contract:2026-10-29T00:00:00+00:00");
+    expect(p.cards.map((card) => card.id)).toEqual(["c1", "c2"]);
+    for (const card of p.cards) {
+      expect(card.redacted).toBe(false);
+      expect(card.digest).toMatchObject({
+        alg: "sha256",
+        value: expect.stringMatching(/^[0-9a-f]{64}$/),
+      });
+    }
+    expect(p.islands.find((island) => island.id === "i-reviewed")?.digest).toMatchObject({
+      alg: "sha256",
+    });
+    expect(p.cards.map((card) => card.id)).not.toContain("c3");
+    expect(JSON.stringify(p)).not.toContain("SECRET-UNREVIEWED");
+  });
+
   it("島のdigestは、レビュー済みの題名にだけ付き、SafeModeに依存しない", async () => {
     const on = await callProjection(fixture.source, { safeMode: true });
     const off = await callProjection(fixture.source, { safeMode: false });
@@ -93,6 +113,22 @@ describe("MCPツール出力のdigest（ADR-0103）", () => {
     const after = await callProjection(doc, { safeMode: false });
     expect(after.cards.map((c) => c.digest)).toEqual(before.cards.map((c) => c.digest));
     expect(after.bundleHash).toBe(before.bundleHash);
+  });
+
+  it("reviewed本文の編集はbundleHashとそのカードのdigestを変える", async () => {
+    const doc = structuredClone(fixture.agentView) as {
+      cards: Array<{ id: string; text: string }>;
+    };
+    const before = await callProjection(doc, { safeMode: false });
+    const c1 = doc.cards.find((card) => card.id === "c1");
+    if (c1) c1.text = "edited reviewed claim one";
+    const after = await callProjection(doc, { safeMode: false });
+
+    const digest = (projection: Projection, id: string) =>
+      projection.cards.find((card) => card.id === id)?.digest;
+    expect(after.bundleHash).not.toBe(before.bundleHash);
+    expect(digest(after, "c1")).not.toEqual(digest(before, "c1"));
+    expect(digest(after, "c2")).toEqual(digest(before, "c2"));
   });
 });
 

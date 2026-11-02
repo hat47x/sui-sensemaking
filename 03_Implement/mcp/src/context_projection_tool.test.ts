@@ -129,6 +129,55 @@ describe("get_context_projection tool behavior", () => {
     expect(text).not.toMatch(/score|rank|confidence|priority/i);
   });
 
+  it("returns isError and no projection when a 200 body is not a DocumentV1 (#3312)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => mockDocResponse(200, { version: 1, id: "doc_mcp_fixture" })));
+    const client = await connectedClient();
+
+    const result = await client.callTool({
+      name: "get_context_projection",
+      arguments: { docId: "doc_mcp_fixture", constraint: "summary" },
+    });
+
+    expect(result.isError).toBe(true);
+    const text = (result.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
+    expect(text).toContain("unexpected response shape");
+    expect(text).not.toContain("bundleHash");
+  });
+
+  it("tells an expired credential (401) and a backend failure (503) apart in the error text (#3312)", async () => {
+    const client = await connectedClient();
+    for (const [status, label] of [[401, "unauthorized"], [503, "backend error"]] as const) {
+      vi.stubGlobal("fetch", vi.fn(async () => mockDocResponse(status, {})));
+      const result = await client.callTool({
+        name: "get_context_projection",
+        arguments: { docId: "doc_mcp_fixture", constraint: "summary" },
+      });
+      expect(result.isError).toBe(true);
+      const text = (result.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
+      expect(text).toContain(`HTTP ${status}`);
+      expect(text).toContain(label);
+    }
+  });
+
+  it("returns isError naming the timeout when the backend does not respond (#3312)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }),
+    );
+    const client = await connectedClient();
+
+    const result = await client.callTool({
+      name: "get_context_projection",
+      arguments: { docId: "doc_mcp_fixture", constraint: "summary" },
+    });
+
+    expect(result.isError).toBe(true);
+    const text = (result.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
+    expect(text).toContain("timeout");
+  });
+
   it("returns an error result (not a thrown exception) when the document is missing", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => mockDocResponse(404, {})));
     const client = await connectedClient();

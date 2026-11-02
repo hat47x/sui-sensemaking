@@ -9,11 +9,11 @@ sui-sensemakingの `ContextBundle` の投影を読み取り専用で公開する
 読み取り専用のツールを2つ公開します。
 
 1. `get_context_projection({ docId, constraint, safeMode? })`。フロントエンドの投影の中核である `buildContextProjection` を呼びます。`constraint` は `reviewed-only | evidence | contradiction | summary` のいずれかです。`safeMode` は省略すると `true`（安全な既定値）になります。
-2. `get_proposal_status({ docId })`。文書のCE4提案のライフサイクルを返します。AIの各提案が、まだ提案のみのまま（`status=proposed`）か、人間が決定した（`accepted | rejected | held`、`decidedAt` つき）かが分かります。生成AIの検証役は、提案が自動適用されていないことと、人間の決定の経緯を、何も変更せずに確認できます。
+2. `get_proposal_status({ docId })`。文書のCE4提案のライフサイクルを返します。AIの各提案が、まだ提案のみのまま（`status=proposed`）か、人間が決定した（`accepted | rejected | held`、`decidedAt` つき）かが分かります。生成AIの検証役は、提案が自動適用されていないことと、人間の決定の経緯を、何も変更せずに確認できます。`accepted` は提案生成時の `sourceBundleHash` に対する判断で、現在の文書への受理ではありません。現在の版は `GET /docs/{id}` の `baseDocSignature` で別に確認してください（#3311）。
 
-**適用範囲（DOGFOOD-05）**: 未レビューのカードは、どの `constraint` でも `cards`、`relations`、`evidence`、`contradictions`、`voids[].cardIds` に現れず、その本文も返しません。`safeMode: false` でも同じです。未レビューのカードは `cards` に含まれず、件数だけが `counts.unreviewed` に出ます（`SEC-CONTEXT-PROJECTION-01` で安全側に拒否）。ただし、島の題名（`islands[].title`）は、レビュー済み（`titleReviewed`）の島の題名だけを返します。未レビューの島の題名は返さず、プレースホルダ `(未レビュー)` で置き換えます。文書の題名は、エージェントには返しません（`documentMetadata.title` は `null`）。レビュー済みの題名は、人が確認した短い見出しとして扱い、`safeMode: true` でも返します（ADR-0098）。ただし、題名が未レビューのカード本文を引用している可能性は残ります。題名をレビュー済みにする人が、引用の有無に責任を持ちます。この経路は、**レビュー済み**の内容を見直して構造化するためのもので、未レビューの資料を最初に探索する用途ではありません。レビュー済みカードの作業状態を尊重したいAIの協働者には、`holdState` のメタデータを返します（DOGFOOD-08）。
+**適用範囲（DOGFOOD-05）**: 未レビューのカードは、どの `constraint` でも `cards`、`relations`、`evidence`、`contradictions`、`voids[].cardIds` に現れず、その本文も返しません。`safeMode: false` でも同じです。未レビューのカードは `cards` に含まれず、件数だけが `counts.unreviewed` に出ます（`SEC-CONTEXT-PROJECTION-01` で安全側に拒否）。ただし、島の題名（`islands[].title`）は、レビュー済み（`titleReviewed`）の島の題名だけを返します。未レビューの島の題名は返さず、プレースホルダ `(未レビュー)` で置き換えます。文書の題名は、エージェントには返しません（`documentMetadata.title` は `null`）。レビュー済みの題名は、人が確認した短い見出しとして扱い、`safeMode: true` でも返します（ADR-0098）。ただし、題名が未レビューのカード本文を引用している可能性は残ります。題名をレビュー済みにする人が、引用の有無に責任を持ちます。カードの `meta`（出典 `source` と通し番号 `seq` を含む）は返しません。出典は内部情報を含み得るため、投影には明示トグルがなく、既定では出さないと決めています（ADR-0105）。この経路は、**レビュー済み**の内容を見直して構造化するためのもので、未レビューの資料を最初に探索する用途ではありません。レビュー済みカードの作業状態を尊重したいAIの協働者には、`holdState` のメタデータを返します（DOGFOOD-08）。
 
-**単位digest（ADR-0103）**: `cards[].digest` と `islands[].digest` は、露出した内容だけから計算した `{ "alg": "sha256", "value": "<16進64桁>" }` です。カードは、本文を返したとき（レビュー済みかつ `safeMode: false`）だけ値を持ち、本文を伏せたとき（未レビュー、または `safeMode: true`）は `null` です。島は、題名がレビュー済みのときだけ値を持ち、`safeMode` によらず同じ値です。入力は、カードが `{schema, kind:"card", id, text}`、島が `{schema, kind:"island", id, title}` のcanonical JSON（`schema` は `context-projection.item-digest.v1`）で、受け取った項目から再計算して確かめられます。レビュー済みの本文・題名の編集だけが値を変え、位置、`holdState`、`claimType`、関係線は変えません。内容の真実性や著者は保証しません。`bundleHash` の値はこの追加で変わりません。
+**単位digest（ADR-0103）**: `cards[].digest` と `islands[].digest` は、露出した内容だけから計算した `{ "alg": "sha256", "value": "<16進64桁>" }` です。カードは、本文を返したとき（レビュー済みかつ `safeMode: false`）だけ値を持ち、本文を伏せたとき（未レビュー、または `safeMode: true`）は `null` です。島は、題名がレビュー済みのときだけ値を持ち、`safeMode` によらず同じ値です。入力は、カードが `{schema, kind:"card", id, text}`、島が `{schema, kind:"island", id, title}` のcanonical JSON（`schema` は `context-projection.item-digest.v1`）で、受け取った項目から再計算して確かめられます。レビュー済みの本文・題名の編集だけが値を変え、位置、`holdState`、`claimType`、関係線、島の所属カード・親島は変えません（ADR-0103、ADR-0107）。所属の変化は、文書の`baseDocSignature`と`bundleHash`で扱います。内容の真実性や著者は保証しません。`bundleHash` の値はこの追加で変わりません。
 
 **`bundleHash` の意味（#3280）**: `bundleHash` は露出内容だけの版ではなく、文書の版（`baseDocSignature` = `<docId>:<updatedAt>`）を含む値です。露出内容が同じでも、文書が保存されて `updatedAt` が進めば変わります。一方、`holdState` は露出されますが入力に含まれないため、`updatedAt` が同じなら `holdState` だけの変更では変わりません。内容だけで版固定したい場合は、単位digestを使ってください。入力と条件は `02_Architecture/schemas.md` §1.4 にあります。
 
@@ -34,11 +34,11 @@ npm start   # runs src/index.ts (transport selected by SUI_MCP_TRANSPORT)
 
 # Client-based verification (generative-AI path; requires running backend).
 # Run via tsx (npm run verify) — the script imports a .ts module and uses TS
-# `as` syntax, which plain Node 20 rejects:
+# `as` syntax, which plain Node rejects:
 SUI_MCP_API_BASE_URL=http://127.0.0.1:8000 npm run verify -- [docId] [constraint]
 ```
 
-PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージの `npm ci`・`typecheck`・`test`（Node 20）と、agent認証・OAuth・contextルートのbackendテスト（Python 3.12）を実行する。Postgres RLSの実地matrixはCIの対象外である。
+PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージの `npm ci`・`typecheck`・`test`（Node 22）と、agent認証・OAuth・contextルートのbackendテスト（Python 3.12）を実行する。Postgres RLSの実地matrixはCIの対象外である。
 
 ### 生成AIのMCPクライアントを接続する（設定例）
 
@@ -63,7 +63,7 @@ PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージ�
 この経路を使うAIエージェント向けの注意点です。
 - ツールは2つで、どちらも読み取り専用です。`get_context_projection({ docId, constraint, safeMode })` と `get_proposal_status({ docId })` です。
 - **未レビューのカードは、どの `constraint` でも公開しません**（安全側に拒否します。上の適用範囲を参照）。レビュー済みの内容に使ってください。`holdState` のメタデータから、保留、未確定、棚上げのカードが分かります（DOGFOOD-08）。
-- 投影には、生成AIが検証できる構造の状態も含まれます。`voids`（kind、resolved、cardIds、islandIds。KJ-VOIDS-01）と `narrativeChecks`（A/Bの向きと件数。KJ-AB-CROSS-CHECK-01）です。どちらもSafeModeで安全に扱えます（カードの本文も、課題のメッセージも含みません）。
+- 投影には、生成AIが検証できる構造の状態も含まれます。`voids`（kind、resolved、cardIds、islandIds。KJ-VOIDS-01）と `narrativeChecks`（A/Bの向きと件数。KJ-AB-CROSS-CHECK-01）です。どちらもSafeModeで安全に扱えます（カードの本文も、課題のメッセージも含みません）。ナラティブの題名と本文は返しません（ADR-0106）。
 - HTTPとOAuth 2.1のリソースサーバーで使うには、`SUI_MCP_TRANSPORT=http` と必須のOAuth用の環境変数を設定します（下の「通信方式の選択」を参照）。トークンは、設定した信頼済みの発行者が発行し、`read:context` スコープを持つ必要があります。
 
 ### 生成AIによる検証の手順
@@ -84,7 +84,7 @@ PRでは `.github/workflows/mcp-agent-auth-ci.yml` が、このパッケージ�
 
 解釈の規則です。`not_found` や `error` を伴う `isError` の結果は、対象の文書が存在しないことを示す**有効なシグナル**であり、MCP経路の失敗ではありません。通信は動き、リクエストはサーバーに届き、失敗は分類されています。
 
-上の `mcp-context-read.v1` のローカル記録に加えて、**成功した**読み取りはすべて、バックエンドの `POST /docs/{id}/context-audit`（CE-4）エンドポイントに `channel="mcp"` で報告されます（`operation=query`、`command=context-query`、`equivalenceKey=queryCanonicalHash`、`bundleHash=projection.bundleHash`、`safeMode`、`dryRun=true`、`sideEffect=none`）。報告は `src/audit_log.ts` の `emitContextAuditEvent` が行います。これで、以前あったチャネル列挙の欠落が解消されました。MCP経由の読み取りも、api、cli、guiの呼び出しと同じバックエンドの監査証跡で追跡できます。報告は**ベストエフォート**です。同期的なローカル記録が読み取りの相関になるため、CE-4のPOSTが失敗しても、成功した読み取りがエラーになることはありません（構造化された警告をstderrに出します）。バックエンドがその読み取りを受け取ったことを確かめたい生成AIの検証役は、配備先の監査の出力先を直接照合してください。`verify_mcp.ts` 自体が検証するのは読み取り経路で、出力先への配送ではありません。
+上の `mcp-context-read.v1` のローカル記録に加えて、**成功した**読み取りはすべて、バックエンドの `POST /docs/{id}/context-audit`（CE-4）エンドポイントに `channel="mcp"` で報告されます（`operation=query`、`command=context-query`、`equivalenceKey=queryCanonicalHash`、`bundleHash=projection.bundleHash`、`safeMode`、`dryRun=true`、`sideEffect=none`）。報告は `src/audit_log.ts` の `emitContextAuditEvent` が行います。これで、以前あったチャネル列挙の欠落が解消されました。MCP経由の読み取りも、api、cli、guiの呼び出しと同じバックエンドの監査証跡で追跡できます。報告は**ベストエフォート**です。同期的なローカル記録が読み取りの相関になるため、CE-4のPOSTが失敗しても、成功した読み取りがエラーになることはありません（構造化された警告をstderrに出します）。バックエンドがその読み取りを受け取ったことを確かめたい生成AIの検証役は、配備先の監査の出力先を直接照合してください。ただし、このPOSTの `bundleHash` と `safeMode` はMCPプロセスの申告値で、バックエンドが返した内容を再計算したものではありません。監査eventの `metadata` は `recordedBy="agent_report"`、`serverVerified=false` を持つので、サーバーが観測した読み取りとは区別できます。読み取りの事実そのものの証跡には使えません。`verify_mcp.ts` 自体が検証するのは読み取り経路で、出力先への配送ではありません。
 
 連鎖の全体（MCPの読み取り、CE-4の `channel="mcp"` イベント、バックエンド、設定したHTTP監査の出力先）を一度の自己完結した実行で検証するには、ドッグフードのE2Eを使います。
 
@@ -111,7 +111,7 @@ SUI_E2E_PYTHON=../backend/.venv/bin/python npm run verify:agent-e2e
 - 失効の次の要求で、同じMCPプロセスが401を受ける。別のagentIdの資格情報には影響しない。
 - 監査eventの主体が `agent` で、資格情報と本文を含まない。
 
-この検証は、PostgresとIdPを使いません。テーブルごとのRLSは `test_agent_credential_postgres_rls.py`、OAuthのトークン交換は `http_server_exchange.test.ts` が担当します。CIでは `mcp-agent-auth-ci.yml` の `agent-mcp-e2e` ジョブが実行します。
+この検証は、PostgresとIdPを使いません。テーブルごとのRLSは `test_agent_credential_postgres_rls.py`、OAuthのトークン交換は `http_server_exchange.test.ts` が担当します。CIでは、RLSを `mcp-agent-auth-ci.yml` の `backend-postgres-rls` ジョブ、OAuthを `mcp-package` ジョブが実行します。
 
 ### 通信方式の選択
 
@@ -130,6 +130,7 @@ SUI_E2E_PYTHON=../backend/.venv/bin/python npm run verify:agent-e2e
 | `SUI_MCP_TOKEN_EXCHANGE_CLIENT_SECRET` | unset | 同上。上のクライアントの秘密。設定ファイルやログへ書き込まない。このプロセスが持つ秘密は、これだけである（トークンの発行や登録はしない）。 |
 | `SUI_MCP_TOKEN_EXCHANGE_AUDIENCE` | unset | 同上。交換後のトークンの宛先（backend）。バックエンドの `SUI_AGENT_OAUTH_AUDIENCE` と一致させる。4つは、すべて同時に設定する。 |
 | `SUI_MCP_API_BASE_URL` | `http://127.0.0.1:8000` | Backend base URL this process fetches `GET /docs/{id}` from. Not the frontend's browser-relative `SUI_FRONTEND_API_BASE` -- this process runs outside the frontend's nginx proxy and needs an absolute URL. |
+| `SUI_MCP_REQUEST_TIMEOUT_MS` | `10000` | バックエンドへの取得1回あたりの待ち時間の上限（ミリ秒、100から120000）。範囲外・不正な値は既定値に戻る。超過は「timeout」として `isError` で返る。200で返った本文が `DocumentV1` の最低限の形（`version`が1、`id`、`cards`・`edges`・`islands`が配列）を満たさないときは、投影を作らず「unexpected response shape」で返る。401・403・5xxは、`HTTP <status>` の後ろの分類で区別できる（資格情報や応答本文は含めない）。 |
 | `SUI_API_KEY` | unset | Sent as `X-API-Key` when the backend requires it. The browser client relies on same-origin proxying instead; this standalone process must send it itself. |
 
 接続後、stdoutはMCPのJSON-RPCストリーム専用です。ほかのものは一切書き込まないでください。診断はすべてstderrへ出します。これは、stdioで配備しない場合も含め、通信方式によらず同じ扱いです。

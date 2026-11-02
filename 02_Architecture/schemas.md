@@ -260,6 +260,7 @@ export type HilRsDocSyncCheckV1 = {
 4. `sha256(canonical_json)` を16進小文字で出力し `bundleHash` とする。
 5. `ContextQuery` も同一規則で正規化し、`queryCanonicalHash` を算出する。
 6. 検証の判定は `sameQuery && sameBundle`（`queryCanonicalHash` 一致かつ `bundleHash` 一致）を必須とし、`sameQuery && !sameBundle` は安全側で拒否する。
+   - この `bundleHash` はCE-1の `POST /context/bundle` 専用である。MCP投影（§1.4）の `bundleHash` とは入力も実装言語も異なり、値は一致しない。二つを同じ欄で比較・照合しない。監査eventで `channel=mcp` のときは、`bundleHash` に投影の値が入る（`api.md` §2.4）。
 7. 検証の自己修復は最大3回までとし、4回目相当は停止する（推測継続禁止）。
 
 #### CE2-LOW-RISK-AI-ASSIST
@@ -321,6 +322,7 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - 入力は、投影が返した内容だけのcanonical JSON（`canonicalizeJson`）。カードは `{schema:"context-projection.item-digest.v1", kind:"card", id, text}`、島は `{schema, kind:"island", id, title}`。利用者は受け取った項目から再計算して確かめられる。
 - カードのdigestは、本文が露出した（`textReviewed` が真かつSafeMode OFF）ときだけ値を持つ。伏せた場合（未レビュー、SafeMode ON）は `null`。島のdigestは `titleReviewed` が真のときだけ値を持ち、SafeModeのON/OFFによらず同じ値になる。伏せた内容のdigestは計算も出力もしない。
 - レビュー済みの本文・題名の編集とid変更だけがdigestを変える。位置などのレイアウト、`holdState`、`claimType`、関係線、`evidenceLinks`、`Card.meta.source`、他項目の変更は変えない。
+- 島のdigestは、所属カード（`cardIds`）と親島（`parentIslandId`）を含めない。所属の変更は、文書の `baseDocSignature` と `bundleHash` で扱う（ADR-0107）。`updatedAt` を進めない保存で所属だけを変えた場合は、`bundleHash` でも検出できない残存リスクがある（#3299）。
 - シリアライズの規則（`canonicalizeJson`、#3282）。他言語で再計算する実装は、次のとおりに揃える。
   - 文字列は、生のUTF-8で出す。日本語、サロゲートペア（BMP外の文字）、`<`、`>`、`&`、U+2028、U+2029、U+007F は、エスケープしない。エスケープするのは `"`（`\"`）、`\`（`\`）、U+0000〜U+001F だけである。U+0008、U+0009、U+000A、U+000C、U+000D は `\b`、`\t`、`\n`、`\f`、`\r`、それ以外の制御文字は小文字16進の `\u00xx` とする。
   - オブジェクトのキーは、UTF-16コード単位の昇順に並べる（RFC 8785 の規則と同じ）。単位digestのキーはASCIIだけなので、`id`、`kind`、`schema`、`text`（島は `title`）の順になる。
@@ -342,10 +344,14 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 
 ### 1.4 context-projection.v1 の `bundleHash` と `baseDocSignature`（#3280）
 
+この節の `bundleHash` は、MCPの読み取り専用投影（`context-projection.v1`）専用である。CE-1の `POST /context/bundle` が返す `bundleHash`（§CE1）とは、入力・実装言語・値がすべて別である。混同を避けるため、外部の記録では「投影の `bundleHash`」と明記する。両者を同じ欄で比較・照合しない。
+
 `bundleHash` は、投影に露出した内容だけの版ではなく、文書の版を含む値である。内容だけで版固定するときは、§1.3 の単位digestを使う。
 
 - `baseDocSignature` は `` `${doc.id}:${doc.updatedAt}` `` の文字列である。`bundleHash` の入力に含まれる。
 - `bundleHash` は、次の入力のcanonical JSON（`canonicalizeJson`）のsha256（小文字16進64桁）である。`schemaVersion`、`docId`、`baseDocSignature`、`constraint`、`safeMode`、`cards`（`id`、`claimType`、`reviewed`、`redacted`、露出した本文。伏せた本文は `null`）、`islands`（`id`と、レビュー済みでなければ伏せた題名）、`relations`、`evidence`、`contradictions`、`counts`、`voids`、`narrativeChecks`。単位digestは入力に含めない。
+- `contradictions` は `{from, to}` だけを持ち、`contradictionState` と `note` は投影にも `bundleHash` の入力にも含めない（ADR-0104）。`resolved` の矛盾も `unconfirmed` と同じ形で残す。
+- `narratives` の `title` と `text` は、投影にも `bundleHash` の入力にも含めない。投影が返すのは `narrativeChecks`（`id`、`counts`、`issueDirections`）だけである（ADR-0106）。
 - 値が変わる条件は次のとおり。
   - 文書が保存されて `updatedAt` が進んだとき。露出内容が1文字も変わらなくても変わる。カードの移動、無関係なカードの追加、`holdState` の変更を含む。
   - 露出する本文、レビュー済みの島の題名、関係線、根拠・矛盾の関係、`counts`、`voids`、`narrativeChecks` が変わったとき。
@@ -354,6 +360,22 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - `holdState` は投影に露出する項目だが、`bundleHash` の入力には含まれない。同じ `updatedAt` のまま `holdState` だけが変わっても値は変わらない。通常は保存で `updatedAt` が進むため検出できるが、`bundleHash` 単独の保証ではない。
 - 内容だけの版固定には、`cards[].digest` と `islands[].digest`（§1.3）を使う。`updatedAt` にも `holdState` にも依存しない。
 - 版固定には `baseDocSignature`（`<docId>:<updatedAt>`、版を含む）を使う。`ViewMetadataV1` の `docSignature`（§8.1）は別の項目で、文書のidだけ（idがなければ `title-<hash>`、文書がなければ `"unknown"`）を持ち、`updatedAt` を含まない。したがって `docSignature` は版固定には使えない。外部の記録で版を固定するときは、`docSignature` ではなく `baseDocSignature` と書く。
+- `bundleHash` の入力は、次のcanonical JSON（キーをUTF-16コード単位順に並べ、区切りに空白を入れない）のsha256である。`cards` は投影に含まれたカードだけを持ち、`claimType` は未指定なら `null`、伏せた本文は `null` にする。`islands` は `id` と `title` だけを持ち、未レビューの題名は `(未レビュー)` にする。`voids` の `cardIds` はレビュー済みのidだけを残し、空なら項目自体を省く。`narrativeChecks` の `issueDirections` は `direction` がある issue だけを並べる。
+
+```json
+{"baseDocSignature":"doc-vector-1:2026-08-01T00:00:00.000Z","cards":[{"claimType":"claim","id":"c1","redacted":false,"reviewed":true,"text":"日本語の本文\n二行目 \"quote\""},{"claimType":null,"id":"c3","redacted":false,"reviewed":true,"text":"third"}],"constraint":"reviewed-only","contradictions":[],"counts":{"redacted":1,"reviewed":2,"unreviewed":1},"docId":"doc-vector-1","evidence":[],"islands":[{"id":"i1","title":"島の題名"},{"id":"i2","title":"(未レビュー)"}],"narrativeChecks":[{"counts":{"aMissingInB":1,"bMissingInA":2},"id":"chk1","issueDirections":["b_missing_in_a"]}],"relations":[{"from":"c1","to":"c3","type":"related"}],"safeMode":false,"schemaVersion":"context-projection.v1","voids":[{"cardIds":["c1"],"id":"v1","islandIds":["i1"],"kind":"unintegrated_card","resolved":false}]}
+```
+
+- 上の入力に対応する固定値は次のとおり。`updatedAt` の書式（`Z` と `+00:00`）が違えば、同じ内容でも値が変わる。テストは `context_bundle_projection.test.ts` の「bundleHash 固定値テストベクトル（#3298）」にある。
+
+| `updatedAt` | `safeMode` | `bundleHash` |
+|---|---|---|
+| `2026-08-01T00:00:00.000Z` | `false` | `644c8810751c4c4dcff3d1fad94dbd207f1b97fb92beccdcdb2fd26e6419b301` |
+| `2026-08-01T00:00:00.000Z` | `true` | `4da85435b23fd489e24c89e5c5266bf8c8f5f62004e2557fbca67291c2196ea0` |
+| `2026-08-01T00:00:00+00:00` | `false` | `c742c2105d5070cf39da8d7af2bd212799b43f1197c95e8eb6d4c5f39c92522d` |
+| `2026-08-01T00:00:00+00:00` | `true` | `738c618b092785d42165200e8f8f0c0da6d3b510a3d7b4be6294beddecab8879` |
+
+- `updatedAt` はクライアントが `PUT /docs/{doc_id}` で送る値で、サーバーは採番も単調増加の検証もしない（`api.md` §1.2）。したがって `baseDocSignature` の版の成分は、サーバーが保証する版ではない。`updatedAt` を更新しないクライアントや、古い `updatedAt` を送るクライアントが保存すると、内容が変わっても `bundleHash` の版の成分は変わらない。`holdState` のように露出するが `bundleHash` の入力に含まれない項目は、この経路では検出できない。内容だけの版固定には、単位digest（§1.3）を使う。この残存リスクは、サーバー採番の `revision` を足す判断（#3299）まで続く。
 - 実装は `frontend/src/export/context_bundle_projection.ts`、条件は同じ階層の `context_bundle_projection.test.ts`（「bundleHash が変わる条件と変わらない条件」）で固定している。`updatedAt` を入力から外す、露出内容だけの値を別項目として足す、といった変更は、既存の `bundleHash` の値を変えるか契約を広げるため、ADRと `schemaVersion` の扱いを決めてから行う（未決）。
 
 ## 2. ID・座標系の前提
@@ -1414,9 +1436,16 @@ ADR-0048 D3改訂（2026-07-03）採択分。加算原則に従い、全フィ�
 
 ### 15.6 参照
 
-- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3改訂）
+- ADR: `ADR-0048-visual-language-command-reach-and-kj-vocabulary.md`（D3改訂）、`ADR-0105-source-reference-not-in-projection.md`
 - Issue: `DOMAIN-TRACE-01-serial-number-and-source-provenance`, `CARD-META-UI-01-card-provenance-metadata-ui-boundary`（主体メタの上位境界）
 - フロントエンド: `03_Implement/frontend/src/domain/types.ts` (カード.meta)
+
+### 15.7 外部agent投影での扱い（ADR-0105）
+
+- 外部投影（`context-projection.v1`、MCPの `get_context_projection`）の `cards` は、`meta` を出さない。`seq` と `source` のどちらも含めない。
+- 出典は内部情報を含み得る。本文がレビュー済みでも、出典の安全性はレビューされていない。本文のレビュー状態を、出典の露出許可として流用しない。
+- 出典が必要な場合は、人が「出典参照を含める」をONにした書き出し（§15.4）を使う。投影には明示トグルがないため、既定では出さない。
+- 単位digest（§1.3）の入力にも `meta` を含めない。
 
 ## 16. DOMAIN-EXPR-04 加算スキーマ拡張: 矛盾シグナルのレビュー決定（2026-07-08）
 

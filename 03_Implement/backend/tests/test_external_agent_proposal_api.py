@@ -171,6 +171,17 @@ def test_external_decision_is_idempotent_and_rejects_changed_decision(sqlite_cli
     assert changed.status_code == 409
 
 
+def test_registration_is_content_free_and_rejects_body_fields(sqlite_client) -> None:
+    client, _ = sqlite_client
+    assert "content" not in AIProposalRow.__table__.columns
+
+    response = client.post(
+        "/ai/external-proposals/register",
+        json=_registration(content="unreviewed external proposal text"),
+    )
+    assert response.status_code == 422
+
+
 def test_task_registration_is_idempotent_and_rejects_reuse(sqlite_client) -> None:
     client, _ = sqlite_client
     first = client.post("/ai/external-tasks/register", json=_task_registration())

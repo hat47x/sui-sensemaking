@@ -119,14 +119,6 @@
         "claimType": "evidence",
         "textReviewed": true,
         "text": "reviewed claim two"
-      },
-      {
-        "id": "c3",
-        "x": 200,
-        "y": 0,
-        "claimType": "unknown",
-        "textReviewed": false,
-        "text": ""
       }
     ],
     "edges": [
@@ -149,9 +141,7 @@
       },
       {
         "id": "i-unreviewed",
-        "cardIds": [
-          "c3"
-        ],
+        "cardIds": [],
         "titleReviewed": false
       },
       {
@@ -165,12 +155,6 @@
         "type": "supports",
         "fromCardId": "c2",
         "toCardId": "c1"
-      },
-      {
-        "id": "e2",
-        "type": "supports",
-        "fromCardId": "c1",
-        "toCardId": "c3"
       }
     ],
     "narratives": []

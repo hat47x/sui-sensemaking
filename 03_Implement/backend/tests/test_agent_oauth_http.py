@@ -251,7 +251,7 @@ def test_a_bound_oauth_principal_reads_only_its_granted_documents(env) -> None:
 def test_unreviewed_text_is_withheld_on_the_oauth_path_too(env) -> None:
     body = env["client"].get("/docs/shared-doc", headers=_bearer(_token(env["key"]))).json()
 
-    assert {card["id"]: card["text"] for card in body["cards"]} == {"c1": "REVIEWED", "c2": ""}
+    assert {card["id"]: card["text"] for card in body["cards"]} == {"c1": "REVIEWED"}
     assert "SECRET" not in json.dumps(body)
 
 

@@ -119,6 +119,22 @@ describe("EpistemicReviewStatus", () => {
     expect(html).not.toContain(">確認<");
   });
 
+  it("marks detached targets and absent metadata without confirming", () => {
+    const detached = render({
+      targetBinding: "detached",
+      useState: "review-required",
+    });
+    expect(detached).toContain("対象なし");
+    expect(detached).not.toContain(">確認済み<");
+
+    const noMetadata = render({
+      metadataState: "absent",
+      useState: "review-required",
+    });
+    expect(noMetadata).toContain("情報不足");
+    expect(noMetadata).not.toContain(">確認済み<");
+  });
+
   it("keeps compact mode to the four fast review actions", () => {
     const html = render({}, true);
     expect(html).toContain(">確認<");

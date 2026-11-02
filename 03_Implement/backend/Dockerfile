@@ -2,12 +2,13 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Single source of truth: app deps (incl. the fastapi<0.137 cap) come from pyproject.toml.
-# psycopg[binary] is added explicitly because it is the Postgres driver for this Docker
-# path only; the non-Docker path uses sqlite, so it is intentionally absent from pyproject.
-COPY pyproject.toml ./
+# Runtime dependencies are pinned in requirements.lock (generated from
+# pyproject.toml's `postgres` extra), so the image does not resolve new versions
+# at build time. The package itself is installed without re-resolving deps.
+COPY pyproject.toml requirements.lock ./
 COPY src ./src
-RUN pip install --no-cache-dir . "psycopg[binary]"
+RUN pip install --no-cache-dir -r requirements.lock \
+    && pip install --no-cache-dir --no-deps .
 
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini

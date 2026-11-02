@@ -28,6 +28,7 @@ DeleteはMVPおよび現製品化準備段階の標準APIに含めない（`ADR-
 - `PUT /docs/{doc_id}` で **Document全体** を置き換える
 - クライアントは `updatedAt` を更新して送る
 - サーバは検証後に保存し、保存後のDocumentを返す
+- サーバは `updatedAt` を採番しない。保存されるのはクライアントが送ったISO文字列であり、単調増加や保存時刻との一致は保証しない。版の保証が必要な用途では、保存された内容そのもの（ETagや単位digest）を使う
 
 ### 1.3 競合
 
@@ -131,8 +132,8 @@ Document本体の標準CRUDとは別に、共有・コンテキスト操作の�
 - リクエストボディ
   - `operation: "query" | "bundle" | "proposal" | "apply"`
   - `safeMode: boolean`
-  - `equivalenceKey: <64hex>`
-  - `bundleHash: <64hex>`
+  - `equivalenceKey: <64hex>`（`channel=mcp` ではMCPの `queryCanonicalHash`。CE-1の `queryCanonicalHash` とは別の定義）
+  - `bundleHash: <64hex>`（`channel=mcp` では投影の `bundleHash`。CE-1の `bundleHash` とは別の定義で、値は一致しない）
   - `sourceBundleHash?: <64hex> | mock:<64hex>`
   - `queryHash?: string`
   - `dryRun: boolean`
@@ -607,7 +608,9 @@ Polygon auto-fitのバックエンド接続準備として、A2比較キーの�
 **GET** `/ai/proposals/status`
 
 - 文書ごとのCE4読み取り専用proposalライフサイクル状態を返す。クエリ: `docId`（テナント単位の事前条件必須）。
-- レスポンス: `ProposalStatusResponse`（`proposalId`・`proposalKind`・`origin`・各proposalの判定状態など）。
+- レスポンス: `ProposalStatusResponse.proposals[]` は、`proposalId`、`proposalKind`、`origin`（`internal` / `external_agent`）、`status`（`proposed` / `accepted` / `rejected` / `held`）、`sourceBundleHash`、`createdAt`、`decidedAt` を持つ。
+- `sourceBundleHash` は、提案を生成したときのCE-1の文脈バンドルのハッシュである。`status=accepted` などは、その生成時点のバンドルに対する人間の判断を表し、現在の文書の内容への受理を意味しない。文書が編集された後に古い判断が残っていても、現在の版への受理として読まない。現在の版は、`GET /docs/{doc_id}` の `updatedAt` と `baseDocSignature` で別に確認する（#3311）。
+- `decidedAt` は、最後に判断を記録した時刻である。`held` から `accepted` / `rejected` へ進めた場合は、その最後の判断時刻になる。`proposed` のときは `null`。
 - 生成AI（MCP/API経由）が、proposalが依然提案のみか、人間が判定済み（accepted/rejected/held）かを検証するための追跡手段。読み取り専用契約（`action="read"`）で、proposalや判定を一切書き込まない。
 
 **POST** `/ai/external-tasks/register`
@@ -913,15 +916,16 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 - **ヘッダー**: `Sui-Sensemaking-Agent-Credential: suiag_...`。通常の利用者の `Authorization` とは別に扱う。ヘッダーがあれば、そのヘッダーだけを認証として評価する。
 - **OAuthトークンによる認証（ADR-0094）**: 不透明な資格情報の代わりに、`Sui-Sensemaking-Agent-Bearer: Bearer <JWT>` でも認証できる。このJWTは、MCPサーバーがトークン交換（RFC 8693）で得た、バックエンド宛ての短命のトークンである。バックエンドは署名・発行者・有効期限を自分で検証し、audience は設定 `SUI_AGENT_OAUTH_AUDIENCE` と完全に一致するものだけを受け付ける。テナントは、トークンのテナントクレームを `tenant_identity_providers` で写した値で確定し、検証済みの `(tenant, identity_provider_id, sub)` を、Tenant Adminが結んだ対応付けから agent に引く。MCP宛てのトークンやメンバーのログイン用のトークンは、audience が違うので受け付けない。二つのヘッダーを同時に送ると `400 agent_credential_conflict`。agentの資格情報と、利用者の資格情報（`Sui-Sensemaking-Auth-Session` / `Sui-Sensemaking-Guest-Session` のcookie、`X-Sui-Sensemaking-Authorization`）を同じ要求で送っても、同じ `400` で閉じる。以降の許可route・拒否・本文・監査・失効は、不透明な資格情報と同じである。
 - **テナントの決まり方**: トークンのハッシュから、サーバー側の行（資格情報）を引いて決める。リクエストのヘッダー・query・body・パスで指定した値は使わない。
-- **通れるroute**: `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つだけ。`GET /docs` は付与された文書のmetadataだけを返す。判断ログ、類似候補など、読み取りでも本文由来の派生データを返す経路は `403 agent_route_not_enabled` で閉じる。
+- **通れるroute**: `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つだけ。`GET /docs` は付与された文書のmetadataだけを返す。判断ログ、類似候補など、読み取りでも本文由来の派生データを返す経路は `403 agent_route_not_enabled` で閉じる。TEI epistemic projection（`GET /docs/{doc_id}/epistemic/projection`）も、判定項目を含み、バックエンドでSafeModeの伏せ字を行わないため、agent経路には開かない（ADR-0093追記、#3297）。
 - **拒否**: 不正、未知、失効、期限切れ、バージョン不一致は、区別せず `401 agent_credential_invalid` とする。付与外の文書、存在しない文書、他テナントの文書は、同じ `404 agent_document_not_granted` を返す。書き込み、export、archive は `403 agent_write_not_enabled`。
-- **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。レビュー済みの島の題名は、SafeModeがONでも返す。人が確認した短い見出しとして扱うためである（ADR-0098）。題名が未レビューのカード本文を引用し得る危険は残るが、確認した人の責任とし、文字列の自動走査では判定しない。
-- **監査**: eventの主体は `x-actor-ref` ではなく、検証済みの `agent:<agentId>` から求める。agentが送れる `POST /docs/{doc_id}/context-audit` は、`operation=query`、`command=context-query`、`channel=mcp` の読み取りの記録だけである（それ以外は `403 agent_audit_operation_not_enabled`）。CE-4の完全性の追跡には加えない。
+- **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。未レビューのカードは、本文だけでなくidも返さない。そのカードを端点とする関係線・根拠リンク、島の`cardIds`・`placardCardId`、voidの`cardIds`からも除く（MCP投影と同じゲート、#3275）。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。レビュー済みの島の題名は、SafeModeがONでも返す。人が確認した短い見出しとして扱うためである（ADR-0098）。題名が未レビューのカード本文を引用し得る危険は残るが、確認した人の責任とし、文字列の自動走査では判定しない。レビュー済みのカード本文は、agent資格情報の付与範囲として返す。MCPの`safeMode: true`は、それより厳しくカード本文を伏せるクライアント側の既定であり、バックエンドの読み取りを認可する条件ではない。agent経路の監査eventは、実際にレビュー済み本文を返したとき`safe_mode=false`と`metadata.reviewedTextExposed=true`を記録する（ADR-0093、#3276）。
+- **監査**: eventの主体は `x-actor-ref` ではなく、検証済みの `agent:<agentId>` から求める。agentが送れる `POST /docs/{doc_id}/context-audit` は、`operation=query`、`command=context-query`、`channel=mcp` の読み取りの記録だけである（それ以外は `403 agent_audit_operation_not_enabled`）。CE-4の完全性の追跡には加えない。この経路の `bundleHash`、`safeMode`、`equivalenceKey` はagentの申告値であり、サーバーが実際に返した内容と突き合わせたものではない。監査eventの `metadata` には `recordedBy="agent_report"` と `serverVerified=false` を付け、サーバーが観測した読み取りと区別できるようにする。読み取りの事実の証跡には使えない。
 - **応答**: agentへの応答は `Cache-Control: private, no-store` とし、資格情報のヘッダーで `Vary` を付ける。`GET /docs/{doc_id}` は `ETag` を返さない。`GET /docs` の `created_by` は返さない。
 - **即時失効**: 状態・期限・付与は毎要求で確認する。キャッシュは持たない。
 - **登録・失効（Tenant Admin）**: `/tenant-admin/agent-credentials` で管理する。通常の利用者と同じ信頼済みSaaS セッションと `tenantSessionVersion` を要求し、テナント管理者向けの権限を独立して確認する。
   - `POST /tenant-admin/agent-credentials`（`agent.register`）: `{agentId, label, expiresAt, docIds}`。有効期限は、タイムゾーンつきで、未来かつ90日以内。付与する文書は1〜50件で、明示して列挙する。`201` で、`credential`（トークン平文）を**この応答でだけ**返す。`Cache-Control: no-store`。同じ `agentId` は、失効後も再登録できない（`409 agent_credential_exists`）。付与する文書は、登録者本人が読める文書に限る。読めない文書、存在しない文書、他テナントの文書は区別せず `404 document_not_found` で、何も作らない。
   - `GET /tenant-admin/agent-credentials`（`agent.register` または `agent.revoke`）: 自テナントの資格情報と、有効な付与の `docIds`。トークンもそのハッシュも返さない。
+  - 期限の延長、付与の追加、回転の専用APIは提供しない。これらは新しい `agentId` での再登録として行い、旧 `agentId` を失効させる。監査の主体は新しい `agentId` になるため、旧 `agentId` の履歴とは連続しない（`04_Documentation/mcp_agent_connection.md`）。
   - `POST /tenant-admin/agent-credentials/{agentId}/revoke`（`agent.revoke`）: 次の要求から効く。冪等で `204`。他テナントの `agentId` は `404`。
   - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings`（`agent.register`）: `{identityProviderId, subject}` を agent に結ぶ。このテナントが `tenant_identity_providers` で信頼する、有効なIdPの行が無ければ `404 identity_provider_not_found`（存在しないIdPと区別しない）。すでに結ばれていれば `409`（どのテナントの agent かは示さない）。`identityProviderId` と `subject` は、前後に空白があれば `422`。一覧の `oauthBindings` に出る。
   - `POST /tenant-admin/agent-credentials/{agentId}/oauth-bindings/remove`（`agent.revoke`）: 同じ本文で対応付けを外す。`204`。他テナントの対応付けは `404`。
@@ -940,13 +944,13 @@ ADR-0101は、TEI Assessmentを外部の信頼境界を越えさせないため�
 - 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}` を返す。応答は `Cache-Control: no-store`。読み取り専用であり、TEI AssessmentをDocument / Canonical stateへ埋め込まない。
 - テナント業務面への公開は未決である。テナント境界に沿う公開や、利用者ごとの紐付けを設ける場合は、別の判断材料（ADR）で扱う。
 
-### 2.17 TEI epistemic projection（テナント業務面、provisional 案B, ADR-0102）
+### 2.17 TEI epistemic projection（テナント業務面、案B、ADR-0102 採択済み）
 
-ADR-0102 は未決だが、provisional として案B（文書単位の紐付けを管理面で登録し、テナント業務面の読み取り endpoint で提供する）を実装した。紐付けは `SUI_TEI_REFERENCE_DIR` 内の `epistemic-bindings.json` に運用者が記録する。endpoint はテナント認証・文書認可を通し、fail closed を維持する。
+ADR-0102 は案B（文書単位の紐付けを管理面で登録し、テナント業務面の読み取り endpoint で提供する）を採択した。紐付けは `SUI_TEI_REFERENCE_DIR` 内の `epistemic-bindings.json` に運用者が記録する。endpoint はテナント認証・文書認可を通し、fail closed を維持する。
 
 **GET** `/docs/{doc_id}/epistemic/projection`
 
-- 認可: `GET /docs/{doc_id}` と同じ `_authorize_request`（テナント認証、ゲストセッション、agent credential、access control adapter、policy binding、anti-enumeration）。agent credential は `_AGENT_ALLOWED_ROUTES` に含まれないため `403 agent_route_not_enabled` で閉じる。
+- 認可: `GET /docs/{doc_id}` と同じ `_authorize_request`（テナント認証、ゲストセッション、agent credential、access control adapter、policy binding、anti-enumeration）。agent credential は `_AGENT_ALLOWED_ROUTES` に含まれないため `403 agent_route_not_enabled` で閉じる。ゲストセッションは、その文書の読み取りが許可されている場合だけ返す。ゲスト専用の追加許可はない。
 - `SUI_TEI_REFERENCE_DIR` 未設定: `503 {"code": "tei_reference_unconfigured"}`。
 - 紐付けが無い（registry 不在、または (tenant, doc) に一致する登録なし）: `404 {"code": "epistemic_binding_not_found"}`。registry が壊れている・曖昧（重複）・未知の bound artifact kind も fail closed（registry 壊れは 503、それ以外は 404）。
 - artifact は、紐付けた (tenant, doc) ごとのディレクトリ `SUI_TEI_REFERENCE_DIR/tenants/<tenantId>/<docId>/<artifactKind>.json` からだけ読む。ディレクトリ直下の運用者向けコーパス（`/admin/tei-epistemic` が返すもの）は、業務面では返さない。これにより、紐付けを通して別のテナントや別の文書のために作った artifact を返すことはない。tenantId と docId が安全な一つのパス要素（英数字で始まり、英数字・`.`・`_`・`-` だけ、128文字以内、`..` を含まない）でない場合も fail closed する。

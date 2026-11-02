@@ -41,16 +41,34 @@ jobs:
 
       - name: バックエンドの依存を導入
         working-directory: 03_Implement/backend
-        run: python -m pip install -e '.[test]'
+        run: |
+          python -m pip install -r requirements-test.lock
+          python -m pip install --no-deps -e .
 
       - name: 型契約と判断履歴モデルを検証
         working-directory: 03_Implement/backend
         env:
           SUI_LLM_PROVIDER: none
         run: |
+          python scripts/check_contract_drift.py
+          python -m ruff check src tests
           python -m pytest -q \
             tests/test_ts_python_contract_drift.py \
-            tests/test_critique_history_model.py
+            tests/test_critique_history_model.py \
+            tests/test_ai_safemode.py \
+            tests/test_request_body_safety.py \
+            tests/test_context_bundle_routes.py \
+            tests/test_agent_credential_http.py \
+            tests/test_docs_access_control_integration.py \
+            tests/test_docs_tenant_isolation_surfaces.py \
+            tests/test_audit.py \
+            tests/test_docs_audit_integration.py \
+            tests/test_ce2_proposal_api.py \
+            tests/test_llm_input_ir.py \
+            tests/test_external_agent_proposal_api.py \
+            tests/test_reviewer_ref_resolver.py \
+            tests/test_settings_env_prefix_migration.py \
+            tests/test_tei_epistemic_tenant_route.py
 
   frontend-unit:
     runs-on: ubuntu-24.04
@@ -116,5 +134,6 @@ jobs:
             e2e/structure_decision_history.spec.ts \
             e2e/structure_decision_persistence.spec.ts \
             e2e/structure_decision_hold_restore.spec.ts \
+            e2e/epistemic_review_panel.spec.ts \
             e2e/ce3_patch_workspace.spec.ts \
             --reporter=line

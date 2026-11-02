@@ -3,6 +3,8 @@ import { resolveIslandDisplayTitle } from "../i18n/island_title";
 import { inspectIslandTitle } from "../domain/island_title_quality";
 import { t } from "../i18n/translate";
 
+import { EpistemicReviewPanel } from "./EpistemicReviewPanel";
+import { RelatedCandidatesPanel } from "./RelatedCandidatesPanel";
 import { formatTimestamp } from "../domain/format_timestamp";
 import { CRITIQUE_TAGS, KNOWN_EDGE_TYPES, resolveKnownEdgeType } from "../domain/types";
 import type { EdgeType, KnownEdgeType, StructureDecisionRecord } from "../domain/types";
@@ -1454,6 +1456,14 @@ export function SidePanel({
         <div data-ui-region="read-only-banner" style={{ fontSize: 12, color: "#9a3412", backgroundColor: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: 8, marginBottom: 12 }}>
           {t("read_only.banner.active")}
         </div>
+      ) : null}
+      {document ? <EpistemicReviewPanel docId={document.id} /> : null}
+      {document && selectedCard ? (
+        <RelatedCandidatesPanel
+          document={document}
+          focusCardId={selectedCard.id}
+          reviewedOnly={isReadOnly}
+        />
       ) : null}
       <section
         data-panel="selection-context"
