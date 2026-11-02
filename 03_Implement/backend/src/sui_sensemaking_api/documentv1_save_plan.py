@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from sui_sensemaking_api.documentv1_merge import merge_preserving_existing
 from sui_sensemaking_api.documentv1_projection import (
     ProjectedDocument,
     ProjectionError,
@@ -40,6 +41,8 @@ class SavePlan:
     islands_added: tuple[str, ...]
     islands_removed: tuple[str, ...]
     warnings: tuple[str, ...]
+    preserved_cards: tuple[str, ...] = ()
+    preserved_islands: tuple[str, ...] = ()
 
 
 def _card_signature(card: Mapping[str, Any]) -> tuple[Any, ...]:
@@ -60,10 +63,20 @@ def plan_save(
     created_at: str,
     updated_at: str,
     existing: Mapping[str, Any] | None = None,
+    preserve_existing: bool = False,
 ) -> SavePlan:
-    payload = to_documentv1_payload(
-        projected, transform=transform, created_at=created_at, updated_at=updated_at
-    )
+    if existing is not None and preserve_existing:
+        payload = merge_preserving_existing(
+            projected,
+            transform=transform,
+            created_at=created_at,
+            updated_at=updated_at,
+            existing=existing,
+        )
+    else:
+        payload = to_documentv1_payload(
+            projected, transform=transform, created_at=created_at, updated_at=updated_at
+        )
     if existing is None:
         return SavePlan(
             action="create",
@@ -85,13 +98,19 @@ def plan_save(
     }
     projected_cards = {card.id: card for card in projected.cards}
     cards_added = tuple(sorted(set(projected_cards) - set(existing_cards)))
-    cards_removed = tuple(sorted(set(existing_cards) - set(projected_cards)))
+    if preserve_existing:
+        cards_removed = ()
+        preserved_cards = tuple(sorted(set(existing_cards) - set(projected_cards)))
+    else:
+        cards_removed = tuple(sorted(set(existing_cards) - set(projected_cards)))
+        preserved_cards = ()
+    payload_cards = {card["id"]: card for card in payload.get("cards", [])}
     cards_changed = tuple(
         sorted(
             card_id
             for card_id in set(projected_cards) & set(existing_cards)
             if _card_signature(existing_cards[card_id])
-            != _card_signature(payload["cards"][[c["id"] for c in payload["cards"]].index(card_id)])
+            != _card_signature(payload_cards.get(card_id, {}))
         )
     )
 
@@ -101,17 +120,22 @@ def plan_save(
         if isinstance(island, Mapping)
     }
     projected_islands = {island.id for island in projected.islands}
-    warnings = [
-        f"existing {field} is not projected and would be dropped by this save"
-        for field in UNPROJECTED_FIELDS
-        if existing.get(field) not in (None, {}, [])
-    ]
-    if cards_removed:
-        warnings.append("cards would be removed: " + ", ".join(cards_removed))
-    if existing_islands - projected_islands:
-        warnings.append(
-            "islands would be removed: " + ", ".join(sorted(existing_islands - projected_islands))
-        )
+    if preserve_existing:
+        islands_removed = ()
+        preserved_islands = tuple(sorted(existing_islands - projected_islands))
+        warnings = []
+    else:
+        islands_removed = tuple(sorted(existing_islands - projected_islands))
+        preserved_islands = ()
+        warnings = [
+            f"existing {field} is not projected and would be dropped by this save"
+            for field in UNPROJECTED_FIELDS
+            if existing.get(field) not in (None, {}, [])
+        ]
+        if cards_removed:
+            warnings.append("cards would be removed: " + ", ".join(cards_removed))
+        if islands_removed:
+            warnings.append("islands would be removed: " + ", ".join(islands_removed))
 
     return SavePlan(
         action="update",
@@ -121,6 +145,8 @@ def plan_save(
         cards_removed=cards_removed,
         cards_changed=cards_changed,
         islands_added=tuple(sorted(projected_islands - existing_islands)),
-        islands_removed=tuple(sorted(existing_islands - projected_islands)),
+        islands_removed=islands_removed,
         warnings=tuple(warnings),
+        preserved_cards=preserved_cards,
+        preserved_islands=preserved_islands,
     )
