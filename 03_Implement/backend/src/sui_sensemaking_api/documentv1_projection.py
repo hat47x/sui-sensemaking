@@ -207,3 +207,68 @@ def from_artifact(payload: Mapping[str, Any]) -> ProjectedDocument:
         contract_version=contract_version,
         tei_commit=tei_commit,
     )
+
+
+def to_documentv1_payload(
+    document: ProjectedDocument,
+    *,
+    transform: Mapping[str, Any],
+    created_at: str,
+    updated_at: str,
+) -> dict[str, Any]:
+    """Build a DocumentV1-shaped mapping from a projection.
+
+    The projection does not carry `transform`, `createdAt`, or `updatedAt`, so
+    the caller must supply them. This function does not save anything.
+    """
+    if not isinstance(transform, Mapping) or not transform:
+        raise ProjectionError("transform is required")
+    if not created_at or not updated_at:
+        raise ProjectionError("createdAt and updatedAt are required")
+
+    cards = []
+    for card in document.cards:
+        item: dict[str, Any] = {"id": card.id, "text": card.text, "x": card.x, "y": card.y}
+        if card.claim_type is not None:
+            item["claimType"] = card.claim_type
+        if card.hold_state is not None:
+            item["holdState"] = card.hold_state
+        if card.text_reviewed is not None:
+            item["textReviewed"] = card.text_reviewed
+        cards.append(item)
+
+    islands = []
+    for island in document.islands:
+        item = {"id": island.id, "cardIds": list(island.card_ids)}
+        if island.title is not None:
+            item["title"] = island.title
+        islands.append(item)
+
+    payload: dict[str, Any] = {
+        "version": 1,
+        "id": document.id,
+        "createdAt": created_at,
+        "updatedAt": updated_at,
+        "transform": dict(transform),
+        "cards": cards,
+        "edges": [
+            {
+                "id": edge.id,
+                "fromId": edge.from_id,
+                "toId": edge.to_id,
+                "fromKind": edge.from_kind,
+                "toKind": edge.to_kind,
+                "type": edge.type,
+            }
+            for edge in document.edges
+        ],
+        "islands": islands,
+    }
+    if document.title is not None:
+        payload["title"] = document.title
+    if document.affiliations:
+        payload["affiliations"] = [
+            {"id": item.id, "cardId": item.card_id, "islandId": item.island_id}
+            for item in document.affiliations
+        ]
+    return payload
