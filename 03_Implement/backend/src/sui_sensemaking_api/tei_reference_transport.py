@@ -36,6 +36,7 @@ TEI_REFERENCE_ARTIFACT_KINDS: frozenset[str] = frozenset(
         "epistemic-assessment",
         "epistemic-context",
         "epistemic-detail",
+        "documentv1-projection",
     }
 )
 

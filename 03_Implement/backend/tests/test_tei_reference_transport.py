@@ -112,3 +112,17 @@ def test_bound_artifact_is_read_only_from_its_own_pair_directory(tmp_path: Path)
     other = read_bound_tei_reference_artifact(tmp_path, "tenant-b", "doc-1", "epistemic-assessment")
     assert isinstance(other, TeiReferenceReadFailure)
     assert other.reason == "not-a-file"
+
+
+def test_documentv1_projection_artifact_is_readable(tmp_path: Path) -> None:
+    payload = {
+        "schema": "tai.reference.tei-documentv1-projection/v0",
+        "contract": {"id": "sui.documentv1.projection", "version": "1"},
+        "document": {"id": "doc-1"},
+    }
+    _write_artifact(tmp_path, "documentv1-projection.json", payload)
+
+    result = read_tei_reference_artifact(tmp_path, "documentv1-projection")
+
+    assert isinstance(result, TeiReferenceArtifact)
+    assert result.payload == payload
