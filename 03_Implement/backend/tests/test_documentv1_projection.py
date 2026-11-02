@@ -3,6 +3,7 @@ import unittest
 from sui_sensemaking_api.documentv1_projection import (
     ProjectionError,
     from_artifact,
+    to_documentv1_payload,
 )
 
 ARTIFACT = {
@@ -76,3 +77,29 @@ class FromArtifactTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ToDocumentV1PayloadTest(unittest.TestCase):
+    def test_builds_documentv1_shape(self):
+        document = from_artifact(ARTIFACT)
+        payload = to_documentv1_payload(
+            document,
+            transform={"kind": "test"},
+            created_at="2026-11-02T00:00:00Z",
+            updated_at="2026-11-02T00:00:00Z",
+        )
+        self.assertEqual(payload["version"], 1)
+        self.assertEqual(payload["id"], "doc-1")
+        self.assertEqual(payload["cards"][1]["textReviewed"], True)
+        self.assertEqual(payload["edges"][0]["toKind"], "island")
+        self.assertEqual(payload["affiliations"][0]["islandId"], "island-1")
+
+    def test_requires_transform(self):
+        document = from_artifact(ARTIFACT)
+        with self.assertRaises(ProjectionError):
+            to_documentv1_payload(document, transform={}, created_at="t", updated_at="t")
+
+    def test_requires_timestamps(self):
+        document = from_artifact(ARTIFACT)
+        with self.assertRaises(ProjectionError):
+            to_documentv1_payload(document, transform={"kind": "test"}, created_at="", updated_at="t")
