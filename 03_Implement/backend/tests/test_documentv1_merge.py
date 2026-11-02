@@ -86,5 +86,32 @@ class MergePreservingExistingTest(unittest.TestCase):
             _merge({"id": "doc-2", "cards": [], "islands": []})
 
 
+class ValidateExistingDocumentTest(unittest.TestCase):
+    def _valid(self):
+        return {
+            "version": 1,
+            "id": "doc-1",
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "transform": {"panX": 0.0, "panY": 0.0, "zoom": 1.0},
+            "cards": [{"id": "card-1", "text": "old", "x": 1, "y": 2}],
+            "edges": [],
+            "islands": [{"id": "island-1", "cardIds": ["card-1"]}],
+        }
+
+    def test_accepts_a_valid_document(self):
+        from sui_sensemaking_api.documentv1_merge import validate_existing_document
+
+        validate_existing_document(self._valid())
+
+    def test_rejects_invalid_critique_inputs(self):
+        from sui_sensemaking_api.documentv1_merge import validate_existing_document
+
+        document = self._valid()
+        document["critiqueInputs"] = [{"id": "crit-1"}]
+        with self.assertRaises(ValueError):
+            validate_existing_document(document)
+
+
 if __name__ == "__main__":
     unittest.main()
