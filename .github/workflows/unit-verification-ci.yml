@@ -68,7 +68,9 @@ jobs:
             tests/test_external_agent_proposal_api.py \
             tests/test_reviewer_ref_resolver.py \
             tests/test_settings_env_prefix_migration.py \
-            tests/test_tei_epistemic_tenant_route.py
+            tests/test_tei_epistemic_tenant_route.py \
+            tests/test_tei_epistemic_admin_route.py \
+            tests/test_tei_reference_transport.py
 
   frontend-unit:
     runs-on: ubuntu-24.04

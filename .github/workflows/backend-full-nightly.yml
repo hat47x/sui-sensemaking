@@ -3,6 +3,9 @@ name: SUI バックエンド全テスト（定期）
 # PRのCIは安全不変条件に関係するテストを明示的に選ぶ。選ばれなかった
 # バックエンドテストは、ここで毎日まとめて実行し、後退を翌日までに検出する。
 # Issue #3303: どのテストをPRの必須にし、どれを定期実行に残すかを分ける。
+# Issue #3370: TEI Referenceの局所I/O（test_tei_reference_transport.py）と管理面の認可
+# （test_tei_epistemic_admin_route.py）はPRの必須に移した。DocumentV1投影の
+# test_documentv1_projection*.pyは、認可を外して形を確認するテストなので、定期実行に残す。
 on:
   schedule:
     - cron: '0 18 * * *'
