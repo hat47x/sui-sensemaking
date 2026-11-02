@@ -243,5 +243,31 @@ class SourcesTest(unittest.TestCase):
             from_artifact(artifact)
 
 
+class ReadingOrderTest(unittest.TestCase):
+    def _artifact(self):
+        artifact = json.loads(json.dumps(ARTIFACT))
+        artifact["document"]["document"]["readingOrder"] = ["card-1", "card-2"]
+        return artifact
+
+    def test_reads_reading_order(self):
+        document = from_artifact(self._artifact())
+        self.assertEqual(document.reading_order, ("card-1", "card-2"))
+
+    def test_payload_carries_reading_order(self):
+        payload = to_documentv1_payload(
+            from_artifact(self._artifact()),
+            transform=TRANSFORM,
+            created_at="2026-11-02T00:00:00Z",
+            updated_at="2026-11-02T00:00:00Z",
+        )
+        self.assertEqual(payload["readingOrder"], ["card-1", "card-2"])
+
+    def test_rejects_non_array_reading_order(self):
+        artifact = self._artifact()
+        artifact["document"]["document"]["readingOrder"] = "card-1"
+        with self.assertRaises(ValueError):
+            from_artifact(artifact)
+
+
 if __name__ == "__main__":
     unittest.main()
