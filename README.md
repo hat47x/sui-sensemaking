@@ -66,7 +66,7 @@ SUI Sensemakingは、一つの正解へ早く収束すること自体を目的�
 - 貢献の手順: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - 実装のガイド（開発者向けの実行方法）: [`03_Implement/README.md`](03_Implement/README.md)
 
-> 作業の種類ごとに読む正本の表と、変更時の規則・安全不変条件は、`AGENTS.md` にまとめています。開発の各階層（`00_Prompt` から `04_Documentation`）の概要は、下の「文書の構成（人間向けの要約）」の節にあります。
+> 作業の種類ごとに読む正本の表と、変更時の規則・安全不変条件は、`AGENTS.md` にまとめています。開発の各階層（`01_Plans` から `04_Documentation`）の概要は、下の「文書の構成（人間向けの要約）」の節にあります。
 
 
 ### 文書の公開範囲（迷ったとき）
