@@ -2,7 +2,7 @@
 
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-> 現行契約とStream / 凍結履歴の読み分けは `02_Architecture/contract_reading_guide.md` を参照する。
+> 現行契約とStream / 凍結履歴の読み分けは `02_Architecture/contract_reading_guide.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/contract_reading_guide.md)） を参照する。
 > MVPのCRUDサポート表と運用保守境界は `02_Architecture/data_model_operations_overview.html` を参照する。
 本ドキュメントは、sui-sensemakingの **MVP API（Documentの保存・取得）** を定義します。
 

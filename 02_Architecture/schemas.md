@@ -2,10 +2,10 @@
 
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-> 現行契約の読み方は `02_Architecture/contract_reading_guide.md`、2026年5月のストリームと凍結の形成履歴は [スキーマ契約の形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/schema-contract-formation-2026-05.md) を参照する。
+> 現行契約の読み方は `02_Architecture/contract_reading_guide.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/contract_reading_guide.md)）、2026年5月のストリームと凍結の形成履歴は [スキーマ契約の形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/schema-contract-formation-2026-05.md) を参照する。
 > MVPで実際に運用サポートするデータ構造、埋め込み限定の構造、契約のみの構造は `02_Architecture/data_model_operations_overview.html` を参照する。
 > ADR-0033で定義したSupport・Maintenance・Contractの境界（L1/L1.5/L2/L2.5/L3/L0）を正本とし、本書の型定義単体で運用保証を主張しない。
-> `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生バンドルは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存バンドルはこのメタデータを省略する。詳細は `02_Architecture/inquiry_journey_model.html` を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、バージョンゲート、保存契約へ履歴キーを追加しない。
+> `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生バンドルは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存バンドルはこのメタデータを省略する。詳細は `02_Architecture/inquiry_journey_model.html`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/inquiry_journey_model.html)） を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、バージョンゲート、保存契約へ履歴キーを追加しない。
 > `ADR-0085` / `02_Architecture/sensemaking_semantic_model.md` は、Evidence / Observation / 関係 / Hypothesis / Structure / Synthesis / レビュー / Decisionを将来の意味成果物として定義する。`ADR-0086` / `02_Architecture/sensemaking_artifact_contract_v1alpha1.md` は、その論理識別情報・厳密なリビジョン・来歴・レビュー・Authority遷移を定義し、`ADR-0087` / `sensemaking_payload_authority_exchange_v1alpha1.md` はペイロード・スコープ・交換の境界を定義する。`ADR-0088`は永続化の第一候補を選んだが、**マイグレーション / 実行時スキーマは未実装**である。これらはすべて **L0 Plannedの概念／設計契約** であり、現行 `DocumentV1` へ新フィールドや新配列を追加したことを意味しない。
 本ドキュメントは、sui-sensemakingの **MVPで扱う永続データの最小スキーマ** を定義します。
 
@@ -1662,7 +1662,7 @@ ADR-0054「後段が前段の安全原則を弱めることはない」に従い
 
 - ADR: `ADR-0054-external-connection-layer-staged-introduction.md`（段階3）, `ADR-0049-external-flat-rate-agent-collaboration.md`（安全境界の正本）, `ADR-0041-core-value-invariants-single-guard.md`（CVI-2 proposal-only）
 - Issue: `EXT-CONN-03-critique-constraint-export`
-- 調査: `01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md`（追補A3: TRACE定量根拠）
+- 調査: `01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md)）（追補A3: TRACE定量根拠）
 - 仕様: `02_Architecture/external_agent_collaboration_spec.html`（§3.3a制約節の埋め込みプロファイル）
 - フロントエンド: `03_Implement/frontend/src/domain/types.ts`（CRITIQUE_TAGS / AgentProposalDecisionEntry）, `03_Implement/frontend/src/domain/hil_rs_payload.ts`（内部critique収集の前例）, `03_Implement/frontend/src/export/context_bundle_projection.ts`（外部読み取り面の安全境界前例）
 

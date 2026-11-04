@@ -10,7 +10,7 @@
 
 > **現行の `ir_version` は `1.2`**（2026-08-30、`cards[*].hold_state` を加算）。1.1は、同日の `ADR-0069` D1=B / D2=A / D3=A / D4=A を反映した版である。版数を判断した根拠と、各版の差分は、§7.4を参照。
 
-> CE1のContext基盤との統合メモ: `ContextQuery` / `ContextBundle` の契約固定（`previewConfirmed` 必須、正準ハッシュ）は、`02_Architecture/api.md` と `01_Plans/issues/done/issue-CE1-context-query-bundle-foundation.md` を正本とする。本書では、IRと接続するときの整合条件だけを規定する。
+> CE1のContext基盤との統合メモ: `ContextQuery` / `ContextBundle` の契約固定（`previewConfirmed` 必須、正準ハッシュ）は、`02_Architecture/api.md` と `01_Plans/issues/done/issue-CE1-context-query-bundle-foundation.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/done/issue-CE1-context-query-bundle-foundation.md)） を正本とする。本書では、IRと接続するときの整合条件だけを規定する。
 
 ---
 
@@ -844,11 +844,11 @@ A2の契約テストでは、次を機械判定する。
 - 品質ゲート: `02_Architecture/llm_quality_strategy.md`。
 - エスカレーションの運用: `02_Architecture/llm_escalation_policy.html`。
 - 版数1.1の決定の根拠: `01_Plans/adr/ADR-0069-llm-input-ir-as-the-actual-ai-input-path.md`（D1=B / D2=A / D3=A / D4=A）。
-- 版数1.2（`cards[*].hold_state`）の決定の根拠: `01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md` AC-2と「結果（Stage 2）」の節。`holdState` の意味の正本は、`02_Architecture/schemas.md` §14.1。
-- ルート必須カードの切り詰めからの保護: `01_Plans/issues/done/issue-AI-IR-FOCUS-PRESERVATION-01-preserve-focus-adjudication-under-truncation.md`。共有IRの実装は `03_Implement/backend/src/sui_sensemaking_api/llm_input_ir.py`、`detect-contradiction` の配線は `03_Implement/backend/src/sui_sensemaking_api/routes/ai.py` を参照する。
-- 実装課題: `01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md`。
-- SafeModeの第一層（本仕様の§7.1が置き換えてはならない既存の実装）: `01_Plans/adr/ADR-0068-safemode-enforcement-at-api-boundary.md`, `01_Plans/issues/done/issue-SEC-AI-SAFEMODE-01-safemode-not-enforced-at-api-boundary.md`。
-- カードから島への一意化規則（先勝ち）の出典: `01_Plans/issues/done/issue-DOMAIN-ISLAND-MEMBERSHIP-01-cross-island-cardid-duplicate-detection.md`。
+- 版数1.2（`cards[*].hold_state`）の決定の根拠: `01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md)） AC-2と「結果（Stage 2）」の節。`holdState` の意味の正本は、`02_Architecture/schemas.md` §14.1。
+- ルート必須カードの切り詰めからの保護: `01_Plans/issues/done/issue-AI-IR-FOCUS-PRESERVATION-01-preserve-focus-adjudication-under-truncation.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/done/issue-AI-IR-FOCUS-PRESERVATION-01-preserve-focus-adjudication-under-truncation.md)）。共有IRの実装は `03_Implement/backend/src/sui_sensemaking_api/llm_input_ir.py`、`detect-contradiction` の配線は `03_Implement/backend/src/sui_sensemaking_api/routes/ai.py` を参照する。
+- 実装課題: `01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/issue-AI-IR-PROJECTION-01-llm-input-ir-as-ai-input-path.md)）。
+- SafeModeの第一層（本仕様の§7.1が置き換えてはならない既存の実装）: `01_Plans/adr/ADR-0068-safemode-enforcement-at-api-boundary.md`, `01_Plans/issues/done/issue-SEC-AI-SAFEMODE-01-safemode-not-enforced-at-api-boundary.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/done/issue-SEC-AI-SAFEMODE-01-safemode-not-enforced-at-api-boundary.md)）。
+- カードから島への一意化規則（先勝ち）の出典: `01_Plans/issues/done/issue-DOMAIN-ISLAND-MEMBERSHIP-01-cross-island-cardid-duplicate-detection.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/done/issue-DOMAIN-ISLAND-MEMBERSHIP-01-cross-island-cardid-duplicate-detection.md)）。
 - Pythonの実装（D4=A）: `03_Implement/backend/src/sui_sensemaking_api/llm_input_ir.py`。
 
 

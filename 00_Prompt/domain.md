@@ -230,7 +230,7 @@
 - `WorkingGraph`（計画中）は、探索中の配置、Observation、Hypothesis、Structure、未確定の関係を保持します。
   将来は人間とAIそれぞれの作業面、またはAIが複数段階の探索を行う AI Workspace の論理的な保持先として利用できるようにします。
   「主体ごと」に分かれるのは複数主体運用が成立した後であり、現時点の実装は単一主体を前提とします
-  （複数主体は `02_Architecture/post-mvp-business-scope-design-program.html` 第3反復の範囲）。
+  （複数主体は `02_Architecture/post-mvp-business-scope-design-program.html`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/post-mvp-business-scope-design-program.html)） 第3反復の範囲）。
   AI WorkspaceはAccepted / Consensusと同義ではなく、内部で複数段階の仮説形成や棄却を行っても、そのことだけでは人間承認済み状態へ昇格しません。
 - `ContextProjectionGraph`（実装済み）は、問い合わせ目的に合わせて読み取り専用で作る投影です。永続的な正本ではありません。
 - `Consensus Graph`（計画中）は、`patch + approval` 済みの差分だけを保持します。
