@@ -2,7 +2,7 @@
 
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-> 現行契約の読み方は `02_Architecture/contract_reading_guide.md`、2026年5月のストリームと凍結の形成履歴は [スキーマ契約の形成履歴](history/schema-contract-formation-2026-05.md) を参照する。
+> 現行契約の読み方は `02_Architecture/contract_reading_guide.md`、2026年5月のストリームと凍結の形成履歴は [スキーマ契約の形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/schema-contract-formation-2026-05.md) を参照する。
 > MVPで実際に運用サポートするデータ構造、埋め込み限定の構造、契約のみの構造は `02_Architecture/data_model_operations_overview.html` を参照する。
 > ADR-0033で定義したSupport・Maintenance・Contractの境界（L1/L1.5/L2/L2.5/L3/L0）を正本とし、本書の型定義単体で運用保証を主張しない。
 > `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生バンドルは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存バンドルはこのメタデータを省略する。詳細は `02_Architecture/inquiry_journey_model.html` を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、バージョンゲート、保存契約へ履歴キーを追加しない。
@@ -375,7 +375,7 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 | `2026-08-01T00:00:00+00:00` | `false` | `c742c2105d5070cf39da8d7af2bd212799b43f1197c95e8eb6d4c5f39c92522d` |
 | `2026-08-01T00:00:00+00:00` | `true` | `738c618b092785d42165200e8f8f0c0da6d3b510a3d7b4be6294beddecab8879` |
 
-- `updatedAt` はクライアントが `PUT /docs/{doc_id}` で送る値で、サーバーは採番も単調増加の検証もしない（`api.md` §1.2）。したがって `baseDocSignature` の版の成分は、サーバーが保証する版ではない。`updatedAt` を更新しないクライアントや、古い `updatedAt` を送るクライアントが保存すると、内容が変わっても `bundleHash` の版の成分は変わらない。`holdState` のように露出するが `bundleHash` の入力に含まれない項目は、この経路では検出できない。内容だけの版固定には、単位digest（§1.3）を使う。この残存リスクは、サーバー採番の `revision` を足す判断（#3299）まで続く。
+- `updatedAt` はクライアントが `PUT /docs/{doc_id}` で送る値で、サーバーは採番も単調増加の検証もしない（`api.md` §1.2）。したがって `baseDocSignature` の版の成分は、サーバーが保証する版ではない。`updatedAt` を更新しないクライアントや、古い `updatedAt` を送るクライアントが保存すると、内容が変わっても `bundleHash` の版の成分は変わらない。`holdState` のように露出するが `bundleHash` の入力に含まれない項目は、この経路では検出できない。内容だけの版固定には、単位digest（§1.3）を使う。#3299 では現状の契約を明確にする選択肢を採り、サーバー採番の `revision` を足すかは、必要になった時点で別のIssue/ADRで判断する。それまでこの残存リスクは続く。
 - 実装は `frontend/src/export/context_bundle_projection.ts`、条件は同じ階層の `context_bundle_projection.test.ts`（「bundleHash が変わる条件と変わらない条件」）で固定している。`updatedAt` を入力から外す、露出内容だけの値を別項目として足す、といった変更は、既存の `bundleHash` の値を変えるか契約を広げるため、ADRと `schemaVersion` の扱いを決めてから行う（未決）。
 
 ## 2. ID・座標系の前提
