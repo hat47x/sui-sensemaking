@@ -236,7 +236,7 @@ export SUI_ACCESS_CONTROL_EXTERNAL_HTTP_ENDPOINT='https://pdp.example.com/decide
 
 1. 該当する `agentId` を、すぐに失効させます。冪等な操作で、次の要求から効きます。OAuthの対応付けを使っているときは、`oauth-bindings/remove` で外します。
 2. その資格情報が付与されていた文書の一覧を、`GET /tenant-admin/agent-credentials` で確認します。agentが読める内容は、確認済みのカード本文と確認済みの島の題名です。未確認のカードのidと、そのカードを端点とする関係線は、`GET /docs/{id}` の出力から除かれます（#3275）。
-3. 監査の外部出力が有効なら、`agent:<agentId>` の読み取りのeventで、いつ何件の文書を読まれたかを確認します。外部出力は既定で無効（`SUI_AUDIT_EXPORT_ENABLED=false`）で、agentの読み取りはSafeModeのeventなので、`SUI_AUDIT_ALLOW_IN_SAFE_MODE` も真でないと送られません。この2つを有効にしていない環境では、読まれた履歴は外部に残りません。
+3. 監査の外部出力が有効なら、`agent:<agentId>` の読み取りのeventで、いつ何件の文書を読まれたかを確認します。外部出力は既定で無効（`SUI_AUDIT_EXPORT_ENABLED=false`）です。確認済みのカード本文を1件でも返した読み取りは`safe_mode=false`（`metadata.reviewedTextExposed=true`）で記録され、`SUI_AUDIT_EXPORT_ENABLED`が真なら送られます。本文を返さなかった読み取りはSafeModeのeventとして記録され、`SUI_AUDIT_ALLOW_IN_SAFE_MODE`も真でないと送られません（#3276、[api.md](../02_Architecture/api.md)）。外部出力を有効にしていない環境では、読まれた履歴は外部に残りません。
 4. 新しい `agentId` で、登録し直します。漏えいの原因（保管先、ログ、共有の経路）を特定するまで、同じ経路には載せません。
 
 SafeModeの扱いは、agent資格情報には及びません。バックエンドは、agentに対してSafeModeを強制せず、確認済みの本文を返します（#3276）。付与の判断は、SafeModeに頼らず、読ませてよい文書かどうかで行います。
