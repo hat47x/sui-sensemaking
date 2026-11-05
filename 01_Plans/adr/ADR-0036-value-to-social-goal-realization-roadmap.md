@@ -78,6 +78,7 @@
 
 ## Traceability
 
+- Superseded by（一部）: `ADR-0089`（価値の「現在の定義」に関する運用部分。原則・不変条件・モデルそのものは `ADR-0010`・`ADR-0032`・`ADR-0041` が引き続き正本）
 - Related: `README.md`, `00_Prompt/domain.md`, `00_Prompt/ai_cognitive_externalization_requirements.md`
 - Related: `01_Plans/adr/ADR-0001-value-to-requirements.md`, `ADR-0010-values-principles.md`, `ADR-0011-requirements-mapping.md`
 - Related: `01_Plans/adr/ADR-0028-ai-cognitive-externalization-phase-plan.md`, `ADR-0031-productization-screen-information-architecture.md`, `ADR-0032-product-value-realization-model.md`, `ADR-0033-mvp-data-support-and-maintenance-boundary.md`

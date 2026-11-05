@@ -2,7 +2,7 @@
 
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-> 現行契約とStream / 凍結履歴の読み分けは `02_Architecture/contract_reading_guide.md` を参照する。
+> 現行契約とStream / 凍結履歴の読み分けは `02_Architecture/contract_reading_guide.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/contract_reading_guide.md)） を参照する。
 > MVPのCRUDサポート表と運用保守境界は `02_Architecture/data_model_operations_overview.html` を参照する。
 本ドキュメントは、sui-sensemakingの **MVP API（Documentの保存・取得）** を定義します。
 
@@ -273,7 +273,7 @@ JSONリクエスト共通のトランスポート安全境界として、バッ�
 SafeMode既定ON、未レビュー本文保護、proposal-only、`human_reviewed`人手昇格、Consensus Graph直接更新禁止は [architecture.html §05](architecture.html#ce0-boundary) を正本とする。
 
 
-旧段階手順、モック検証計画、Stream A凍結ログは[形成履歴](history/api-contract-formation-2026-04-to-05.md)へ分離した。
+旧段階手順、モック検証計画、Stream A凍結ログは[形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/api-contract-formation-2026-04-to-05.md)へ分離した。
 
 ### 2.9 CE4 API/CLI/GUI 同値性・監査契約（CE4-API-CLI-AUDIT）
 
@@ -1476,7 +1476,7 @@ Inquiryバンドルは `DocumentV1` の任意フィールドではなく、W型�
 
 ## 12. 形成履歴（Informative）
 
-2026-04-30〜2026-05-19のCE0/CE1/CE4モック先行、Stream同期、凍結/handoff形成記録は [API契約の形成履歴](history/api-contract-formation-2026-04-to-05.md) へ分離した。現在の型は`schemas.md`、責務・信頼境界は`02_Architecture/architecture.html`、エンドポイント/ステータス/エラー/認証/副作用は本書を基準とする。
+2026-04-30〜2026-05-19のCE0/CE1/CE4モック先行、Stream同期、凍結/handoff形成記録は [API契約の形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/api-contract-formation-2026-04-to-05.md) へ分離した。現在の型は`schemas.md`、責務・信頼境界は`02_Architecture/architecture.html`、エンドポイント/ステータス/エラー/認証/副作用は本書を基準とする。
 
 ## 13. 廃止済みエンドポイントの記録規約（DX-CANON-INTENT-01）
 

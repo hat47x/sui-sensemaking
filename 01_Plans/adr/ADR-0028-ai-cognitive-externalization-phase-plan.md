@@ -1,6 +1,6 @@
 # ADR-0028: 認知外在化AI要件の文書体系統合と次フェーズ実行計画
 
-- Status: Superseded by `ADR-0090` (2026-10-01)
+- Status: Superseded by（一部）ADR-0090（2026-10-01。旧: Accepted。置換はフェーズ計画・Issue運用・完了ゲートに限る。認知支援の安全境界は `ADR-0090` と現行の正本文書へ引き継ぐ）
 - Date: 2026-04-10
 - Deciders: Project Maintainers
 - Scope: `00_Prompt/`, `01_Plans/adr/`, `02_Architecture/`, `03_Implement/frontend/`, `03_Implement/backend/`, `04_Documentation/`
@@ -403,6 +403,7 @@ AIエージェントは自由文入力をそのまま処理せず、次の順で
 - Related: `01_Plans/issues/done/issue-HIL-RS-02-next-phase-delivery-plan.md`
 - Related: `02_Architecture/llm_input_ir_spec.md`
 - Related: `02_Architecture/llm_quality_strategy.md`
+- Superseded by（一部）: `ADR-0090`（フェーズ計画・Issue運用・完了ゲート。認知支援の安全境界は `ADR-0090` と現行の正本文書へ引き継ぐ）
 
 ## Stream A Contract/Governance Freeze Snapshot（for downstream lanes）
 

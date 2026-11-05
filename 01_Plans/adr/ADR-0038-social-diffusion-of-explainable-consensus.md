@@ -72,6 +72,7 @@ V4の先に、社会的普及を扱う層VR5を次の4本柱で定義する。�
 
 ## Traceability
 
+- Superseded by（一部）: `ADR-0089`（価値の「現在の定義」に関する運用部分。原則・不変条件・モデルそのものは `ADR-0010`・`ADR-0032`・`ADR-0041` が引き続き正本）
 - Derived-from: `01_Plans/adr/ADR-0036-value-to-social-goal-realization-roadmap.md`
 - Related: `00_Prompt/domain.md`, `00_Prompt/ai_cognitive_externalization_requirements.md`
 - Related: `01_Plans/adr/ADR-0032-product-value-realization-model.md`, `ADR-0006-phase3-review-governance.md`

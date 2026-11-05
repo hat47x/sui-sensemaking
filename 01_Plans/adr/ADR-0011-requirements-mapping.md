@@ -30,5 +30,6 @@ UX/Data/AI要求が価値原則と混在しており、要件レビュー時に�
 
 ## Traceability
 
+- Superseded by（一部）: `ADR-0089`（価値の「現在の定義」に関する運用部分。原則・不変条件・モデルそのものは `ADR-0010`・`ADR-0032`・`ADR-0041` が引き続き正本）
 - Derived sections: `ADR-0001` の「2. 価値観ごとの要求」「3. Backlog整合」
 - Related: `ADR-0010`, `ADR-0012`

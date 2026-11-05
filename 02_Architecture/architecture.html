@@ -53,8 +53,8 @@
     <div style="margin:20px 0 0; padding:12px 14px; background:#f8fafc; border-left:3px solid #cbd5e1; border-radius:0 4px 4px 0;">
       <p style="font-size:12.5px; line-height:1.8; color:#52606d; margin:0;">
         本書が正本である（<code>AGENTS.md</code> §3）。環境変数と実行パラメータの正本は <a href="runtime_parameter_registry.md">runtime_parameter_registry.md</a> である。<br>
-        価値判断と設計要素の対応は<a href="value_traceability.md">value_traceability.md</a>　／　現行契約と履歴ログの読み分けは<a href="contract_reading_guide.md">contract_reading_guide.md</a><br>
-        MVPで運用サポートするデータ構造は<a href="data_model_operations_overview.html">data_model_operations_overview.html</a>　／　CE0/CE1の凍結に至った記録は<a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">contract-freeze formation history</a>
+        価値判断と設計要素の対応は<a href="https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/value_traceability.md">value_traceability.md</a>　／　現行契約と履歴ログの読み分けは<a href="https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/contract_reading_guide.md">contract_reading_guide.md</a><br>
+        MVPで運用サポートするデータ構造は<a href="data_model_operations_overview.html">data_model_operations_overview.html</a>　／　CE0/CE1の凍結に至った記録は<a href="https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/architecture-contract-freeze-formation-2026-04-to-05.md">contract-freeze formation history</a>
       </p>
     </div>
   </header>
@@ -75,7 +75,7 @@
     </table>
 
     <h3 style="font-size:15px; font-weight:700; margin:22px 0 0;">1.4 プロダクト価値実現の責務境界</h3>
-    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;">製品にするには、機能があるだけでは足りず、利用者が価値を受け取る流れを、構造として支える必要がある。価値を実現するループの正本は <a href="value_traceability.md">value_traceability.md</a> と <code>ADR-0032</code> とし、本書では責務の境界だけを固定する。</p>
+    <p style="font-size:13px; line-height:1.7; color:#3e4c59; margin:8px 0 0;">製品にするには、機能があるだけでは足りず、利用者が価値を受け取る流れを、構造として支える必要がある。価値を実現するループの正本は <a href="https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/value_traceability.md">value_traceability.md</a> と <code>ADR-0032</code> とし、本書では責務の境界だけを固定する。</p>
     <table class="grid">
       <thead><tr><th style="width:18%;">要素</th><th>固定する責務境界</th></tr></thead>
       <tbody>
@@ -168,7 +168,7 @@ flowchart TB
         <tr><td><code>POST /docs</code></td><td>サーバーが採番する新規作成の候補。MVPでは必須ではなく、実装の契約にするのは <code>DATA-CONTRACT-01</code> で扱う</td></tr>
       </tbody>
     </table>
-    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">認証と共有の詳細は、文書保存のAPIとは分けて <a href="enterprise_architecture.html">enterprise_architecture.html</a>、<a href="review_attribution.md">review_attribution.md</a>、共有とエクスポートに関する仕様で扱う。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:10px 0 0;">認証と共有の詳細は、文書保存のAPIとは分けて <a href="https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/enterprise_architecture.html">enterprise_architecture.html</a>、<a href="review_attribution.md">review_attribution.md</a>、共有とエクスポートに関する仕様で扱う。</p>
   </section>
 
   <!-- 04 LLM Provider -->
@@ -316,7 +316,7 @@ flowchart LR
       <li>語彙の衝突は0件で固定する（契約の語彙は <code>ConsensusGraph</code> / <code>WorkingGraph</code> / <code>ContextProjectionGraph</code> に統一する）。</li>
       <li>検証での自己修復は最大3回とする。4回目に相当する時点で停止し、推測で続けることを禁止する。</li>
     </ul>
-    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;"><strong>インターフェース契約の参照先</strong>　本書は、型シグネチャ、必須キーとオプションキー、エンドポイント、ステータス、エラーを再定義しない。型、キー、列挙、バージョンの互換は<a href="schemas.md#12-ce1ce2ce4-型契約実装非依存">schemas.md §1.2</a>、エンドポイント、認証、ステータス、エラー、副作用は<a href="api.md#27-ce4-audit-integration-contractapicli-equivalence">api.md §2.7〜§2.9</a>、CE1 v1のlogical、transport、handoffの所属は<a href="schemas.md#ce1-v1-layer-ownership-matrixlogical--transport--handoff">schemas.md layer ownership matrix</a>を参照する。旧Interface Freezeの型、メソッド、イベント順序の再掲と、CE0の入力スナップショットの識別子は<a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">形成履歴</a> へ移した。</p>
+    <p style="font-size:12.5px; color:#6b7280; margin:12px 0 0;"><strong>インターフェース契約の参照先</strong>　本書は、型シグネチャ、必須キーとオプションキー、エンドポイント、ステータス、エラーを再定義しない。型、キー、列挙、バージョンの互換は<a href="schemas.md#12-ce1ce2ce4-型契約実装非依存">schemas.md §1.2</a>、エンドポイント、認証、ステータス、エラー、副作用は<a href="api.md#27-ce4-audit-integration-contractapicli-equivalence">api.md §2.7〜§2.9</a>、CE1 v1のlogical、transport、handoffの所属は<a href="schemas.md#ce1-v1-layer-ownership-matrixlogical--transport--handoff">schemas.md layer ownership matrix</a>を参照する。旧Interface Freezeの型、メソッド、イベント順序の再掲と、CE0の入力スナップショットの識別子は<a href="https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/architecture-contract-freeze-formation-2026-04-to-05.md">形成履歴</a> へ移した。</p>
   </section>
 
   <!-- 06 CE-1/2/4 -->
@@ -406,7 +406,7 @@ flowchart LR
         <li>自動最適配置（正解クラスタ提示）</li>
       </ul>
     </div>
-    <p style="font-size:12.5px; line-height:1.75; color:#6b7280; margin:16px 0 0;"><strong>形成履歴（参考）</strong>　2026-05-04のインターフェースのみのベースラインとStream Bの反映メモは、現行の契約と誤認されないよう、<a href="history/architecture-contract-freeze-formation-2026-04-to-05.md">Architecture contract-freeze formation history</a> へ分離した。現行の責務境界は本書、型は <a href="schemas.md">schemas.md</a>、エンドポイントとステータス、エラーは<a href="api.md">api.md</a>を正本とする。</p>
+    <p style="font-size:12.5px; line-height:1.75; color:#6b7280; margin:16px 0 0;"><strong>形成履歴（参考）</strong>　2026-05-04のインターフェースのみのベースラインとStream Bの反映メモは、現行の契約と誤認されないよう、<a href="https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/architecture-contract-freeze-formation-2026-04-to-05.md">Architecture contract-freeze formation history</a> へ分離した。現行の責務境界は本書、型は <a href="schemas.md">schemas.md</a>、エンドポイントとステータス、エラーは<a href="api.md">api.md</a>を正本とする。</p>
   </section>
 
 </main>
