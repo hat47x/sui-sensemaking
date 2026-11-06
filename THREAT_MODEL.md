@@ -149,6 +149,22 @@ stdioの段階では、待ち受けのポートを開かず、外部から到達
 - 資格情報の漏えいへの備えは、失効とローテーションに依存する。ローテーションは、新しい `agentId` で登録し直し、古いものを失効させる運用で、同じ `agentId` は再利用しない（ADR-0093）。保管、ローテーション、漏えい時の失効の運用手順は、`04_Documentation/security.md` の「agent資格情報の運用」に置く。
 - 資格情報の期限の延長、付与の追加、回転の専用APIは作らず、新しい `agentId` での再登録で行う（#3286 の決定）。再登録後の監査eventの `actorRefHash` は、旧 `agentId` の履歴と連続しない。agentごとの要求回数の上限は、テナントとagentのどちらをキーにするか決まっていない（ADR-0093）。
 
+### 6-4. TEI Referenceの局所I/O経路（ADR-0101、ADR-0102、#3387）
+
+`SUI_TEI_REFERENCE_DIR` を設定すると、バックエンドが運用者の置いたJSONファイルを読む。管理面（`GET /admin/tei-epistemic/artifacts/{artifact_kind}`）とテナント業務面（`GET /docs/{doc_id}/epistemic/projection`）が対象で、実装は `tei_reference_transport.py`、契約は `02_Architecture/api.md` §2.16、§2.17 にある。
+
+- 運用者が置くファイルを信頼する前提である。artifactの内容は検証せず、JSON objectとしてそのまま返す。検証は frontend consumer が行う。
+- `documentv1-projection` はカードの本文を運ぶ。運用者が (tenant, doc) に結ぶと、業務面からも返り得る。この経路には `textReviewed` やSafeModeに基づく除外がない。公開してよいかはOwner判断待ちである（#3369）。
+- テナント間の分離は、`tenants/<tenantId>/<docId>/` の配置と、パス要素の検査（英数字で始まる128文字以内、`..` を含まない）に依存する。
+- ファイルの大きさに上限がない。リクエストごとにファイル全体と `epistemic-bindings.json` を読み直し、`json.loads` で展開する（コード読みによる確認で、巨大ファイルでの実測はしていない）。
+- 封じ込めは `Path.resolve()` の後で、基準ディレクトリの内側かを確かめる方式である。`SUI_TEI_REFERENCE_DIR` の外を指すシンボリックリンクは拒否される。一方、あるテナントの配置から別のテナントのファイルを指すシンボリックリンクは、基準ディレクトリの内側に解決されるため通る（コード読みの推定で、Windowsでは作成できず実測していない）。運用者が配置を作る前提のため重大度は低いが、「テナント間でartifactを共有しない」という説明はこの前提に依存する。
+
+**未決**
+
+- ファイルサイズの上限値と、超過を `invalid-json` と別の理由でfail closedさせるか。
+- シンボリックリンクを拒否するか、許す前提を運用手順に書くか。
+- この経路がTAIのSCN-001で使われるかの見通し。`04_Documentation/tai_agent_connection.md` は、TAIのagent経路ではTEI投影を使わないとしている。使うなら、別の認可を決める判断が先に要る。
+
 ### 6-2. バックエンドのJSONリクエストの境界（SEC-DOC-BOUND-03）
 
 - 構文としては正しくても、深すぎるJSONが、パーサーの再帰の上限を超え、捕捉されない例外や500を起こす。
