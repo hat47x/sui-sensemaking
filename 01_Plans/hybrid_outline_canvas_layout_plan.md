@@ -375,3 +375,44 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 - **意味とAction P2**：SEI #820/#767の問い相対のSource/Unknown/自他参照、TEI #2497/#2507/#3236の合成写像とSelection/Operation分離へ引渡し。Cardが二回引用されても同じCard Identity/元Relationは自動操作しない。OKFの`verified`・SHO Reader PASS・文字表現の一致からOwner受理/Host Grant/実書戻しへ昇格しない。
 
 **採用状態**：#3397はDraftのtest/opt-in関数のみ。実SUI UI接続／SHO main Readerによる実草稿Read／G2 Writer／SEI Inquiry／OKF Conformance・原典Reader／SUI逆Patch／外部Harness実資格は未実証。本§13自体も提案であり、SUI/SHO/SEI/TEIのOwner既存責務を変更しない。
+
+---
+
+<!-- 20261107-sho-raw-byte-handoff-p0-bridge -->
+## 14. SUI Producer実バイト→SHO実Readerに向けた固定引渡し試験（2026-11-07）
+
+### 14.1 同じ合成Raw原文を別製品の既存Readerで検査する
+
+**SUI Producerの実証**：[SUI Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397) HEAD `72fd41fa5ab4b7685e07705be72f16b4d1c7cedf`で、実`buildContextProjection`→`renderReadOnlyMarkdownDraft` の一往復を追加。5 Card（公開/非保留2、非公開/保留3）・2 Island・2 EdgeのSynthetic Documentから、以下の独立手書き期待原文と**byte一致**を確認した。
+
+- **原文**：UTF-8、354 bytes、SHA-256 `7fd6fde2fbc4d9beaf9de14e8b8f4f5d70003cd2129f1502cdd7c73f50c171cd`。
+- **内容**：公開本文の二つの引用ブロック、Literal Backslash、偽Markdown見出し・Link・Footnoteをエスケープ。Original `meta.source`、Island/Edge、hidden ID/count、未レビュー・保留本文、`sources/verified`の補完なし。
+- **実CI**：[SUI単体 #42352776477](https://github.com/hat47x/sui-sensemaking/actions/runs/42352776477)はcompleted/success、当該新試験 **1/1 PASS** と既存草稿5/5 PASS、全279ファイル／1,870テストPASS。SUI ProductがSHO/SEI/OKFに送信したことは未証明。
+
+**SHO Consumerの独立候補**：[SHO test-only Draft #21](https://github.com/hat47x/sho-composer/pull/21)は、SHO `main`の既存`inspectRaw`に、SUIの期待bytesをコピーした**固定Synthetic .md Fixture**（上記354 bytes/hash）を実ファイルとして入力する試験を追加。正例/負例で以下を区別する。
+
+| 観測地点 | Independent Expected | 責任・許されるClaim |
+| --- | --- | --- |
+| SUI real Producer | Raw bytes/shaが独立Expectedと一致、hidden Source/Island/Count/heldを補わない | 公開Projectionから普通のMarkdown草稿を決定的生成できた |
+| SHO actual Reader候補 | 354 bytes/sha維持、原文非変更、Parser `markdown-it 14.3.3`、`link_open=0`、`coverage.allDocumentReferencesEnumerated=false`、`unresolvedReferenceCandidatesEvaluated=false`、`externalSourcesAcquired=false`、`source.revision=unknown` | 与えられたRaw文書を**限定されたGrammar Scope**で読んだ。出典0件/全件/真正性は証明しない |
+| SHO unsafe-mutant対照 | 文書中の偽リンクのEscapeだけ解除→Readerの`link_open=1`（出典URIは依然未照合） | 単にすべてのリンクを無視するReaderではない |
+| 独立Source検査（将来） | 原Sourceの実許可Read、Card Claim/Original Occurrence/Revision、時点/公開Scope、別Sourceの独立性 | SUI Draftの文章からは推論できずSEI/SHO/TEI各Ownerへ |
+| Writer／Host／YIC（将来） | Raw bytesを実保存・再Open、Recipient開示許可、Tool実Load/OS隔離、必要に応じ実Provider独立Read | Reader単独やSHA一致ではWriter・Owner意味受理・Host Effectを証明しない |
+
+**CIの状態**：SUI Producerは上記固定HEAD実CIで成立。SHO #21は新規Draftであり、**独立したSHO Actionsの実結果をまだ確認できていない**。固定Fixtureと2ケースを書いた事実をSHO Product PASSにしない。既存[SHO #16](https://github.com/hat47x/sho-composer/issues/16)のread-only G1b Scope、未定義参照候補未評価、POSIX FIFO Open前停止の受入未了は引き続き優先。Reader部分の選択だけでSource/Witness/Current Grantを拡張しない。
+
+### 14.2 他チャットの判断との一致
+
+- **TEI Draft #3236／#2497**：合成Projection `Q(P(World))` は、Pで失った`meta.source`／Island関係をQが自動復元できない。実バイト一致はRepresentation同一の限定証拠。逆Write対象・Relation Occurrence・Owner意味/Authorityは別のSource/Target条件で再資格化。
+- **SEI #820/#767**：出典風の本文をEscapeしてReaderリンク0にしても、独立一次資料0件とは言えない。同じSUI由来のConceptやDecision自身をbasisに数えない（SEI #794）。Resumeで見えない根拠は不存在と断定しない（SEI #752）。未取得/未開示/真に空を別に扱う。
+- **SHO #18/#4/#16**：文書の生成原文、Reader構文索引、Editor dirty buffer、disk保存/再Open、相対Reference解決、元Source/Occurrence Revisionは別々の観測。将来Editorが重複引用の一つを編集しても、元SUI Card/Island/EdgeへのPatchは発生させない。
+- **TAI #168/#271**：Productが既に生成した原文を独立Consumerが読めたことと、外部HarnessでSkill効果・現在Grant・OS read隔離を観測できたことは別。最初のH2/H3固定Trialに今回のP0を新Blockingで加えない。
+
+### 14.3 最小Exit
+
+1. **SUI byte Producer**：完了（#3397の固定HEAD単体CI、新1/1）。過去のSUI公開Projectionの非単射の負例#3396（3/3）と独立に保持。
+2. **SHO Parser**：#21をSHO CIの実HEAD・Node版・実logで確認。あえて `link_open=0`のScope限定判定と、Escape解除で`link_open=1`の対照を保持。Readerが成功しても0 Sourceという断定をしない。
+3. **実ファイルの引渡し**：SUI Runtimeが実生成して保存した**同一Raw bytes**をSHO実CLIへ受け渡し、ファイル所在/実Read/Source SHA・OS/Parser profileを別途確認。今回の二つのrepoに同一Fixtureを置いた結果はこの手順の代替ではない。
+4. **SHO G2／SEI**：Writerが成立した後にsave→reopenし、SEIが用途別にSource/Claim/Unknownを問い直す。Owner/Recipient可視性の確認なく勝手に公開・逆Patchしない。
+
+**追加実装の上限**：SUIには小さなread-only草稿Emitterと固定byteテスト、SHOには既存Readerのfixture/テストだけ。新中央Schema/二重Reader/第二Writer/Host/Metadata DBを設置せず、既存SU-OKF03/08/10・SU-SH01/12/14・KO-01/02/10/15・SHO FR-09/10/11を同じデータで参照する。現時点ではSUI↔SHO自動E2E、OKF Conformance/実出典Read、SHO Writer/SEI Native Import、OS Egress・Owner受理はNOT RUN。
