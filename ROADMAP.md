@@ -46,7 +46,7 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 ## 検討候補：OKFの出典・確認・鮮度をSUIの自由な意味探索へ取り込む
 
-[OKF連携の製品要件 #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)と[Hybrid Tree/KJ計画案](01_Plans/hybrid_outline_canvas_layout_plan.md#8-okfの知識管理原則を探索の多層構造に合わせて導入する2026-11-07未採用)で、Card/Island/Tree/Edgeの出典、生成/確認履歴、再検討と、SHO/SEIへのLoss付きMarkdown投影を検証する。OKFをSUI DocumentV1やReviewの正本へ置き換えない。可視の知識から非公開Cardの存在を推定せず、AI/OFF・OKF Pluginなしでも手動KJ/Outlineを維持する。
+[OKF連携の製品要件 #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)と[Hybrid Tree/KJ計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)で、Card/Island/Tree/Edgeの出典、生成/確認履歴、再検討と、SHO/SEIへのLoss付きMarkdown投影を検証する。OKFをSUI DocumentV1やReviewの正本へ置き換えない。可視の知識から非公開Cardの存在を推定せず、AI/OFF・OKF Pluginなしでも手動KJ/Outlineを維持する。
 
 **現在は調査と受入候補のみ**。最初に既存Card出典手掛かりを使う5 Cardの固定Fixtureと独立Expectedを用意し、Review/Sourceの観測範囲を確認する。Hybrid永続化、実Exporter、SHO/SEIの実受領、実利用によるT2の価値確認は未実施。全件検証や実認可に進む前にOwner判断を要する。
 
