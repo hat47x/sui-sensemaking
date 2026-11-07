@@ -205,7 +205,7 @@ AIは親子関係の生成、代表テキスト候補、初期配置、局所的
 | **L1: SUIが許可した元DocumentとCard出典手掛かりを内部で実Read** | Card ID+実Doc版+自由記述 `meta.source` を見たといえるが、原典の取得/位置の照合・Source authenticityまでは未確定 | Sourceの存在を未検証の『参照候補』として限定表示（公開可否/範囲が別）。OKF sourcesを作るときは誤って `verified` へ昇格しない |
 | **L2: 参照先原本を許可されたReaderで再取得し Claim→Original span/Revisionを解決** | 特定ClaimのOriginalに戻れることを、指定Source/時点/範囲に限定して説明できる。独立性/意味妥当性/完全性は別のSEI判断 | 権限により公開可能な源だけ `sources[].id`↔本文脚注を実対応。Credential/秘密URI/Hidden IDをFrontmatterへ流さない |
 
-**L0→L1→L2は単なるユーザー操作の順番ではなく、実証できるClaimの包含関係**。OKF `type`/脚注の見た目、SKILLの説明、LLM自身の作文だけで段階を上げない。現在のSUI外部AdapterがL1/L2に到達するとは主張しない。Native SUI閲覧は外部Agent公開許可と同義ではない。
+**L0→L1→L2は単なるユーザー操作の順番ではなく、実証できるClaimの包含関係**。このL0/L1/L2は本節での**説明上の読取範囲の略号**であり、既存`InquiryJourneyV1`等の「L0: Planned」成熟段階とは無関係。正式Status Enum・Capability Level・実行許可に導入しない。OKF `type`/脚注の見た目、SKILLの説明、LLM自身の作文だけで段階を上げない。現在のSUI外部AdapterがL1/L2に到達するとは主張しない。Native SUI閲覧は外部Agent公開許可と同義ではない。
 
 ### 9.3 二世界・同表示の反例とDisclosureの検証
 
