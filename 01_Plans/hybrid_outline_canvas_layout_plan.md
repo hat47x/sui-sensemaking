@@ -271,3 +271,49 @@ OKF/SHOへ送る最小の内部検証票（**新Canon Schemaでなく試験票**
 ### 10.5 Ownerと採用の境界
 
 本§10はSUIの次のRead-only Producer/Sourceの観測要件と、他製品へ出すClaimの上限の明確化のみ。SHO G1b/G2のReader/WriterはSHO #4/#16、SEIのExact Binding/Inquiry adequacyはSEI #820/#767、TAIのH2/H3実Tool・Skill比較はTAI #168/#488、TEI意味・計算契約は既存Ownerのまま。SUIが出した自然な解説・OKF `verified`・SHOの保存と、実意味受理/権限行使を互換な出来事として扱わない。
+
+
+---
+
+<!-- 20261107-sui-okf-typed-structure-vs-expression-inverse -->
+## 11. SUIの多層トポロジーとOKF表現は非同型の写像として扱う（2026-11-07／横断・未採用）
+
+### 11.1 TEI標準構造／表現型／Function／Rendererの区別をSUIの交換に翻訳する
+
+[TEI #2497](https://github.com/hat47x/tei-platform/issues/2497)（構造保存写像・Loss・編集逆写像）、[#2507](https://github.com/hat47x/tei-platform/issues/2507)（標準構造と標準表現型・Function Data Context/Actionの分離）で成熟した境界を、SUI内の実装依存ではなく**任意の交換時の比較規則**として活用する。
+
+- **元の意味・データ構造**：Card identity、Card本文、Review/Hold/Critique、Tree親子・順序、Islandの表示上の包含、Affiliationの意味所属、Edgeの種別・向き・多重性、Canvas上の座標などは別軸。Hybrid Treeや多層revisionは未実装の候補であり、現DocumentV1へ既にあると主張しない。
+- **用途・Functionの文脈**：自由KJ整理、原出典調査、文章化、配置比較、編集/受理で、必要な対象集合とGrain、失ってよい軸、取得完備性、現在版、Owner/Disclosureをそれぞれ決める。可視のCard集合が同一でも、判断の前提が同じとは限らない。
+- **表現とRenderer**：Canvas・Island・将来Tree/MindMap・SHO Markdownの見出し・OKF Concept/脚注は異なる表示・交換面。表現型の定義が再利用できても、Function内Instance・操作・認可・逆書戻しは製品ごとに別。SUIの内部RendererをTEIに置き換えることは本件の条件にしない。
+- **逆写像**：文章・見出し・位置を編集しても、元のIsland/Tree/Edgeを変更したとはみなさない。対象Identity/Relation kind/Occurrenceと現Source Revisionが一意で、明示された意図・レビュー・Write Grant・独立再読取が成立した場合に限り、既存Productの操作候補として検討する。現OKF→SUI自動Patchは**非目標**。
+
+### 11.2 保存軸とLossの実際
+
+| 元の構造軸 | SUI現Agent Projection | OKF/SHO文書の表現候補 | 表示から復元・保証できないこと |
+| --- | --- | --- | --- |
+| Cardと本文 | review/SafeMode/Constraintで部分取得 | 段落/箇条書き | 同文面＝同Card ID/Source/Revision |
+| Tree親子・順序（将来） | Treeは現Projectionに未収録 | 見出し/インデント | 元の親子順序・複数Tree |
+| Island視覚包含 | cardIds/parentは未収録 | 島名の見出しや叙述 | Island＝Tree親＝Affiliation |
+| 意味Edge / Affiliation | 一部Relationだけ。Affiliationは既存共有方針でomit | 無型リンク/脚注 | Relation種別・方向・多重性・承認 |
+| Canvas座標/MindMap配置 | 現Projectionに未収録 | 原則省略 | 2D近接・交差・配置の生成経緯 |
+| Hold/異論/Review | Holdは一部可視、実Review履歴は別 | 未決/注記（許可済範囲） | 文書の流暢さ＝異論解消、OKF verified＝現在Review |
+
+OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現しない。SUIのIsland上に表示されることとAffiliationが宣言されたことも異なる。TEI標準表現型を利用する場合も、表示の対応可能性／忠実度とFunction Operation/認可/効果資格を別に判定する。
+
+### 11.3 既存Fixtureに重ねる高判別力の反例（新Gate/Case IDなし）
+
+[#3392](https://github.com/hat47x/sui-sensemaking/issues/3392) SU-OKF03/04/05/10、[#3391](https://github.com/hat47x/sui-sensemaking/issues/3391) SU-SH12/14/15、[TEI #2497](https://github.com/hat47x/tei-platform/issues/2497)のProjection比較を、§10と同じ合成5Card/2Island/2Edge・別Tree枝（Treeは概念上のfixture）に適用する。
+
+1. **非単射**：World Aでは別Tree枝の2 Cardが同一Island、World Bでは異なるIsland。両者が同じMarkdown見出し・本文を生成し得る。OKF Conformanceも文書byteも一致するが、元Worldは同一と判定できず、元構造への自動逆写像は0件。
+2. **同一Data・別View**：同じ原Card/EdgeをCanvas・将来Tree・SHO箇条書きとして表示。View切替だけでは元Source/Review/意味Relation/Owner判断への書込みは0件。ただし実Read未取得なら「0件成功」へ昇格しない。
+3. **編集曖昧性**：Markdown見出しの移動や一つのCardの2か所引用を元Canvas/Islandの所属操作へ変換するのは多義的。明示的な対象/版/関係種別がなければPatch適用0件、別Draft/Review候補として戻す。
+4. **履歴と失効**：OKF generatedの時刻が新しくてもSUIの元Review/Sourceは別時点。原資料の変更・配置だけの変更・Review撤回で再評価する対象を分け、A→B→Aで以前の意味受理を自動復活させない。
+5. **非開示の別World**：表示本文が同じでも内部の秘密Card/Edge/所属が異なり得る。元の完全性は宣言できず、Loss診断と外部OKF index/脚注へ秘密ID/数/URIを再掲しない。現Projectionで見えるCountと二次公開許可は別。
+
+**最小の実証上限**：SUIが実際に公開可能な部分をread-onlyで文書化し、出典/Relation/Reviewを捏造せず、目的別Lossを明示、逆書戻し0件を独立Expectedで確認するところまで。正式なTEI標準表現型、SUI Hybrid Tree、OKF Exporter、逆写像Editor、SHO Writer→SEI Consumerの実E2Eは**NOT RUN**。
+
+### 11.4 既存コードの証拠と横断Harnessの現在資格
+
+現SUIの context_bundle_projection.test.ts には、updatedAt固定時のholdStateだけの変更、Island所属だけの変更、座標変更などで既存Hash/digestが何を表すかのテストが**既に存在**する。これらを新規テストとして二重実装しない。次に追加すべき独立検証は、構造からの表現Lossと**非単射な表現からの曖昧な逆書戻しを拒否すること**。
+
+[TAI #168](https://github.com/hat47x/tai-pleroma/issues/168)の実H2/H3経緯は[TAI Draft #270のRunbook §24.5](https://github.com/hat47x/tai-pleroma/blob/docs/yi-harness-skills-20261102/docs/yi-constellation/first-real-skill-qualification-runbook-2026-11-02.md)。H3-A/H3-BでTEI Product Skill本文5,482 bytesと参照を実Toolで読み取った事実は限定成立。一方、OS隔離/事前割付/Tool許可条件/独立Expected・正答採点が未成立で、比較適格は**0/4**。旧H3未実行の記述は歴史状態であり現在の実Loadを否定しない。SUI Product Skillの実Load/OKF横断資格には転用しない。最初の外部Harness試験に新Blocking Gateは増やさない。
