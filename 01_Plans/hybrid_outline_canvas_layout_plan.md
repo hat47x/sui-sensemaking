@@ -490,3 +490,6 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 **独立Expected**は既存SUI SU-OKF03/08/10、SU-SH01/12/14、TEI #2497/#3266の「実CLI出力と期待値を別比較」の原則、TAI #271の同一Attempt・同一Artifactに接続する。SEI #767/#820の問い相対十分性・独立Source/Current Authorityは本Receiptから推論しない。
 
 **受入上限**：今回追加されたのはRunner、Runnerの明示起動拒否・構文の単体確認、Runbookと設計計画。GitHub CIでは別RepoのSUI checkoutを与えないため、**実一ファイルHandoffは依然NOT RUN**。通常CIでRunner引数ガードがPASSしても、その出力を実P1消費のPASSへ昇格させない。実Runの対象opt-in Case **1/1 PASS（非Skip）**と両実HEAD/Raw Receiptを観測して初めて、その一回のSynthetic Local Handoffを限定受理する。
+
+<!-- 20261107-one-command-ci-exact-head-19pass-1skip -->
+**試験入口の最新固定CI**：[SHO Draft #21](https://github.com/hat47x/sho-composer/pull/21) HEAD `f5eeb9f537c0cf9d518139afed272e189b82fe1c` の[Actions #42374198180](https://github.com/hat47x/sho-composer/actions/runs/42374198180)はUbuntu/Windowsとも **19 PASS・0 FAIL・1 SKIP**（実Job log）。新しいRunner構文/省略・相対Path拒否は両OSでPASS。SKIPは**実同一ファイルのConsumer試験**であり、実HandoffのPass数は0。RunnerはSUI/SHO実HEAD・追跡ファイルclean・独立Expected Byte/SHA・対象のSHO実1 Case非Skip／実CLI再Readを要求し、JSON Receiptを**一時ファイル削除の確認後**にだけ出力する。Node 22の二Checkoutを本当に接続したReceiptは、現在 **NOT RUN**。
