@@ -1,3 +1,5 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { DocumentV1 } from "../domain/types";
 import { buildContextProjection } from "./context_bundle_projection";
@@ -76,5 +78,17 @@ describe("SUI→SHO P0 fixed raw-byte Consumer contract (SUI producer only)", ()
     expect(md).not.toContain("レビュー済みだが保留");
     expect(md).not.toContain("sources:");
     expect(md).not.toContain("verified:");
+
+    // Explicit opt-in local integration probe only: the actual SUI runtime
+    // output is written to one new disk file for SHO's real CLI to read.
+    // Never overwrite pre-existing content, and never write hidden SUI data.
+    // CI without this env var remains a pure read-only Producer test.
+    const output = process.env.SUI_SHO_P0_OUTPUT;
+    if (output !== undefined) {
+      expect(output.length).toBeGreaterThan(0);
+      expect(isAbsolute(output)).toBe(true);
+      writeFileSync(output, raw, { flag: "wx", mode: 0o600 });
+      expect(new Uint8Array(readFileSync(output))).toEqual(raw);
+    }
   });
 });
