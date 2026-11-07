@@ -474,3 +474,19 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 - **次の明示Trial**：SUI実コードが生成した**その一つのファイル**をSHO実CLIに絶対Pathで渡し、両コミット、Node/OS、書込/実読込Path・サイズ・SHA、Parser/Scope、無Writer・開示対象を記録。これが揃うまではLive One-file Handoffを**NOT RUN**とする。SHO G2 Editor/Writer、OKF正式束、SEI Native Decision、現在のSource/Owner/配布認可はさらに別受入。
 
 **設計上の線引き**：SUI Data→公開Projectionが非単射で、公開Projection→通常Markdownも不可逆なのだから、同じFileを読めてもSource/Topologyは自動復元できない。既存Product Ownerを維持し、中央Ledger、別Reader/Writer、二重Meaning/Action Engineを作らない。
+
+---
+
+<!-- sui-20261107-one-command-local-actual-input-orchestrator -->
+### 16.4 SUI/SHOの実ファイル試験を一回の操作に束ねる（2026-11-07追補）
+
+[SHO試験Draft #21](https://github.com/hat47x/sho-composer/pull/21)に **test-only** `scripts/sui-sho-onefile-p0.cjs`を追加。[実施Runbook](https://github.com/hat47x/sho-composer/blob/test/sui-p0-readonly-handoff-20261107/docs/sui-p0-same-file-handoff-trial-2026-11-07.md)の手動2段階は残したまま、SHO checkoutから `node scripts/sui-sho-onefile-p0.cjs --sui-frontend <絶対SUI Frontend Path>`で、**SUIの実Vitest Producer→新しいPrivate一時ファイル→SHOの対象opt-in Reader実テスト→SHO実CLIの再Read**を逐次実行する候補。
+
+- **元コード束縛**：両Repoの実Git HEADとtracked worktree cleanを検査する。別Subject/別版を混ぜたらこのAttemptの資格としない。SUI実依存（node_modules/Vitest）・Node22・SHO実markdown-it 14.3.3の存在を前提として、未導入なら明示的に失敗する。
+- **実Consumer束縛**：SUIが実生成したその一つのFileについて、354 byte・独立Expected SHA `7fd6fde2fbc4d9beaf9de14e8b8f4f5d70003cd2129f1502cdd7c73f50c171cd`・通常File、SHOの**名前指定されたopt-in 1 Caseが非SkipでPASS**、実`sho-inspect`の結果と再Read原文を検証。SHO全テスト件数が将来増減しても、対象試験の成績だけを別に数える。異なる粒度のSuite PASSをActual Handoffへ転用しない。
+- **証拠の表記**：成功時だけstdoutに両Git HEAD、Node/OS、実File PathとSHA・byte、実ParserとLink Scope、Original Sources未取得、Host Grant未検証、SHO Writer未呼出し、SEI Meaning未受理の**限定JSON Receipt**を表示。一時Fileは最後に削除。歴史的Pathを永続Source Locationと混同しない。ファイル変更の無い観測点は確認できるが、連続したOSレベルLock・TOCTOU不在は証明しない。
+- **既存契約を優先**：これは別Host/共通Artifact Store/Source Registryや正式のSHO Writerでなく、**合成データを使った試験専用Runner**。SUI UI/SHO Writer/SEI Native Import/実OKF Concept/Author権限を変更しない。
+
+**独立Expected**は既存SUI SU-OKF03/08/10、SU-SH01/12/14、TEI #2497/#3266の「実CLI出力と期待値を別比較」の原則、TAI #271の同一Attempt・同一Artifactに接続する。SEI #767/#820の問い相対十分性・独立Source/Current Authorityは本Receiptから推論しない。
+
+**受入上限**：今回追加されたのはRunner、Runnerの明示起動拒否・構文の単体確認、Runbookと設計計画。GitHub CIでは別RepoのSUI checkoutを与えないため、**実一ファイルHandoffは依然NOT RUN**。通常CIでRunner引数ガードがPASSしても、その出力を実P1消費のPASSへ昇格させない。実Runの対象opt-in Case **1/1 PASS（非Skip）**と両実HEAD/Raw Receiptを観測して初めて、その一回のSynthetic Local Handoffを限定受理する。
