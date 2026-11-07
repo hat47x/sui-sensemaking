@@ -369,7 +369,7 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 
 ### 13.3 既存Expectedへの接続と次の修了条件
 
-- **現時点の限定証拠**：[SUI Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397)の最初の固定HEAD `38c319dd...`は公開投影→草稿の4件PASS、[単体CI #42351654854](https://github.com/hat47x/sui-sensemaking/actions/runs/42351654854)および[MCP/agent回帰 #42351654714](https://github.com/hat47x/sui-sensemaking/actions/runs/42351654714)の7 Jobが成功。Backslash修正と5件目は**別HEAD**なので、この旧CIを新HEADへ流用せず新結果で確認する。
+- **現時点の限定証拠**：[SUI Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397)の最初の固定HEAD `38c319dd...`は公開投影→草稿4件PASS（旧CI #42351654854/#42351654714）。Backslash修正と新文字忠実度テストを加えた**現HEAD `aa3c31fa42c4e490a698cda7629d9d6bd2a74b9c`**では、[単体CI #42351852065](https://github.com/hat47x/sui-sensemaking/actions/runs/42351852065)と[MCP/agent回帰 #42351852202](https://github.com/hat47x/sui-sensemaking/actions/runs/42351852202)が**共にcompleted/success（全7 Job）**。frontend-unit実ログの新5/5 PASS、全278ファイル/1,869テストPASSを確認。これはP0の関数単体と既存回帰に限定し、SHO実受領と再配布権限は未証明。
 - **次のProduct P0**：同一合成5Card／2Island／2Edge／1Heldを使い、公開本文のみを出す。出典未取得、Card/Island/Edge ID非出力、SafeMode/保留による非開示、偽Markdown Link/Footnote抑止、元Source/Island変更で草稿は同じ、公開本文変更で草稿は変わる、文字忠実度という**既存SU-OKF01/03/08/10・SU-SH01/05/12/14**へ接続。新しい中央Gateや独立SSOTは増やさない。
 - **次のConsumer P1**：実SUI生成byte（改版と出力時点をPin）を、実SHO main `sho-inspect`で**独立した同一ファイル**としてRead。G1bの限定`link_open`数とRaw SHA/BOM/Parse Profileを観測し、未解決Sourceが無い・原資料の正しさ・出典の完全性とは結論しない。保存・再OpenはSHO #4/G2が成立してから別試験。AI/Plugin/TEI不可でも手動文書作成は妨げない。
 - **意味とAction P2**：SEI #820/#767の問い相対のSource/Unknown/自他参照、TEI #2497/#2507/#3236の合成写像とSelection/Operation分離へ引渡し。Cardが二回引用されても同じCard Identity/元Relationは自動操作しない。OKFの`verified`・SHO Reader PASS・文字表現の一致からOwner受理/Host Grant/実書戻しへ昇格しない。
