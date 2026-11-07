@@ -416,3 +416,32 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 4. **SHO G2／SEI**：Writerが成立した後にsave→reopenし、SEIが用途別にSource/Claim/Unknownを問い直す。Owner/Recipient可視性の確認なく勝手に公開・逆Patchしない。
 
 **追加実装の上限**：SUIには小さなread-only草稿Emitterと固定byteテスト、SHOには既存Readerのfixture/テストだけ。新中央Schema/二重Reader/第二Writer/Host/Metadata DBを設置せず、既存SU-OKF03/08/10・SU-SH01/12/14・KO-01/02/10/15・SHO FR-09/10/11を同じデータで参照する。現時点ではSUI↔SHO自動E2E、OKF Conformance/実出典Read、SHO Writer/SEI Native Import、OS Egress・Owner受理はNOT RUN。
+
+---
+<!-- sui-20261107-sho-crossos-rawbytes-qualified -->
+## 15. 固定Rawを介したSUI Producer→SHO Reader検証の証拠と、次の製品受渡し（2026-11-07）
+
+### 15.1 同一Fixture・別Productを区別した実測
+
+- **P0 SUI Producer**：[SUI Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397) HEAD `72fd41fa5ab4b7685e07705be72f16b4d1c7cedf`、[SUI単体CI #42352776477](https://github.com/hat47x/sui-sensemaking/actions/runs/42352776477)で実`buildContextProjection`→`renderReadOnlyMarkdownDraft`が**公開合成2 Cardの354 UTF-8 bytes**を作り、独立手書きExpected SHA-256 `7fd6fde2fbc4d9beaf9de14e8b8f4f5d70003cd2129f1502cdd7c73f50c171cd`と一致。元Cardの出典/島/非公開/hold/ID/Edgeは出力しない。
+- **P1 SHO Reader**：[SHO Draft #21](https://github.com/hat47x/sho-composer/pull/21)の同一Raw合成Fixtureを`main`由来の既存`inspectRaw`で構文解析。初回[CI #42353536878](https://github.com/hat47x/sho-composer/actions/runs/42353536878)はUbuntu18/18 PASS、Windows17/18 FAIL。Windows CheckoutによるLF→CRLFで`354→368 bytes`となり、**パーサーや表示は動いてもRaw Witnessは不一致**。この赤は期待検証の実際の判別能力を示す。
+- **修正後**：[SHO PR #21](https://github.com/hat47x/sho-composer/pull/21) HEAD `720ee05765e1d110e03acb0223dac34023c58612`で、**合成Fixtureだけ**`.gitattributes`に`text eol=lf`を指定。[SHO CI #42353651398](https://github.com/hat47x/sho-composer/actions/runs/42353651398)のUbuntu/Windowsの実Job logはともに**18/18 PASS（各0失敗）**。SHA/Raw bytes維持、実`markdown-it 14.3.3`限定`link_open=0`、Escape解除したmutantは`link_open=1`。著者が保存するMarkdownをLFに自動変換する製品仕様ではない。
+
+### 15.2 知識を失わせない受渡しの最小Witness（新ABIでない）
+
+| 観測 | 取得済みの保証 | なおUnknownのもの |
+| --- | --- | --- |
+| SUI公開ProjectionのProducer・固定bytes | 出力された公開可能なCard本文、合成Fixtureの生成バイト/期待SHA | Hidden Card/Island/Edgeの完全性、原`meta.source`の真偽、元DocのRevision/Disclosure、実Runtimeの現在性 |
+| OSのcheckoutとSHO Reader | 実checkout先のRaw bytes/SHA、Parser実版、固定Grammarでの認識Link数、出力coverage | 対象ファイルの実Author Revisionや文書内全Reference（Readerは`unresolvedReferenceCandidatesEvaluated=false`）、実原資料取得 |
+| Markdownの保守・逆編集（後続） | いまはraw保存Writer未実行、元SUIへのEdit不在 | dirty buffer/disk/旧Index/Source R0→R1競合、逆Patch一意性/Host Grant/実Effect |
+| SEI/TEI/TAI再利用（後続） | 固定合成文書の読取を次の観測候補として渡せる | SEI問い相対Adequacy/Decision、TEI意味受理、TAI Skill比較、実外部Recipientへの二次配布許可 |
+
+**合成Fixtureの2つのリポジトリにある原文が同じことは、1つの実SUIプロセスがSHOプロセスへ同一ファイルを送信した証拠ではない**。今後の実HandoffではProducerの実出力ファイル／実Source Context／独立Consumerが開いた同一ファイルPathとByteを逐次観測し、OS変換、転送、Buffer→Diskの競合を別に記録する。Product固有Reader/Writer/Hostを新設しない。
+
+### 15.3 他の認知・意味・実行契約との接続
+
+- **SEI**：[SEI PR #822](https://github.com/hat47x/sei-cognition/pull/822)は`merged`、CLI自己参照basis拒否とResumeの根拠表示等を統合。これは**SEIのCLI入力/表示の限定改善**。SHO文書が自身やSUIのコピーを独立根拠として数えることや、SEI OKF Import/問い相対Adequacyが解決したとは限らない。原Source未取得なら`insufficient-evidence`を維持。
+- **TEI**：#2497／[Draft #3236](https://github.com/hat47x/tei-platform/pull/3236)の`P:Data→View`, `Q:View→Consumer`をSUI/SHOに適用。Pで元Source/Island所属を落とせばQが原情報を回復できない。Rawバイトの再現性成功は、元構造の一意な逆写像や更新Intent/Effect資格を与えない。
+- **TAI/EKI**：OS実Reader成功とHostの実Grant・Skill価値は別。EKIの[PR #783](https://github.com/hat47x/eki-fabric/pull/783)（merged）による`--version`の実VCS revision表示は、未知版を`unknown`とする正直な実行版観測の参考だが、SUI→SHOの実Transport/Source Revision/OS隔離を代替しない。
+
+**次の最小Exit**：既存合成Fixtureの実SUI Producerが作成した**その一つのRawファイル**を、許可済みのSHO実CLIへ明示的に渡し、同一Source bytes/実Parser結果/対象Scope/外部への出力ゼロを観測する。その後SHO G2 WriterとSEIによる根拠未確認の保持を別試験。最初のOS赤/緑とOwner未受理は併記し、旧SUI計画§14の『SHO新CI未確認』は**作成当時の履歴**として扱う。本§15の実績はP0/P1固定Fixture相互運用だけ。正式OKF Concept・自動転送・Writer・Import・Source真正性は**NOT RUN**。
