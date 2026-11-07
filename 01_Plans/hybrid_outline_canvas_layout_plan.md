@@ -317,3 +317,23 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 現SUIの context_bundle_projection.test.ts には、updatedAt固定時のholdStateだけの変更、Island所属だけの変更、座標変更などで既存Hash/digestが何を表すかのテストが**既に存在**する。これらを新規テストとして二重実装しない。次に追加すべき独立検証は、構造からの表現Lossと**非単射な表現からの曖昧な逆書戻しを拒否すること**。
 
 [TAI #168](https://github.com/hat47x/tai-pleroma/issues/168)の実H2/H3経緯は[TAI Draft #270のRunbook §24.5](https://github.com/hat47x/tai-pleroma/blob/docs/yi-harness-skills-20261102/docs/yi-constellation/first-real-skill-qualification-runbook-2026-11-02.md)。H3-A/H3-BでTEI Product Skill本文5,482 bytesと参照を実Toolで読み取った事実は限定成立。一方、OS隔離/事前割付/Tool許可条件/独立Expected・正答採点が未成立で、比較適格は**0/4**。旧H3未実行の記述は歴史状態であり現在の実Loadを否定しない。SUI Product Skillの実Load/OKF横断資格には転用しない。最初の外部Harness試験に新Blocking Gateは増やさない。
+
+
+---
+
+<!-- 20261107-sui-okf-test-only-noninjectivity-witness -->
+## 12. 実Projectionの非単射を確認する最小実装試験（2026-11-07）
+
+[独立test-only Draft #3396](https://github.com/hat47x/sui-sensemaking/pull/3396) は、現mainの実 `buildContextProjection()` を呼ぶVitestの3対照を追加。新OKF Exporter／SUI逆Patch API／共有Data Store／第二Converterを実装しない。
+
+| 検証（既存SU-OKF/SU-SHへ接続） | 二つの元Worldの差分 | 独立Expected／主張の上限 |
+| --- | --- | --- |
+| **Source Identity**：SU-OKF01/03 | c1の原資料参照 `meta.source` のみ A→C。レビュー済み本文と更新日時は固定 | Original attributionは異なるが、**公開Projection全体は等しい**。そこから原資料脚注を自動補完しない |
+| **Island／Canvas Structure**：SU-OKF03/04、SU-SH12/14 | 2 Islandの `cardIds` を組替え、c1の位置だけ移動。タイトル・本文と公開Revisionは同じ | Island所属／座標は異なるが、**公開Projection全体は等しい**。文書の見出しやHashで元の所属を確定・書戻しできない |
+| **Positive control** | 公開可能なCard本文とreview済みIsland題名を変更 | 投影全体・対応digest・bundleHashは変化する。常に『同じ』を返す偽の検証ではない |
+
+**テスト境界**：この3件で証明できるのは『今の公開投影がSource attribution/Island構造に対して非単射である』という実観測のみ。Treeは現行Product型で実装されておらず、Markdown/OKF実変換やSHO/SEI連携の完成、逆Patchが安全に拒否されたこと、独立原典Reader／Owner受理を証明するものではない。
+
+**次の受入順**：まず#3396の固定HEADでVitest/TypeScript/CI結果を確認し、その証拠を既存SU-OKF03/04／SU-SH12/14へ限定対応付ける。次いで[TEI表現同期Draft #3222](https://github.com/hat47x/tei-platform/pull/3222)の Subject occurrence／Relation occurrence／Result grain／Representation occurrence／Selection epoch を参照し、SUIのCard ID・Island membership・文書中の引用Occurrenceを区別した**明示的な戻り先選択**を検討する。選択/焦点/位置変更だけでDomain編集を発火しない。TEI #3222もDraftであり、既存SUI Runtimeへの正式仕様追加とはしない。
+
+**状態**：#3396はtest-only Draft、新規実テストの結果は個別のActions Runで記録。現段階でSUI→SHO→SEI/OKF実E2E、SUI逆Patch、TEI共通表現の採用は NOT RUN。既存#3393はdocs-only Draftのまま保持し、実テストは別PR/別Ownerに切り分ける。
