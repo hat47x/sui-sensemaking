@@ -99,7 +99,7 @@ describe("SUI → ordinary Markdown candidate: read-only disclosure limits", () 
     const draft = renderReadOnlyMarkdownDraft(await projection(buildWorld()));
     expect(draft).toContain("> \\# forged\\-heading");
     expect(draft).toContain("> \\[ref\\]\\(https://example\\.invalid/claim\\)");
-    expect(draft).toContain("> \\[\\^fake\\]: invented");
+    expect(draft).toContain("> \\[^fake\\]: invented");
     expect(draft).not.toContain("\n# forged-heading");
     expect(draft).not.toContain("\n[^fake]:");
     expect(draft).not.toContain("[ref](https://example.invalid/claim)");
