@@ -225,3 +225,49 @@ OKF/SHOへ送る最小の内部検証票（**新Canon Schemaでなく試験票**
 - **TAI/YIC Skill**：SUI→SHO/SEIが必要な時だけ受渡し。実Tool/Skill Load、Host・OS隔離、現在の開示許可と対象Contextを別検査。外部Harnessでの限定TEI CLI呼出し成功（TAI #168）を今回のSUI OKF経路の実証へ転用しない。
 
 **試験の位置付け**：上記は既存[#3392](https://github.com/hat47x/sui-sensemaking/issues/3392) SU-OKF01/04/05/08/09/10/12と、[SEI #820](https://github.com/hat47x/sei-cognition/issues/820) KO-01/05/06/07/10/11を**同一Fixtureで絞って適用**する。新たな長大な試験群・中央Attesterを設置しない。L0現行コードは静的確認のみ、L1/L2/実外部API/文書生成/Importer・独立Consumer/OS権限は NOT RUN。
+---
+
+<!-- 20261107-sui-okf-proof-carrying-handoff-trial -->
+## 10. SUI → SHO → SEI の「根拠を伴う引渡し」を一つの縦切りで検証する（2026-11-07／設計・未実行）
+
+### 10.1 先行製品の最新実証と不足
+
+- **SUI**：現mainの `context-projection.v1` は一部のCard/Island/Relation/Countを出せるが、`Card.meta.source`、原資料版、Islandの全所属は出せない（§9）。`bundleHash`やクライアント申告`updatedAt`も、公開された知識全体の同一性保証ではない。
+- **SHO**：[Draft #17](https://github.com/hat47x/sho-composer/pull/17) の固定HEAD `4113040fb66b72f62f5baaeaf88aedd961b4b6bc` はUbuntu/Windows各16/16のG1b read-only Reader限定CIが成立（BOM検出と2MiB+1有界読取）。ただし未解決のReferenceを全列挙した証明でなく、文書を書込んで再開するG2 Writerは別。[SHO #4](https://github.com/hat47x/sho-composer/issues/4)/[#16](https://github.com/hat47x/sho-composer/issues/16)がOwnerであり、Reader成功をSHO受領・保存成功へ転用しない。
+- **TEI/TAI**：[TEI PR #3113](https://github.com/hat47x/tei-platform/pull/3113)は2026-11-07 01:10 UTCにmerged。DSH `h2-08` で実TEI CLI起動32回・Tool呼出し56回・結果55回が限定観測された。一方、read-only参加者から固定WorktreeのReadが可能で、独立Expected/Skill資料の非露出隔離が未証明。[TAI #168](https://github.com/hat47x/tai-pleroma/issues/168)のH2→H3比較資格は**未達**。この実験をSUI/SHO/SEIの接続・認可・Tool実LoadのPASSへ昇格させない。
+- **SEI**：[SEI #820](https://github.com/hat47x/sei-cognition/issues/820)はConcept/Source/Decision/Unknownの対応案。原資料の独立Readと用途別十分性が未証明なら、OKF `type`/`verified`や文書の保存を現在のMeaning/Decision Acceptanceにしない。
+
+### 10.2 受渡しの同一性と観測の鎖（新しい共通ABIではない）
+
+最小の試験票は**固定された公開合成5 Card/2 Island/2 Edge/1 held + 出典2種 + 非開示の対照**を使い、製品ごとの既存Receipt/記録を参照する。次の識別対象を**別の列**にする。
+
+| 確認地点 | 最小観測 | その地点だけで主張できないこと |
+| --- | --- | --- |
+| **SUI選択** | 元DocumentのIdentityと実Read/Selection・公開チャネル/Constraint/SafeMode・可視範囲・現在のhold/review | 同じ見た目/同じprojection hash=元構造/元Source同一、全Card取得 |
+| **SUI投影** | 載せたClaim/Cardの対応・投影Profile/投影bytes・失ったTree/Island/Affiliation/Edge/座標/異論と、原資料の実照合有無（§9の説明用L0/L1/L2） | 未取得Sourceを自動で`sources`/脚注へ補完、`status:stable`や`verified`を自動受理 |
+| **SHO Reader** | 受信した実Markdown bytes/実Parser版・抽出したLink/Footnoteの範囲/BOM・unresolved候補の未評価・Source span | Readerで文法解析できた=Raw Save/Restart・URL dereference・全Link網羅 |
+| **SHO Writer（将来）** | dirty buffer基準版と実保存disk bytes、再open後bytes、外部資産や相対Pathの解決状態を別照合 | 保存成功=元SUIに対する意味同値・文書固定納品・外部Recipientで表示確認 |
+| **SEI Consumer（将来）** | 実受信のConcept/Claim別Source ID・元Revision/Unknown/Conflict/Loss、問い・用途・時点・可視範囲 | OKF Conformance/Source脚注だけで独立根拠・全件性・正式Decision/現Authorityを宣言 |
+| **TAI/Harness（後続）** | 実Tool/Skill Load/Session/OS隔離/許可された出力、独立Expectedの非露出、各製品の必要Witness | 1製品のCI/Harness成功=横断Handoff成功、Skill文書だけ=実接続、実行Receipt=現在のGrant |
+
+**判定結果は積ではなく、用途別の必要条件の充足関係**として提示する。文書/出典へのアクセス許可は再配布先の開示を意味しない。暗号学的な証明、新しい永続Ledger、第二Semantic Store、OKF独自Execution Hostは作らない。
+
+### 10.3 One-source → One-claim の出典帰属と、同時変更の反例
+
+1. 5 CardのうちC1とC2が同一原典A（その転載Bでは独立性なし）、C3は別原典D、C4は未解決参照、C5はheldの合成例を使う。安全な出力は、**説明可能なCard/Claimだけ**を文書に載せ、原資料A/Dについて実取得・位置/版照合できたものだけに正規の`sources[].id`/脚注を付ける。C4/C5を削除して『未決なし』とは宣言しない。未公開C5のIDや件数を出すことが禁じられたチャネルでは、未決の詳しい理由も開示しない。公開可能な未評価範囲は用語上区別する。
+2. **TOCTOU（読取後の変更）**：SUI選択R0→投影生成→C1の出典RefまたはC2のIsland所属/holdだけがR1へ変更→SHO編集→保存という順にする。元のdocument/read snapshot、投影とSHO Writer保存時点を混同せず、R0の出典が現在のR1でも同じと自動表示しない。文書自体のByte一致とSource/Meaningの現在性は独立に扱う。
+3. **無関係な変更**：キャンバスの座標のみ変更し原典A/元Claimを変えない場合、出典全件を再読する必要があるとは断定しない。ただし空間的な「枝の収束」という仮説は別の検証対象。依存のないカードのSource変更では、他CardのReviewを一括失効させない。
+4. **出典への誘導**：`sources[].resource`やSHO文書内のLinkは説明データであり、Scope Descriptor・外部URI・未信頼URLかもしれない。自動Fetch/Plugin起動/Egressを行わず、必要時の実Resolverと現在のDisclosure/許可を検査する。
+
+### 10.4 最小実証順と修了条件
+
+- **P0（現時点の実行可能範囲）**：既存SUI公開投影から、可視カード/hold状態/部分構造を実Readする最小対象を固定し、**元原典が未取得であることを明記したMarkdown草稿**をオフラインで組み立てる。OKF形式とするなら`type`は付けてもよいが、`sources`/出典脚注/`verified`を捏造しない。既存SUI SU-OKF01/08/10、SU-SH01/03を利用し、生成器とExpectedを独立にする。
+- **P1（SHO Readerの限定適合）**：実生成Markdownを固定SHO G1b候補でread-only解析し、raw bytes/BOM/link認識範囲/未解決Reference被覆の欠落を示す。**SHO PR #17の既存16/16 CIはこのP1の実試験ではない**。外部URL到達・Writer Saveは主張しない。
+- **P2（Product Authoring／意味Loss）**：SHOの正式Writer G2が成立した後に保存→再読取を試し、SEIにはread-only Inquiry候補として引き渡す。SEI #820 KO-01/02/10/14、SHO #4 FR-09/10/11、SUI #3391 SU-SH01/05/14を同じfixtureで採点。元SUIへの自動Patch/SEI Decision/TEI Meaningの昇格はしない。
+- **P3（横断Harness）**：TAI #168の実隔離が確保された別Groupで、Tool-onlyとProduct Skillありの差を比較。Skillの実Loader/参照内容、独立Expected保全、Egress、再配布権限を確かめる。既存の正式H2/H3 4Session比較をOKF統合のために変更しない。
+
+**P0合格の必要条件**は「許可された投影の実Readと内容の一致」「出典未取得が明示される」「held/非公開が無断で説明文に変換されない」「失われた構造と未評価範囲を表示できる」「独立Expectedに対する正負対照」であり、Markdownが綺麗に表示されることだけでは不足。現時点で**P0〜P3は全て NOT RUN**。固定fixtureは既存SU-OKF/SU-SH/SEI KO/SHO FRから共用し、新試験Gateを増やさない。
+
+### 10.5 Ownerと採用の境界
+
+本§10はSUIの次のRead-only Producer/Sourceの観測要件と、他製品へ出すClaimの上限の明確化のみ。SHO G1b/G2のReader/WriterはSHO #4/#16、SEIのExact Binding/Inquiry adequacyはSEI #820/#767、TAIのH2/H3実Tool・Skill比較はTAI #168/#488、TEI意味・計算契約は既存Ownerのまま。SUIが出した自然な解説・OKF `verified`・SHOの保存と、実意味受理/権限行使を互換な出来事として扱わない。
