@@ -44,6 +44,12 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 初期の確認対象は、同じノードの親子関係・位置・島を別々に保ち、人手で形成した島や保留を自動レイアウトで損なわないこと。KJキャンバス単独の自由探索も維持する。標準データ構造やSEIとの将来連携は候補とし、既存DocumentV1の契約変更は独立判断に残す。
 
+## 検討候補：OKFの出典・確認・鮮度をSUIの自由な意味探索へ取り込む
+
+[OKF連携の製品要件 #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)と[Hybrid Tree/KJ計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)で、Card/Island/Tree/Edgeの出典、生成/確認履歴、再検討と、SHO/SEIへのLoss付きMarkdown投影を検証する。OKFをSUI DocumentV1やReviewの正本へ置き換えない。可視の知識から非公開Cardの存在を推定せず、AI/OFF・OKF Pluginなしでも手動KJ/Outlineを維持する。
+
+**現在は調査と受入候補のみ**。最初に既存Card出典手掛かりを使う5 Cardの固定Fixtureと独立Expectedを用意し、Review/Sourceの観測範囲を確認する。Hybrid永続化、実Exporter、SHO/SEIの実受領、実利用によるT2の価値確認は未実施。全件検証や実認可に進む前にOwner判断を要する。
+
 ## 将来の候補（約束ではありません）
 
 位置づけと段階は [`ADR-0091`](01_Plans/adr/ADR-0091-positioning-for-the-agent-era.md) に従います。生成AIが普及した社会で、AIの要約の隣に置く「判断と異論の記録層」を目指し、既存の質的分析ツールからの移行（REFI-QDA）と来歴の受け渡し（W3C PROV）は、実際に必要な場面が確認されてから取り組みます。
