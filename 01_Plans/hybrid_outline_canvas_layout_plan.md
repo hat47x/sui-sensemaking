@@ -161,3 +161,20 @@ AIは親子関係の生成、代表テキスト候補、初期配置、局所的
 - 評価対象は、新しい関係や区別を元カードへ戻って説明できたか、孤立カード／反例／heldを保持できたか、Tree先行による見落とし・修正が発生したか、説明できない関係を「発見」と言い切っていないか、試行・保留・撤回を続けられたか。AIによる「発見件数」「採用率」「類似度」だけを成功指標にしない。
 - 追加の実験専用UI・順位付けモデルを必須にせず、まず既存の手動／決定論的操作と固定fixtureで比較する。SUI #3157のlearned rankingはT8判定待ちの独立研究であり、同研究のPreservation Laneやlongitudinal reopen測定を置換しない。第4段階の確認はADR-0089 T2の実務利用とは別資格であり、T2を代替しない。
 
+
+---
+<!-- 20261107-sui-okf-crosslayer-plan -->
+## 8. OKFの知識管理原則を、探索の多層構造に合わせて導入する（2026-11-07／未採用）
+
+一次資料：[OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md)。実装・独立Expectedの追跡先は [SUI #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)、SHO文書化は[#3391](https://github.com/hat47x/sui-sensemaking/issues/3391)、SEI知識交換は[SEI #820](https://github.com/hat47x/sei-cognition/issues/820)。**OKFをDocumentV1や未実装のTree/Canvas正本へ置き換えない**。
+
+- **出典（Source）**：Card単位、Islandの理由、仮説と反例のそれぞれが何に依拠するかを選択的に観測し、OKF出力時に`source.id`と脚注IDで対応づける。既存`Card.meta.source`は原資料への任意の自由記述であり、出典の実取得・Exact Binding・著者性を保証しない。OKF sourcesのリスト順をCard/Claim対応へ流用しない。
+- **生成と確認（Provenance）**：SUIのAI提案、人手での配置/要約変更、カードや島のreview、SEIの判断、OKF Conceptの`verified`は異なるイベント/対象。OKF派生`human-reviewed`の文字列やConceptの`status:stable`をSUIのlocal review/Owner受理へ自動昇格させない。IslandやTreeの構造が美しいことも真理・合意ではない。
+- **鮮度（Lifecycle）**：Card本文・原Source・Island包含・Tree祖先・Reviewer撤回・キャンバスの座標を異なるChange kindとして扱う。Source改版と判断の失効は依存する範囲だけ再評価し、過去の発見/違和感は歴史として保持。座標だけが変わるとき原文脚注を失効させず、位置関係に依存した仮説には再検討候補を出す。`stale_after`は期間の目安で、現在の採用・完備性の保証ではない。
+- **多層構造・Loss**：Outline/MindMapのTree親子、Canvas位置、Islandの視覚包含、Affiliation、意味Edge、Hold/Contrary/Reviewを単一のMarkdown見出しへ縮約しない。別Tree祖先の枝が一島に集まる現象はObservation候補であり、OKFに`type: Insight`を付けても自動Meaning化しない。Lossと元SUIへの参照を明示。非公開のCard/Edge/Island/countをLoss表示で漏洩しない。
+- **段階的Discovery**：OKF `index.md`の発想は、大きなSUI探索から許可済みの関心対象・出典・保留だけを読み込む選択的Contextとして参考にする。ただしIndexの取得対象は完全なUniverseとは限らず、表示されない数/ID/未許可情報を推測しない。`log.md`は公開用の人間可読な履歴であり、SUI既存のsummaryHistory/critiqueHistory/Review Eventsや正式な撤回・認可の代替としない。
+- **軽量性と自律性**：AIやOKF Plugin、SEI/TEI/TAI常駐を要求せず、Card/KJ/Outline/Mind Mapの基本操作が成立することを維持する。SHOへ渡すときは利用者が許可した範囲だけMarkdown Draft/任意OKF ConceptとしてProjection。外部OKF Conceptをインポートしてもカード/島/Treeの自動更新とせずレビュー候補として扱う。
+
+**検証順序**：既存のAI無し手動KJと出典手掛かりをまず固定→同じ5 Card/2 Island合成FixtureでClaim-source脚注と未解決/多重所属/構造Lossの投影→SafeMode/異論/未レビュー・非開示→A→B→A/一部変更の再検討→SHO/SEIへ実受領。#3392のSU-OKF01〜12を独立Expectedとして参照し、ここに第二試験Gateを作らない。Hybrid PlanのHC-01〜17/C1〜8とADR-0089 T2実利用を後から満たしたことにはしない。
+
+**状態**：仕様照合に基づく製品設計候補。現mainに新OKF Exporter、Hybrid Tree永続化、真正Source Binding、Attester、SHO Writer E2E、実Agent Skill、User T2効果が実装・実証されたわけではない。
