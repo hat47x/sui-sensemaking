@@ -337,3 +337,41 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 **次の受入順**：まず#3396の固定HEADでVitest/TypeScript/CI結果を確認し、その証拠を既存SU-OKF03/04／SU-SH12/14へ限定対応付ける。次いで[TEI表現同期Draft #3222](https://github.com/hat47x/tei-platform/pull/3222)の Subject occurrence／Relation occurrence／Result grain／Representation occurrence／Selection epoch を参照し、SUIのCard ID・Island membership・文書中の引用Occurrenceを区別した**明示的な戻り先選択**を検討する。選択/焦点/位置変更だけでDomain編集を発火しない。TEI #3222もDraftであり、既存SUI Runtimeへの正式仕様追加とはしない。
 
 **実観測（固定HEAD）**：[SUI test-only Draft #3396](https://github.com/hat47x/sui-sensemaking/pull/3396) の HEAD `a7893f9c4114d140dc19c7ff2f565693c5b1b29b` について、[SUI単体検証CI #42345896949](https://github.com/hat47x/sui-sensemaking/actions/runs/42345896949) は `completed/success`。`frontend-unit`の実ログに本新規テストファイル **3/3 PASS** があり、suite全体は278 files／1867 tests PASS。これは元World→公開Projectionの**非単射という限定命題の実証**であり、TypeScriptの現在テストでOKF書出し・原典実Read・逆Patchの拒否・SHO/SEI実受領・Owner Meaning受理まで確認したわけではない。[MCP/agent認証回帰 #42345897113](https://github.com/hat47x/sui-sensemaking/actions/runs/42345897113)も同HEADでcompleted/success、両workflowの全7ジョブを確認。ただしこれは既存製品の回帰資格であり、OKF/SHO/SEI横断機能が存在・採用されたという意味ではない。SUI→SHO→SEI/OKF実E2E、逆Patch、TEI共通表現の正式採用は **NOT RUN**。本#3393は引き続きdocs-only Draft、実テストは別PRに分離。
+
+---
+
+<!-- 20261107-sui-markdown-draft-product-limited-p0 -->
+## 13. 公開投影から「出典未検証の通常Markdown草稿」を作るP0（2026-11-07／実装候補）
+
+### 13.1 同一性よりも許された叙述の範囲を優先
+
+[実験Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397)で、現SUIの実 `buildContextProjection()` 出力だけを入力として、**外部再配布や書戻しを行わない純粋なread-only関数** `renderReadOnlyMarkdownDraft` を用意した。常設Exporter/正式製品UIやOKF Conceptの採用ではない。独立した[非単射実証 #3396](https://github.com/hat47x/sui-sensemaking/pull/3396)は「出典・島所属が異なっても公開投影全体が等しい」という元の証拠であり、#3397はその不足を勝手に補わず**出力の上限を小さくする**候補。
+
+- **入力**：`context-projection.v1`のうち、`safeMode=false`かつ`card.reviewed===true`、`redacted===false`、公開本文digestあり、`holdState===null`のカード本文。これは**本関数の安全側の選択条件**であり、全SUIデータの真偽・元資料許可ではない。
+- **出力**：カードIDや元 `meta.source`、Island/Cardの関係、未公開Count、`bundleHash`、出典らしいリンク・OKF `sources`/`verified`を付けない通常の`.md`草稿。Card.textをMarkdown引用ブロックとして**記法をエスケープ**し、未信頼の見出し・脚注・URLを外部の出典や構造関係へ昇格させない。
+- **現在の取得範囲**：SafeMode ONまたは条件に合うCardなしなら、その**投影条件で本文として出せるものがない**とだけ表示する。元DocumentにCardが不存在・未決が0・出典が無いと断言しない。説明冒頭にもOriginal Sourceは未照合で、構造・意味の全件性を証明していない旨を示す。
+- **権限**：既存Agent Projectionを読めることとMarkdownを新しいRecipientへ**再配布してよいことは別**。実験関数はStore/Clipboard/Network/Host Actionを呼ばず、配布先のDisclosure/Owner許可を追加で検証するまでは配布を実装しない。UIでのWriter/Exportボタンに直結しない。
+- **文字忠実度**：Backslashの二重エスケープは元文字列を変え得るため、#3397では一度だけエスケープするよう修正し、文字忠実度の反例を追加。本文の原raw byteを文書へ移すという主張ではなく、Markdown Rendererが見せる文字を保つ**候補**として扱う。SHOが実Parserで表示/保存した結果とは別に評価する。
+
+### 13.2 OKF・SHO・SEIの採用境界
+
+| 達成できること | 達成したと誤認してはいけないこと |
+| --- | --- |
+| SUI可視・レビュー済み・非保留の本文をMarkdown草稿に選択的に移す | SUI元Card・Source/Island/Graph/Treeと同一の構造文書を作った |
+| 本文内の `[title](url)`、`[^id]` 等を外部出典の記法にしない | Original Sourceが確認できた／不適切なURLを持つSourceをすべて検出した |
+| 出力された通常MarkdownをSHO G1bで将来実Read可能な候補にする | `SHO Reader 0 link`＝元SUIや文書に必要な根拠が0件・Reference Complete |
+| 出力関数自身は書込み・Network・逆Patchを呼ばない | 配布先Disclosureが許可済み、SHO G2 Writerが完成、元SUI逆書戻しが安全 |
+| OKF Conceptへ今すぐ強制しない | OKFの`type`/`generated`/`verified`やSEIのDecisionとして自動Importできる |
+
+**SHOの現状に注意**：[SHO Draft #17](https://github.com/hat47x/sho-composer/pull/17)は**Closed/Unmerged**になっている。一方、2026-11-07時点のSHO `main`には `src/g1b-reader.cjs` と `bin/sho-inspect.cjs` があり、双方のblob SHAは#17 HEAD `4113040f...`と一致する。つまり「PRが未mergeだからReaderがmainに無い」も「ReaderコードがmainにあるからOwner正式受理が済んだ」も誤り。G1bは`markdown-it` 14.3.3、`link_open`を中心にした限定Parserで、未解決Reference/Markdown全出典の完全列挙・G2 Writerや通常文書の実保存を証明しない。特殊File/FIFOのOpen前ブロック問題はSHO #16 R17-03へ残す。
+
+**SEIの根拠ループ**：最近の[SEI #794](https://github.com/hat47x/sei-cognition/issues/794)にある「Decision自身をbasisにする」「存在を根拠として数える」という反例は、SUI草稿が自分自身を出典脚注とし、SHO→SEIで独立根拠に化ける問題の同類。文書生成・Parserの受領・同じConceptの`verified`だけでは独立Sourceが増えない。[SEI #752](https://github.com/hat47x/sei-cognition/issues/752)のRecommendation根拠非表示も、未表示と不存在を区別する例として共用する。両IssueはClosedだが、**修正済みの実CLI動作は未再確認**なので解消済みと誤判定しない。
+
+### 13.3 既存Expectedへの接続と次の修了条件
+
+- **現時点の限定証拠**：[SUI Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397)の最初の固定HEAD `38c319dd...`は公開投影→草稿の4件PASS、[単体CI #42351654854](https://github.com/hat47x/sui-sensemaking/actions/runs/42351654854)および[MCP/agent回帰 #42351654714](https://github.com/hat47x/sui-sensemaking/actions/runs/42351654714)の7 Jobが成功。Backslash修正と5件目は**別HEAD**なので、この旧CIを新HEADへ流用せず新結果で確認する。
+- **次のProduct P0**：同一合成5Card／2Island／2Edge／1Heldを使い、公開本文のみを出す。出典未取得、Card/Island/Edge ID非出力、SafeMode/保留による非開示、偽Markdown Link/Footnote抑止、元Source/Island変更で草稿は同じ、公開本文変更で草稿は変わる、文字忠実度という**既存SU-OKF01/03/08/10・SU-SH01/05/12/14**へ接続。新しい中央Gateや独立SSOTは増やさない。
+- **次のConsumer P1**：実SUI生成byte（改版と出力時点をPin）を、実SHO main `sho-inspect`で**独立した同一ファイル**としてRead。G1bの限定`link_open`数とRaw SHA/BOM/Parse Profileを観測し、未解決Sourceが無い・原資料の正しさ・出典の完全性とは結論しない。保存・再OpenはSHO #4/G2が成立してから別試験。AI/Plugin/TEI不可でも手動文書作成は妨げない。
+- **意味とAction P2**：SEI #820/#767の問い相対のSource/Unknown/自他参照、TEI #2497/#2507/#3236の合成写像とSelection/Operation分離へ引渡し。Cardが二回引用されても同じCard Identity/元Relationは自動操作しない。OKFの`verified`・SHO Reader PASS・文字表現の一致からOwner受理/Host Grant/実書戻しへ昇格しない。
+
+**採用状態**：#3397はDraftのtest/opt-in関数のみ。実SUI UI接続／SHO main Readerによる実草稿Read／G2 Writer／SEI Inquiry／OKF Conformance・原典Reader／SUI逆Patch／外部Harness実資格は未実証。本§13自体も提案であり、SUI/SHO/SEI/TEIのOwner既存責務を変更しない。
