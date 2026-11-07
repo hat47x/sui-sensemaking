@@ -227,3 +227,41 @@ SUIをKJ法キャンバスとマインドマップを中心とする思考環境
 **初期優先順位**は 0→1。次に利用者が実際に困る規模/分割/読取で2を選ぶ。3〜4を独立研究・将来の拡張として並行検討できるが、既存ADR-0089/0090の一次価値の検証を妨げない。TEI側の生産性比較はTEI #2018、構造Facetは#2495、写像/逆編集は#2497、Roleは#2620、適用Patternは#2507、UI Compositionは#997、Action/Authorityは既存各Ownerに分離。SUIの正式なUI/データの変更は別PRで証拠とOwner受理を要する。
 
 **現在の資格**：本節は設計差分の保存のみ（NOT RUN）。既存MCP read-only、DocumentV1、SUI→SHO限定Synthetic CIが成立した範囲を、新しいItem/Canvasモデルの実装済み証拠には流用しない。
+
+---
+
+<!-- sui-raw-item-first-vertical-20261108 -->
+### 8.8 横断深化：Raw Itemの受皿から直接読取・抽出・二Canvas配置まで（設計／NOT RUN）
+
+**目的**：§8.3の未整理Itemの許容を、実際に実装・反証できる一つの最小利用経路へ具体化する。単に「Itemを作成できる」だけでは不十分。**保存したと主張する内容を開ける、あるいは外部Locatorだけで内容未取得と診断できる**ことが入口の要件である。分類・概念化・カード化・AI呼出しは受付の必須条件にしない。既存DocumentV1、Shelf/Hold、OKF/SHO、TEIのデータ源・Authority/Effectの正本は変更しない。
+
+**同じItemに関して混同しない4つの観測**：
+1. **受付／参照**：何の入力（貼付テキスト、Raw file、URL等）を受領し、どのSource locator/実bytesを手元で観測したか。URLを登録しただけなら原文取得・オフライン再読込・現在性は未証明。
+2. **内容と解析**：保存できたRaw Content、そのRevision/byte identity、別途解析した本文やサムネイル、そのCoverage/処理版を区別。抽出失敗・非対応・途中停止でも原Rawを破壊しない。byte一致から同一のSubject/意味を推定しない。
+3. **認知上の取扱い**：未読（利用者相対）・未分類・未確認・Held・Shelved・保管/廃止などは互いに独立。Inboxは既存ItemをQueryするView候補であり、別の意味正本・物理Store・強制Workflowにしない。
+4. **表示・派生・外部作用**：Readerで原文を見ること、範囲を根拠に新Item候補を作ること、CanvasへDisplay Occurrenceを置くこと、AIへ送ること、Markdown/OKFへ書き出すこと、外部Taskを実登録することは別操作。画面View可能≠送出/共有/書込許可、Role適用可能≠実Action資格。
+
+**小さな縦切り候補（標準Data Structure＋Presentation BindingのConsumer試験）**：
+- 入力：未命名の長文・PDF・URLのみの参照・画像を合成Itemとして受け、RawまたはLocatorの観測結果を返す。Inbox一覧は全文Cardを生成せず、開けるものは実Readerで直接読める。Rawが未取得のものは「読めない理由」を権限に応じて表示し、架空の要約を作らない。
+- 展開：本文の選択範囲・ページ・原Revisionを伴う抽出候補を作り、原Itemは不変。人が採用した候補ItemをCanvas AにCard表示し、同じItemをCanvas Bにも別Display Occurrenceとして表示。両Canvas間の座標/固定/局所注記は独立。
+- 再構成：Item本文の改版時、現在版を参照するOccurrenceだけ再取得し、特定版Pinは旧版と明示。Canvas Aから表示を外しても原Item、Canvas B、元Source、越境Relation、Reviewは残す。AI提案や分割は現readSetと対象writeSetを確認したうえでPreviewし、採用は明示的な一回Undo単位。
+- 説明：同じ対象について、Inbox/Reader、KJ/Tree、CLI read-only Contextが実際に参照できるSource・Content・Revision・Coverage・Disclosure・Unknownを比較する。標準UI側はTEI #2507/#997、Query結果の範囲/粒度は#2506、CLIの必要閉包は#3262、投影Lossは#2497のOwnerに委譲する。新Reader/Policy Engine/Role Resolver/Storeを本PoCで重複実装しない。
+
+**独立Expectedを先に手書きする最小反例（すべてNOT RUN）**：
+
+| ID | 入力・変更 | 期待する観測／禁止する推論 |
+| --- | --- | --- |
+| **SI-RAW01** | タイトル・Role・Tree所属・座標のない長文を受付 | Item参照を保持し、Inbox→Readerで実Contentを読む。Card/OKF Concept/人工分類の強制作成0 |
+| **SI-RAW02** | URLだけ登録し外部Fetchせず、次に取得不可 | locatorは残るがRawの存在・完全性・原文取得はunknown/unavailable。取得成功を偽装しない |
+| **SI-RAW03** | 同じbytesの別Source 2件、同名の旧Document Card 2件 | identityは別。明示Bindingなしに重複統合・同一Review引継ぎ・別Canvasでの自動共有を行わない |
+| **SI-RAW04** | 利用者Aだけ既読、分類なし、heldは別Item、review未実施 | Aの既読はBに波及せず、既読/分類/held/review/lifecycleを相互変換しない |
+| **SI-RAW05** | PDF内の範囲から2候補抽出後、元Content改版 | 原Rawを保持、抽出候補は元Revision・範囲・Coverageを保持。旧根拠を現行原文と偽らない |
+| **SI-RAW06** | 同じItemをCanvas A/Bへ置き、A移動・A表示削除・B Revision Pin | Aの局所座標だけ変更、削除はAのOccurrenceだけ。B/Item/元Relation存続、Pinは古い版と明示 |
+| **SI-RAW07** | AI提案待ちの間に参照先Item・所属Group・権限を変更 | 古いreadSetの提案を黙ってcommitしない。書込範囲外のCanvas/Role/Reviewは不変 |
+| **SI-RAW08** | Raw内部にツール命令らしい文言、非公開Itemを含む集合の要約要求 | 内容を命令として実行しない。外部AI/SHO/OKFへの送出は現在のGrant/Disclosureを別判定。非公開ID・件数・存在を漏らさない |
+| **SI-RAW09** | 未解析10件から可視3件を選択、途中Reader失敗、Tool応答途中切断 | Selected/Loaded/Parsed/ExposedのCoverageを別報告。表示3件を全10件・全世界としない。途切れた応答を完了としない |
+| **SI-RAW10** | Raw ItemからTask候補を連想し、PERT/外部Issue登録を要求 | 説明Item≠正式Task≠Operation/実Event/Receipt。意味受理・Provider能力・明示Action/現在Grantなしに外部Effectを起こさない |
+
+**追加する評価軸**：最小保存操作数／未分類で再読込できる率、Inbox→実Reader到達、抽出の元位置再到達、A/Bの独立性、戻り先の分かりやすさ、Token/CLI手順/標準Plugin再利用数と個別コード量。30〜50件の初期Hybrid実験に対して上の10件全てを新たなBlocking Gateにせず、まずSI-RAW01/02/03/06の非破壊・非誤認を小さな独立Fixtureで検査し、残りは既存Security/OKF/TEI/Product SkillのOwnerへ段階的に接続する。
+
+**実装・受理状況**：設計案のみ。Rawの正式Item DB、複数Canvas UI、実Reader自動選択、実CLI/Plugin Binding、AI/SHO出力、外部Task更新、T2の実利用は未検証。合成Fixtureの期待記述はPASS、正式製品採用、Source真正性を意味しない。
