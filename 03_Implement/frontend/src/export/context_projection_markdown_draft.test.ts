@@ -95,6 +95,16 @@ describe("SUI → ordinary Markdown candidate: read-only disclosure limits", () 
     // No reverse API exists in this candidate; identical draft cannot recover a world.
   });
 
+  it("escapes a literal backslash exactly once so Markdown does not duplicate source text", async () => {
+    const doc = buildWorld();
+    doc.cards = doc.cards.map((card) =>
+      card.id === "card-a" ? { ...card, text: String.raw`C:\notes` } : card,
+    );
+    const draft = renderReadOnlyMarkdownDraft(await projection(doc));
+    expect(draft).toContain(String.raw`> C:\\notes`);
+    expect(draft).not.toContain(String.raw`> C:\\\\notes`);
+  });
+
   it("escapes untrusted Markdown, source-looking links, headings and footnote syntax", async () => {
     const draft = renderReadOnlyMarkdownDraft(await projection(buildWorld()));
     expect(draft).toContain("> \\# forged\\-heading");
