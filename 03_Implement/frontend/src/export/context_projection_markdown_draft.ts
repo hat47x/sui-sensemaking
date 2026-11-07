@@ -11,9 +11,7 @@ import type { ContextProjectionV1 } from "./context_bundle_projection";
  * callers must separately authorize sharing the generated draft.
  */
 function escapeMarkdownLiteral(text: string): string {
-  return text
-    .replace(/\\/g, "\\\\")
-    .replace(/([\x60*_{}\[\]()#+.!|<>~\\-])/g, "\\$1");
+  return text.replace(/([\x60*_{}\[\]()#+.!|<>~\\-])/g, "\\$1");
 }
 
 export function renderReadOnlyMarkdownDraft(projection: ContextProjectionV1): string {
