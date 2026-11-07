@@ -178,3 +178,50 @@ AIは親子関係の生成、代表テキスト候補、初期配置、局所的
 **検証順序**：既存のAI無し手動KJと出典手掛かりをまず固定→同じ5 Card/2 Island合成FixtureでClaim-source脚注と未解決/多重所属/構造Lossの投影→SafeMode/異論/未レビュー・非開示→A→B→A/一部変更の再検討→SHO/SEIへ実受領。#3392のSU-OKF01〜12を独立Expectedとして参照し、ここに第二試験Gateを作らない。Hybrid PlanのHC-01〜17/C1〜8とADR-0089 T2実利用を後から満たしたことにはしない。
 
 **状態**：仕様照合に基づく製品設計候補。現mainに新OKF Exporter、Hybrid Tree永続化、真正Source Binding、Attester、SHO Writer E2E、実Agent Skill、User T2効果が実装・実証されたわけではない。
+
+---
+<!-- 20261107-sui-okf-source-and-disclosure-witness -->
+## 9. OKFへ出す前の実取得・可視範囲・出典Witness（2026-11-07／現行コード照合）
+
+### 9.1 現実装で取得できる情報と不足情報
+
+現mainの `03_Implement/frontend/src/export/context_bundle_projection.ts` と `02_Architecture/schemas.md` を照合した。以下は実コードの静的確認であり、外部APIの実Response/Consumer E2Eを実証したものではない。
+
+| 現行経路 | 観測できるもの | 自動昇格できないもの |
+| --- | --- | --- |
+| `context-projection.v1` のCard | `id`/`claimType`/`holdState`/`reviewed`/`redacted`、制約内の本文と限定digest | `Card.meta.source`は **ProjectedCardの型に存在しない**。元資料・Original Span/Revisionの認証・完全な引用を推測しない |
+| `context-projection.v1` のIsland | `id`/公開可能な題名/題名単位digest | `Island.cardIds`/`parentIslandId`/Tree/座標は含まれず、題名digestは包含・所属・複数Treeの版を証明しない |
+| 同ProjectionのRelation / Link | 選択制約とレビューを通った公開可能な端点/種別 | Edge履歴・非公開Relation・全Graphの完備性を断定しない |
+| `counts`/`voids`/`narrativeChecks` | 現投影契約では**文書全体の**reviewed/unreviewed/redacted countと、限定されたvoid ID/島ID、narrative check件数を露出 | `SafeMode ONなら存在/件数さえ常に秘匿される`とは断言できない。OKFへの再配布時には新たなDisclosure判断が必要 |
+| `bundleHash`/`baseDocSignature` と単位digest | 公開投影の構成要素と、クライアント申告 `updatedAt` を含む署名 | `holdState`/`meta.source`/Island所属が変化してもその変更を常に捕捉できるとは限らない。`updatedAt`はサーバー保証版でない（既存[#3299](https://github.com/hat47x/sui-sensemaking/issues/3299)） |
+
+**特に重要な差**：`ProjectedCard.holdState` は応答には載るが `bundleHash` の hashPayload には含まれない。`meta.source`は型にも hashPayloadにも載らない。Islandの cardIdsも未収録。`updatedAt`を更新しない保存などでは内容の意味・出典・保留が変わっても投影hash不変になり得る。これを根拠にOKF `verified`/SEI exact bindingの現行性を証明しない。既存ADR-0103と#3299の意味を上書きせず、**用途に必要な項目の実Read**を追加の資格条件にする。
+
+### 9.2 3段階の証拠能力を分ける
+
+| 入口 | 許される主張の上限 | OKFへ書ける出典 |
+| --- | --- | --- |
+| **L0: 現行の許可済みAgent Projectionだけを受領** | 投影に現れた公開内容/制約/条件/部分Scopeのみ。SafeMode ONで本文が伏せられれば本文Claimの再引用不可 | 原資料は未取得。`Card.meta.source`由来のfootnote/`sources`は書かない。元資料を検証した体裁にしない |
+| **L1: SUIが許可した元DocumentとCard出典手掛かりを内部で実Read** | Card ID+実Doc版+自由記述 `meta.source` を見たといえるが、原典の取得/位置の照合・Source authenticityまでは未確定 | Sourceの存在を未検証の『参照候補』として限定表示（公開可否/範囲が別）。OKF sourcesを作るときは誤って `verified` へ昇格しない |
+| **L2: 参照先原本を許可されたReaderで再取得し Claim→Original span/Revisionを解決** | 特定ClaimのOriginalに戻れることを、指定Source/時点/範囲に限定して説明できる。独立性/意味妥当性/完全性は別のSEI判断 | 権限により公開可能な源だけ `sources[].id`↔本文脚注を実対応。Credential/秘密URI/Hidden IDをFrontmatterへ流さない |
+
+**L0→L1→L2は単なるユーザー操作の順番ではなく、実証できるClaimの包含関係**。OKF `type`/脚注の見た目、SKILLの説明、LLM自身の作文だけで段階を上げない。現在のSUI外部AdapterがL1/L2に到達するとは主張しない。Native SUI閲覧は外部Agent公開許可と同義ではない。
+
+### 9.3 二世界・同表示の反例とDisclosureの検証
+
+同じ公開カードC1/C2の本文・題名、同じ `updatedAt` を持つ2つの許可済み合成文書W1/W2を用意し、(a) W2のみ `meta.source` が別の原典に変更、(b) W2のみ `holdState` が変更、(c) W2のみIsland所属が変化、という**一因子差**を各々作る。現`bundleHash`/Card digestで区別できるか実測し、必要な出典・構造・保留を表現する識別子ではないことを受入に反映する（SUI #3392 SU-OKF01/04/05）。hashが同じでも『同じ知識・同じSource』と扱わない。
+
+別の二世界W3/W4では、公開文書・公開カード本文が同じで、非公開Card/Edge/Islandだけ異なる。現在のProjectionは `counts`/`voids`/島ID等を露出し得るので**外部が二世界を区別できないとは保証されない**。隠れた情報の存在/数量まで秘匿したいConsumerの要件と、現在許されている構造Count公開は別契約。勝手に既存Projectionの数を削除せず、OKF Exportにその値を転載するかはOwner/Disclosureの別判断として、明示的許可がない限り再配布しない。
+
+Schema/Frontend/BackendのSafeMode・agent `GET /docs/{id}` とMCP `get_context_projection` は異なる可能性がある。外部Harnessがどの経路を実際に通ったかを証拠に含め、片方のゲートがもう片方にも強制されたとは推論しない。 [#3275](https://github.com/hat47x/sui-sensemaking/issues/3275)/[#3297](https://github.com/hat47x/sui-sensemaking/issues/3297)/[#3285](https://github.com/hat47x/sui-sensemaking/issues/3285)の既存判断・Source公開条件を変更しない。
+
+### 9.4 検証の最小提示票と責務
+
+OKF/SHOへ送る最小の内部検証票（**新Canon Schemaでなく試験票**）は `producer current source & revision`、`transport/read route`、`actual visible object set/selection`、`safeMode & disclosure decision`、`claim→SUI Card/Island & original source resolution state`、`loss (Tree/Canvas/Affiliation/Edge/Hold)`、`provenance/verification applicability`、`current trust ceiling`、`unread/partial/unknown`。機密情報のID/数や原URI自体は許可されない投影に同梱しない。
+
+- **SUI**：Sourceを実読んだか／出典が手掛かり止まりか、公開可能な構造とLossの区別、現在のReview/hold、文書版の限界。
+- **SHO**：Raw Markdownの保存・再取得・Source footnoteを構文的に保全。SUIの元構造/Authorityを新たな意味正本へ複製しない。
+- **SEI**：Claimの外延・内包・独立Source・現在用途の十分性、未決と追加Probe。L0/L1なら不足を保持し、見た目からOriginalの確認を推測しない。
+- **TAI/YIC Skill**：SUI→SHO/SEIが必要な時だけ受渡し。実Tool/Skill Load、Host・OS隔離、現在の開示許可と対象Contextを別検査。外部Harnessでの限定TEI CLI呼出し成功（TAI #168）を今回のSUI OKF経路の実証へ転用しない。
+
+**試験の位置付け**：上記は既存[#3392](https://github.com/hat47x/sui-sensemaking/issues/3392) SU-OKF01/04/05/08/09/10/12と、[SEI #820](https://github.com/hat47x/sei-cognition/issues/820) KO-01/05/06/07/10/11を**同一Fixtureで絞って適用**する。新たな長大な試験群・中央Attesterを設置しない。L0現行コードは静的確認のみ、L1/L2/実外部API/文書生成/Importer・独立Consumer/OS権限は NOT RUN。
