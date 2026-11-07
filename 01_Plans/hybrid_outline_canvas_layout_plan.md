@@ -445,3 +445,32 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 - **TAI/EKI**：OS実Reader成功とHostの実Grant・Skill価値は別。EKIの[PR #783](https://github.com/hat47x/eki-fabric/pull/783)（merged）による`--version`の実VCS revision表示は、未知版を`unknown`とする正直な実行版観測の参考だが、SUI→SHOの実Transport/Source Revision/OS隔離を代替しない。
 
 **次の最小Exit**：既存合成Fixtureの実SUI Producerが作成した**その一つのRawファイル**を、許可済みのSHO実CLIへ明示的に渡し、同一Source bytes/実Parser結果/対象Scope/外部への出力ゼロを観測する。その後SHO G2 WriterとSEIによる根拠未確認の保持を別試験。最初のOS赤/緑とOwner未受理は併記し、旧SUI計画§14の『SHO新CI未確認』は**作成当時の履歴**として扱う。本§15の実績はP0/P1固定Fixture相互運用だけ。正式OKF Concept・自動転送・Writer・Import・Source真正性は**NOT RUN**。
+
+---
+<!-- sui-20261107-live-local-onefile-handoff-executable -->
+## 16. SUI実Producer→同一ディスクファイル→SHO実CLIの検証経路（2026-11-07）
+
+### 16.1 今回準備した最小接続
+
+- [SUI実験Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397)：現行の実Projection→Markdownの合成テストに、**SUI_SHO_P0_OUTPUT**が明示された場合のみ、生成した354 UTF-8 bytesを新規の絶対Pathへ**wx（上書き禁止）**で保存し、直後に実ファイルを再Readする経路を追加。未指定なら書かない。通常UI/API/Writerは変更しない。
+- [SHO実験Draft #21](https://github.com/hat47x/sho-composer/pull/21)：**SHO_SUI_P0_INPUT**が明示されたときだけ、その絶対Pathの実ファイルを既存SHO CLIへ渡すテストを追加。Raw SHA/354 bytes、実Parser14.3.3、Scope限定link0、参照完全列挙はfalse、原文のmtime・bytes不変を確認。未指定では**テストSkip＝未実行**。Reader/Parser本体は変更しない。
+- 操作は[SHO #21の実施Runbook](https://github.com/hat47x/sho-composer/blob/test/sui-p0-readonly-handoff-20261107/docs/sui-p0-same-file-handoff-trial-2026-11-07.md)に固定。両RepoのローカルCheckoutとNode22が必要。外部Token、ネットワーク転送、元Source自動取得、外部公開を実装しない。
+
+### 16.2 同一ファイルと意味受理は別のWitness
+
+| 観測地点 | 検証できること | 未解決のこと |
+| --- | --- | --- |
+| SUI Producer | 公開2 Card・非公開/heldの制限を保った354-byte生成、新規File書込とReadback | 元CardのSource、Island/Edge、全件性、現在Grantと原Doc Revision |
+| 実Disk | **Producerが実生成した一つのファイル**をConsumerが実Readしたこと、Path・Raw SHA・OS改行 | 同じバイトから元Worldの同一性・原Source真正性やA→B→Aが証明されたこと |
+| SHO CLI | 実Parser版、固定文書link0、coverageの未評価・Writer未呼出し、mtime不変 | 原資料0件・未定義Referenceなし・SHO G2 Writer完成 |
+| SEI/TEI/TAI | 限定のRead事実を次の調査へ利用する候補 | 独立根拠数・Meaning/Owner受理・逆Patch/Host Grant・H2/H3適格性 |
+
+**受入の負例**：Producerが既存ファイルに出力しようとすれば上書き拒否、SHO入力Path未指定ならSkip、LF→CRLFはRaw SHA不一致、SUI元SourceやIsland所属だけ異なるWorldは同一草稿を作り得る、SHO Parserのlink0は原資料なしの証明でない、配布先のDisclosureは別。既存SU-OKF03/08/10・SU-SH01/12/14・SEI KO-01/02/10/15・TEI #2497/#3236に接続し、新SSOTを設置しない。
+
+### 16.3 結果の資格と次のExit
+
+- **先行済**：SUI #3397の実Producer固定354-byte/期待SHA（[CI #42352776477](https://github.com/hat47x/sui-sensemaking/actions/runs/42352776477)）、SHO #21の同一合成FixtureのUbuntu/Windows各18/18（[CI #42353651398](https://github.com/hat47x/sho-composer/actions/runs/42353651398)）。これは**別Productで同じ固定原文をそれぞれ検査した**資格に限る。
+- **今回のSUI変更の限定CI**：HEAD 0bc63b944c6f18e0fc8693bd05092ad031997c11、[単体CI #42370271882](https://github.com/hat47x/sui-sensemaking/actions/runs/42370271882)はcompleted/success、279 files/1,870 tests PASS（実frontend-unitログ）。ただし環境変数は**未指定**であり、実ディスクへ書き出した経路のPASSではない。
+- **次の明示Trial**：SUI実コードが生成した**その一つのファイル**をSHO実CLIに絶対Pathで渡し、両コミット、Node/OS、書込/実読込Path・サイズ・SHA、Parser/Scope、無Writer・開示対象を記録。これが揃うまではLive One-file Handoffを**NOT RUN**とする。SHO G2 Editor/Writer、OKF正式束、SEI Native Decision、現在のSource/Owner/配布認可はさらに別受入。
+
+**設計上の線引き**：SUI Data→公開Projectionが非単射で、公開Projection→通常Markdownも不可逆なのだから、同じFileを読めてもSource/Topologyは自動復元できない。既存Product Ownerを維持し、中央Ledger、別Reader/Writer、二重Meaning/Action Engineを作らない。
