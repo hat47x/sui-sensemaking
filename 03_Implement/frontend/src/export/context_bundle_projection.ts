@@ -176,8 +176,25 @@ export function projectIslandTitle(island: DocumentV1["islands"][number]): strin
   return island.titleReviewed === true ? island.title : "(未レビュー)";
 }
 
+/**
+ * UTF-16コード単位順の比較（#3389）。`localeCompare` はICUの照合順序に従い、
+ * 実行環境のロケールで順序が変わるため、bundleHashの入力の並べ替えには使わない。
+ * `canonicalizeJson` のキー順と同じ規則である。
+ */
+export function compareCodeUnits(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
 const byFromThenTo = (a: ProjectedLink, b: ProjectedLink): number =>
-  a.from === b.from ? a.to.localeCompare(b.to) : a.from.localeCompare(b.from);
+  a.from === b.from ? compareCodeUnits(a.to, b.to) : compareCodeUnits(a.from, b.from);
+
+const byFromToType = (a: ProjectedRelation, b: ProjectedRelation): number =>
+  a.from !== b.from
+    ? compareCodeUnits(a.from, b.from)
+    : a.to !== b.to
+      ? compareCodeUnits(a.to, b.to)
+      : compareCodeUnits(a.type, b.type);
 
 /**
  * Build a read-only, constraint-scoped, SafeMode-respecting projection of the
@@ -186,7 +203,7 @@ const byFromThenTo = (a: ProjectedLink, b: ProjectedLink): number =>
 export async function buildContextProjection(input: ContextProjectionInput): Promise<ContextProjectionV1> {
   const { doc, constraint, safeMode } = input;
 
-  const allCards = [...doc.cards].sort((a, b) => a.id.localeCompare(b.id));
+  const allCards = [...doc.cards].sort((a, b) => compareCodeUnits(a.id, b.id));
   const reviewedCount = allCards.filter(isReviewed).length;
   const unreviewedCount = allCards.length - reviewedCount;
   const reviewedCardIds = new Set(allCards.filter(isReviewed).map((card) => card.id));
@@ -250,7 +267,7 @@ export async function buildContextProjection(input: ContextProjectionInput): Pro
 
   const islands: ProjectedIsland[] = await Promise.all(
     [...doc.islands]
-      .sort((a, b) => a.id.localeCompare(b.id))
+      .sort((a, b) => compareCodeUnits(a.id, b.id))
       .map(async (island) => ({
         id: island.id,
         title: projectIslandTitle(island),
@@ -268,7 +285,7 @@ export async function buildContextProjection(input: ContextProjectionInput): Pro
   const relations: ProjectedRelation[] = doc.edges
     .filter((edge) => relationScope(edge.fromId) && relationScope(edge.toId))
     .map((edge) => ({ from: edge.fromId, to: edge.toId, type: resolveKnownEdgeType(edge.type) }))
-    .sort((a, b) => (a.from === b.from ? a.to.localeCompare(b.to) : a.from.localeCompare(b.from)));
+    .sort(byFromToType);
 
   // The evidence/contradiction link lists are surfaced for the constraint
   // that asked for them (and for summary as structure).
