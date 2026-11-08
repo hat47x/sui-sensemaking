@@ -206,6 +206,8 @@ MCPサーバー（読み取り専用の外部接続）が読む環境変数で�
 | `SUI_POSTGRES_PASSWORD` | `sui_sensemaking` | Compose PostgreSQLのパスワード |
 | `SUI_RUNTIME_PROFILE` | `local-dev`（Composeは`evaluation`を注入） | フロントエンドエントリモード。`local-dev` / `evaluation` / `enterprise-production` はシングルテナント、`saas-multitenant` はテナントセッション必須。未知値は起動UIをブロックにする |
 | `SUI_FRONTEND_API_BASE` | `/api` | フロントエンドのビルド時に埋め込む同一オリジンのAPIベースパス。標準Composeは同梱Nginxの固定 `location /api/` と一致させるため `/api` を固定注入し、ホスト側のこの値では変更しない。直接フロントエンドのビルド / 独自リバースプロキシでは `/` 自体または単一の `/` で始まるパスを受理する。`//host`、バックスラッシュ、クエリ、fragment、相対パスは `/api` にフォールバック |
+| `SUI_BROKER_BASE_URL` | `http://localhost:18081`（モックIdP） | 旧SPA向けOAuth経路（`oauth_login.ts` / `oauth_callback.ts`、ADR-0064）がビルド時に読むアイデンティティブローカーのベースURL。未設定ならモックの既定値が使われる。標準のComposeは注入しない。BFFのセッション経路（`/session/login`）では使わない。この旧経路を維持・置換・削除のどれにするかは #3405 で未決。実IdPには未接続で、配備する場合は必ず明示して設定する。 |
+| `SUI_BROKER_CLIENT_ID` | `mock-client` | 同上。ブローカーに登録したOAuthクライアントID。未設定ならモックの既定値が使われる。 |
 
 
 ## Private adapter boundary (non-public keys)

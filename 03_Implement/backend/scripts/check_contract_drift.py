@@ -190,6 +190,26 @@ if RUNTIME_REGISTRY.exists():
         print(f"  MCP env vars: {len(mcp_env_vars)}")
     else:
         warn("mcp/src not found — skipping MCP env var check")
+
+    # フロントエンドがビルド時に読む SUI_*(import.meta.env 経由)も対象にする(#3405)。
+    # テストと、末尾が「_」の接頭辞だけの文字列は除く。
+    frontend_env_vars: set[str] = set()
+    if FRONTEND_SRC.exists():
+        for fe_file in list(FRONTEND_SRC.rglob("*.ts")) + list(FRONTEND_SRC.rglob("*.tsx")):
+            if ".test." in fe_file.name or fe_file.name.endswith(".d.ts"):
+                continue
+            try:
+                fe_text = fe_file.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            frontend_env_vars.update(MCP_ENV_VAR_RE.findall(fe_text))
+        known_vars = (code_env_vars if settings_py.exists() else set()) | mcp_env_vars
+        for var in sorted(frontend_env_vars - known_vars):
+            if var not in registry_content:
+                warn(f"SUI_* env var '{var}' (frontend) not mentioned in runtime_parameter_registry.md")
+        print(f"  Frontend env vars: {len(frontend_env_vars)}")
+    else:
+        warn("frontend/src not found — skipping frontend env var check")
 else:
     warn("runtime_parameter_registry.md not found — skipping env var check")
 
