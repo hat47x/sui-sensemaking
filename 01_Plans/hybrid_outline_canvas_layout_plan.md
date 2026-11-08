@@ -322,3 +322,46 @@ SUIをKJ法キャンバスとマインドマップを中心とする思考環境
 
 **資格**：本節は横断Evidenceの照合と追加Expectedの設計記録のみ。SI-XC01〜07、複数Canvas共有Itemの永続化、共同編集E2E、SUI→SHO H1、Writer Save、TEI実CLIのItem Role/Projection適用、外部Task Providerを今回実行したものではない。正式採用はOwnerの独立判断と実証を要する。
 
+---
+
+<!-- sui-sensemaking-living-unit-and-promotion-20261108 -->
+### 8.10 原材料から「意味として生きる単位」へ：SUIの一次価値と外部への翻訳境界（2026-11-08／設計候補・NOT RUN）
+
+**今回の横断入力・Owner**：[SUI #3400](https://github.com/hat47x/sui-sensemaking/issues/3400)の初期KJ構想→現ADR-0089の一次価値、[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)の外部認知接続、既存§8.3/8.8の未整理Item、§8.4/8.9の複数Canvas、[SUI #3391](https://github.com/hat47x/sui-sensemaking/issues/3391)のSHO文章化、TEI #2497/#2620のProjection/Roleを照合。**価値の採否はADR-0089/#3400が正本**、外部送信・ingest・reviewの許可はADR-0111が正本。SUI計画に第二の価値規約・外部Transport・Role意味正本を作らない。
+
+#### A. Raw Item、意味のあるCard単位、実体・Roleを混同しない
+
+1. **Raw Material / Inbox Item**：未読の長文、インタビュー、画像、未取得URL、PDF等を無分類で保管。入力を「一文一カード」「一命題一Item」へ機械的に分割しない。保存・閲覧できることと原Sourceの検証、観測・解釈の受理は別。
+2. **KJで扱う意味の単位**：人が一緒に考えたい体験、発言、文脈、違和感のまとまりをCardの候補にする。1語でも複数段落でもよく、論理命題として一文に整形する義務はない。CardはItemや他Subjectの表示Occurrenceを持てるが、元Rawの単なる表示も、抜粋から新しいItemを作る場合もある。**表示するたびに新しい情報実体/独立根拠を増やさない**。
+3. **抽出・解釈**：元Sourceの引用（原文/原領域）と、引用から人やAIが追加した見立て・仮説を別のReference/Relationで繋ぐ。生きた単位の抽出が一つの意味主体を成立させるなら新Item/Revisionを明示。部分引用/多箇所引用・ページ/時刻/画像領域等の適格なLocatorと元Revision、抽出Scope/欠落を保持する。Locatorがない場合は手がかりだけを表示し、精密な出典を捏造しない。
+4. **KJ・Mind Map・Canvas**：ItemのIdentity、Treeの親子/順序、KJ島の見立て、Canvas位置・交錯、批判/保留を独立に保持。一つのItemが別Canvas/島で使われても「独立した2証拠」「自動的な合意」とは扱わない。幾何学的近接、同じ島名、Tree同祖先を意味受理の根拠にしない。
+5. **後から読む・後から意味付ける自由**：未閲覧、未分類、役割未決、違和感の理由未記載でも保存/再開できる。読了や分類をKJの開始条件にせず、保留理由を後付けした際は**後からの記録**として保存し、過去にそう判断したと偽らない。
+
+#### B. SUI→他製品の境界：参照／草稿／人間・AIによる翻訳／正式受理
+
+- **単なる保管・読取**：SUIのRawやCardを別Consumerが許可済みReader/参照で読み取ることは、業務意味への変換でも正式なTEIモデル化でもない。元Source、Scope、Revision、開示、Readの実績を明示する。
+- **SHO経由は任意**：B型文章化/Markdown Draftは著者の文章表現であり、SHOの文書Revision・Writer・著者Reviewへ委譲する。原SUIのKJ島/Tree/異論/未決を無損失に複製できるとは主張しない。SUIにSHOの原文Writerを複製せず、SHOなしのKJ/Raw利用も成立。
+- **TEIへは翻訳の明示段階が必要**：SUIのItem/Task Role候補やSHO文書から、Data/Function/Business・Rule等のモデルを**人間または生成AIが明示的に読み替え・提案**する。SUI Card/島/PERT表示の変化をTEI Accepted Meaning・DSL・本番Actionへ機械的に直結しない。SHO経由必須でもSUIからの自動直結でもなく、**任意の情報経路＋明示的な翻訳/検証**という区別にする。TEI側では元Source/Role/Model/独立Expected/Owner受理・実Provider・現在Grantを別資格で確認する。
+- **外部連携は現行ADR-0111へ従属**：SUIの現Agent MCPはread-only、TEI送信は未実装。送信・Proposal ingest・Effectを増設する場合は同ADRの方向／データclass／権限への効果／証拠階層／可逆性とTEI側のAuthorityを検収する。公開可能な文字列から送信資格やContentの完全性を推定しない。Task外部連携でも、PERT表示＝外部登録の許可ではない。
+
+#### C. 実Document/Sourceの保存と閲覧の責務：現行実装を止めない
+
+- SUIの現在のDocument保存・ETag/CAS・Revision/Content Storeは現行ADR-0070/0071/0076/0088の責務に置く。SUIの`DocumentV1`はCanvasを含むレガシー保存集合であり、将来のItem/Content/Documentという論理的区別を追加しただけで実分離・移行・共通API実装済みとは呼ばない。
+- 共通化しやすい**文書の保存/再読取/版条件付き更新の薄い契約**は、必要になった時に実Consumer同士で比較することはできるが、SUIの初期PoCを別の共通Documentサービス、第二のDB/Authority/Host、全形式の正規化、集中同期に依存させない。既存のRDBとContent Store、Reader/APIで基線を取る。別製品のローカルMarkdownはその製品で編集正本となり得るため、SUIのDocument JSONに吸収しない。
+- 文書のContent fingerprint、`DocumentV1`のJSON/ETag、head/CAS Revision、Item Semantic Revision、Canvas Occurrence epoch、SHO Working Copyと正式Saveは**比較対象が異なる**。Raw保存成功・File Reader PASS・Projection digest一致を、各々の正本入替え・共同編集成功・Writer再開保証・TEI意味受理へ合算しない。
+- S3/NAS等の保存Providerや全文検索/Vector索引は必要性と実負荷を観測して選ぶ。Blobが保存済みでもIndex更新遅延・Meta commit不明・部分的なReader readがあり得る。表示件数/検索HitとRaw全体・Disclosureの完全性は別。
+
+#### D. 既存ケースで実行する「思考の往復」評価（新しいT2認定の捏造・ケース重複なし）
+
+| 操作・反例 | 使う既存Expected | 認知上の観測／技術上の停止線 |
+| --- | --- | --- |
+| 長い原資料・複数の主題／未整理をそのまま受付し、必要部分を後から読む | SI-RAW01/02/05、#3400 SV-01 | 読む前の分類・文単位強制0。元Source/引用位置を保ち、意味単位を人が選べる |
+| 原資料にない島見立て・違和感を後から言語化、AIなしで配置・再開 | #3400 SV-03/04/08、既存HC/T2 | 元Rawと新しい解釈、当時の記録と後付け理由を分ける。新発見・根拠回帰・未決維持を別観測 |
+| 同じItemがA/B Canvasに現れ、異なる島/Tree/説明に利用される | SI-RAW06、SI-XC01/04/05、#3400 SV-06/09 | 表示Occurrenceは別、Identityと原Sourceは一つ。独立証拠数を水増しせず、別案を潰さない |
+| A型図解からB型草稿、任意にTEIモデル候補へ人/AIが翻訳 | SI-XC05/06、#3391 SU-SH01〜05、ADR-0111 | 文書化・モデル候補・Meaning受理・実送信/実Effectを別資格。Lossや非公開を隠さない |
+| 外部Source未取得／共有拒否／SUIを実務で使わず合成のみ | SI-RAW02/08/09、#3400 SV-10、ADR-0089 T2 | 不明/非開示を不存在扱いしない。SUI内部Dogfoodや合成PASSを「SUI以外の実務」でのT2へ算入しない |
+
+**優先順位**：現在の3カード/KJ+AI OFF→未分類RawのReader再開（小さな資料で十分）→人が決めるCard単位と引用位置→KJ上の配置/異論/保留→二Canvasでの非干渉を確認してから拡張を測る。初期段階から大量Item、外部Task同期、汎用文書サービス、完全Ontologyを必須にしない。利用価値のOwner判断は#3400/ADR-0089に戻し、技術的受入は本節の既存SI-RAW/SI-XC・TEI/SHOの各Ownerへ戻す。
+
+**証拠の上限**：本節は構想・現在の責務と受入順の設計反映のみ。Raw Itemの新製品API、実複数Canvas、Reader→Card抽出E2E、SUI→TEI人/AI翻訳の実モデル受理、SHO正式Writer、外部Task Provider、T2実利用価値の実測は今回NOT RUN。
+
