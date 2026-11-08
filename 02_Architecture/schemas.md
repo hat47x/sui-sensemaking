@@ -352,6 +352,10 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - `bundleHash` は、次の入力のcanonical JSON（`canonicalizeJson`）のsha256（小文字16進64桁）である。`schemaVersion`、`docId`、`baseDocSignature`、`constraint`、`safeMode`、`cards`（`id`、`claimType`、`reviewed`、`redacted`、露出した本文。伏せた本文は `null`）、`islands`（`id`と、レビュー済みでなければ伏せた題名）、`relations`、`evidence`、`contradictions`、`counts`、`voids`、`narrativeChecks`。単位digestは入力に含めない。
 - `contradictions` は `{from, to}` だけを持ち、`contradictionState` と `note` は投影にも `bundleHash` の入力にも含めない（ADR-0104）。`resolved` の矛盾も `unconfirmed` と同じ形で残す。
 - `narratives` の `title` と `text` は、投影にも `bundleHash` の入力にも含めない。投影が返すのは `narrativeChecks`（`id`、`counts`、`issueDirections`）だけである（ADR-0106）。
+- 配列の並べ方（#3389）は次のとおりで、いずれも実行環境のロケールに依存しない。文字列の比較はすべてUTF-16コード単位順（JavaScriptの `<` による比較。キー順と同じ規則）である。
+  - 並べ替える配列: `cards` は `id`、`islands` は `id`、`relations` は `from`、`to`、`type` の順、`evidence` と `contradictions` は `from`、`to` の順。
+  - 文書の並びのまま出す配列: `voids`、`narrativeChecks`、`voids[].cardIds`、`voids[].islandIds`、`narrativeChecks[].issueDirections`。同じ内容でも保存時の並びが違えば `bundleHash` は変わる。他言語で再計算するときは、保存された文書の並びを使う。
+  - #3389 より前の実装は、`id` と `from`/`to` の比較に `localeCompare`（ICUの照合順序）を使っていた。大文字小文字・記号・数字が混ざるidでは、コード単位順と順序が変わり、`bundleHash` の値も変わる。既存の固定値テストベクトル（idは `c1`、`c3` など）は順序が変わらず、値も変わらない。保存済みの `bundleHash` を持つ利用者がいる場合、該当する文書では再取得で値が変わる。この変更は、他言語での再計算を可能にするための破壊的修正として扱い、`schemaVersion` は変えない。
 - 値が変わる条件は次のとおり。
   - 文書が保存されて `updatedAt` が進んだとき。露出内容が1文字も変わらなくても変わる。カードの移動、無関係なカードの追加、`holdState` の変更を含む。
   - 露出する本文、レビュー済みの島の題名、関係線、根拠・矛盾の関係、`counts`、`voids`、`narrativeChecks` が変わったとき。
