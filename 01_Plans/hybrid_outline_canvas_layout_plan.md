@@ -265,3 +265,60 @@ SUIをKJ法キャンバスとマインドマップを中心とする思考環境
 **追加する評価軸**：最小保存操作数／未分類で再読込できる率、Inbox→実Reader到達、抽出の元位置再到達、A/Bの独立性、戻り先の分かりやすさ、Token/CLI手順/標準Plugin再利用数と個別コード量。30〜50件の初期Hybrid実験に対して上の10件全てを新たなBlocking Gateにせず、まずSI-RAW01/02/03/06の非破壊・非誤認を小さな独立Fixtureで検査し、残りは既存Security/OKF/TEI/Product SkillのOwnerへ段階的に接続する。
 
 **実装・受理状況**：設計案のみ。Rawの正式Item DB、複数Canvas UI、実Reader自動選択、実CLI/Plugin Binding、AI/SHO出力、外部Task更新、T2の実利用は未検証。合成Fixtureの期待記述はPASS、正式製品採用、Source真正性を意味しない。
+
+---
+
+<!-- sui-crosscanvas-qualification-20261108 -->
+### 8.9 横断受入：共有Item・複数Canvas・共同編集・SHO受渡しを別資格で接続する（2026-11-08／設計・NOT RUN）
+
+**既存成果の更新と本節の独自範囲**：同一Itemを複数Canvasに置ける論理案は§8.4、Raw→Reader→抽出は§8.8、SUI固有の共同編集Undo/RedoとDocument CASは[Issue #3399](https://github.com/hat47x/sui-sensemaking/issues/3399)、OKF/SHOのSource/Loss/開示は[#3392](https://github.com/hat47x/sui-sensemaking/issues/3392)・[#3391](https://github.com/hat47x/sui-sensemaking/issues/3391)がOwner。本節は**同じ一件を横断して照合するための証拠・停止条件**だけを定め、#3399のCU-01〜10や§8.8のSI-RAW01〜10を第二の試験正本として再定義しない。
+
+#### A. UI上の参照を正本とみなさない最小観測票
+
+- **Original Source**：実際に読めたbytes／外部Locatorのみ／未取得／失効、Source Revision、読み取った範囲。元URLだけからReader成功・現在性を推測しない。
+- **Information Item**：Item IdentityとContent Revision、原Sourceとの明示的系譜、解析済みか、Role/Reviewが候補か受理済みか。旧`(DocumentID, CardID)`・本文一致からグローバル同一Itemを生成しない。
+- **Structural World**：Tree parent/order、Group membership、Island包含、Semantic Edge、Canvas間の参照関係を別の参照/Revisionで識別。1つのGraph投影へ畳むとき、区別が落ちたらLossとする。
+- **Presentation Occurrence**：Canvas/View ID、表示出現ID、参照Item/Revision、座標・固定・注記・選択epoch。あるCanvasの座標変更からItem本文・別Canvas座標・意味上の所属の変更を導かない。
+- **Consumer Evidence**：そのConsumerが**実際に**受け取ったRaw/ProjectionのContent・Scope・Coverage・Disclosure・revision・ページ終端とGrant。宣言した出力項目や表示上の件数を、Source全体の実読取・実配送・実保存とは扱わない。
+- **Edit/Effect**：提案のreadSet/writeSet、UI Undo、Document版/CAS、実Provider Request、ACK、Receipt、独立Readを分ける。Operation可能の宣言と現Host資格、他者編集後の再適用資格を区別する。
+
+この票は**既存Contractで観測できるものだけを埋める検証用の対照表**であり、現時点で正式な共通Envelope/新Storeを採用しない。未読込・不明・権限不可・非対応を空値や「不存在」へ変換しない。
+
+#### B. 複数Canvasと共同編集の必要な非干渉
+
+- **保存粒度の実証が先**：現`DocumentV1`はDocument単位の保存で、[ADR-0076](adr/ADR-0076-collaboration-concurrency-model.md)はサーバー権威のETag/CASによる保存時同期を採用する。**将来の別Canvas＝別Documentにまたがる一操作の原子Commitは保証済みではない**。Item本体・A表示・B表示・越境Edgeをまとめて一度に変える操作を「単一Undo・全体成功」と表示する前に、対象Store/Revision/失敗cut pointを検証する。
+- **編集の衝突は対象と効果で分ける**：A内Occurrenceの移動とB内Occurrenceの移動は論理的には独立。しかし実Storeが同一DocumentをCAS単位にする場合は両方が競合し得る。更新先の項目だけでなく、Readerが参照した位置・Island/Relation・現在Grantを含めたreadSetを照合し、競合しないことを永続化層の実測なしに宣言しない。
+- **共有Itemの改版と表示Pin**：A/Bが同一Itemの現在版を表示すれば本文改版を共有するが、個別Canvasの表示固定版は古いSnapshotとして明示する。現在版で内容が変わっても、他Canvasの人手配置やIsland理由を再意味付けしない。古い版のReviewやOKF `verified`を自動継承しない。
+- **共同編集の履歴三分離**：UIローカルUndo／保存Revision・Checkpoint／構造判断・保留・異論・Reviewは別。保存済み編集の取り消しは「現在版への条件付き逆操作候補」であって、他者の保存を黙って巻き戻す機能ではない。競合・不明Commit・再Readの振舞いは#3399に委譲する。
+- **分割と再配置**：Extract/Share/Move/LinkでCanvasを分割する時、元Canvasの島/線、他CanvasのOccurrence、Item本体、越境Relationの削除・移行を区別。部分成功の場合は成功対象・未適用対象・戻し方を示し、全体を成功扱いしない。異なる永続化単位の横断原子性を新インフラで先取りしない。
+
+#### C. 横断で利用する既存の限定Evidence（2026-11-08時点の確認）
+
+| 確認できた限定成果 | 言えないこと |
+| --- | --- |
+| [SUI merged PR #3396](https://github.com/hat47x/sui-sensemaking/pull/3396)の実`buildContextProjection`対照3/3 PASS：原Card SourceやIsland所属/座標が異なっても公開投影全体が一致する例 | 表示/文章化の一致から元Source・Topology・編集先Identityを逆決定できること |
+| [SUI Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397)：公開投影から出典を捏造しない通常Markdown草稿、合成354byte、生成ファイルのopt-in経路 | OKF適合、実Source読取、SHOへの実同一Attempt受渡し、Writer保存、再公開Grant |
+| [SHO merged PR #21](https://github.com/hat47x/sho-composer/pull/21)：固定RawのReader実試験・One-file Runner入口。標準CIの実SUI→SHO H1はSkip | SUIが実生成した同一ファイルのSHO実受領、二製品を通した保存資格 |
+| [SHO Draft #25](https://github.com/hat47x/sho-composer/pull/25)：Working Copy readbackとFile Identityの限定CI | 正式Editor Save／Storage CAS・ABA防止／Publication・再Openを伴う製品Writer資格 |
+| [TEI #3262](https://github.com/hat47x/tei-platform/issues/3262)：read-only Design Contextの実CLI 11 Reply＋限定32 Consumer Controlの記録 | 任意WorkspaceのRequired閉包、実Source読込、外部Tool全Reply配送、Role/意味受理／実Provider E2E |
+
+特に#3396により、**同じMarkdownや画面が得られる二つの原Worldは異なり得る**ことが実Consumerで確認された。したがってCanvas Map/Island要約/B型文章化/OKFから元Item/Edge/Sourceへの編集逆写像は、公開投影だけに頼らず、元の安定Ref・Revision・許可されたReaderと明示的な対象選択を必要とする。これはTEI [#2497](https://github.com/hat47x/tei-platform/issues/2497)の構造写像／逆編集Ownerへ返す。
+
+#### D. 独立Expectedの追加差分（新たな全機能Blocking Gateにはしない）
+
+| ID | 固定する操作と一因子差 | 期待結果・停止線 |
+| --- | --- | --- |
+| **SI-XC01** | Item XをA/Bに表示。Aの位置のみ変更、B別位置、同じItem本文 | UI/読取でOccurrence IDとItem IDを区別。A移動後Bの位置/本文/Tree/島は不変。旧DocumentV1の二コピーを共有実装成功として扱わない |
+| **SI-XC02** | A移動提案中に、別編集者がBの本文または元Itemを改版 | 提案readSetの依存と実CAS単位を照合。衝突する場合は再Preview／拒否、他者の変更・保留・異論を保持（CU-02〜06） |
+| **SI-XC03** | 分割がItem/複数Canvas/越境Edgeの複数保存単位へ跨る。途中で一つ失敗 | 実際に永続化できた範囲を確認し、全体atomic成功と表示せず未適用・不明・回復手順を返す。副作用を無条件replayしない |
+| **SI-XC04** | 原Item内容同一だがSource改版、またはCanvas配置だけ変更 | 前者はSource依存の出典/抽出を再確認、後者は配置依存の説明だけ再評価。全Role/Review/文書が一斉に失効または復権したことにしない |
+| **SI-XC05** | 二つの内部Worldの公開Projectionが一致、その後SHO草稿も一致 | #3396の非単射証拠に従い、隠れた島所属/出典/元Item IDを文書から再構成しない。SHO Edit→SUI逆Patchは対象未同定として保留 |
+| **SI-XC06** | Readerは利用できたがOriginal Source未取得、Tool Replyが途中切断 | Item受付・実Reader可否・原Source確認・外部Consumer完全受領を別資格。公開3件を全世界3件、ACKをWriter Save成功としない |
+| **SI-XC07** | Canvas Aは閲覧可、B/共有Item一部は非公開。集計ラベル/Canvas Map/競合診断を表示 | Item/Edge/未公開件数・存在/時刻/IDを不許可Consumerへ漏らさない。Canvas閲覧資格だけで共有Item/外部AI送信資格を付与しない |
+
+**最短の次作業**：既存DocumentV1に対しまずSI-RAW01/02とSI-XC05/06の**現行Consumerで再現可能な限定観測**を優先。次にSynthetic Shared ItemモデルでSI-XC01/04（headless→実Reader/Studio）を試す。SI-XC02/03/07は#3399の実2クライアント・ETag/CAS・Disclosure検証へ、SHO H1は#3391/#3392とSHO #6/#19へ、TEI横断同一Source/Scopeは#2497/#3262/#2507へ引渡す。初期Hybridの30〜50件の価値検証やKJ-only/AI OFFの成立を阻害しない。
+
+**計画統合時の留意**：SUI [Draft #3393](https://github.com/hat47x/sui-sensemaking/pull/3393)は同じ計画ファイルを§8〜16まで追補し、本Draft #3398は§8からの別枝。**片方を先にマージする際は、後者の章番号と末尾Appendの競合を明示的に統合**し、二つの§8を共存させない。現Draft段階で他者の作業ブランチを上書き・強制更新しない。
+
+**資格**：本節は横断Evidenceの照合と追加Expectedの設計記録のみ。SI-XC01〜07、複数Canvas共有Itemの永続化、共同編集E2E、SUI→SHO H1、Writer Save、TEI実CLIのItem Role/Projection適用、外部Task Providerを今回実行したものではない。正式採用はOwnerの独立判断と実証を要する。
+
