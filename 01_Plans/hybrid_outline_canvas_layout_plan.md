@@ -493,3 +493,207 @@ OKFの普通のMarkdownリンクは型付きGraph Relationを自動的に表現�
 
 <!-- 20261107-one-command-ci-exact-head-19pass-1skip -->
 **試験入口の最新固定CI**：[SHO Draft #21](https://github.com/hat47x/sho-composer/pull/21) HEAD `f5eeb9f537c0cf9d518139afed272e189b82fe1c` の[Actions #42374198180](https://github.com/hat47x/sho-composer/actions/runs/42374198180)はUbuntu/Windowsとも **19 PASS・0 FAIL・1 SKIP**（実Job log）。新しいRunner構文/省略・相対Path拒否は両OSでPASS。SKIPは**実同一ファイルのConsumer試験**であり、実HandoffのPass数は0。RunnerはSUI/SHO実HEAD・追跡ファイルclean・独立Expected Byte/SHA・対象のSHO実1 Case非Skip／実CLI再Readを要求し、JSON Receiptを**一時ファイル削除の確認後**にだけ出力する。Node 22の二Checkoutを本当に接続したReceiptは、現在 **NOT RUN**。
+---
+
+<!-- sui-item-canvas-crossview-20261108 -->
+## 17. 未整理Item・複数Canvas・多重Roleの横断Pressure Case（2026-11-08／設計候補・未実装）
+
+### 17.1 目的と採用境界
+
+SUIをKJ法キャンバスとマインドマップを中心とする思考環境に保ちつつ、未整理の資料投入、同一情報の複数認知空間での使用、Tree/Group/Graph/時間/文章への投影をTEI標準データ構造・表現型の**異質Consumer試験**にする。一般的な情報中央統合・地図・PERT・外部Task同期などは**将来の拡張圧力**であり、SUIの一次価値（ADR-0089）や現Hybrid PoCのP0前提を拡大しない。KJのみ・手動・provider=none・オフラインでも、根拠、異論、保留へ戻れることを優先する。
+
+この節は**論理モデルと反例・依存順**を定めるだけで、現行 `DocumentV1`、Semantic Artifact L0、OKF v0.2、標準TEI Role/Plugin、外部Task Providerの正式採用・実装・E2E PASSを主張しない。既存の計画Ownerは本計画、SUI #3391/#3392、TEI #2495/#2497/#2507/#2620、およびSHO/SEIの各Ownerに残す。第二Meaning Registry・第二Host/Policy Engine・新しい全機能統合DBを作らない。
+
+### 17.2 分離する7つの論理概念（新Core型／新物理テーブルの宣言ではない）
+
+| 概念 | 最小意味 | 他概念との禁止すべき混同 |
+| --- | --- | --- |
+| Subject | 安定して参照できる対象。Source occurrence、Semantic identity、Revisionは区別 | 原資料とその説明Item、同名・同byteの別情報を暗黙同一化しない |
+| Item | 未解釈でも保管・直接閲覧できる情報単位 | 観測対象の人物・実Event・操作のEffectそのものではない |
+| Content/Asset | 原文・バイナリ・URL等の実Resourceまたは参照 | URL保存＝実内容取得、hash一致＝現在性・真正性ではない |
+| Structure | Treeの親子/順序、Groupの意味的所属、GraphのRelation、時間的依存等 | Islandの視覚的包含・Tree祖先・Affiliation・意味Edgeを同一視しない |
+| Canvas/View | 視点・作業空間・表示範囲・局所配置 | CanvasはItemの正本所有者ではなく、Tree/Roleの第二正本でもない |
+| Display Occurrence | Canvas/Tree等の一表示出現と位置・スタイル・表示固定版 | 実際のEvent occurrence、Item本体、Semantic Roleとの混同禁止 |
+| Representation | Item/Island/Canvas/Relation等の文章・図解・画像表現、元Subject参照・来歴・Loss | B型の流暢さをMeaning/Sourceの受理、元構造への可逆編集資格としない |
+
+`Document`は将来は文章成果物を指す用語候補とし、現行`DocumentV1`の名前／JSONを即時変更しない。正式命名では `Canvas` / `View` / `Item` / `Document` / `DisplayOccurrence` / 実Eventの `Occurrence` を峻別する。旧`DocumentV1`はカード本文と`x/y`、`Island.cardIds`等を含む**互換入出力の正本**であり、論理分解した新モデルへ移行済みとは扱わない。旧 `(documentId, cardId)` の一致・内容一致だけで新しい全域Item IDへ統合しない。
+
+### 17.3 非整理・未読を正規の状態として認める
+
+- Itemを作る時点で `title`、意味Role、要約、Tree所属、Canvas座標、Island、解析済本文、human reviewを要求しない。最小は**Identity＋保管できた情報への参照＋観測可能な取得・保存結果**。少なくとも原Contentを読める、あるいは外部参照が未取得・失効と診断できる。任意の `capturedAt` は実取得時刻／記録時刻を区別する。
+- Inboxは未整理Itemを引ける**View候補**。未読（利用者相対）、未分類、未レビュー、Held、Shelved、旧資料、取得不能は別軸。既存`Card.holdState`・`Shelf`をInboxに読み替えない。未読でも分類済み、既読でも未分類を許容。
+- 大容量テキスト/PDF/画像/音声/URLは、内容全量をカード化せずReader/Document/Media Viewで直接閲覧し、必要に応じて範囲付きItemを抽出する。原Itemを破壊せず、抽出の元Source・span・version・Transformation・Coverageを可能な範囲で保持する。URLのみ／原bytesキャッシュあり／解析済み／外部取得不可は別状態。
+- インポートデータの中の「命令」は資料であり、TEI Action実行の根拠ではない。ローカル閲覧と外部AI送信・二次配布は別Grant/Disclosure。SafeModeを緩めず、未解析・部分取得・未開示を不存在扱いしない。
+
+### 17.4 多重構造と複数Canvasへの分割・共有
+
+- 同じItem（あるいは別Subject参照）をCanvas A/Bに**別DisplayOccurrence**として表示でき、座標・縮尺・固定・局所注記は独立。両Canvasから同じ**現在版**へ参照する場合だけ本文更新を共有する。指定Revisionを固定した表示は明示的な古いSnapshotとして扱う。
+- Canvasから表示を外してもItem・他Canvas・Relationを消さない。同じItemを一Canvasで二度出すことも許容。Island可視包含、Group Membership、Affiliation、Tree Parent、Semantic Edge、Canvas→Canvas Linkをそれぞれ独立に保持する。Group/Canvasを必ず単一Treeへ押し込まない。幾何学的入れ子と意味的包含の推定変換はしない。
+- 分割操作候補は `extract`（部分集合を新Canvasへ）、`share`（両方へ表示）、`move-occurrences`（表示だけを移動）、`link-canvas`（関連参照）、`merge-view`（表示構成の統合）を区別する。意味を持つカード本文・Group所属・Reviewを副作用で変更しない。元Canvasには代表島・他Canvasへの入口を残せる。
+- Canvas MapはCanvas群と横断Relationの読み取りProjection候補。境界を越えるRelationを削除・自動再結線せず、対象が隠されている場合の線・件数・集約ラベルによる漏えいを拒否する。閲覧できるCanvasだけでItem/Relationの閲覧権限が成立したとみなさない。
+- 分割／AI整形／部分復元は既存HC-09〜15・C5〜C7に従い、base/currentの**readSetとwriteSet**、関係依存、選択範囲、版、権限を照合するProposal→Preview→明示Apply→一回Undo単位。配置の自動Fit/LODは意味と配置意図の自動上書きを許さない。
+
+### 17.5 Task/Action/Eventは単一itemType列挙ではなくRole候補
+
+- Itemは情報保持単位。Task（予定作業）、Activity（活動）、Action（意図/操作）、Event（発生事項）、Question、Hypothesis、Observation、Decision等は**拡張可能な意味Role候補**であり、排他的な巨大enumにしない。一方、実Task・発生Event・実Execution/Receipt・それらを説明するItemは、それぞれ独立Identity/時点/Authorityを必要とし得る。
+- Roleは「何として扱うか」、Traitは「どの型付き能力/実装義務を満たすか」を記述する候補。Role文字列の自己宣言からMeaning/実装/Host実行資格へ昇格しない。共通Role Resolver、新DSL/型階層の採用をこのSUI計画から要求しない（TEI #2495/#2620）。
+- PERTはTask/Dependency/Duration/Calendar/Resourceに意味が揃う場合のProjection。KJ島・Cardの存在だけからTaskを推定・登録しない。Task管理連携はPERTを必須にせず、外部Issue/Planner等へは標準Providerの能力差・属性ごとの同期所有者・外部ID/Revision・競合/二重作成/Receipt不明を明示する。実EffectはTEI既存Host/Authorityへ委譲し、SUIに第二Scheduler/Task Sync Engineを先行導入しない。
+
+### 17.6 情報の多段投影・AIと人間の別コンテキスト
+
+- 人間向けはKJ＋MindMapが中心。Card表示が不適切な巨大小ItemはReaderへ開く。島の代表ラベル/合計/未処理数、鳥瞰→詳細のSemantic ZoomとFitは、入力集合・出典・有効Revision・取得/Disclosure Scopeを持つ**Derived Projection**とする。AI提案ラベルと人間の表札を混同しない。
+- AI向けCLI/MCPは画面のズーム量ではなく、目的・許可されたContent・利用可能な関係・Complete/Partial/Unknown・Token予算からコンテキストを選択する。画面上のCard IDや投影digestだけで元SourceやIsland Membershipを復元しない（SUI #3392/#3396/#3397、TEI #2497）。External AIは候補提示までとし、human_reviewed/Accepted/Consensus/実Effectへ自動昇格しない。
+- Item/Group/Island/Canvas/RelationにMarkdown・図解・要約を関連付け得るが、Representationは各元Subjectの代替正本としない。OKF風文書は交換候補であり、現時点のSUI生成Draftは**通常Markdown**。元資料実Read、OKF Conformance、SHO Writer/Save、逆Patchは既存SUI #3391/#3392/SHOの未実行Gateを継続する。
+
+### 17.7 既存PoCと実務価値の段階（追加の全機能Blocking Gateにしない）
+
+| 段階 | 限定Pressure Case | 最小の独立Expected／停止線 |
+| --- | --- | --- |
+| 0: 現行固定fixture／read-only | 旧DocumentV1→候補Item/Canvas/Occurrence投影、同名・同byteの別Card、未取得URL、未読/未整理 | Legacy保存byteを変更せず、元Refと未解決を返す。同一ID推測で結合しない。AI不要 |
+| 1: Hybrid 30〜50件 | 既存HC-01〜17/C1〜C8＋二Canvasに同一Item表示、A移動後B不変、Aの表示除外後B現存 | Tree/Island/Affiliation/Edge/Reviewの非干渉。再読込しても共有Identityと独立配置が保たれる。現DocumentV1に新必須キーを追加しない |
+| 2: Split/Representation | 島をExtract→別CanvasへShare、一方のみ古いRevision表示、Canvas横断Relation、Readerから原文範囲抽出 | 元情報・cross Relation・読取/書込依存・Undo、元span/RevisionとLossを検査。部分/非公開を不存在としない |
+| 3: 人間/AIの異質なView | 同一固定SourceからCard/Tree/KJ/Canvas Map/MarkdownとCLI投影を比較、1,000件→10,000件へ負荷拡大 | 重要情報・保留・異論が欠落した場合は宣言。LOD/Reader性能を測定し、AI ContextとScreen LODを同一視しない |
+| 4: Task/外部Consumer | Task候補→明示Task→PERTと外部2 Provider能力比較、進捗戻し／競合 | Task/外部ID/Execution/Receiptを区別。実Providerの双方向同期資格はこの段階の独立検証。初期PoC完了条件に含めない |
+| 5: 実利用T2・TEI生産性 | KJのみ／Tree先行／遅延Tree提示／Hybrid、Inboxあり/なしを実務資料で比較 | 情報へ戻る容易さ、注意移動、未分類の保全、操作負担、誤った早期収束、TEI標準機能で実装できた比率を別計測。T3/合成PASSをT2に数えない |
+
+**初期優先順位**は 0→1。次に利用者が実際に困る規模/分割/読取で2を選ぶ。3〜4を独立研究・将来の拡張として並行検討できるが、既存ADR-0089/0090の一次価値の検証を妨げない。TEI側の生産性比較はTEI #2018、構造Facetは#2495、写像/逆編集は#2497、Roleは#2620、適用Patternは#2507、UI Compositionは#997、Action/Authorityは既存各Ownerに分離。SUIの正式なUI/データの変更は別PRで証拠とOwner受理を要する。
+
+**現在の資格**：本節は設計差分の保存のみ（NOT RUN）。既存MCP read-only、DocumentV1、SUI→SHO限定Synthetic CIが成立した範囲を、新しいItem/Canvasモデルの実装済み証拠には流用しない。
+
+---
+
+<!-- sui-raw-item-first-vertical-20261108 -->
+### 17.8 横断深化：Raw Itemの受皿から直接読取・抽出・二Canvas配置まで（設計／NOT RUN）
+
+**目的**：§17.3の未整理Itemの許容を、実際に実装・反証できる一つの最小利用経路へ具体化する。単に「Itemを作成できる」だけでは不十分。**保存したと主張する内容を開ける、あるいは外部Locatorだけで内容未取得と診断できる**ことが入口の要件である。分類・概念化・カード化・AI呼出しは受付の必須条件にしない。既存DocumentV1、Shelf/Hold、OKF/SHO、TEIのデータ源・Authority/Effectの正本は変更しない。
+
+**同じItemに関して混同しない4つの観測**：
+1. **受付／参照**：何の入力（貼付テキスト、Raw file、URL等）を受領し、どのSource locator/実bytesを手元で観測したか。URLを登録しただけなら原文取得・オフライン再読込・現在性は未証明。
+2. **内容と解析**：保存できたRaw Content、そのRevision/byte identity、別途解析した本文やサムネイル、そのCoverage/処理版を区別。抽出失敗・非対応・途中停止でも原Rawを破壊しない。byte一致から同一のSubject/意味を推定しない。
+3. **認知上の取扱い**：未読（利用者相対）・未分類・未確認・Held・Shelved・保管/廃止などは互いに独立。Inboxは既存ItemをQueryするView候補であり、別の意味正本・物理Store・強制Workflowにしない。
+4. **表示・派生・外部作用**：Readerで原文を見ること、範囲を根拠に新Item候補を作ること、CanvasへDisplay Occurrenceを置くこと、AIへ送ること、Markdown/OKFへ書き出すこと、外部Taskを実登録することは別操作。画面View可能≠送出/共有/書込許可、Role適用可能≠実Action資格。
+
+**小さな縦切り候補（標準Data Structure＋Presentation BindingのConsumer試験）**：
+- 入力：未命名の長文・PDF・URLのみの参照・画像を合成Itemとして受け、RawまたはLocatorの観測結果を返す。Inbox一覧は全文Cardを生成せず、開けるものは実Readerで直接読める。Rawが未取得のものは「読めない理由」を権限に応じて表示し、架空の要約を作らない。
+- 展開：本文の選択範囲・ページ・原Revisionを伴う抽出候補を作り、原Itemは不変。人が採用した候補ItemをCanvas AにCard表示し、同じItemをCanvas Bにも別Display Occurrenceとして表示。両Canvas間の座標/固定/局所注記は独立。
+- 再構成：Item本文の改版時、現在版を参照するOccurrenceだけ再取得し、特定版Pinは旧版と明示。Canvas Aから表示を外しても原Item、Canvas B、元Source、越境Relation、Reviewは残す。AI提案や分割は現readSetと対象writeSetを確認したうえでPreviewし、採用は明示的な一回Undo単位。
+- 説明：同じ対象について、Inbox/Reader、KJ/Tree、CLI read-only Contextが実際に参照できるSource・Content・Revision・Coverage・Disclosure・Unknownを比較する。標準UI側はTEI #2507/#997、Query結果の範囲/粒度は#2506、CLIの必要閉包は#3262、投影Lossは#2497のOwnerに委譲する。新Reader/Policy Engine/Role Resolver/Storeを本PoCで重複実装しない。
+
+**独立Expectedを先に手書きする最小反例（すべてNOT RUN）**：
+
+| ID | 入力・変更 | 期待する観測／禁止する推論 |
+| --- | --- | --- |
+| **SI-RAW01** | タイトル・Role・Tree所属・座標のない長文を受付 | Item参照を保持し、Inbox→Readerで実Contentを読む。Card/OKF Concept/人工分類の強制作成0 |
+| **SI-RAW02** | URLだけ登録し外部Fetchせず、次に取得不可 | locatorは残るがRawの存在・完全性・原文取得はunknown/unavailable。取得成功を偽装しない |
+| **SI-RAW03** | 同じbytesの別Source 2件、同名の旧Document Card 2件 | identityは別。明示Bindingなしに重複統合・同一Review引継ぎ・別Canvasでの自動共有を行わない |
+| **SI-RAW04** | 利用者Aだけ既読、分類なし、heldは別Item、review未実施 | Aの既読はBに波及せず、既読/分類/held/review/lifecycleを相互変換しない |
+| **SI-RAW05** | PDF内の範囲から2候補抽出後、元Content改版 | 原Rawを保持、抽出候補は元Revision・範囲・Coverageを保持。旧根拠を現行原文と偽らない |
+| **SI-RAW06** | 同じItemをCanvas A/Bへ置き、A移動・A表示削除・B Revision Pin | Aの局所座標だけ変更、削除はAのOccurrenceだけ。B/Item/元Relation存続、Pinは古い版と明示 |
+| **SI-RAW07** | AI提案待ちの間に参照先Item・所属Group・権限を変更 | 古いreadSetの提案を黙ってcommitしない。書込範囲外のCanvas/Role/Reviewは不変 |
+| **SI-RAW08** | Raw内部にツール命令らしい文言、非公開Itemを含む集合の要約要求 | 内容を命令として実行しない。外部AI/SHO/OKFへの送出は現在のGrant/Disclosureを別判定。非公開ID・件数・存在を漏らさない |
+| **SI-RAW09** | 未解析10件から可視3件を選択、途中Reader失敗、Tool応答途中切断 | Selected/Loaded/Parsed/ExposedのCoverageを別報告。表示3件を全10件・全世界としない。途切れた応答を完了としない |
+| **SI-RAW10** | Raw ItemからTask候補を連想し、PERT/外部Issue登録を要求 | 説明Item≠正式Task≠Operation/実Event/Receipt。意味受理・Provider能力・明示Action/現在Grantなしに外部Effectを起こさない |
+
+**追加する評価軸**：最小保存操作数／未分類で再読込できる率、Inbox→実Reader到達、抽出の元位置再到達、A/Bの独立性、戻り先の分かりやすさ、Token/CLI手順/標準Plugin再利用数と個別コード量。30〜50件の初期Hybrid実験に対して上の10件全てを新たなBlocking Gateにせず、まずSI-RAW01/02/03/06の非破壊・非誤認を小さな独立Fixtureで検査し、残りは既存Security/OKF/TEI/Product SkillのOwnerへ段階的に接続する。
+
+**実装・受理状況**：設計案のみ。Rawの正式Item DB、複数Canvas UI、実Reader自動選択、実CLI/Plugin Binding、AI/SHO出力、外部Task更新、T2の実利用は未検証。合成Fixtureの期待記述はPASS、正式製品採用、Source真正性を意味しない。
+
+---
+
+<!-- sui-crosscanvas-qualification-20261108 -->
+### 17.9 横断受入：共有Item・複数Canvas・共同編集・SHO受渡しを別資格で接続する（2026-11-08／設計・NOT RUN）
+
+**既存成果の更新と本節の独自範囲**：同一Itemを複数Canvasに置ける論理案は§17.4、Raw→Reader→抽出は§17.8、SUI固有の共同編集Undo/RedoとDocument CASは[Issue #3399](https://github.com/hat47x/sui-sensemaking/issues/3399)、OKF/SHOのSource/Loss/開示は[#3392](https://github.com/hat47x/sui-sensemaking/issues/3392)・[#3391](https://github.com/hat47x/sui-sensemaking/issues/3391)がOwner。本節は**同じ一件を横断して照合するための証拠・停止条件**だけを定め、#3399のCU-01〜10や§17.8のSI-RAW01〜10を第二の試験正本として再定義しない。
+
+#### A. UI上の参照を正本とみなさない最小観測票
+
+- **Original Source**：実際に読めたbytes／外部Locatorのみ／未取得／失効、Source Revision、読み取った範囲。元URLだけからReader成功・現在性を推測しない。
+- **Information Item**：Item IdentityとContent Revision、原Sourceとの明示的系譜、解析済みか、Role/Reviewが候補か受理済みか。旧`(DocumentID, CardID)`・本文一致からグローバル同一Itemを生成しない。
+- **Structural World**：Tree parent/order、Group membership、Island包含、Semantic Edge、Canvas間の参照関係を別の参照/Revisionで識別。1つのGraph投影へ畳むとき、区別が落ちたらLossとする。
+- **Presentation Occurrence**：Canvas/View ID、表示出現ID、参照Item/Revision、座標・固定・注記・選択epoch。あるCanvasの座標変更からItem本文・別Canvas座標・意味上の所属の変更を導かない。
+- **Consumer Evidence**：そのConsumerが**実際に**受け取ったRaw/ProjectionのContent・Scope・Coverage・Disclosure・revision・ページ終端とGrant。宣言した出力項目や表示上の件数を、Source全体の実読取・実配送・実保存とは扱わない。
+- **Edit/Effect**：提案のreadSet/writeSet、UI Undo、Document版/CAS、実Provider Request、ACK、Receipt、独立Readを分ける。Operation可能の宣言と現Host資格、他者編集後の再適用資格を区別する。
+
+この票は**既存Contractで観測できるものだけを埋める検証用の対照表**であり、現時点で正式な共通Envelope/新Storeを採用しない。未読込・不明・権限不可・非対応を空値や「不存在」へ変換しない。
+
+#### B. 複数Canvasと共同編集の必要な非干渉
+
+- **保存粒度の実証が先**：現`DocumentV1`はDocument単位の保存で、[ADR-0076](adr/ADR-0076-collaboration-concurrency-model.md)はサーバー権威のETag/CASによる保存時同期を採用する。**将来の別Canvas＝別Documentにまたがる一操作の原子Commitは保証済みではない**。Item本体・A表示・B表示・越境Edgeをまとめて一度に変える操作を「単一Undo・全体成功」と表示する前に、対象Store/Revision/失敗cut pointを検証する。
+- **編集の衝突は対象と効果で分ける**：A内Occurrenceの移動とB内Occurrenceの移動は論理的には独立。しかし実Storeが同一DocumentをCAS単位にする場合は両方が競合し得る。更新先の項目だけでなく、Readerが参照した位置・Island/Relation・現在Grantを含めたreadSetを照合し、競合しないことを永続化層の実測なしに宣言しない。
+- **共有Itemの改版と表示Pin**：A/Bが同一Itemの現在版を表示すれば本文改版を共有するが、個別Canvasの表示固定版は古いSnapshotとして明示する。現在版で内容が変わっても、他Canvasの人手配置やIsland理由を再意味付けしない。古い版のReviewやOKF `verified`を自動継承しない。
+- **共同編集の履歴三分離**：UIローカルUndo／保存Revision・Checkpoint／構造判断・保留・異論・Reviewは別。保存済み編集の取り消しは「現在版への条件付き逆操作候補」であって、他者の保存を黙って巻き戻す機能ではない。競合・不明Commit・再Readの振舞いは#3399に委譲する。
+- **分割と再配置**：Extract/Share/Move/LinkでCanvasを分割する時、元Canvasの島/線、他CanvasのOccurrence、Item本体、越境Relationの削除・移行を区別。部分成功の場合は成功対象・未適用対象・戻し方を示し、全体を成功扱いしない。異なる永続化単位の横断原子性を新インフラで先取りしない。
+
+#### C. 横断で利用する既存の限定Evidence（2026-11-08時点の確認）
+
+| 確認できた限定成果 | 言えないこと |
+| --- | --- |
+| [SUI merged PR #3396](https://github.com/hat47x/sui-sensemaking/pull/3396)の実`buildContextProjection`対照3/3 PASS：原Card SourceやIsland所属/座標が異なっても公開投影全体が一致する例 | 表示/文章化の一致から元Source・Topology・編集先Identityを逆決定できること |
+| [SUI Draft #3397](https://github.com/hat47x/sui-sensemaking/pull/3397)：公開投影から出典を捏造しない通常Markdown草稿、合成354byte、生成ファイルのopt-in経路 | OKF適合、実Source読取、SHOへの実同一Attempt受渡し、Writer保存、再公開Grant |
+| [SHO merged PR #21](https://github.com/hat47x/sho-composer/pull/21)：固定RawのReader実試験・One-file Runner入口。標準CIの実SUI→SHO H1はSkip | SUIが実生成した同一ファイルのSHO実受領、二製品を通した保存資格 |
+| [SHO Draft #25](https://github.com/hat47x/sho-composer/pull/25)：Working Copy readbackとFile Identityの限定CI | 正式Editor Save／Storage CAS・ABA防止／Publication・再Openを伴う製品Writer資格 |
+| [TEI #3262](https://github.com/hat47x/tei-platform/issues/3262)：read-only Design Contextの実CLI 11 Reply＋限定32 Consumer Controlの記録 | 任意WorkspaceのRequired閉包、実Source読込、外部Tool全Reply配送、Role/意味受理／実Provider E2E |
+
+特に#3396により、**同じMarkdownや画面が得られる二つの原Worldは異なり得る**ことが実Consumerで確認された。したがってCanvas Map/Island要約/B型文章化/OKFから元Item/Edge/Sourceへの編集逆写像は、公開投影だけに頼らず、元の安定Ref・Revision・許可されたReaderと明示的な対象選択を必要とする。これはTEI [#2497](https://github.com/hat47x/tei-platform/issues/2497)の構造写像／逆編集Ownerへ返す。
+
+#### D. 独立Expectedの追加差分（新たな全機能Blocking Gateにはしない）
+
+| ID | 固定する操作と一因子差 | 期待結果・停止線 |
+| --- | --- | --- |
+| **SI-XC01** | Item XをA/Bに表示。Aの位置のみ変更、B別位置、同じItem本文 | UI/読取でOccurrence IDとItem IDを区別。A移動後Bの位置/本文/Tree/島は不変。旧DocumentV1の二コピーを共有実装成功として扱わない |
+| **SI-XC02** | A移動提案中に、別編集者がBの本文または元Itemを改版 | 提案readSetの依存と実CAS単位を照合。衝突する場合は再Preview／拒否、他者の変更・保留・異論を保持（CU-02〜06） |
+| **SI-XC03** | 分割がItem/複数Canvas/越境Edgeの複数保存単位へ跨る。途中で一つ失敗 | 実際に永続化できた範囲を確認し、全体atomic成功と表示せず未適用・不明・回復手順を返す。副作用を無条件replayしない |
+| **SI-XC04** | 原Item内容同一だがSource改版、またはCanvas配置だけ変更 | 前者はSource依存の出典/抽出を再確認、後者は配置依存の説明だけ再評価。全Role/Review/文書が一斉に失効または復権したことにしない |
+| **SI-XC05** | 二つの内部Worldの公開Projectionが一致、その後SHO草稿も一致 | #3396の非単射証拠に従い、隠れた島所属/出典/元Item IDを文書から再構成しない。SHO Edit→SUI逆Patchは対象未同定として保留 |
+| **SI-XC06** | Readerは利用できたがOriginal Source未取得、Tool Replyが途中切断 | Item受付・実Reader可否・原Source確認・外部Consumer完全受領を別資格。公開3件を全世界3件、ACKをWriter Save成功としない |
+| **SI-XC07** | Canvas Aは閲覧可、B/共有Item一部は非公開。集計ラベル/Canvas Map/競合診断を表示 | Item/Edge/未公開件数・存在/時刻/IDを不許可Consumerへ漏らさない。Canvas閲覧資格だけで共有Item/外部AI送信資格を付与しない |
+
+**最短の次作業**：既存DocumentV1に対しまずSI-RAW01/02とSI-XC05/06の**現行Consumerで再現可能な限定観測**を優先。次にSynthetic Shared ItemモデルでSI-XC01/04（headless→実Reader/Studio）を試す。SI-XC02/03/07は#3399の実2クライアント・ETag/CAS・Disclosure検証へ、SHO H1は#3391/#3392とSHO #6/#19へ、TEI横断同一Source/Scopeは#2497/#3262/#2507へ引渡す。初期Hybridの30〜50件の価値検証やKJ-only/AI OFFの成立を阻害しない。
+
+**計画統合時の留意**：SUI [PR #3393](https://github.com/hat47x/sui-sensemaking/pull/3393)が統合済みの§8〜16（OKF・出典Witness・SHO/SEI受渡し）と章番号が衝突したため、本節は§17として末尾に追加した（旧Draft上の§8、各小節8.x）。既存の§8〜16の番号・内容は変更していない。
+
+**資格**：本節は横断Evidenceの照合と追加Expectedの設計記録のみ。SI-XC01〜07、複数Canvas共有Itemの永続化、共同編集E2E、SUI→SHO H1、Writer Save、TEI実CLIのItem Role/Projection適用、外部Task Providerを今回実行したものではない。正式採用はOwnerの独立判断と実証を要する。
+
+---
+
+<!-- sui-sensemaking-living-unit-and-promotion-20261108 -->
+### 17.10 原材料から「意味として生きる単位」へ：SUIの一次価値と外部への翻訳境界（2026-11-08／設計候補・NOT RUN）
+
+**今回の横断入力・Owner**：[SUI #3400](https://github.com/hat47x/sui-sensemaking/issues/3400)の初期KJ構想→現ADR-0089の一次価値、[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)の外部認知接続、既存§17.3/8.8の未整理Item、§17.4/8.9の複数Canvas、[SUI #3391](https://github.com/hat47x/sui-sensemaking/issues/3391)のSHO文章化、TEI #2497/#2620のProjection/Roleを照合。**価値の採否はADR-0089/#3400が正本**、外部送信・ingest・reviewの許可はADR-0111が正本。SUI計画に第二の価値規約・外部Transport・Role意味正本を作らない。
+
+#### A. Raw Item、意味のあるCard単位、実体・Roleを混同しない
+
+1. **Raw Material / Inbox Item**：未読の長文、インタビュー、画像、未取得URL、PDF等を無分類で保管。入力を「一文一カード」「一命題一Item」へ機械的に分割しない。保存・閲覧できることと原Sourceの検証、観測・解釈の受理は別。
+2. **KJで扱う意味の単位**：人が一緒に考えたい体験、発言、文脈、違和感のまとまりをCardの候補にする。1語でも複数段落でもよく、論理命題として一文に整形する義務はない。CardはItemや他Subjectの表示Occurrenceを持てるが、元Rawの単なる表示も、抜粋から新しいItemを作る場合もある。**表示するたびに新しい情報実体/独立根拠を増やさない**。
+3. **抽出・解釈**：元Sourceの引用（原文/原領域）と、引用から人やAIが追加した見立て・仮説を別のReference/Relationで繋ぐ。生きた単位の抽出が一つの意味主体を成立させるなら新Item/Revisionを明示。部分引用/多箇所引用・ページ/時刻/画像領域等の適格なLocatorと元Revision、抽出Scope/欠落を保持する。Locatorがない場合は手がかりだけを表示し、精密な出典を捏造しない。
+4. **KJ・Mind Map・Canvas**：ItemのIdentity、Treeの親子/順序、KJ島の見立て、Canvas位置・交錯、批判/保留を独立に保持。一つのItemが別Canvas/島で使われても「独立した2証拠」「自動的な合意」とは扱わない。幾何学的近接、同じ島名、Tree同祖先を意味受理の根拠にしない。
+5. **後から読む・後から意味付ける自由**：未閲覧、未分類、役割未決、違和感の理由未記載でも保存/再開できる。読了や分類をKJの開始条件にせず、保留理由を後付けした際は**後からの記録**として保存し、過去にそう判断したと偽らない。
+
+#### B. SUI→他製品の境界：参照／草稿／人間・AIによる翻訳／正式受理
+
+- **単なる保管・読取**：SUIのRawやCardを別Consumerが許可済みReader/参照で読み取ることは、業務意味への変換でも正式なTEIモデル化でもない。元Source、Scope、Revision、開示、Readの実績を明示する。
+- **SHO経由は任意**：B型文章化/Markdown Draftは著者の文章表現であり、SHOの文書Revision・Writer・著者Reviewへ委譲する。原SUIのKJ島/Tree/異論/未決を無損失に複製できるとは主張しない。SUIにSHOの原文Writerを複製せず、SHOなしのKJ/Raw利用も成立。
+- **TEIへは翻訳の明示段階が必要**：SUIのItem/Task Role候補やSHO文書から、Data/Function/Business・Rule等のモデルを**人間または生成AIが明示的に読み替え・提案**する。SUI Card/島/PERT表示の変化をTEI Accepted Meaning・DSL・本番Actionへ機械的に直結しない。SHO経由必須でもSUIからの自動直結でもなく、**任意の情報経路＋明示的な翻訳/検証**という区別にする。TEI側では元Source/Role/Model/独立Expected/Owner受理・実Provider・現在Grantを別資格で確認する。
+- **外部連携は現行ADR-0111へ従属**：SUIの現Agent MCPはread-only、TEI送信は未実装。送信・Proposal ingest・Effectを増設する場合は同ADRの方向／データclass／権限への効果／証拠階層／可逆性とTEI側のAuthorityを検収する。公開可能な文字列から送信資格やContentの完全性を推定しない。Task外部連携でも、PERT表示＝外部登録の許可ではない。
+
+#### C. 実Document/Sourceの保存と閲覧の責務：現行実装を止めない
+
+- SUIの現在のDocument保存・ETag/CAS・Revision/Content Storeは現行ADR-0070/0071/0076/0088の責務に置く。SUIの`DocumentV1`はCanvasを含むレガシー保存集合であり、将来のItem/Content/Documentという論理的区別を追加しただけで実分離・移行・共通API実装済みとは呼ばない。
+- 共通化しやすい**文書の保存/再読取/版条件付き更新の薄い契約**は、必要になった時に実Consumer同士で比較することはできるが、SUIの初期PoCを別の共通Documentサービス、第二のDB/Authority/Host、全形式の正規化、集中同期に依存させない。既存のRDBとContent Store、Reader/APIで基線を取る。別製品のローカルMarkdownはその製品で編集正本となり得るため、SUIのDocument JSONに吸収しない。
+- 文書のContent fingerprint、`DocumentV1`のJSON/ETag、head/CAS Revision、Item Semantic Revision、Canvas Occurrence epoch、SHO Working Copyと正式Saveは**比較対象が異なる**。Raw保存成功・File Reader PASS・Projection digest一致を、各々の正本入替え・共同編集成功・Writer再開保証・TEI意味受理へ合算しない。
+- S3/NAS等の保存Providerや全文検索/Vector索引は必要性と実負荷を観測して選ぶ。Blobが保存済みでもIndex更新遅延・Meta commit不明・部分的なReader readがあり得る。表示件数/検索HitとRaw全体・Disclosureの完全性は別。
+
+#### D. 既存ケースで実行する「思考の往復」評価（新しいT2認定の捏造・ケース重複なし）
+
+| 操作・反例 | 使う既存Expected | 認知上の観測／技術上の停止線 |
+| --- | --- | --- |
+| 長い原資料・複数の主題／未整理をそのまま受付し、必要部分を後から読む | SI-RAW01/02/05、#3400 SV-01 | 読む前の分類・文単位強制0。元Source/引用位置を保ち、意味単位を人が選べる |
+| 原資料にない島見立て・違和感を後から言語化、AIなしで配置・再開 | #3400 SV-03/04/08、既存HC/T2 | 元Rawと新しい解釈、当時の記録と後付け理由を分ける。新発見・根拠回帰・未決維持を別観測 |
+| 同じItemがA/B Canvasに現れ、異なる島/Tree/説明に利用される | SI-RAW06、SI-XC01/04/05、#3400 SV-06/09 | 表示Occurrenceは別、Identityと原Sourceは一つ。独立証拠数を水増しせず、別案を潰さない |
+| A型図解からB型草稿、任意にTEIモデル候補へ人/AIが翻訳 | SI-XC05/06、#3391 SU-SH01〜05、ADR-0111 | 文書化・モデル候補・Meaning受理・実送信/実Effectを別資格。Lossや非公開を隠さない |
+| 外部Source未取得／共有拒否／SUIを実務で使わず合成のみ | SI-RAW02/08/09、#3400 SV-10、ADR-0089 T2 | 不明/非開示を不存在扱いしない。SUI内部Dogfoodや合成PASSを「SUI以外の実務」でのT2へ算入しない |
+
+**優先順位**：現在の3カード/KJ+AI OFF→未分類RawのReader再開（小さな資料で十分）→人が決めるCard単位と引用位置→KJ上の配置/異論/保留→二Canvasでの非干渉を確認してから拡張を測る。初期段階から大量Item、外部Task同期、汎用文書サービス、完全Ontologyを必須にしない。利用価値のOwner判断は#3400/ADR-0089に戻し、技術的受入は本節の既存SI-RAW/SI-XC・TEI/SHOの各Ownerへ戻す。
+
+**証拠の上限**：本節は構想・現在の責務と受入順の設計反映のみ。Raw Itemの新製品API、実複数Canvas、Reader→Card抽出E2E、SUI→TEI人/AI翻訳の実モデル受理、SHO正式Writer、外部Task Provider、T2実利用価値の実測は今回NOT RUN。
+
