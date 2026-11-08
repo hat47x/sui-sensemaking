@@ -22,6 +22,7 @@
 - GPU 非搭載でも AI 連携の動作イメージを確認できるモック `/generate` アダプタ（`03_Implement/deploy/tools/mock_local_llm.py`）。
 
 ### Changed
+- 投影（`context-projection.v1`）の配列の並べ替えを `localeCompare` からUTF-16コード単位順へ変更した（#3389）。関係線は `type` も比較に含める。大文字小文字・記号・数字が混ざるidを持つ文書では `bundleHash` の値が変わる。並べ方は `schemas.md` §1.4 に明記した。
 - 環境変数契約を `SUI_*` 専用へ統一し、旧キー（`DATABASE_URL` 等）の受理を停止。
 - 初回MVP向けに AI 系UI（レイアウト提案・統合候補・ナラティブ・島/関係サマリ）を「詳細」トグル配下へ集約。
 - Docker スタックの初回起動を堅牢化（fastapi のバージョン上限を image でも固定、`SUI_DATABASE_URL` 既定を `POSTGRES_*` から導出、api ヘルスチェック追加、dev プロキシを IPv4 へ）。

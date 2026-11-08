@@ -812,3 +812,64 @@ describe("buildContextProjection: per-item digest (ADR-0103)", () => {
   });
 
 });
+
+// #3389: 配列の並べ方はロケール非依存（UTF-16コード単位順）で、入力の並びに依存しない。
+describe("buildContextProjection: 配列の並べ方（#3389）", () => {
+  const mixedIds = ["c10", "C2", "c-1", "c_1", "c2", "B", "a"];
+  const codeUnitOrder = ["B", "C2", "a", "c-1", "c10", "c2", "c_1"];
+
+  function buildMixedIdDoc(ids: string[], edgeTypes: string[]): DocumentV1 {
+    const stamp = "2026-08-01T00:00:00.000Z";
+    return {
+      version: 1,
+      id: "doc-order-1",
+      title: "order vector",
+      createdAt: stamp,
+      updatedAt: stamp,
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: ids.map((id, index) => ({ id, text: `text-${id}`, x: index * 10, y: 0, textReviewed: true })),
+      edges: edgeTypes.map((type, index) => ({ id: `e${index}`, fromId: "a", toId: "B", type })),
+      islands: ids.map((id) => ({ id: `i-${id}`, cardIds: [id], title: `題-${id}`, titleReviewed: true })),
+      readingOrder: ids,
+      narratives: [],
+      evidenceLinks: [],
+      voids: [],
+      mergeSuggestionDecisions: [],
+    } as DocumentV1;
+  }
+
+  it("カードと島のidは、大文字小文字・記号・数字が混ざってもコード単位順に並ぶ", async () => {
+    const projection = await buildContextProjection({
+      doc: buildMixedIdDoc(mixedIds, []),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    expect(projection.cards.map((card) => card.id)).toEqual(codeUnitOrder);
+    expect(projection.islands.map((island) => island.id)).toEqual(codeUnitOrder.map((id) => `i-${id}`));
+  });
+
+  it("同じ from/to で種別が違う関係線は type の順に並び、入力の並びに依存しない", async () => {
+    const forward = await buildContextProjection({
+      doc: buildMixedIdDoc(mixedIds, ["related", "causal", "negate"]),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    const reversed = await buildContextProjection({
+      doc: buildMixedIdDoc([...mixedIds].reverse(), ["negate", "related", "causal"]),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    expect(forward.relations.map((relation) => relation.type)).toEqual(["causal", "negate", "related"]);
+    expect(reversed.relations).toEqual(forward.relations);
+    expect(reversed.bundleHash).toBe(forward.bundleHash);
+  });
+
+  it("混在idの文書の bundleHash 固定値", async () => {
+    const projection = await buildContextProjection({
+      doc: buildMixedIdDoc(mixedIds, ["related", "causal", "negate"]),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    expect(projection.bundleHash).toBe("a2cdf24c5e37250ac22744796f73ff2a6e08659b5760002f7458eff56455a07e");
+  });
+});
