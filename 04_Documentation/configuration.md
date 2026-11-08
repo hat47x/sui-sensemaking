@@ -185,6 +185,8 @@ export SUI_LLM_PROVIDER=none
 | `SUI_RUNTIME_PROFILE` | `evaluation`（Compose） | バックエンドとフロントエンドに、同じ実行プロファイルを渡します。`saas-multitenant` には、PostgreSQLの共有認証テーブルと、必須の外部アダプタが必要です。 |
 | `SUI_APP_REVISION` | `unknown` | バックエンドの `/version` とすべてのアプリケーションログ、フロントエンドの診断バンドルを、同じビルドに結び付けます。標準のComposeは、apiへそのまま渡し、webのビルドにも渡します。値は運用者の申告であり、手順に従うだけではコミットSHAに結び付きません（後述の渡し方を参照）。 |
 | `SUI_FRONTEND_API_BASE` | `/api` | フロントエンドを直接ビルドするときの、APIの基準パス。標準のComposeは `/api` を固定で注入するため、ホスト側の値では変えられません。 |
+| `SUI_BROKER_BASE_URL` | `http://localhost:18081`（モックIdP） | 旧SPA向けのOAuth経路がビルド時に読む、ブローカーのベースURL。未設定ならモックの既定値が使われます。標準のComposeは渡しません。実IdPへは未接続で、この経路の扱いは決まっていません。 |
+| `SUI_BROKER_CLIENT_ID` | `mock-client` | 同じ経路のOAuthクライアントID。未設定ならモックの既定値が使われます。 |
 
 PostgreSQLのイメージやフロントエンドのビルドツールが内部で使う名前は、sui-sensemakingの公開設定キーではありません。利用者が設定するのは、上の `SUI_*` だけです。
 
