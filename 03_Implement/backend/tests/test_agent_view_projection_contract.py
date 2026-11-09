@@ -27,6 +27,15 @@ def test_agent_view_matches_shared_fixture() -> None:
     assert _agent_document_view(data["source"]) == data["agentView"]
 
 
+def test_agent_view_does_not_return_contradiction_state() -> None:
+    """人が付けた確認状態 `contradictionState` は、agent向けの文書表示に出さない（ADR-0104、#3418）。"""
+    data = _load()
+    sources = [link for link in data["source"]["evidenceLinks"] if "contradictionState" in link]
+    assert sources, "fixtureに contradictionState を持つ根拠リンクが必要"
+    for link in data["agentView"]["evidenceLinks"]:
+        assert "contradictionState" not in link
+
+
 def test_agent_view_drops_unreviewed_island_title_key() -> None:
     """未レビューの題名と題名なしの島は、どちらも `title` キーを持たない（MCP投影では「(無題)」になる）。"""
     islands = {island["id"]: island for island in _load()["agentView"]["islands"]}

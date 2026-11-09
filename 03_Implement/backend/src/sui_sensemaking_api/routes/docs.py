@@ -679,7 +679,7 @@ _AGENT_ISLAND_FIELDS = (
     "collapsed",
     "titleReviewed",
 )
-_AGENT_EVIDENCE_LINK_FIELDS = ("id", "type", "fromCardId", "toCardId", "contradictionState")
+_AGENT_EVIDENCE_LINK_FIELDS = ("id", "type", "fromCardId", "toCardId")
 _AGENT_VOID_FIELDS = ("id", "kind", "createdAt", "resolved", "cardIds", "islandIds")
 
 
