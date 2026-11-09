@@ -8,6 +8,7 @@ import {
   DocumentShapeError,
   fetchDocument,
   fetchDocumentMetadata,
+  MAX_METADATA_LIST_PAGES,
   fetchProposalStatus,
   loadDocumentClientConfigFromEnv,
   resolveRequestTimeoutMs,
@@ -272,6 +273,39 @@ describe("fetchDocumentMetadata", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/docs", { headers: {}, redirect: "error", signal: expect.any(AbortSignal) });
     expect(metadata).toEqual(list[0]);
+  });
+
+  it("follows X-Next-Cursor and finds a document on a later page (#3419)", async () => {
+    const target = { id: "doc-old", lifecycle_state: "archived", updated_at: "2026-01-01T00:00:00Z" };
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ id: "doc-new", lifecycle_state: "active", updated_at: "2026-08-01T00:00:00Z" }]), {
+          status: 200,
+          headers: { "X-Next-Cursor": "2026-08-01T00%3A00%3A00Z:doc-new" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify([target]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const metadata = await fetchDocumentMetadata({ baseUrl: "http://127.0.0.1:8000" }, "doc-old");
+
+    expect(metadata).toEqual(target);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.mock.calls[1][0]).toBe(
+      `http://127.0.0.1:8000/docs?cursor=${encodeURIComponent("2026-08-01T00%3A00%3A00Z:doc-new")}`,
+    );
+  });
+
+  it("stops at the last page and at the page cap without looping (#3419)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("[]", { status: 200 })));
+    expect(await fetchDocumentMetadata({ baseUrl: "http://127.0.0.1:8000" }, "missing")).toBeNull();
+
+    let n = 0;
+    const endless = vi.fn(async () => new Response("[]", { status: 200, headers: { "X-Next-Cursor": `c${(n += 1)}` } }));
+    vi.stubGlobal("fetch", endless);
+    expect(await fetchDocumentMetadata({ baseUrl: "http://127.0.0.1:8000" }, "missing")).toBeNull();
+    expect(endless).toHaveBeenCalledTimes(MAX_METADATA_LIST_PAGES);
   });
 
   it("returns null when the list is unavailable (advisory, never breaks the projection)", async () => {
