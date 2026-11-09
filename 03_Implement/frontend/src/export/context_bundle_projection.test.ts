@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { DocumentV1 } from "../domain/types";
 import { canonicalizeJson } from "../domain/patch/patch_fingerprint";
@@ -855,6 +856,47 @@ describe("buildContextProjection: per-item digest (ADR-0103)", () => {
     expect(after.islands[0]).not.toHaveProperty("parentIslandId");
   });
 
+});
+
+// #3371: TEIの投影(5 card / 3 island / 1 edge)から `to_documentv1_payload` で組み立てた文書を
+// 投影し、単位digest(ADR-0103)とbundleHashの振る舞いを固定する。
+// fixtureはバックエンドの `test_documentv1_projection.py` が生成結果との一致を検査する。
+describe("buildContextProjection: documentv1-projection 由来の文書（#3371）", () => {
+  const fixtureUrl = new URL(
+    "../../../backend/tests/fixtures/documentv1_projection_scn001_payload.json",
+    import.meta.url,
+  );
+  const loadDoc = (updatedAt?: string): DocumentV1 => {
+    const payload = JSON.parse(readFileSync(fixtureUrl, "utf-8")) as DocumentV1;
+    return updatedAt ? { ...payload, updatedAt } : payload;
+  };
+  const project = (doc: DocumentV1) =>
+    buildContextProjection({ doc, constraint: "reviewed-only", safeMode: false });
+
+  it("5 card / 3 island / 1 edge の文書で、レビュー済みの2枚だけが単位digestつきで出る", async () => {
+    const p = await project(loadDoc());
+    expect(loadDoc().cards).toHaveLength(5);
+    expect(loadDoc().islands).toHaveLength(3);
+    expect(loadDoc().edges).toHaveLength(1);
+    expect(p.cards.map((card) => card.id)).toEqual(["card-2", "card-4"]);
+    expect(p.cards.map((card) => card.digest)).toEqual([
+      { alg: "sha256", value: "0f49aaa4b4eec950e1192d8b99d7e8f433c94cdf561828f92a1bffb99bb21c01" },
+      { alg: "sha256", value: "afa29ebd672eec17e420c5524a59b09f2c7b2b1727cb5d274131e81485df9bc6" },
+    ]);
+  });
+
+  it("updatedAt だけが違う2つの文書で、単位digestは一致し、bundleHashは変わる", async () => {
+    const before = await project(loadDoc("2026-11-02T00:00:00Z"));
+    const after = await project(loadDoc("2026-11-03T00:00:00Z"));
+    expect(after.cards.map((card) => card.digest)).toEqual(before.cards.map((card) => card.digest));
+    expect(after.islands.map((island) => island.digest)).toEqual(before.islands.map((island) => island.digest));
+    expect(after.bundleHash).not.toBe(before.bundleHash);
+  });
+
+  it("島の題名はtitleReviewedがない投影由来の文書では未レビューとして扱われ、digestを出さない", async () => {
+    const p = await project(loadDoc());
+    expect(p.islands.every((island) => island.digest === null)).toBe(true);
+  });
 });
 
 // #3389: 配列の並べ方はロケール非依存（UTF-16コード単位順）で、入力の並びに依存しない。
