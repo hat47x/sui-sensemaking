@@ -83,6 +83,15 @@
         "toCardId": "c3",
         "note": "SECRET-NOTE",
         "createdAt": "2026-10-29T00:00:00+00:00"
+      },
+      {
+        "id": "e3",
+        "type": "contradicts",
+        "fromCardId": "c1",
+        "toCardId": "c2",
+        "contradictionState": "confirmed",
+        "note": "SECRET-NOTE",
+        "createdAt": "2026-10-29T00:00:00+00:00"
       }
     ],
     "readingOrder": [
@@ -155,6 +164,12 @@
         "type": "supports",
         "fromCardId": "c2",
         "toCardId": "c1"
+      },
+      {
+        "id": "e3",
+        "type": "contradicts",
+        "fromCardId": "c1",
+        "toCardId": "c2"
       }
     ],
     "narratives": []
