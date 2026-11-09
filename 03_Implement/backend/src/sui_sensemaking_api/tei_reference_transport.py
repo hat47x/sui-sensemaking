@@ -41,6 +41,22 @@ TEI_REFERENCE_ARTIFACT_KINDS: frozenset[str] = frozenset(
 )
 
 
+#: 1ファイルの上限（バイト）。artifactと `epistemic-bindings.json` は、リクエストごとに
+#: 全体を読み、`json.loads` で展開する。運用者が置くファイルを信頼する前提だが、
+#: 誤配置の巨大ファイルでAPIプロセスのメモリを使い切らないよう、固定の上限を設ける。
+#: 超過は内容を返さず `too-large` でfail closedする（設定値にはしない。#3387）。
+TEI_REFERENCE_MAX_FILE_BYTES = 16 * 1024 * 1024
+
+
+def _read_limited(path: Path) -> bytes | None:
+    """上限を超えるなら None を返す。上限+1バイトまでしか読まない。"""
+    with path.open("rb") as handle:
+        raw = handle.read(TEI_REFERENCE_MAX_FILE_BYTES + 1)
+    if len(raw) > TEI_REFERENCE_MAX_FILE_BYTES:
+        return None
+    return raw
+
+
 @dataclass(frozen=True)
 class TeiReferenceArtifact:
     """A successfully read TEI Reference JSON artifact, verbatim.
@@ -60,6 +76,8 @@ class TeiReferenceReadFailure:
         "unconfigured",
         "unknown-artifact",
         "invalid-path",
+        "symlink",
+        "too-large",
         "not-a-file",
         "invalid-json",
         "not-an-object",
@@ -92,6 +110,8 @@ def read_tei_reference_artifact(
         return TeiReferenceReadFailure(reason="unknown-artifact")
 
     base = Path(artifacts_dir).resolve()
+    if (base / f"{artifact_kind}.json").is_symlink():
+        return TeiReferenceReadFailure(reason="symlink")
     path = (base / f"{artifact_kind}.json").resolve()
     if path.parent != base and base not in path.parents:
         return TeiReferenceReadFailure(reason="invalid-path")
@@ -99,7 +119,9 @@ def read_tei_reference_artifact(
         return TeiReferenceReadFailure(reason="not-a-file")
 
     try:
-        raw = path.read_bytes()
+        raw = _read_limited(path)
+        if raw is None:
+            return TeiReferenceReadFailure(reason="too-large")
         text = raw.decode("utf-8")
         loaded = json.loads(text)
     except (OSError, ValueError):
@@ -155,7 +177,12 @@ def read_bound_tei_reference_artifact(
     if not _is_safe_path_segment(tenant_id) or not _is_safe_path_segment(doc_id):
         return TeiReferenceReadFailure(reason="invalid-path")
     base = Path(artifacts_dir).resolve()
-    bound_dir = base / TEI_TENANT_ARTIFACTS_DIR / tenant_id / doc_id
+    tenants_dir = base / TEI_TENANT_ARTIFACTS_DIR
+    tenant_dir = tenants_dir / tenant_id
+    bound_dir = tenant_dir / doc_id
+    # テナント間のartifact共有を、シンボリックリンクで作れないようにする（#3387）。
+    if any(d.is_symlink() for d in (tenants_dir, tenant_dir, bound_dir)):
+        return TeiReferenceReadFailure(reason="symlink")
     return read_tei_reference_artifact(bound_dir, artifact_kind)
 
 
@@ -182,6 +209,8 @@ def read_tei_epistemic_binding(
         return TeiReferenceReadFailure(reason="no-binding")
 
     base = Path(artifacts_dir).resolve()
+    if (base / TEI_EPISTEMIC_BINDINGS_FILE).is_symlink():
+        return TeiReferenceReadFailure(reason="symlink")
     path = (base / TEI_EPISTEMIC_BINDINGS_FILE).resolve()
     if path.parent != base and base not in path.parents:
         return TeiReferenceReadFailure(reason="invalid-path")
@@ -189,7 +218,9 @@ def read_tei_epistemic_binding(
         return TeiReferenceReadFailure(reason="binding-registry-missing")
 
     try:
-        raw = path.read_bytes()
+        raw = _read_limited(path)
+        if raw is None:
+            return TeiReferenceReadFailure(reason="too-large")
         text = raw.decode("utf-8")
         loaded = json.loads(text)
     except (OSError, ValueError):
