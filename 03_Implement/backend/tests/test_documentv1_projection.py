@@ -46,6 +46,26 @@ def artifact(**document_changes):
     return payload
 
 
+def scn001_artifact():
+    # 5 card / 3 island / 1 edge。affiliationは、islandのcardIdsと重ならないカードだけに付ける。
+    cards = [
+        {"id": f"card-{n}", "text": f"text {n}", "x": n, "y": n, "claimType": "hypothesis",
+         "holdState": "pending", "textReviewed": n % 2 == 0}
+        for n in range(1, 6)
+    ]
+    islands = [
+        {"id": "island-1", "cardIds": ["card-1", "card-2"], "title": "A"},
+        {"id": "island-2", "cardIds": ["card-3"]},
+        {"id": "island-3", "cardIds": ["card-4"]},
+    ]
+    edges = [
+        {"id": "edge-1", "fromId": "island-1", "toId": "island-2", "type": "supports",
+         "fromKind": "island", "toKind": "island"}
+    ]
+    affiliations = [{"id": "aff-1", "cardId": "card-5", "islandId": "island-3"}]
+    return artifact(cards=cards, islands=islands, edges=edges, affiliations=affiliations)
+
+
 class FromArtifactTest(unittest.TestCase):
     def test_reads_typed_document(self):
         document = from_artifact(ARTIFACT)
@@ -139,25 +159,7 @@ class ToDocumentV1PayloadTest(unittest.TestCase):
 
 
     def test_scn001_shaped_payload_validates_as_documentv1(self):
-        # 5 card / 3 island / 1 edge。affiliationは、islandのcardIdsと重ならないカードだけに付ける。
-        cards = [
-            {"id": f"card-{n}", "text": f"text {n}", "x": n, "y": n, "claimType": "hypothesis",
-             "holdState": "pending", "textReviewed": n % 2 == 0}
-            for n in range(1, 6)
-        ]
-        islands = [
-            {"id": "island-1", "cardIds": ["card-1", "card-2"], "title": "A"},
-            {"id": "island-2", "cardIds": ["card-3"]},
-            {"id": "island-3", "cardIds": ["card-4"]},
-        ]
-        edges = [
-            {"id": "edge-1", "fromId": "island-1", "toId": "island-2", "type": "supports",
-             "fromKind": "island", "toKind": "island"}
-        ]
-        affiliations = [{"id": "aff-1", "cardId": "card-5", "islandId": "island-3"}]
-        document = from_artifact(
-            artifact(cards=cards, islands=islands, edges=edges, affiliations=affiliations)
-        )
+        document = from_artifact(scn001_artifact())
         payload = to_documentv1_payload(
             document,
             transform=TRANSFORM,
@@ -171,6 +173,21 @@ class ToDocumentV1PayloadTest(unittest.TestCase):
         self.assertEqual(model.cards[0].claimType, "hypothesis")
         self.assertEqual(model.cards[0].holdState, "pending")
         self.assertEqual([c.textReviewed for c in model.cards], [False, True, False, True, False])
+
+    def test_scn001_payload_matches_the_fixture_shared_with_the_frontend(self):
+        # frontend の context_bundle_projection.test.ts が同じ fixture を読み、
+        # 単位digestとbundleHashの振る舞いを固定する。生成規則が変わったらここで検出する。
+        from pathlib import Path
+
+        fixture = Path(__file__).parent / "fixtures" / "documentv1_projection_scn001_payload.json"
+        expected = json.loads(fixture.read_text(encoding="utf-8"))
+        payload = to_documentv1_payload(
+            from_artifact(scn001_artifact()),
+            transform=TRANSFORM,
+            created_at="2026-11-02T00:00:00Z",
+            updated_at="2026-11-02T00:00:00Z",
+        )
+        self.assertEqual(json.loads(json.dumps(payload)), expected)
 
     def test_affiliation_duplicating_containment_is_not_a_documentv1(self):
         # 投影の読み込みは通るが、DocumentV1はisland.cardIdsと同じ組のaffiliationを拒否する。

@@ -1,0 +1,98 @@
+{
+  "affiliations": [
+    {
+      "cardId": "card-5",
+      "id": "aff-1",
+      "islandId": "island-3"
+    }
+  ],
+  "cards": [
+    {
+      "claimType": "hypothesis",
+      "holdState": "pending",
+      "id": "card-1",
+      "text": "text 1",
+      "textReviewed": false,
+      "x": 1.0,
+      "y": 1.0
+    },
+    {
+      "claimType": "hypothesis",
+      "holdState": "pending",
+      "id": "card-2",
+      "text": "text 2",
+      "textReviewed": true,
+      "x": 2.0,
+      "y": 2.0
+    },
+    {
+      "claimType": "hypothesis",
+      "holdState": "pending",
+      "id": "card-3",
+      "text": "text 3",
+      "textReviewed": false,
+      "x": 3.0,
+      "y": 3.0
+    },
+    {
+      "claimType": "hypothesis",
+      "holdState": "pending",
+      "id": "card-4",
+      "text": "text 4",
+      "textReviewed": true,
+      "x": 4.0,
+      "y": 4.0
+    },
+    {
+      "claimType": "hypothesis",
+      "holdState": "pending",
+      "id": "card-5",
+      "text": "text 5",
+      "textReviewed": false,
+      "x": 5.0,
+      "y": 5.0
+    }
+  ],
+  "createdAt": "2026-11-02T00:00:00Z",
+  "edges": [
+    {
+      "fromId": "island-1",
+      "fromKind": "island",
+      "id": "edge-1",
+      "toId": "island-2",
+      "toKind": "island",
+      "type": "supports"
+    }
+  ],
+  "id": "doc-1",
+  "islands": [
+    {
+      "cardIds": [
+        "card-1",
+        "card-2"
+      ],
+      "id": "island-1",
+      "title": "A"
+    },
+    {
+      "cardIds": [
+        "card-3"
+      ],
+      "id": "island-2"
+    },
+    {
+      "cardIds": [
+        "card-4"
+      ],
+      "id": "island-3"
+    }
+  ],
+  "title": "Notes",
+  "transform": {
+    "panX": 0,
+    "panY": 0,
+    "zoom": 1
+  },
+  "updatedAt": "2026-11-02T00:00:00Z",
+  "version": 1
+}
