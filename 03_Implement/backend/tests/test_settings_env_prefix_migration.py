@@ -207,7 +207,7 @@ def test_settings_rejects_legacy_tenant_capability_key(monkeypatch) -> None:  # 
 def test_backend_ci_uses_canonical_database_test_keys_when_present() -> None:
     if not CI_WORKFLOW.is_file():
         release = RELEASE_DOC.read_text(encoding="utf-8")
-        assert "常設CIは現在無効" in release
+        assert "単一の `ci.yml` による常設CIは置いていません" in release
         return
 
     workflow = CI_WORKFLOW.read_text(encoding="utf-8")
