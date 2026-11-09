@@ -77,6 +77,7 @@
 
 ## Traceability
 
+- Superseded by（一部）: `ADR-0089`（価値の「現在の定義」に関する運用部分。原則・不変条件・モデルそのものは `ADR-0010`・`ADR-0032`・`ADR-0041` が引き続き正本）
 - Related: `README.md`（NOTICE）, `00_Prompt/domain.md`
 - Related: `01_Plans/adr/ADR-0036-value-to-social-goal-realization-roadmap.md`, `ADR-0037-value-measurement-harness-and-scorecard.md`（観測の延期枠組み）
 - Related: `01_Plans/adr/ADR-0039-governance-right-sizing-personal-oss.md`（solo段階・再導入トリガー）

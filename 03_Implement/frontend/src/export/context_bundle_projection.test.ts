@@ -179,6 +179,50 @@ describe("buildContextProjection: evidence vs contradiction scoping", () => {
   });
 });
 
+describe("buildContextProjection: 島を端点とする関係線 (#3402)", () => {
+  // 方針B: 島を端点とする関係線は、どの constraint でも返さず、countsにもbundleHashにも載せない。
+  // 方針Aへ変える場合は、このテストと api.md / mcp_agent_connection.md / mcp/README.md を同時に改める。
+  function buildDocWithIslandEdges(): DocumentV1 {
+    const doc = buildDoc();
+    doc.islands = [
+      { id: "i1", cardIds: ["c1", "c2"], title: "First island", titleReviewed: true },
+      { id: "i2", cardIds: ["c4"], title: "Second island", titleReviewed: true },
+    ];
+    doc.edges = [
+      ...doc.edges,
+      { id: "e-ii", fromId: "i1", toId: "i2", fromKind: "island", toKind: "island", type: "related" },
+      { id: "e-ci", fromId: "c1", toId: "i2", fromKind: "card", toKind: "island", type: "related" },
+      { id: "e-ic", fromId: "i2", toId: "c2", fromKind: "island", toKind: "card", type: "related" },
+    ];
+    return doc;
+  }
+
+  it.each(CONTEXT_PROJECTION_CONSTRAINTS)("%s では、島を端点とする関係線を relations に出さない", async (constraint) => {
+    const projection = await buildContextProjection({
+      doc: buildDocWithIslandEdges(),
+      constraint: constraint as ContextProjectionConstraint,
+      safeMode: false,
+    });
+    const endpoints = projection.relations.flatMap((r) => [r.from, r.to]);
+    expect(endpoints).not.toContain("i1");
+    expect(endpoints).not.toContain("i2");
+  });
+
+  it("島を端点とする関係線の有無は bundleHash を変えず、counts にも現れない", async () => {
+    const withIslandEdges = await buildContextProjection({
+      doc: buildDocWithIslandEdges(),
+      constraint: "summary",
+      safeMode: false,
+    });
+    const doc = buildDocWithIslandEdges();
+    doc.edges = doc.edges.filter((edge) => edge.fromKind !== "island" && edge.toKind !== "island");
+    const without = await buildContextProjection({ doc, constraint: "summary", safeMode: false });
+    expect(withIslandEdges.relations).toEqual([{ from: "c1", to: "c2", type: "related" }]);
+    expect(withIslandEdges.bundleHash).toBe(without.bundleHash);
+    expect(withIslandEdges.counts).toEqual(without.counts);
+  });
+});
+
 describe("buildContextProjection: summary constraint", () => {
   it("emits no card nodes but keeps counts, islands, and reviewed-only relations/links", async () => {
     const projection = await buildContextProjection({ doc: buildDoc(), constraint: "summary", safeMode: false });
@@ -852,5 +896,66 @@ describe("buildContextProjection: documentv1-projection 由来の文書（#3371�
   it("島の題名はtitleReviewedがない投影由来の文書では未レビューとして扱われ、digestを出さない", async () => {
     const p = await project(loadDoc());
     expect(p.islands.every((island) => island.digest === null)).toBe(true);
+  });
+});
+
+// #3389: 配列の並べ方はロケール非依存（UTF-16コード単位順）で、入力の並びに依存しない。
+describe("buildContextProjection: 配列の並べ方（#3389）", () => {
+  const mixedIds = ["c10", "C2", "c-1", "c_1", "c2", "B", "a"];
+  const codeUnitOrder = ["B", "C2", "a", "c-1", "c10", "c2", "c_1"];
+
+  function buildMixedIdDoc(ids: string[], edgeTypes: string[]): DocumentV1 {
+    const stamp = "2026-08-01T00:00:00.000Z";
+    return {
+      version: 1,
+      id: "doc-order-1",
+      title: "order vector",
+      createdAt: stamp,
+      updatedAt: stamp,
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: ids.map((id, index) => ({ id, text: `text-${id}`, x: index * 10, y: 0, textReviewed: true })),
+      edges: edgeTypes.map((type, index) => ({ id: `e${index}`, fromId: "a", toId: "B", type })),
+      islands: ids.map((id) => ({ id: `i-${id}`, cardIds: [id], title: `題-${id}`, titleReviewed: true })),
+      readingOrder: ids,
+      narratives: [],
+      evidenceLinks: [],
+      voids: [],
+      mergeSuggestionDecisions: [],
+    } as DocumentV1;
+  }
+
+  it("カードと島のidは、大文字小文字・記号・数字が混ざってもコード単位順に並ぶ", async () => {
+    const projection = await buildContextProjection({
+      doc: buildMixedIdDoc(mixedIds, []),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    expect(projection.cards.map((card) => card.id)).toEqual(codeUnitOrder);
+    expect(projection.islands.map((island) => island.id)).toEqual(codeUnitOrder.map((id) => `i-${id}`));
+  });
+
+  it("同じ from/to で種別が違う関係線は type の順に並び、入力の並びに依存しない", async () => {
+    const forward = await buildContextProjection({
+      doc: buildMixedIdDoc(mixedIds, ["related", "causal", "negate"]),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    const reversed = await buildContextProjection({
+      doc: buildMixedIdDoc([...mixedIds].reverse(), ["negate", "related", "causal"]),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    expect(forward.relations.map((relation) => relation.type)).toEqual(["causal", "negate", "related"]);
+    expect(reversed.relations).toEqual(forward.relations);
+    expect(reversed.bundleHash).toBe(forward.bundleHash);
+  });
+
+  it("混在idの文書の bundleHash 固定値", async () => {
+    const projection = await buildContextProjection({
+      doc: buildMixedIdDoc(mixedIds, ["related", "causal", "negate"]),
+      constraint: "reviewed-only",
+      safeMode: false,
+    });
+    expect(projection.bundleHash).toBe("a2cdf24c5e37250ac22744796f73ff2a6e08659b5760002f7458eff56455a07e");
   });
 });

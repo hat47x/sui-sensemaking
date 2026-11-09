@@ -8,6 +8,7 @@ import {
   DocumentShapeError,
   fetchDocument,
   fetchDocumentMetadata,
+  fetchProposalStatus,
   loadDocumentClientConfigFromEnv,
   resolveRequestTimeoutMs,
   validateMcpRuntimeProfile,
@@ -290,5 +291,91 @@ describe("resolveRequestTimeoutMs (#3312)", () => {
 
   it.each(["0", "-5", "abc", "1.5", "99", "999999999", ""])("falls back to the default for %j (never unbounded)", (raw) => {
     expect(resolveRequestTimeoutMs({ SUI_MCP_REQUEST_TIMEOUT_MS: raw })).toBe(DEFAULT_REQUEST_TIMEOUT_MS);
+  });
+});
+
+describe("fetchProposalStatus (#3403)", () => {
+  const config = { baseUrl: "http://127.0.0.1:8000" };
+  const ITEM = {
+    proposalId: "p1",
+    proposalKind: "island_proposal",
+    origin: "external_agent",
+    status: "proposed",
+    sourceBundleHash: "h",
+    createdAt: "2026-11-09T00:00:00Z",
+    decidedAt: null,
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("requests GET /ai/proposals/status and returns the proposals", async () => {
+    const fetchSpy = vi.fn(async () => mockResponse(200, { docId: "doc1", proposals: [ITEM] }));
+    vi.stubGlobal("fetch", fetchSpy);
+    const result = await fetchProposalStatus(config, "doc1");
+    expect(fetchSpy).toHaveBeenCalledWith("http://127.0.0.1:8000/ai/proposals/status?docId=doc1", {
+      headers: {},
+      redirect: "error",
+      signal: expect.any(AbortSignal),
+    });
+    expect(result).toEqual([ITEM]);
+  });
+
+  it("returns an empty array for a well-formed response with no proposals", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => mockResponse(200, { docId: "doc1", proposals: [] })));
+    expect(await fetchProposalStatus(config, "doc1")).toEqual([]);
+  });
+
+  it("throws DocumentNotFoundError on 404, same as fetchDocument", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => mockResponse(404, {})));
+    await expect(fetchProposalStatus(config, "doc1")).rejects.toThrow(DocumentNotFoundError);
+  });
+
+  it("distinguishes 401, 403, 5xx without leaking a body", async () => {
+    const cases: Array<[number, string]> = [
+      [401, "unauthorized"],
+      [403, "forbidden"],
+      [503, "backend error"],
+    ];
+    for (const [status, label] of cases) {
+      vi.stubGlobal("fetch", vi.fn(async () => mockResponse(status, { detail: "secret-body" })));
+      const error = await fetchProposalStatus(config, "doc1").catch((e: Error) => e);
+      expect(error).toBeInstanceOf(DocumentFetchError);
+      expect((error as Error).message).toContain(`HTTP ${status}`);
+      expect((error as Error).message).toContain(label);
+      expect((error as Error).message).not.toContain("secret-body");
+    }
+  });
+
+  it("raises DocumentFetchTimeoutError when the request is aborted by the timeout", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }),
+    );
+    await expect(fetchProposalStatus(config, "doc1")).rejects.toThrow(DocumentFetchTimeoutError);
+  });
+
+  it("rejects a 200 whose body is not JSON with DocumentShapeError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ status: 200, ok: true, json: async () => { throw new SyntaxError("Unexpected token <"); } }) as unknown as Response),
+    );
+    await expect(fetchProposalStatus(config, "doc1")).rejects.toThrow(DocumentShapeError);
+  });
+
+  it.each([
+    ["null", null],
+    ["an array", []],
+    ["an empty object", {}],
+    ["proposals that are not an array", { proposals: {} }],
+    ["an item that is not an object", { proposals: ["x"] }],
+    ["an item without proposalId", { proposals: [{ ...ITEM, proposalId: undefined }] }],
+    ["an unknown status", { proposals: [{ ...ITEM, status: "applied" }] }],
+  ])("rejects %s with DocumentShapeError", async (_label, body) => {
+    vi.stubGlobal("fetch", vi.fn(async () => mockResponse(200, body)));
+    await expect(fetchProposalStatus(config, "doc1")).rejects.toThrow(DocumentShapeError);
   });
 });

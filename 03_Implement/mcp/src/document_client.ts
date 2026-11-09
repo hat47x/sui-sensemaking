@@ -229,6 +229,26 @@ export type ProposalStatusItem = {
   decidedAt?: string | null;
 };
 
+const PROPOSAL_STATUS_VALUES = ["proposed", "accepted", "rejected", "held"];
+
+/** `GET /ai/proposals/status` の最低限の形を検査する。壊れた応答を「提案が0件」と読ませないために、満たさないときは理由を返す（#3403）。 */
+export function describeProposalStatusShapeProblem(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return "body is not an object";
+  const proposals = (body as Record<string, unknown>).proposals;
+  if (!Array.isArray(proposals)) return "proposals is not an array";
+  for (const item of proposals) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) return "proposal item is not an object";
+    const record = item as Record<string, unknown>;
+    if (typeof record.proposalId !== "string" || record.proposalId.length === 0) {
+      return "proposalId is not a non-empty string";
+    }
+    if (typeof record.status !== "string" || !PROPOSAL_STATUS_VALUES.includes(record.status)) {
+      return "status is not one of proposed, accepted, rejected, held";
+    }
+  }
+  return null;
+}
+
 export async function fetchProposalStatus(
   config: DocumentClientConfig,
   docId: string,
@@ -237,16 +257,27 @@ export async function fetchProposalStatus(
   const headers: Record<string, string> = authHeaders(config);
 
   const timeoutMs = resolveRequestTimeoutMs();
-  let response: Response;
+  let body: unknown;
   try {
-    response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
+    if (response.status === 404) {
+      throw new DocumentNotFoundError(docId);
+    }
+    if (!response.ok) {
+      throw new DocumentFetchError(docId, response.status);
+    }
+    try {
+      body = await response.json();
+    } catch (error) {
+      if (isAbortLike(error)) throw error;
+      throw new DocumentShapeError(docId, "body is not valid JSON");
+    }
   } catch (error) {
     if (isAbortLike(error)) throw new DocumentFetchTimeoutError(docId, timeoutMs);
     throw error;
   }
-  if (!response.ok) {
-    throw new DocumentFetchError(docId, response.status);
-  }
-  const body = (await response.json()) as { proposals: ProposalStatusItem[] };
-  return body.proposals;
+
+  const problem = describeProposalStatusShapeProblem(body);
+  if (problem) throw new DocumentShapeError(docId, problem);
+  return (body as { proposals: ProposalStatusItem[] }).proposals;
 }

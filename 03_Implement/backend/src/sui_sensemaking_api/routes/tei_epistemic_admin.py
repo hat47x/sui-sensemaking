@@ -41,6 +41,8 @@ _PROVIDER_FAILURE_CODES = {
     "invalid-json": ("tei_reference_unavailable", 503),
     "not-an-object": ("tei_reference_unavailable", 503),
     "invalid-path": ("tei_reference_unavailable", 503),
+    "symlink": ("tei_reference_unavailable", 503),
+    "too-large": ("tei_reference_unavailable", 503),
     "unknown-artifact": ("unknown_tei_artifact", 404),
 }
 

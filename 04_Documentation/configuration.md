@@ -143,7 +143,7 @@ export SUI_LLM_PROVIDER=none
 | `SUI_TENANT_CAPABILITY_HTTP_ENDPOINT` | 未設定 | 権限リゾルバーの接続先。HTTPSを使います。ローカルでの検証に限り、ループバックのHTTPも使えます。 |
 | `SUI_TENANT_CAPABILITY_HTTP_API_KEY` | 未設定 | 権限リゾルバー専用のベアラートークン。空でなく、空白と制御文字を含まない値にします。Git、DB、監査ログには保存しません。 |
 | `SUI_TENANT_CAPABILITY_HTTP_TIMEOUT_SECONDS` | `1.5` | 権限リゾルバーのタイムアウト（秒）。0より大きく、30以下にします。 |
-| `SUI_TEI_REFERENCE_DIR` | 未設定 | 生成済みTEI ReferenceのJSON artifactを置くディレクトリ（ADR-0101 Option A）。未設定のとき、`/admin/tei-epistemic` のエンドポイントは無効で、503 `tei_reference_unconfigured` でfail closedします。設定した場合も、エンドポイントはコントロールプレーン認可（`X-Admin-Api-Key` または provision capability）を必要とし、artifactをそのまま返します。内容の解釈や検証は行いません。 |
+| `SUI_TEI_REFERENCE_DIR` | 未設定 | 生成済みTEI ReferenceのJSON artifactを置くディレクトリ（ADR-0101 Option A）。未設定のとき、`/admin/tei-epistemic` のエンドポイントは無効で、503 `tei_reference_unconfigured` でfail closedします。設定した場合も、エンドポイントはコントロールプレーン認可（`X-Admin-Api-Key` または provision capability）を必要とし、artifactをそのまま返します。内容の解釈や検証は行いません。テナント業務面（`GET /docs/{doc_id}/epistemic/projection`）は、`tenants/<tenantId>/<docId>/` のartifactと、運用者が置く `epistemic-bindings.json` の紐付けだけを使います（ADR-0102、api.md §2.17）。カード本文を含む `documentv1-projection` を業務面で返してよいかは、Owner判断を待っています。 |
 | `SUI_ALLOW_JIT_PROVISIONING` | `false` | シングルテナントの転送ヘッダーによる本人識別でだけ、未登録の利用者を自動作成（JIT）してよいかを決めます。`true` なら、利用者、識別子の紐づけ、既定のメンバーシップを作ります。`false` なら、403 `identity_not_provisioned` を返します。`saas-multitenant` では起動時に `false` が必須です。検証済みのJWTやCookieによる経路では、この設定にかかわらず、未登録の利用者を403で拒否します。 |
 | `SUI_SAAS_OAUTH_BROKER_HTTP_AUTHORIZE_ENDPOINT` | 未設定 | OAuthの認可コードフローを始めるURL。認証情報、クエリ、フラグメントを含まないHTTPS、またはループバックのHTTPだけを使えます。`saas-multitenant` では必須で、起動前に検査します。 |
 | `SUI_SAAS_OAUTH_BROKER_HTTP_TOKEN_ENDPOINT` | 未設定 | 認可コードを交換するトークンエンドポイント。認証情報、クエリ、フラグメントを含まないHTTPS、またはループバックのHTTPだけを使えます。起動には必須ではありません。ただしコールバックでは、リダイレクトURI、クライアントID、クライアントシークレットと合わせた4項目がそろっている必要があり、欠けていると503を返します。 |
@@ -183,10 +183,25 @@ export SUI_LLM_PROVIDER=none
 | `SUI_POSTGRES_USER` | `sui_sensemaking` | Compose上のPostgreSQLのユーザー名。 |
 | `SUI_POSTGRES_PASSWORD` | `sui_sensemaking` | Compose上のPostgreSQLのパスワード。 |
 | `SUI_RUNTIME_PROFILE` | `evaluation`（Compose） | バックエンドとフロントエンドに、同じ実行プロファイルを渡します。`saas-multitenant` には、PostgreSQLの共有認証テーブルと、必須の外部アダプタが必要です。 |
-| `SUI_APP_REVISION` | `unknown` | バックエンドの `/version` とすべてのアプリケーションログ、フロントエンドの診断バンドルを、同じビルドに結び付けます。標準のComposeは、apiへそのまま渡し、webのビルドにも渡します。 |
+| `SUI_APP_REVISION` | `unknown` | バックエンドの `/version` とすべてのアプリケーションログ、フロントエンドの診断バンドルを、同じビルドに結び付けます。標準のComposeは、apiへそのまま渡し、webのビルドにも渡します。値は運用者の申告であり、手順に従うだけではコミットSHAに結び付きません（後述の渡し方を参照）。 |
 | `SUI_FRONTEND_API_BASE` | `/api` | フロントエンドを直接ビルドするときの、APIの基準パス。標準のComposeは `/api` を固定で注入するため、ホスト側の値では変えられません。 |
+| `SUI_BROKER_BASE_URL` | `http://localhost:18081`（モックIdP） | 旧SPA向けのOAuth経路がビルド時に読む、ブローカーのベースURL。未設定ならモックの既定値が使われます。標準のComposeは渡しません。実IdPへは未接続で、この経路の扱いは決まっていません。 |
+| `SUI_BROKER_CLIENT_ID` | `mock-client` | 同じ経路のOAuthクライアントID。未設定ならモックの既定値が使われます。 |
 
 PostgreSQLのイメージやフロントエンドのビルドツールが内部で使う名前は、sui-sensemakingの公開設定キーではありません。利用者が設定するのは、上の `SUI_*` だけです。
+
+### リビジョンの渡し方（`SUI_APP_REVISION`）
+
+`SUI_APP_REVISION` は未設定だと `unknown` になり、標準のComposeもビルド引数と環境変数の既定を `unknown` にします。ビルドとデプロイの手順がコミットSHAを自動で渡すことはありません。再観測のために版を固定したいときは、起動の前に運用者が設定します。
+
+```bash
+# 例: 現在のコミットの短いSHAを、api と web の両方へ渡す（1〜64文字の英数字、`.`、`_`、`-` のみ）
+export SUI_APP_REVISION="$(git rev-parse --short=12 HEAD)"
+docker compose build && docker compose up -d
+```
+
+- `GET /version` の `revision` が示すのは、この値を渡した運用者の申告です。実行中のコードがそのコミットと同一であることまでは示しません。ビルド成果物へSHAを焼き込むか、本番系のプロファイルで `unknown` を警告・拒否するかは未決で、Owner判断を待っています（#3386）。
+- 申告の値と、実際にビルドしたコミットの一致は、運用者が `git rev-parse` の出力と `/version` の応答を見比べて確かめます。
 
 ## よく使う構成の例
 

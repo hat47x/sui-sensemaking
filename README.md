@@ -66,7 +66,7 @@ SUI Sensemakingは、一つの正解へ早く収束すること自体を目的�
 - 貢献の手順: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - 実装のガイド（開発者向けの実行方法）: [`03_Implement/README.md`](03_Implement/README.md)
 
-> 開発の各階層（`00_Prompt` から `04_Documentation`）の詳しい説明、読む順序、プロジェクトの地図は、`AGENTS.md` にまとめています。
+> 作業の種類ごとに読む正本の表と、変更時の規則・安全不変条件は、`AGENTS.md` にまとめています。開発の各階層（`01_Plans` から `04_Documentation`）の概要は、下の「文書の構成（人間向けの要約）」の節にあります。
 
 
 ### 文書の公開範囲（迷ったとき）
@@ -128,7 +128,7 @@ docker compose up --build
 - `03_Implement/`: 実装の本体（frontend、backend、deploy）
 - `04_Documentation/`: 導入、設定、運用のガイド
 
-> AIエージェント向けの、読む順序とプロジェクトの地図は、`AGENTS.md` にまとめています。
+> AIエージェント向けの、作業の種類ごとに読む正本の表は、`AGENTS.md` にまとめています。
 
 ---
 

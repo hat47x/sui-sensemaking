@@ -86,7 +86,7 @@ type ReviewSignatureVerification = {
 
 ## HIL-RS-01-A1 契約への結びつき（A1-ATTR-IF）
 
-- SSOT（唯一の参照先）: `02_Architecture/hil_rs_01_a1_minimum_interface_contract.md`
+- SSOT（唯一の参照先）: `02_Architecture/hil_rs_01_a1_minimum_interface_contract.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/hil_rs_01_a1_minimum_interface_contract.md)）
 - Contract ID（固定）: `A1-ATTR-IF`
 - schemaVersion（固定）: `1.0.0`
 - 必須フィールド（固定）

@@ -1,0 +1,76 @@
+name: SUI フロントエンドe2e全件（定期）
+
+# PRのCI（unit-verification-ci.yml の frontend-e2e）は代表8件だけを実行する。
+# 残りのe2e（SafeModeの共有前チェック、書き出し、テナントセッションなど）は、
+# ここで毎日まとめて実行し、後退を翌日までに検出する。Issue #3412。
+# 設定は #3250 に合わせる（workers 3、retryなし。playwright.config.ts が持つ）。
+# 失敗をretryで隠さない。環境由来と分かった場合の扱いは e2e_testing.md に書く。
+on:
+  schedule:
+    - cron: '30 18 * * *'
+  workflow_dispatch:
+  # このワークフロー自体を直したPRでは、全件が通ることを確かめる。
+  pull_request:
+    paths:
+      - '.github/workflows/frontend-e2e-nightly.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sui-frontend-e2e-nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-e2e-full:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: 対象版を取得
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Node.js 22を用意
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: 03_Implement/frontend/package-lock.json
+
+      - name: 依存を固定版で導入
+        working-directory: 03_Implement/frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Chromiumを用意
+        working-directory: 03_Implement/frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: 全e2e（testIgnore以外）
+        id: e2e
+        working-directory: 03_Implement/frontend
+        run: |
+          start=$(date +%s)
+          set +e
+          npx playwright test --reporter=line,json
+          status=$?
+          set -e
+          elapsed=$(( $(date +%s) - start ))
+          {
+            echo "## フロントエンドe2e全件"
+            echo ""
+            echo "- 所要時間: ${elapsed}秒"
+            node -e '
+              const r = require("./test-results/reports/ui.json");
+              const s = r.stats || {};
+              console.log("- 成功: " + s.expected + " / 失敗: " + s.unexpected + " / flaky: " + s.flaky + " / skip: " + s.skipped);
+              const failed = [];
+              const walk = (suite) => {
+                for (const spec of suite.specs || []) if (!spec.ok) failed.push(spec.file + " : " + spec.title);
+                for (const child of suite.suites || []) walk(child);
+              };
+              for (const suite of r.suites || []) walk(suite);
+              if (failed.length) { console.log(""); console.log("失敗したspec"); for (const f of failed) console.log("- " + f); }
+            ' 2>/dev/null || echo "- JSON結果を読めなかった"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status

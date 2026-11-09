@@ -5,7 +5,7 @@
 - Updated: 2026-07-15
 - Scope: 6ラウンド累積KJ法、ラウンド間の引継ぎ、停止・再開、分岐、AI支援
 - Decision tracking: `01_Plans/adr/ADR-0057-w-type-cumulative-inquiry-model.md`
-- Implementation tracking: `01_Plans/issues/issue-DOMAIN-W-ITERATION-01-w-type-cumulative-inquiry-support.md`
+- Implementation tracking: `01_Plans/issues/issue-DOMAIN-W-ITERATION-01-w-type-cumulative-inquiry-support.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/issue-DOMAIN-W-ITERATION-01-w-type-cumulative-inquiry-support.md)）
 
 ## 1. 目的
 
@@ -181,7 +181,7 @@ AIの出力は提案のみとし、`SUI_LLM_PROVIDER=none` でも、ラウンド
 - SafeMode既定ONでは、未レビュー本文、現場の生データ、個人情報を含む出典を暗黙にラウンド間共有物やAI入力へ含めない。
 - インポート時は、ラウンド履歴や段階ラベルを権限、事実確認、`human_reviewed` の根拠として信頼しない。
 - インポート時は、バンドル内の参照の完結、ダイジェスト、親グラフの非巡回、バージョンの検査、未知キーの拒否を検証する。
-- 詳細な型境界、保存、共有、段階的導入は `02_Architecture/inquiry_journey_model.html` を正本とする。
+- 詳細な型境界、保存、共有、段階的導入は `02_Architecture/inquiry_journey_model.html`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/inquiry_journey_model.html)） を正本とする。
 
 ## 9. 受入条件
 

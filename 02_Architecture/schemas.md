@@ -2,10 +2,10 @@
 
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-> 現行契約の読み方は `02_Architecture/contract_reading_guide.md`、2026年5月のストリームと凍結の形成履歴は [スキーマ契約の形成履歴](history/schema-contract-formation-2026-05.md) を参照する。
+> 現行契約の読み方は `02_Architecture/contract_reading_guide.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/contract_reading_guide.md)）、2026年5月のストリームと凍結の形成履歴は [スキーマ契約の形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/schema-contract-formation-2026-05.md) を参照する。
 > MVPで実際に運用サポートするデータ構造、埋め込み限定の構造、契約のみの構造は `02_Architecture/data_model_operations_overview.html` を参照する。
 > ADR-0033で定義したSupport・Maintenance・Contractの境界（L1/L1.5/L2/L2.5/L3/L0）を正本とし、本書の型定義単体で運用保証を主張しない。
-> `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生バンドルは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存バンドルはこのメタデータを省略する。詳細は `02_Architecture/inquiry_journey_model.html` を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、バージョンゲート、保存契約へ履歴キーを追加しない。
+> `ADR-0057` は、反復的探究を独立 `InquiryJourneyV1` + 不変 `RoundSnapshotV1` DAGとして扱う設計を採択した。共有用派生バンドルは任意の `InquiryExportInfoV1` でSafeMode適用と全体／選択ラウンド範囲を記録し、ローカル保存バンドルはこのメタデータを省略する。詳細は `02_Architecture/inquiry_journey_model.html`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/inquiry_journey_model.html)） を参照する。実装・移行・CRUDが揃うまでは `L0: Planned` であり、現行 `DocumentV1` の型、バージョンゲート、保存契約へ履歴キーを追加しない。
 > `ADR-0085` / `02_Architecture/sensemaking_semantic_model.md` は、Evidence / Observation / 関係 / Hypothesis / Structure / Synthesis / レビュー / Decisionを将来の意味成果物として定義する。`ADR-0086` / `02_Architecture/sensemaking_artifact_contract_v1alpha1.md` は、その論理識別情報・厳密なリビジョン・来歴・レビュー・Authority遷移を定義し、`ADR-0087` / `sensemaking_payload_authority_exchange_v1alpha1.md` はペイロード・スコープ・交換の境界を定義する。`ADR-0088`は永続化の第一候補を選んだが、**マイグレーション / 実行時スキーマは未実装**である。これらはすべて **L0 Plannedの概念／設計契約** であり、現行 `DocumentV1` へ新フィールドや新配列を追加したことを意味しない。
 本ドキュメントは、sui-sensemakingの **MVPで扱う永続データの最小スキーマ** を定義します。
 
@@ -352,6 +352,10 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 - `bundleHash` は、次の入力のcanonical JSON（`canonicalizeJson`）のsha256（小文字16進64桁）である。`schemaVersion`、`docId`、`baseDocSignature`、`constraint`、`safeMode`、`cards`（`id`、`claimType`、`reviewed`、`redacted`、露出した本文。伏せた本文は `null`）、`islands`（`id`と、レビュー済みでなければ伏せた題名）、`relations`、`evidence`、`contradictions`、`counts`、`voids`、`narrativeChecks`。単位digestは入力に含めない。
 - `contradictions` は `{from, to}` だけを持ち、`contradictionState` と `note` は投影にも `bundleHash` の入力にも含めない（ADR-0104）。`resolved` の矛盾も `unconfirmed` と同じ形で残す。
 - `narratives` の `title` と `text` は、投影にも `bundleHash` の入力にも含めない。投影が返すのは `narrativeChecks`（`id`、`counts`、`issueDirections`）だけである（ADR-0106）。
+- 配列の並べ方（#3389）は次のとおりで、いずれも実行環境のロケールに依存しない。文字列の比較はすべてUTF-16コード単位順（JavaScriptの `<` による比較。キー順と同じ規則）である。
+  - 並べ替える配列: `cards` は `id`、`islands` は `id`、`relations` は `from`、`to`、`type` の順、`evidence` と `contradictions` は `from`、`to` の順。
+  - 文書の並びのまま出す配列: `voids`、`narrativeChecks`、`voids[].cardIds`、`voids[].islandIds`、`narrativeChecks[].issueDirections`。同じ内容でも保存時の並びが違えば `bundleHash` は変わる。他言語で再計算するときは、保存された文書の並びを使う。
+  - #3389 より前の実装は、`id` と `from`/`to` の比較に `localeCompare`（ICUの照合順序）を使っていた。大文字小文字・記号・数字が混ざるidでは、コード単位順と順序が変わり、`bundleHash` の値も変わる。既存の固定値テストベクトル（idは `c1`、`c3` など）は順序が変わらず、値も変わらない。保存済みの `bundleHash` を持つ利用者がいる場合、該当する文書では再取得で値が変わる。この変更は、他言語での再計算を可能にするための破壊的修正として扱い、`schemaVersion` は変えない。
 - 値が変わる条件は次のとおり。
   - 文書が保存されて `updatedAt` が進んだとき。露出内容が1文字も変わらなくても変わる。カードの移動、無関係なカードの追加、`holdState` の変更を含む。
   - 露出する本文、レビュー済みの島の題名、関係線、根拠・矛盾の関係、`counts`、`voids`、`narrativeChecks` が変わったとき。
@@ -375,7 +379,7 @@ type ItemDigest = { alg: "sha256"; value: string }; // 小文字16進64桁
 | `2026-08-01T00:00:00+00:00` | `false` | `c742c2105d5070cf39da8d7af2bd212799b43f1197c95e8eb6d4c5f39c92522d` |
 | `2026-08-01T00:00:00+00:00` | `true` | `738c618b092785d42165200e8f8f0c0da6d3b510a3d7b4be6294beddecab8879` |
 
-- `updatedAt` はクライアントが `PUT /docs/{doc_id}` で送る値で、サーバーは採番も単調増加の検証もしない（`api.md` §1.2）。したがって `baseDocSignature` の版の成分は、サーバーが保証する版ではない。`updatedAt` を更新しないクライアントや、古い `updatedAt` を送るクライアントが保存すると、内容が変わっても `bundleHash` の版の成分は変わらない。`holdState` のように露出するが `bundleHash` の入力に含まれない項目は、この経路では検出できない。内容だけの版固定には、単位digest（§1.3）を使う。この残存リスクは、サーバー採番の `revision` を足す判断（#3299）まで続く。
+- `updatedAt` はクライアントが `PUT /docs/{doc_id}` で送る値で、サーバーは採番も単調増加の検証もしない（`api.md` §1.2）。したがって `baseDocSignature` の版の成分は、サーバーが保証する版ではない。`updatedAt` を更新しないクライアントや、古い `updatedAt` を送るクライアントが保存すると、内容が変わっても `bundleHash` の版の成分は変わらない。`holdState` のように露出するが `bundleHash` の入力に含まれない項目は、この経路では検出できない。内容だけの版固定には、単位digest（§1.3）を使う。#3299 では現状の契約を明確にする選択肢を採り、サーバー採番の `revision` を足すかは、必要になった時点で別のIssue/ADRで判断する。それまでこの残存リスクは続く。
 - 実装は `frontend/src/export/context_bundle_projection.ts`、条件は同じ階層の `context_bundle_projection.test.ts`（「bundleHash が変わる条件と変わらない条件」）で固定している。`updatedAt` を入力から外す、露出内容だけの値を別項目として足す、といった変更は、既存の `bundleHash` の値を変えるか契約を広げるため、ADRと `schemaVersion` の扱いを決めてから行う（未決）。
 
 ## 2. ID・座標系の前提
@@ -1662,7 +1666,7 @@ ADR-0054「後段が前段の安全原則を弱めることはない」に従い
 
 - ADR: `ADR-0054-external-connection-layer-staged-introduction.md`（段階3）, `ADR-0049-external-flat-rate-agent-collaboration.md`（安全境界の正本）, `ADR-0041-core-value-invariants-single-guard.md`（CVI-2 proposal-only）
 - Issue: `EXT-CONN-03-critique-constraint-export`
-- 調査: `01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md`（追補A3: TRACE定量根拠）
+- 調査: `01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/research/research-2026-07-12-trigger-ai-external-integration.md)）（追補A3: TRACE定量根拠）
 - 仕様: `02_Architecture/external_agent_collaboration_spec.html`（§3.3a制約節の埋め込みプロファイル）
 - フロントエンド: `03_Implement/frontend/src/domain/types.ts`（CRITIQUE_TAGS / AgentProposalDecisionEntry）, `03_Implement/frontend/src/domain/hil_rs_payload.ts`（内部critique収集の前例）, `03_Implement/frontend/src/export/context_bundle_projection.ts`（外部読み取り面の安全境界前例）
 

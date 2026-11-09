@@ -374,5 +374,6 @@ kind-specific payload、Relation拡張、Authority Scope、Consensus participant
 
 ## Traceability
 
+- Superseded by（一部）: `ADR-0089`（価値の「現在の定義」に関する運用部分。原則・不変条件・モデルそのものは `ADR-0010`・`ADR-0032`・`ADR-0041` が引き続き正本）
 - Source: `01_Plans/value_to_requirements.md`
 - Supersedes: `01_Plans/value_to_requirements.md`

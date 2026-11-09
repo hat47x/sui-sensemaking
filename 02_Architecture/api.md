@@ -2,7 +2,7 @@
 
 
 > 環境変数・実行パラメータの正本は `02_Architecture/runtime_parameter_registry.md`。本書では必要最小限のみ記載し、追加/改名時は正本を先に更新する。
-> 現行契約とStream / 凍結履歴の読み分けは `02_Architecture/contract_reading_guide.md` を参照する。
+> 現行契約とStream / 凍結履歴の読み分けは `02_Architecture/contract_reading_guide.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/contract_reading_guide.md)） を参照する。
 > MVPのCRUDサポート表と運用保守境界は `02_Architecture/data_model_operations_overview.html` を参照する。
 本ドキュメントは、sui-sensemakingの **MVP API（Documentの保存・取得）** を定義します。
 
@@ -273,7 +273,7 @@ JSONリクエスト共通のトランスポート安全境界として、バッ�
 SafeMode既定ON、未レビュー本文保護、proposal-only、`human_reviewed`人手昇格、Consensus Graph直接更新禁止は [architecture.html §05](architecture.html#ce0-boundary) を正本とする。
 
 
-旧段階手順、モック検証計画、Stream A凍結ログは[形成履歴](history/api-contract-formation-2026-04-to-05.md)へ分離した。
+旧段階手順、モック検証計画、Stream A凍結ログは[形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/api-contract-formation-2026-04-to-05.md)へ分離した。
 
 ### 2.9 CE4 API/CLI/GUI 同値性・監査契約（CE4-API-CLI-AUDIT）
 
@@ -918,7 +918,7 @@ BFFの `Sui-Sensemaking-Auth-Session` cookieで認証する安全でないメソ
 - **テナントの決まり方**: トークンのハッシュから、サーバー側の行（資格情報）を引いて決める。リクエストのヘッダー・query・body・パスで指定した値は使わない。
 - **通れるroute**: `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つだけ。`GET /docs` は付与された文書のmetadataだけを返す。判断ログ、類似候補など、読み取りでも本文由来の派生データを返す経路は `403 agent_route_not_enabled` で閉じる。TEI epistemic projection（`GET /docs/{doc_id}/epistemic/projection`）も、判定項目を含み、バックエンドでSafeModeの伏せ字を行わないため、agent経路には開かない（ADR-0093追記、#3297）。
 - **拒否**: 不正、未知、失効、期限切れ、バージョン不一致は、区別せず `401 agent_credential_invalid` とする。付与外の文書、存在しない文書、他テナントの文書は、同じ `404 agent_document_not_granted` を返す。書き込み、export、archive は `403 agent_write_not_enabled`。
-- **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。未レビューのカードは、本文だけでなくidも返さない。そのカードを端点とする関係線・根拠リンク、島の`cardIds`・`placardCardId`、voidの`cardIds`からも除く（MCP投影と同じゲート、#3275）。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。レビュー済みの島の題名は、SafeModeがONでも返す。人が確認した短い見出しとして扱うためである（ADR-0098）。題名が未レビューのカード本文を引用し得る危険は残るが、確認した人の責任とし、文字列の自動走査では判定しない。レビュー済みのカード本文は、agent資格情報の付与範囲として返す。MCPの`safeMode: true`は、それより厳しくカード本文を伏せるクライアント側の既定であり、バックエンドの読み取りを認可する条件ではない。agent経路の監査eventは、実際にレビュー済み本文を返したとき`safe_mode=false`と`metadata.reviewedTextExposed=true`を記録する（ADR-0093、#3276）。
+- **本文**: `GET /docs/{doc_id}` は、許可リスト方式の文書を返す。構造の項目と、人が確認した本文（`textReviewed` が true のカード本文、`titleReviewed` が true の島の題名）だけを残し、それ以外の本文（文書の題名、島の要約、関係の要約、ナラティブ本文、根拠リンクの注記、voidの題名・詳細）は返さない。未レビューのカードは、本文だけでなくidも返さない。そのカードを端点とする関係線・根拠リンク、島の`cardIds`・`placardCardId`、voidの`cardIds`からも除く（MCP投影と同じゲート、#3275）。島を端点とする関係線（島と島、カードと島）は、端点のカードがレビュー済みでも返さない。`edges`が空でも島の間に関係がないとは限らない（#3402）。必須で空にできない文字列は `[withheld]` とする。`GET /docs` の題名も返さない。レビュー済みの島の題名は、SafeModeがONでも返す。人が確認した短い見出しとして扱うためである（ADR-0098）。題名が未レビューのカード本文を引用し得る危険は残るが、確認した人の責任とし、文字列の自動走査では判定しない。レビュー済みのカード本文は、agent資格情報の付与範囲として返す。MCPの`safeMode: true`は、それより厳しくカード本文を伏せるクライアント側の既定であり、バックエンドの読み取りを認可する条件ではない。agent経路の監査eventは、実際にレビュー済み本文を返したとき`safe_mode=false`と`metadata.reviewedTextExposed=true`を記録する（ADR-0093、#3276）。
 - **監査**: eventの主体は `x-actor-ref` ではなく、検証済みの `agent:<agentId>` から求める。agentが送れる `POST /docs/{doc_id}/context-audit` は、`operation=query`、`command=context-query`、`channel=mcp` の読み取りの記録だけである（それ以外は `403 agent_audit_operation_not_enabled`）。CE-4の完全性の追跡には加えない。この経路の `bundleHash`、`safeMode`、`equivalenceKey` はagentの申告値であり、サーバーが実際に返した内容と突き合わせたものではない。監査eventの `metadata` には `recordedBy="agent_report"` と `serverVerified=false` を付け、サーバーが観測した読み取りと区別できるようにする。読み取りの事実の証跡には使えない。
 - **応答**: agentへの応答は `Cache-Control: private, no-store` とし、資格情報のヘッダーで `Vary` を付ける。`GET /docs/{doc_id}` は `ETag` を返さない。`GET /docs` の `created_by` は返さない。
 - **即時失効**: 状態・期限・付与は毎要求で確認する。キャッシュは持たない。
@@ -938,11 +938,11 @@ ADR-0101は、TEI Assessmentを外部の信頼境界を越えさせないため�
 **GET** `/admin/tei-epistemic/artifacts/{artifact_kind}`
 
 - 認可: コントロールプレーンのみ（ADR-0072）。`X-Admin-Api-Key` または provision capabilityを要求し、業務面の `X-API-Key` では通さない。認可に失敗すると、鍵が設定されているかどうかを明かさない `401 control_plane_unauthorized` を返す。
-- `artifact_kind` は `epistemic-assessment`、`epistemic-context`、`epistemic-detail` のみ。許可リスト外や越境の指定は `404 {"code": "unknown_tei_artifact"}` で拒否し、内容を返さない。
+- `artifact_kind` は `epistemic-assessment`、`epistemic-context`、`epistemic-detail`、`documentv1-projection` の4種のみ（`tei_reference_transport.py` の `TEI_REFERENCE_ARTIFACT_KINDS`）。`documentv1-projection` は、他の3種と違い、カードの `text`、`claimType`、`holdState`、`textReviewed` を運ぶ。DocumentV1を保存せず、SUIの正本を置き換えない。許可リスト外や越境の指定は `404 {"code": "unknown_tei_artifact"}` で拒否し、内容を返さない。
 - `SUI_TEI_REFERENCE_DIR` が未設定のときは、`503 {"code": "tei_reference_unconfigured"}` でfail closedする。これが既定で、このendpointの効果は設定した運用に限る。
-- artifactの欠損、読み取り不能、JSONとして正しくない、JSON objectでない場合は、`503 {"code": "tei_reference_unavailable"}` を返す。いずれの場合も、内容を部分的にも返さない。エラーの種類と応答本体の形は固定し、operatorが設定誤りを見分けられるようにする。
+- artifactの欠損、読み取り不能、JSONとして正しくない、JSON objectでない、ファイルが16 MiBを超える（`too-large`）、artifactがシンボリックリンクである（`symlink`）場合は、`503 {"code": "tei_reference_unavailable"}` を返す。いずれの場合も、内容を部分的にも返さない。エラーの種類と応答本体の形は固定し、operatorが設定誤りを見分けられるようにする。
 - 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}` を返す。応答は `Cache-Control: no-store`。読み取り専用であり、TEI AssessmentをDocument / Canonical stateへ埋め込まない。
-- テナント業務面への公開は未決である。テナント境界に沿う公開や、利用者ごとの紐付けを設ける場合は、別の判断材料（ADR）で扱う。
+- テナント業務面への公開は、epistemic の3種についてはADR-0102が採択済みで、§2.17 に書く。`documentv1-projection` は、許可リストと紐付けの検査に同じ一覧を使うため、運用者が (tenant, doc) に結ぶと §2.17 の endpoint からも返り得る。この endpoint にはカードの `textReviewed` やSafeModeによる除外がなく、カード本文入りのartifactを業務面で返してよいかは未決で、Owner判断を待つ（#3369）。
 
 ### 2.17 TEI epistemic projection（テナント業務面、案B、ADR-0102 採択済み）
 
@@ -954,7 +954,7 @@ ADR-0102 は案B（文書単位の紐付けを管理面で登録し、テナン�
 - `SUI_TEI_REFERENCE_DIR` 未設定: `503 {"code": "tei_reference_unconfigured"}`。
 - 紐付けが無い（registry 不在、または (tenant, doc) に一致する登録なし）: `404 {"code": "epistemic_binding_not_found"}`。registry が壊れている・曖昧（重複）・未知の bound artifact kind も fail closed（registry 壊れは 503、それ以外は 404）。
 - artifact は、紐付けた (tenant, doc) ごとのディレクトリ `SUI_TEI_REFERENCE_DIR/tenants/<tenantId>/<docId>/<artifactKind>.json` からだけ読む。ディレクトリ直下の運用者向けコーパス（`/admin/tei-epistemic` が返すもの）は、業務面では返さない。これにより、紐付けを通して別のテナントや別の文書のために作った artifact を返すことはない。tenantId と docId が安全な一つのパス要素（英数字で始まり、英数字・`.`・`_`・`-` だけ、128文字以内、`..` を含まない）でない場合も fail closed する。
-- bound artifact が読めない（上のディレクトリに無い場合を含む）: `503 {"code": "tei_reference_unavailable"}`。
+- bound artifact が読めない（上のディレクトリに無い場合、16 MiB超過、`tenants/` 配下のartifactや各ディレクトリがシンボリックリンクである場合を含む）: `503 {"code": "tei_reference_unavailable"}`。
 - 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}`。`Cache-Control: no-store`。読み取り専用。epistemic データは Document / Canonical state へ保存・埋め込みしない。
 - レスポンス本体は artifact をそのまま返す。contract / schema の検証と drift 再計算は frontend consumer が行う。
 
@@ -988,6 +988,25 @@ MVPでは、エラーを過度に作り込まない。ただし、実装済み�
 - 409：`If-Match` 不一致、重複する判断ログなどの競合
 - 422：**ドメイン契約違反**。形式は正しいが契約を満たさない（必須フィールドがtrim後空、enum違反、操作/コマンド不一致、A1契約フィールド違反、Pydanticボディ検証の既定）。
 - 500：内部エラー
+- 503：依存の利用不可やfail closed。経路ごとに `code` を持つもの（`tei_reference_unavailable`、`guest_redeem_unavailable` 等）と、文書のリビジョン保存の整合性検査に失敗した場合の `code` を持たないものがある。後者は下の「リビジョン保存の整合性検査の失敗」に分類を示す。
+
+### 4.1 リビジョン保存の整合性検査の失敗（503、`code` なし）
+
+文書の保存（`PUT /docs/{doc_id}` など）と取得（`GET /docs/{doc_id}` など）で、リビジョン保存の整合性検査に失敗すると、`503 {"detail": "Document revision storage failed integrity verification", "requestId": ...}` を返す。機械可読な `code` は持たない。`detail` の文字列は現状のままで、呼び出し側が文言に依存して分岐する前提は置かない。`code` を足すか、競合を `409` へ寄せるかは、応答契約の変更になるため未決である（#3410）。
+
+この `503` は、次の3つの例外を同じ応答へ写したもので、応答だけでは区別できない。条件は `database_content_store.py` と `generation_repository.py` を読んで列挙した（実測は未実施）。
+
+| 例外 | 起きる条件 | 再試行 |
+| --- | --- | --- |
+| `DocumentRevisionDivergence` | 文書の現在値が、`main` のheadのリビジョンの内容と一致しない。headが指すリビジョンの行が無い。文書のJSONを解釈できない | 読み取り中に別の書き込みがコミットされた場合は、再試行で収束し得る（仮説。文書の行とheadを別々に読むため）。再試行しても変わらないときは、DBの食い違いとして運用者が調べる |
+| `GenerationBlobUnavailable` | 内容のblobがDBに無い、状態が `ready` でない、保存サイズやdigestが一致しない、deltaの基底が無い・循環している・深さが上限を超える、復元に失敗する | 再試行では直らない。保存データの欠損または破損として、運用者が調べる |
+| `GenerationBlobConflict` | 書き込み時に、保存サイズが不正、deltaの深さが上限を超える、deltaの基底が無い、生成したblobを復元できない、同じdigestで内容が異なるblobが既にある | 同時書き込みで同じdigestを同時に作った場合を除き、再試行では直らない。内容が異なるのに同じdigestという状態はデータ破損として調べる |
+
+呼び出し側の扱い（現状の契約で取れる範囲）。
+
+- 同じ `503` を受けたら、有限回（例: 2〜3回）だけ間隔を置いて再試行してよい。収束しない場合は、永続的な保存の問題として扱い、再試行を止めて運用者へ知らせる。固定の回数・間隔の根拠となる実測は無い。
+- 別の同時書き込みによる競合は、`If-Match` 不一致の `409` や、`Document changed concurrently` の `409` として返る経路がある。`503` へ落ちる条件と、`409` に写る条件の境界は、実測していない。
+- 「SUIが落ちた」とは区別して記録する。`/readyz` が `ready` のまま、保存と取得だけがこの `503` で失敗している場合は、DBのリビジョン保存の整合性の問題である。
 
 （SEC-HTTP-01・2026-08-15）`POST /admin/provision/users` の必須文字列空チェックを **422** へ統一（従来400だったが、ai.py/ai_relations.pyの同種チェックは422。IdP登録系の `unsupported_protocol` / `invalid_jwks_uri` は構造化コードを持つ別クラスとして400のまま・将来の標準化対象）。
 
@@ -1476,7 +1495,7 @@ Inquiryバンドルは `DocumentV1` の任意フィールドではなく、W型�
 
 ## 12. 形成履歴（Informative）
 
-2026-04-30〜2026-05-19のCE0/CE1/CE4モック先行、Stream同期、凍結/handoff形成記録は [API契約の形成履歴](history/api-contract-formation-2026-04-to-05.md) へ分離した。現在の型は`schemas.md`、責務・信頼境界は`02_Architecture/architecture.html`、エンドポイント/ステータス/エラー/認証/副作用は本書を基準とする。
+2026-04-30〜2026-05-19のCE0/CE1/CE4モック先行、Stream同期、凍結/handoff形成記録は [API契約の形成履歴](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/history/api-contract-formation-2026-04-to-05.md) へ分離した。現在の型は`schemas.md`、責務・信頼境界は`02_Architecture/architecture.html`、エンドポイント/ステータス/エラー/認証/副作用は本書を基準とする。
 
 ## 13. 廃止済みエンドポイントの記録規約（DX-CANON-INTENT-01）
 

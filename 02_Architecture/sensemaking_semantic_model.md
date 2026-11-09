@@ -377,7 +377,7 @@ o1、o2、o3は、一致しなくてかまいません。
 
 プロバイダ内部のスコアを、SUIのTruthやImportanceへ変換しません。各成果物の来歴と関係を保持します。
 
-既存の `associative_cognition_provider_contract.md` にある、D0、D1、D2を並存させる原則と整合します。
+既存の `associative_cognition_provider_contract.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/associative_cognition_provider_contract.md)）にある、D0、D1、D2を並存させる原則と整合します。
 
 ## 9. Review Capsule
 

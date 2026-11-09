@@ -10,10 +10,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+from sui_sensemaking_api import tei_reference_transport as transport
 from sui_sensemaking_api.tei_reference_transport import (
     TeiReferenceArtifact,
     TeiReferenceReadFailure,
     read_bound_tei_reference_artifact,
+    read_tei_epistemic_binding,
     read_tei_reference_artifact,
 )
 
@@ -126,3 +130,56 @@ def test_documentv1_projection_artifact_is_readable(tmp_path: Path) -> None:
 
     assert isinstance(result, TeiReferenceArtifact)
     assert result.payload == payload
+
+def test_oversized_artifact_and_binding_registry_fail_closed_as_too_large(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(transport, "TEI_REFERENCE_MAX_FILE_BYTES", 64)
+    _write_artifact(tmp_path, "epistemic-assessment.json", {"pad": "x" * 200})
+    result = read_tei_reference_artifact(tmp_path, "epistemic-assessment")
+    assert isinstance(result, TeiReferenceReadFailure)
+    assert result.reason == "too-large"
+
+    _write_artifact(tmp_path, "epistemic-bindings.json", {"bindings": [], "pad": "x" * 200})
+    binding = read_tei_epistemic_binding(tmp_path, "tenant-a", "doc-1")
+    assert isinstance(binding, TeiReferenceReadFailure)
+    assert binding.reason == "too-large"
+
+    # 上限ちょうどの内容は通る。
+    exact = json.dumps({"a": "x" * 40})
+    assert len(exact.encode("utf-8")) <= 64
+    _write_artifact(tmp_path, "epistemic-context.json", {"a": "x" * 40})
+    ok = read_tei_reference_artifact(tmp_path, "epistemic-context")
+    assert isinstance(ok, TeiReferenceArtifact)
+
+
+def test_symlinked_artifact_is_rejected_even_inside_the_base_directory(tmp_path: Path) -> None:
+    _write_artifact(tmp_path, "real.json", {"contract": "real"})
+    link = tmp_path / "epistemic-assessment.json"
+    try:
+        link.symlink_to(tmp_path / "real.json")
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink を作れない環境（Windowsの権限など）")
+    result = read_tei_reference_artifact(tmp_path, "epistemic-assessment")
+    assert isinstance(result, TeiReferenceReadFailure)
+    assert result.reason == "symlink"
+
+
+def test_bound_artifact_does_not_follow_symlinks_between_tenants(tmp_path: Path) -> None:
+    owner = tmp_path / "tenants" / "tenant-a" / "doc-1"
+    _write_artifact(owner, "epistemic-assessment.json", {"contract": "tenant-a"})
+    (tmp_path / "tenants" / "tenant-b").mkdir(parents=True)
+    try:
+        (tmp_path / "tenants" / "tenant-b" / "doc-1").symlink_to(owner, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink を作れない環境（Windowsの権限など）")
+    result = read_bound_tei_reference_artifact(tmp_path, "tenant-b", "doc-1", "epistemic-assessment")
+    assert isinstance(result, TeiReferenceReadFailure)
+    assert result.reason == "symlink"
+
+    file_link_dir = tmp_path / "tenants" / "tenant-c" / "doc-1"
+    file_link_dir.mkdir(parents=True)
+    (file_link_dir / "epistemic-assessment.json").symlink_to(owner / "epistemic-assessment.json")
+    result = read_bound_tei_reference_artifact(tmp_path, "tenant-c", "doc-1", "epistemic-assessment")
+    assert isinstance(result, TeiReferenceReadFailure)
+    assert result.reason == "symlink"

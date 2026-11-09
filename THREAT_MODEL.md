@@ -136,7 +136,7 @@ stdioの段階では、待ち受けのポートを開かず、外部から到達
 - 資格情報は、テナント、`agentId`、付与文書の明示列挙、失効日時、状態に束縛する。有効期限は90日以内、付与文書は1〜50件で、テナント全体や全件の付与は作らない（`agent_credential_admin.py`）。
 - 平文は登録の応答に一度だけ出し、保存するのは領域を分けた鍵付きハッシュ（HMAC-SHA256）とバージョンだけにする。一覧の応答にも平文とハッシュは出さない（`test_agent_credential_admin_routes.py`）。ログにトークンが出ないことは `test_agent_credential_log_hygiene.py` で確かめる。
 - 状態、期限、バージョン、付与は、キャッシュせず、毎要求でRLS付きの表（`agent_credentials`、`agent_document_grants`）から引き直す。失効は次の要求から効く（`api.md` §2.15、`test_agent_credential_http.py`）。トークンの索引表（`agent_credential_index`）だけは、テナントが決まる前に引くためRLSを掛けない（ADR-0093の判断）。
-- 付与外の文書と、他テナントの文書と、存在しない文書は、区別できない404で返す。リクエストのヘッダーやクエリでテナントを指定しても、DBスコープは決まらない（`test_agent_credential_http.py`）。他のテナントの資格情報や付与が見えないことは、表のPostgres RLSに依存する（`test_agent_credential_postgres_rls.py`。実DBが要るため、既定ではskipされ、CIでも実行されない。#3284）。
+- 付与外の文書と、他テナントの文書と、存在しない文書は、区別できない404で返す。リクエストのヘッダーやクエリでテナントを指定しても、DBスコープは決まらない（`test_agent_credential_http.py`）。他のテナントの資格情報や付与が見えないことは、表のPostgres RLSに依存する（`test_agent_credential_postgres_rls.py`。実DBが要るため、手元の既定ではskipされる。CIでは `.github/workflows/mcp-agent-auth-ci.yml` の `backend-postgres-rls` ジョブで実行する。#3284）。
 - トークン交換のJWTは、バックエンドが署名、発行者、audience、有効期限を自分で検証する。対応付け（`agent_oauth_bindings`）と登録済みのIdPの対応が、テナントとagentを決める。クレームの値は要求であって権限として扱わない。`Sui-Sensemaking-Agent-Credential` と同時に送ると400にする。MCP宛てのトークンはバックエンドへ渡さない（ADR-0094、`test_agent_oauth_http.py`）。
 - agent向けの文書は、許可リスト方式の出力 `_agent_document_view` だけを返す。確認していないカード本文、島の題名・要約、関係の要約、ナラティブ、根拠リンクの注記、voidの本文、文書の題名は出さない（ADR-0093、`test_agent_view_projection_contract.py`）。agentには書き込み、export、archive、AI実行、提案の決定を許さない。
 - 監査の主体は、`x-actor-ref` ヘッダーではなく、検証済みの `agent:<agentId>` から決める。監査eventにはテナントを持たせ、本文、題名、トークンは含めない。`context-audit` は、資格情報のテナントと文書に束縛した範囲だけ受け付ける。ただし、この経路の `bundleHash` と `safeMode` はagentの申告値である。サーバーは形式だけを検査し、実際に返した投影と突き合わせない。eventの `metadata` には `recordedBy="agent_report"` と `serverVerified=false` を付け、サーバーが観測した読み取りと区別する。agentは、読んでいない文書についても任意の値で記録を作れる。
@@ -144,10 +144,28 @@ stdioの段階では、待ち受けのポートを開かず、外部から到達
 **残存するリスク**
 
 - 確認済みの島の題名は、SafeModeがONでも返す。人が書いた題名が、未確認のカード本文を引用している場合は、その引用が出る。ADR-0098は、この差を経路ごとの役割として許容し、共有境界は広げないと決めている。
-- 確認していないカードのid、関係線、島の構成が、`GET /docs/{id}` の出力に残る。MCP投影は、両端が確認済みでない関係線とカードidを出さないため、規則が食い違っている。どちらへ揃えるかは判断前である（#3275）。
-- SafeModeは、MCPのツール引数 `safeMode`（既定 `true`）にだけある。バックエンドは、agent資格情報に対してSafeModeを強制せず、確認済みの本文を返す。agentの文書読み取りの監査eventも、実際の露出にかかわらず `safe_mode=True` を記録する。強制するか、資格情報の付与範囲として常に返すと明記するかは、判断前である（#3276）。
+- 確認していないカードのidと関係線は、#3275 でMCP投影と同じゲートへ揃え、`GET /docs/{id}` の出力からも除く。そのカードを端点とする関係線・根拠リンク、島の `cardIds`・`placardCardId`、voidの `cardIds` からも除く（`02_Architecture/api.md` §2.15）。
+- SafeModeは、MCPのツール引数 `safeMode`（既定 `true`）にだけある。バックエンドは、agent資格情報に対してSafeModeを強制せず、確認済みの本文を返す。agent経路のSafeModeは未レビュー本文のゲートであり、確認済み本文の伏せ字ではない（#3276 の決定）。agentの文書読み取りの監査eventは、確認済みの本文を返したとき `safe_mode=false` と `metadata.reviewedTextExposed=true` を記録する（`02_Architecture/api.md` §2.15）。
 - 資格情報の漏えいへの備えは、失効とローテーションに依存する。ローテーションは、新しい `agentId` で登録し直し、古いものを失効させる運用で、同じ `agentId` は再利用しない（ADR-0093）。保管、ローテーション、漏えい時の失効の運用手順は、`04_Documentation/security.md` の「agent資格情報の運用」に置く。
-- 資格情報の期限の延長、付与の追加、回転の扱いは決まっていない（#3286）。agentごとの要求回数の上限は、テナントとagentのどちらをキーにするか決まっていない（ADR-0093）。
+- 資格情報の期限の延長、付与の追加、回転の専用APIは作らず、新しい `agentId` での再登録で行う（#3286 の決定）。再登録後の監査eventの `actorRefHash` は、旧 `agentId` の履歴と連続しない。agentごとの要求回数の上限は、テナントとagentのどちらをキーにするか決まっていない（ADR-0093）。
+
+### 6-4. TEI Referenceの局所I/O経路（ADR-0101、ADR-0102、#3387）
+
+`SUI_TEI_REFERENCE_DIR` を設定すると、バックエンドが運用者の置いたJSONファイルを読む。管理面（`GET /admin/tei-epistemic/artifacts/{artifact_kind}`）とテナント業務面（`GET /docs/{doc_id}/epistemic/projection`）が対象で、実装は `tei_reference_transport.py`、契約は `02_Architecture/api.md` §2.16、§2.17 にある。
+
+- 運用者が置くファイルを信頼する前提である。artifactの内容は検証せず、JSON objectとしてそのまま返す。検証は frontend consumer が行う。
+- `documentv1-projection` はカードの本文を運ぶ。運用者が (tenant, doc) に結ぶと、業務面からも返り得る。この経路には `textReviewed` やSafeModeに基づく除外がない。公開してよいかはOwner判断待ちである（#3369）。
+- テナント間の分離は、`tenants/<tenantId>/<docId>/` の配置と、パス要素の検査（英数字で始まる128文字以内、`..` を含まない）に依存する。
+- ファイルの大きさは、1ファイル16 MiB（`TEI_REFERENCE_MAX_FILE_BYTES`）までとする。リクエストごとにファイル全体と `epistemic-bindings.json` を読み直し、`json.loads` で展開するため、誤配置の巨大ファイルがAPIプロセスのメモリを使い切らないようにする。超過は内容を返さず、`too-large` でfail closedする（管理面・業務面ともに `503 tei_reference_unavailable`）。上限は固定値で、設定にはしない。巨大ファイルでの実測はしていない。
+- 封じ込めは `Path.resolve()` の後で、基準ディレクトリの内側かを確かめる方式である。加えて、artifactファイル、`epistemic-bindings.json`、業務面の `tenants/`・`tenants/<tenantId>/`・`tenants/<tenantId>/<docId>/` がシンボリックリンクなら、`symlink` で拒否する。これで、あるテナントの配置から別のテナントのファイルを指すリンクによる共有を作れない。`SUI_TEI_REFERENCE_DIR` 自体がリンクであることは許す（運用者が選ぶ基準ディレクトリのため）。LinuxのWSLでの単体テストで確認した。Windowsではリンクを作れず、該当テストはskipされる。
+
+**既定案と覆す条件**
+
+- 上限16 MiBとシンボリックリンク拒否は、狭く安全な側の既定案である。運用でリンクによる配置が必要になる、または16 MiBを超える正当なartifactが出た場合は、この節と `tei_reference_transport.py` を見直す。
+
+**未決**
+
+- この経路がTAIのSCN-001で使われるかの見通し。`04_Documentation/tai_agent_connection.md` は、TAIのagent経路ではTEI投影を使わないとしている。使うなら、別の認可を決める判断が先に要る。
 
 ### 6-2. バックエンドのJSONリクエストの境界（SEC-DOC-BOUND-03）
 

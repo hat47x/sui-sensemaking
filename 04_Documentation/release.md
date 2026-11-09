@@ -32,7 +32,16 @@ git diff --check
 
 ## リリース判断の流れ
 
-常設CIは現在無効なので、次の確認は、タグを打つ前に、タグの対象にする予定のコミットSHAに対して自分で実行し、結果をリリースの記録に残します。
+単一の `ci.yml` による常設CIは置いていません。PRと定期の検証は、次の個別ワークフローが担います。どれも、リリースの代わりにはなりません。タグを打つ前に、タグの対象にする予定のコミットSHAに対して、CIが確認しない項目を自分で実行し、結果をリリースの記録に残します。
+
+| ワークフロー | 実行のきっかけ | 確認する範囲 |
+| --- | --- | --- |
+| `unit-verification-ci.yml` | `03_Implement/frontend`・`backend` の変更を含むPRとmainへのpush | バックエンドの契約ドリフトとruff、代表サブセットのpytest。フロントエンドの型検査・単体テスト・本番ビルド・代表e2e |
+| `mcp-agent-auth-ci.yml` | MCP、export/domain、backendの変更を含むPRとmainへのpush | MCPとagent認証・context投影・PostgresのRLSの回帰 |
+| `native-action-contract-ci.yml` | 文書の保存・Action関連の変更を含むPRとmainへのpush | native Actionの契約と保存 |
+| `backend-full-nightly.yml` | 毎日の定期実行と手動実行 | バックエンドの全テスト（契約ドリフトとruffを含む） |
+
+CIが確認しないのは、フロントエンドの全e2e、手動のスモークテスト、Docker Composeでの起動、文書の確認、安全上の境界の目視です。これらは、下の手順で自分が行います。PRのCIが通ったことは、リリースの確認を省く理由にしません。
 
 1. 差分の範囲を確認する。
 2. 影響があるテストを実行する。
@@ -55,8 +64,13 @@ npm run build
 
 ```bash
 cd 03_Implement/backend
+export SUI_LLM_PROVIDER=none
+python scripts/check_contract_drift.py
+python -m ruff check src tests
 python -m pytest
 ```
+
+`SUI_LLM_PROVIDER=none` でも主要な価値が成り立つことを、安全不変条件として確かめるため、バックエンドの検査はこの値を付けて実行します。上の3つは `backend-full-nightly.yml` と同じ検査です。
 
 Docker Composeでは、次を実行します。
 

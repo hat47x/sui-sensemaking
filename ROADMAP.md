@@ -34,7 +34,7 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
    - 追加した計画範囲: [表札の射程と残余](01_Plans/cognitive_cultural_validation_plan.md#product-label-scope)、[発言の根拠と解釈](01_Plans/cognitive_cultural_validation_plan.md#product-statement-basis)、[文脈から補った条件の比較](01_Plans/cognitive_cultural_validation_plan.md#product-inherited-context)、[不明点を残した停止・再開](01_Plans/cognitive_cultural_validation_plan.md#product-inquiry-stop)の順で具体化した。原文・元カードへの回帰と異論の非破壊を先行させ、既存の表札・根拠・比較・引継ぎを使う最小差分から試す。発想資料の深掘り例を4件から8件へ増やし、文化的な由来と対象側で確認すべき範囲を分けた。
    - 次は[表札から元カードへ戻る実務試行](01_Plans/cognitive_cultural_validation_plan.md#first-practical-trial)を行い、[残った不足から実装範囲を絞る](01_Plans/cognitive_cultural_validation_plan.md#next-implementation-scope)。既存の違和感メモ・構造の判断履歴へ接続し、履歴の上限とSafeModeでの共有範囲を区別する。第2計画では[華厳由来の全体と部分の比較](01_Plans/cognitive_cultural_validation_plan.md#product-whole-part)を深め、同じカードの役割の変化と原文に残る違いを比べる。実務試行は未実施であり、新しい製品機能の採用は確定していない。
 
-6. **外部agent連携の判断**: 主要な未決は決着した。段階2の提案ingestは必要性が観測されるまで作らない（`ADR-0108`）。境界だけを先に宣言し、認可・未レビュー・監査・undoの条件を固定した（`ADR-0112`）。TEI epistemic projectionのtransportはSUI所有のローカルadapterとする（`ADR-0101`）。TEIの確認状態はSUIの`human_reviewed`へ写さず、intentのoutboxをhandoff境界とする（`ADR-0110`）。残るのは、outboxをTEIへ送る必要が生じたときの送信ADRと、実利用者による操作検証（#3346）である。
+6. **外部agent連携の判断**: 主要な未決は決着した。段階2の提案ingestは必要性が観測されるまで作らない（`ADR-0108`）。境界だけを先に宣言し、認可・未レビュー・監査・undoの条件を固定した（`ADR-0112`）。TEI epistemic projectionのtransportはSUI所有のローカルadapterとする（`ADR-0101`）。TEIの確認状態はSUIの`human_reviewed`へ写さず、intentのoutboxをhandoff境界とする（`ADR-0110`）。残るのは、outboxをTEIへ送る必要が生じたときの送信ADRと、実利用者による操作検証である。操作検証は、#3346 のclose時に外部協力者の確保を完了条件から外し、`ADR-0089` の証拠階層のT2/T3の範囲で記録すると組み替えた（`ADR-0110` §2）。
 
 機能の追加より、価値と認知の増分の確認を優先します。実際に使って、同じ摩擦が再現したものから、実装に昇格させます。
 
@@ -43,6 +43,12 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 [計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)と[設計案](02_Architecture/hybrid-tree-canvas-layout-design.html)に、独立したアウトライン／マインドマップUIとKJキャンバスの連携、Tree由来の薄い背景枝、マインドマップからの初期配置、島を保つ粘性付き整形、人的アノテーション、変化量制御、Undo/Redo、指定版からの部分復元を整理した。**構想段階であり、採用・実装・T2の利用価値検証は未了**。
 
 初期の確認対象は、同じノードの親子関係・位置・島を別々に保ち、人手で形成した島や保留を自動レイアウトで損なわないこと。KJキャンバス単独の自由探索も維持する。標準データ構造やSEIとの将来連携は候補とし、既存DocumentV1の契約変更は独立判断に残す。
+
+## 検討候補：OKFの出典・確認・鮮度をSUIの自由な意味探索へ取り込む
+
+[OKF連携の製品要件 #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)と[Hybrid Tree/KJ計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)で、Card/Island/Tree/Edgeの出典、生成/確認履歴、再検討と、SHO/SEIへのLoss付きMarkdown投影を検証する。OKFをSUI DocumentV1やReviewの正本へ置き換えない。可視の知識から非公開Cardの存在を推定せず、AI/OFF・OKF Pluginなしでも手動KJ/Outlineを維持する。
+
+**現在は調査と受入候補のみ**。最初に既存Card出典手掛かりを使う5 Cardの固定Fixtureと独立Expectedを用意し、Review/Sourceの観測範囲を確認する。Hybrid永続化、実Exporter、SHO/SEIの実受領、実利用によるT2の価値確認は未実施。全件検証や実認可に進む前にOwner判断を要する。
 
 ## 将来の候補（約束ではありません）
 

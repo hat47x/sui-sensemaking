@@ -129,7 +129,7 @@ sui-sensemakingはこの連続性を保ち、次を優先する。
 - 写真が単なる識別手掛かりの場合と、観察データ・根拠である場合を分ける。
 - 既定画面への常設UI追加は行わない。
 
-代表場面、比較条件、測定項目、停止条件は `02_Architecture/representative_visual_cue_evaluation.md`、機械可読fixtureは `02_Architecture/design/representative_visual_cue/phase0_scenarios.json` を正本とする。
+代表場面、比較条件、測定項目、停止条件は `02_Architecture/representative_visual_cue_evaluation.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/representative_visual_cue_evaluation.md)）、機械可読fixtureは `02_Architecture/design/representative_visual_cue/phase0_scenarios.json` を正本とする。
 
 ### Phase 1: 従来実践と連続するオフライン選択
 
@@ -188,9 +188,9 @@ sui-sensemakingはこの連続性を保ち、次を優先する。
 ## 8. 関連文書
 
 - `00_Prompt/domain.md`
-- `00_Prompt/ai_cognitive_externalization_requirements.md`
+- `00_Prompt/ai_cognitive_externalization_requirements.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/00_Prompt/ai_cognitive_externalization_requirements.md)）
 - `01_Plans/adr/ADR-0043-complexity-budget-for-cognitive-load.md`
 - `01_Plans/adr/ADR-0060-representative-visual-cue-source-boundary.md`
-- `01_Plans/issues/issue-DOMAIN-VISUAL-CUE-01-representative-visual-cues.md`
+- `01_Plans/issues/issue-DOMAIN-VISUAL-CUE-01-representative-visual-cues.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/01_Plans/issues/issue-DOMAIN-VISUAL-CUE-01-representative-visual-cues.md)）
 - `02_Architecture/data_model_operations_overview.html`
-- `02_Architecture/representative_visual_cue_evaluation.md`
+- `02_Architecture/representative_visual_cue_evaluation.md`（削除済み。[固定版](https://github.com/hat47x/sui-sensemaking/blob/36ac876befc0fde81897ea3dd90141720f7c58f3/02_Architecture/representative_visual_cue_evaluation.md)）
