@@ -194,22 +194,37 @@ export type DocumentLifecycleMetadata = {
   updated_at: string;
 };
 
-/** Fetch the document's lifecycle metadata via GET /docs (list), matching by id. */
+/** 一覧の走査を打ち切るページ数の上限（500件×20ページ=1万件）。超えた文書のmetadataはnullのままにする（#3419）。 */
+export const MAX_METADATA_LIST_PAGES = 20;
+
+/**
+ * Fetch the document's lifecycle metadata via GET /docs (list), matching by id.
+ * 一覧はkeysetページネーションで返るため、`X-Next-Cursor` に従って最大 MAX_METADATA_LIST_PAGES ページまで走査する（#3419）。
+ */
 export async function fetchDocumentMetadata(
   config: DocumentClientConfig,
   docId: string,
 ): Promise<DocumentLifecycleMetadata | null> {
-  const url = `${config.baseUrl}/docs`;
   const headers: Record<string, string> = authHeaders(config);
+  const timeoutMs = resolveRequestTimeoutMs();
+  let cursor: string | null = null;
 
   try {
-    const response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.timeout(resolveRequestTimeoutMs()) });
-    if (!response.ok) {
-      return null; // metadata is advisory — the content fetch remains authoritative
+    for (let page = 0; page < MAX_METADATA_LIST_PAGES; page += 1) {
+      const url: string = cursor === null ? `${config.baseUrl}/docs` : `${config.baseUrl}/docs?cursor=${encodeURIComponent(cursor)}`;
+      const response: Response = await fetch(url, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
+      if (!response.ok) {
+        return null; // metadata is advisory — the content fetch remains authoritative
+      }
+      const list = (await response.json()) as DocumentLifecycleMetadata[];
+      if (!Array.isArray(list)) return null;
+      const found = list.find((item) => item.id === docId);
+      if (found) return found;
+      const next: string | null = response.headers.get("X-Next-Cursor");
+      if (!next || next === cursor) return null;
+      cursor = next;
     }
-    const list = (await response.json()) as DocumentLifecycleMetadata[];
-    if (!Array.isArray(list)) return null;
-    return list.find((item) => item.id === docId) ?? null;
+    return null;
   } catch {
     return null; // never break the main projection over an advisory metadata fetch
   }
