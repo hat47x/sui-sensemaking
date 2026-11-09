@@ -104,6 +104,31 @@ npm run e2e:headed
 npm run e2e:mock
 ```
 
+## 実行の区分（PR、定期、手元のみ）
+
+Playwrightのspecは、実行される場所で3つに分かれます。`e2e/` 配下は94件あります。
+
+| 区分 | 対象 | 実行される場所 |
+| --- | --- | --- |
+| PRで必須 | 判断履歴、epistemic review panel、CE3 patch workspaceの8件（`unit-verification-ci.yml` の `frontend-e2e` が列挙） | PRごと |
+| 定期 | 上の8件を含む、`playwright.config.ts` の `testIgnore` 以外のすべて（89件） | 毎日1回（`frontend-e2e-nightly.yml`、18:30 UTC）と、手動実行（`workflow_dispatch`） |
+| 手元のみ | `testIgnore` の5件。性能予算2件（`npm run e2e:perf`）と、単独のharnessを要する3件（`ux_perf_01_time_to_interactive`、`saas_auth_browser_multi_instance`、`tenant_session_real_backend_multitab`） | 手元の実行だけ |
+
+定期実行の中でも、`SUI_E2E_REAL_BACKEND=1` を要する実バックエンドのスイート（下の2節）は、環境変数がないためskipされます。2026-11-09の実測では、240件のうち13件がこのskipでした。
+
+定期実行は、PRのCIと同じ手順で依存とChromiumを入れ、`playwright.config.ts` の設定（`workers: 3`、retryなし）で全件を実行します。実行結果は、ジョブの要約に所要時間、成功・失敗・flaky・skipの件数、失敗したspecの一覧として出ます。
+
+### 実測（ubuntu-24.04、2026-11-09）
+
+- 対象: 240件。227件が成功、13件がskip、失敗は0件でした。
+- 所要時間: テストの実行が4.6分、依存とChromiumの導入を含むジョブ全体が5分12秒でした。
+- 計測した版: このワークフローを追加したPR（#3420）のCI実行。Windowsの手元では通るのにLinuxで落ちるspecは、この実測では見つかっていません。1回の実測なので、環境差の有無を保証するものではありません。
+
+### 定期実行が失敗したとき
+
+- 通知は、GitHub Actionsの既定（ワークフローを最後に更新した人と、スケジュールを有効にした人への失敗メール）に任せます。通知先や確認の頻度を決める運用は、まだ決めていません。
+- 失敗は、retryで隠しません（#3250）。同じspecが繰り返し落ちる場合は、環境由来（リソース待ち等）か実装の後退かを切り分け、後退なら別のIssueにします。環境由来と分かった場合にretryを許すかは、未決です。
+
 ## 単体・回帰テスト
 
 E2Eの前に軽い回帰確認を行う場合。
