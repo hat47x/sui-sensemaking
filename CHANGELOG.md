@@ -14,7 +14,12 @@
 - 判断理由の履歴: カードと島の違和感メモに、現在値と分離した改訂履歴と復元を追加（ADR-0099）。
 - 構造の判断履歴: 島の作成・カードの追加/除外・保留状態の変更を記録し、後から任意の理由を追記できる。保留状態の変更履歴からは、その状態へ手動で戻せる（ADR-0100）。
 - epistemicレビューの詳細参照: TEIの詳細参照の結果を、一致・投影の変化・変化を判定できない状態（indeterminate）・取得元の利用不可・安全条件による拒否に分けて表示する部品を、fixtureで固定して追加した。検証を通らない内容は部分的にも表示しない。画面への組み込みはまだ行っていない。TEI Projectionの運搬は、SUIが同じ信頼境界内でTEI ReferenceのCLI/JSON出力を読む方式（案A）に決めた（ADR-0101、#3184）。
-- フロントエンドとバックエンドの単体・契約・代表e2eをPRで実行するCIを追加。
+- フロントエンドとバックエンドの単体・契約・代表e2eをPRで実行するCIを追加。2026-10-20以降は、MCPとagent認証の回帰検証、native Action契約・保存検証をPRで、バックエンド全テストを毎日の定期実行で動かす（`.github/workflows/`）。
+- 読み取り専用のMCPサーバー（`03_Implement/mcp`）: 外部のAI協働者が、許可された文書の投影だけを読める。段階1は読み取りに限り、書き込みはしない（ADR-0054）。
+- agent資格情報: MCPなどの外部agentに、テナントと文書へ束縛した資格情報を与える。通れるrouteは `GET /docs`、`GET /docs/{doc_id}`、`GET /ai/proposals/status`、`POST /docs/{doc_id}/context-audit` の四つに限る（ADR-0093、`api.md` §2.15）。MCP HTTPでは、トークン交換で資格情報を受ける（ADR-0094）。
+- 運用の確認用エンドポイント: `GET /healthz`（生存確認だけ）、`GET /readyz`（DBとスキーマの到達確認）、`GET /version`（`SUI_APP_REVISION` と `runtimeProfile`。未設定の `revision` は `unknown`）を追加した。`revision` は運用者が渡す申告値で、ビルドから算出した値ではない（#3386）。
+- TEI epistemic projectionの読み取りAPI: 管理面の `/admin/tei-epistemic` と、紐付けた文書ごとの `GET /docs/{doc_id}/epistemic/projection` を追加した。TEI Referenceのディレクトリから読み、agent経路には開かない（ADR-0101、ADR-0102）。
+- SaaS向けのテナント境界、セッション、guest redeem（`POST /session/guest/redeem`）を `api.md` に定めた。実IdP・実配備での確認は未実施である。
 - 手動オーサリング: 新規カード追加・本文のインライン編集（ダブルクリック）・削除ボタン。LLM を使わずに「書く・並べる・束ねる・つなぐ」が完結。
 - キャンバスの右クリック・コンテキストメニュー（背景／カード／島）と、ヘッダーの「ファイル」「編集」ドロップダウンメニュー。
 - 「詳細（Advanced）」トグル: AI・高度機能を既定で非表示にし、初回MVPの画面を簡素化。

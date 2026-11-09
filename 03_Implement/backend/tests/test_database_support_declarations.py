@@ -20,7 +20,7 @@ def _optional_ci_workflow_text() -> str | None:
     if CI_WORKFLOW.is_file():
         return CI_WORKFLOW.read_text(encoding="utf-8")
     release = RELEASE_DOC.read_text(encoding="utf-8")
-    assert "常設CIは現在無効" in release
+    assert "単一の `ci.yml` による常設CIは置いていません" in release
     return None
 
 
