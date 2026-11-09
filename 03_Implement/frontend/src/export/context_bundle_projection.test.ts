@@ -178,6 +178,50 @@ describe("buildContextProjection: evidence vs contradiction scoping", () => {
   });
 });
 
+describe("buildContextProjection: 島を端点とする関係線 (#3402)", () => {
+  // 方針B: 島を端点とする関係線は、どの constraint でも返さず、countsにもbundleHashにも載せない。
+  // 方針Aへ変える場合は、このテストと api.md / mcp_agent_connection.md / mcp/README.md を同時に改める。
+  function buildDocWithIslandEdges(): DocumentV1 {
+    const doc = buildDoc();
+    doc.islands = [
+      { id: "i1", cardIds: ["c1", "c2"], title: "First island", titleReviewed: true },
+      { id: "i2", cardIds: ["c4"], title: "Second island", titleReviewed: true },
+    ];
+    doc.edges = [
+      ...doc.edges,
+      { id: "e-ii", fromId: "i1", toId: "i2", fromKind: "island", toKind: "island", type: "related" },
+      { id: "e-ci", fromId: "c1", toId: "i2", fromKind: "card", toKind: "island", type: "related" },
+      { id: "e-ic", fromId: "i2", toId: "c2", fromKind: "island", toKind: "card", type: "related" },
+    ];
+    return doc;
+  }
+
+  it.each(CONTEXT_PROJECTION_CONSTRAINTS)("%s では、島を端点とする関係線を relations に出さない", async (constraint) => {
+    const projection = await buildContextProjection({
+      doc: buildDocWithIslandEdges(),
+      constraint: constraint as ContextProjectionConstraint,
+      safeMode: false,
+    });
+    const endpoints = projection.relations.flatMap((r) => [r.from, r.to]);
+    expect(endpoints).not.toContain("i1");
+    expect(endpoints).not.toContain("i2");
+  });
+
+  it("島を端点とする関係線の有無は bundleHash を変えず、counts にも現れない", async () => {
+    const withIslandEdges = await buildContextProjection({
+      doc: buildDocWithIslandEdges(),
+      constraint: "summary",
+      safeMode: false,
+    });
+    const doc = buildDocWithIslandEdges();
+    doc.edges = doc.edges.filter((edge) => edge.fromKind !== "island" && edge.toKind !== "island");
+    const without = await buildContextProjection({ doc, constraint: "summary", safeMode: false });
+    expect(withIslandEdges.relations).toEqual([{ from: "c1", to: "c2", type: "related" }]);
+    expect(withIslandEdges.bundleHash).toBe(without.bundleHash);
+    expect(withIslandEdges.counts).toEqual(without.counts);
+  });
+});
+
 describe("buildContextProjection: summary constraint", () => {
   it("emits no card nodes but keeps counts, islands, and reviewed-only relations/links", async () => {
     const projection = await buildContextProjection({ doc: buildDoc(), constraint: "summary", safeMode: false });
