@@ -311,6 +311,7 @@ python -m sui_sensemaking_api.backfill_document_revisions \
 
 - テナントが存在しない。または、JSONの復元、ダイジェスト、バイト数の検証に失敗する。
 - 保存やGETが、HTTP 503 `Document revision storage failed integrity verification` を返す。
+  - この503は `code` を持たず、同時書き込みとの一時的な競合と、データの欠損・破損を、応答だけでは区別できません（[api.md](../02_Architecture/api.md) §4.1）。有限回の再試行で収束しないときは、書き込みを止め、`requestId` でログを絞り込み、文書、blob、リビジョンのheadを調べます。`/readyz` が `ready` でも、この失敗は起こり得ます。
 - 同じ文書の `main` のheadと互換のあるデータが、正規化したJSONとして一致しない。
 - バックフィルの対象でないテナントに、リビジョンやheadが作られる。
 - `remaining` が減らない。または、想定の件数を超える。
