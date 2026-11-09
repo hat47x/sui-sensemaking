@@ -940,7 +940,7 @@ ADR-0101は、TEI Assessmentを外部の信頼境界を越えさせないため�
 - 認可: コントロールプレーンのみ（ADR-0072）。`X-Admin-Api-Key` または provision capabilityを要求し、業務面の `X-API-Key` では通さない。認可に失敗すると、鍵が設定されているかどうかを明かさない `401 control_plane_unauthorized` を返す。
 - `artifact_kind` は `epistemic-assessment`、`epistemic-context`、`epistemic-detail`、`documentv1-projection` の4種のみ（`tei_reference_transport.py` の `TEI_REFERENCE_ARTIFACT_KINDS`）。`documentv1-projection` は、他の3種と違い、カードの `text`、`claimType`、`holdState`、`textReviewed` を運ぶ。DocumentV1を保存せず、SUIの正本を置き換えない。許可リスト外や越境の指定は `404 {"code": "unknown_tei_artifact"}` で拒否し、内容を返さない。
 - `SUI_TEI_REFERENCE_DIR` が未設定のときは、`503 {"code": "tei_reference_unconfigured"}` でfail closedする。これが既定で、このendpointの効果は設定した運用に限る。
-- artifactの欠損、読み取り不能、JSONとして正しくない、JSON objectでない場合は、`503 {"code": "tei_reference_unavailable"}` を返す。いずれの場合も、内容を部分的にも返さない。エラーの種類と応答本体の形は固定し、operatorが設定誤りを見分けられるようにする。
+- artifactの欠損、読み取り不能、JSONとして正しくない、JSON objectでない、ファイルが16 MiBを超える（`too-large`）、artifactがシンボリックリンクである（`symlink`）場合は、`503 {"code": "tei_reference_unavailable"}` を返す。いずれの場合も、内容を部分的にも返さない。エラーの種類と応答本体の形は固定し、operatorが設定誤りを見分けられるようにする。
 - 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}` を返す。応答は `Cache-Control: no-store`。読み取り専用であり、TEI AssessmentをDocument / Canonical stateへ埋め込まない。
 - テナント業務面への公開は、epistemic の3種についてはADR-0102が採択済みで、§2.17 に書く。`documentv1-projection` は、許可リストと紐付けの検査に同じ一覧を使うため、運用者が (tenant, doc) に結ぶと §2.17 の endpoint からも返り得る。この endpoint にはカードの `textReviewed` やSafeModeによる除外がなく、カード本文入りのartifactを業務面で返してよいかは未決で、Owner判断を待つ（#3369）。
 
@@ -954,7 +954,7 @@ ADR-0102 は案B（文書単位の紐付けを管理面で登録し、テナン�
 - `SUI_TEI_REFERENCE_DIR` 未設定: `503 {"code": "tei_reference_unconfigured"}`。
 - 紐付けが無い（registry 不在、または (tenant, doc) に一致する登録なし）: `404 {"code": "epistemic_binding_not_found"}`。registry が壊れている・曖昧（重複）・未知の bound artifact kind も fail closed（registry 壊れは 503、それ以外は 404）。
 - artifact は、紐付けた (tenant, doc) ごとのディレクトリ `SUI_TEI_REFERENCE_DIR/tenants/<tenantId>/<docId>/<artifactKind>.json` からだけ読む。ディレクトリ直下の運用者向けコーパス（`/admin/tei-epistemic` が返すもの）は、業務面では返さない。これにより、紐付けを通して別のテナントや別の文書のために作った artifact を返すことはない。tenantId と docId が安全な一つのパス要素（英数字で始まり、英数字・`.`・`_`・`-` だけ、128文字以内、`..` を含まない）でない場合も fail closed する。
-- bound artifact が読めない（上のディレクトリに無い場合を含む）: `503 {"code": "tei_reference_unavailable"}`。
+- bound artifact が読めない（上のディレクトリに無い場合、16 MiB超過、`tenants/` 配下のartifactや各ディレクトリがシンボリックリンクである場合を含む）: `503 {"code": "tei_reference_unavailable"}`。
 - 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}`。`Cache-Control: no-store`。読み取り専用。epistemic データは Document / Canonical state へ保存・埋め込みしない。
 - レスポンス本体は artifact をそのまま返す。contract / schema の検証と drift 再計算は frontend consumer が行う。
 

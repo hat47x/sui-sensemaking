@@ -156,13 +156,15 @@ stdioの段階では、待ち受けのポートを開かず、外部から到達
 - 運用者が置くファイルを信頼する前提である。artifactの内容は検証せず、JSON objectとしてそのまま返す。検証は frontend consumer が行う。
 - `documentv1-projection` はカードの本文を運ぶ。運用者が (tenant, doc) に結ぶと、業務面からも返り得る。この経路には `textReviewed` やSafeModeに基づく除外がない。公開してよいかはOwner判断待ちである（#3369）。
 - テナント間の分離は、`tenants/<tenantId>/<docId>/` の配置と、パス要素の検査（英数字で始まる128文字以内、`..` を含まない）に依存する。
-- ファイルの大きさに上限がない。リクエストごとにファイル全体と `epistemic-bindings.json` を読み直し、`json.loads` で展開する（コード読みによる確認で、巨大ファイルでの実測はしていない）。
-- 封じ込めは `Path.resolve()` の後で、基準ディレクトリの内側かを確かめる方式である。`SUI_TEI_REFERENCE_DIR` の外を指すシンボリックリンクは拒否される。一方、あるテナントの配置から別のテナントのファイルを指すシンボリックリンクは、基準ディレクトリの内側に解決されるため通る（コード読みの推定で、Windowsでは作成できず実測していない）。運用者が配置を作る前提のため重大度は低いが、「テナント間でartifactを共有しない」という説明はこの前提に依存する。
+- ファイルの大きさは、1ファイル16 MiB（`TEI_REFERENCE_MAX_FILE_BYTES`）までとする。リクエストごとにファイル全体と `epistemic-bindings.json` を読み直し、`json.loads` で展開するため、誤配置の巨大ファイルがAPIプロセスのメモリを使い切らないようにする。超過は内容を返さず、`too-large` でfail closedする（管理面・業務面ともに `503 tei_reference_unavailable`）。上限は固定値で、設定にはしない。巨大ファイルでの実測はしていない。
+- 封じ込めは `Path.resolve()` の後で、基準ディレクトリの内側かを確かめる方式である。加えて、artifactファイル、`epistemic-bindings.json`、業務面の `tenants/`・`tenants/<tenantId>/`・`tenants/<tenantId>/<docId>/` がシンボリックリンクなら、`symlink` で拒否する。これで、あるテナントの配置から別のテナントのファイルを指すリンクによる共有を作れない。`SUI_TEI_REFERENCE_DIR` 自体がリンクであることは許す（運用者が選ぶ基準ディレクトリのため）。LinuxのWSLでの単体テストで確認した。Windowsではリンクを作れず、該当テストはskipされる。
+
+**既定案と覆す条件**
+
+- 上限16 MiBとシンボリックリンク拒否は、狭く安全な側の既定案である。運用でリンクによる配置が必要になる、または16 MiBを超える正当なartifactが出た場合は、この節と `tei_reference_transport.py` を見直す。
 
 **未決**
 
-- ファイルサイズの上限値と、超過を `invalid-json` と別の理由でfail closedさせるか。
-- シンボリックリンクを拒否するか、許す前提を運用手順に書くか。
 - この経路がTAIのSCN-001で使われるかの見通し。`04_Documentation/tai_agent_connection.md` は、TAIのagent経路ではTEI投影を使わないとしている。使うなら、別の認可を決める判断が先に要る。
 
 ### 6-2. バックエンドのJSONリクエストの境界（SEC-DOC-BOUND-03）
