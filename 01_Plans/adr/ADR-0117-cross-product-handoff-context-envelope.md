@@ -70,6 +70,7 @@ SHOは票を信じない。`bin/sho-inspect.cjs handoff <票>` が、payloadを*
 | 原本Source | 参照のみ | 原本はSUIが保持。票はlocatorだけを持つ |
 | Review attribution | 運ばない | 真偽フラグのみ。reviewer・時刻・履歴は持たない |
 | Source revision | `unresolved` | SHOの`source.revision=unknown`を現行性確認済と読み替えない |
+| 未知のトップレベル欄 | **逐語運ぶ**（Consumer/Producer とも） | 黙って落とすと、後から語彙を増やしたときに過去の票・Receiptから拡張欄が無警告で失われる。reject すると前方互換が壊れ、解釈すると「未知の値は unknown のまま」不変条件に反する。逐語運ぶだけが両方を満たす |
 | 開示Scope語彙 | 閉集合の候補 | `synthetic-only`／`reviewed-projection-only`。語彙の確定はOwner判断 |
 | 受領Receiptの返送 | 未実装 | SHO→SUIへReceiptを戻す経路は次の段階 |
 | 三製品以上・別Harness実実行 | NOT RUN | 二製品の成立後に段階的に検証する |

@@ -234,3 +234,20 @@ describe("yi.handoff.receipt/v1 Producer側の照合（G2）", () => {
     expect(readFileSync(receiptPath)).toEqual(before);
   });
 });
+
+  it("Producer側も未知のReceipt欄を落とさず運ぶ", () => {
+    // SHO Consumer が `ticket.unknownFields` を運ぶのと同じ規則を Producer 側にも
+    // 敷く。Receipt に v1 語彙のない欄が増えても、過去のReceiptから拡張欄が
+    // 無警告で失われない。
+    const withExtra = receipt();
+    (withExtra as Record<string, unknown>).futureExtension = { hop: 2, priorHandoffId: "ho-prior" };
+    const review = reviewHandoffReceipt(withExtra, TICKET_SHA256);
+    expect(review.status).toBe("matched");
+    expect(review.unknownFields.futureExtension).toEqual({ hop: 2, priorHandoffId: "ho-prior" });
+  });
+
+  it("未知欄が無いReceiptでは unknownFields は空", () => {
+    const review = reviewHandoffReceipt(receipt(), TICKET_SHA256);
+    expect(review.status).toBe("matched");
+    expect(review.unknownFields).toEqual({});
+  });

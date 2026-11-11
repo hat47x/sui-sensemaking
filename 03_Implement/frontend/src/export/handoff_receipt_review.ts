@@ -14,7 +14,11 @@
  */
 
 export const HANDOFF_RECEIPT_SCHEMA = "yi.handoff.receipt/v1";
-export const HANDOFF_READBACK_SCHEMA = "yi.handoff.receipt-write/v1";
+// NOTE: there is no `yi.handoff.receipt-write/v1` constant here. The write-back
+// contract is NOT implemented (OG-5: a receipt is an ephemeral working
+// artifact), and an unused schema constant would read as though a write-back
+// contract existed. If a write-back is ever needed it gets its own decision
+// first, then its own constant.
 
 /** Receiptが主張してよいclaim。Producer側が受理できるのはこの範囲だけ。 */
 const ACCEPTABLE_CLAIMS = [
@@ -73,6 +77,11 @@ export type ReceiptReview = {
   nonAcceptableClaims: string[];
   /** Receiptが持っていたが、Producer側の語彙にないclaim。unknownとして残す。 */
   unknownClaims: string[];
+  /**
+   * Receipt が運んできた、Producer の v1 語彙にないトップレベル欄。
+   * 未知の値は落とさずそのまま運ぶ（Consumer 側の `unknownFields` と同じ規則）。
+   */
+  unknownFields: Record<string, unknown>;
   reason: string;
 };
 
@@ -120,6 +129,7 @@ export function reviewHandoffReceipt(
     expectedTicketSha256: null,
     nonAcceptableClaims: [],
     unknownClaims: [],
+    unknownFields: {},
     reason: "",
   };
   if (typeof expectedTicketSha256 !== "string" || !SHA256_PATTERN.test(expectedTicketSha256)) {
@@ -130,43 +140,55 @@ export function reviewHandoffReceipt(
   }
   base.expectedTicketSha256 = expectedTicketSha256;
   if (receipt === null || typeof receipt !== "object" || Array.isArray(receipt)) {
-    return { ...base, reason: "receipt must be a JSON object" };
+    return { ...base, unknownFields: {}, reason: "receipt must be a JSON object" };
   }
   const value = receipt as Record<string, unknown>;
+  // Unknown top-level receipt fields are carried, never dropped -- the same rule
+  // the SHO Consumer applies to the ticket. An extension added later must not
+  // silently lose data in past receipts.
+  const KNOWN_RECEIPT_FIELDS = new Set([
+    "schema", "status", "receivedAt", "consumer", "ticket", "payload", "checks",
+    "carriedForward", "claims", "receiptWrite",
+  ]);
+  const unknownFields: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (!KNOWN_RECEIPT_FIELDS.has(key)) unknownFields[key] = entry;
+  }
+  const withUnknown = { ...base, unknownFields };
   const leak = findAuthorityBearingKey(value);
   if (leak !== null) {
-    return { ...base, status: "receipt-authority", reason: `authority-bearing field at ${leak}` };
+    return { ...withUnknown, status: "receipt-authority", reason: `authority-bearing field at ${leak}` };
   }
   if (value.schema !== HANDOFF_RECEIPT_SCHEMA) {
-    return { ...base, reason: `schema must be ${HANDOFF_RECEIPT_SCHEMA}` };
+    return { ...withUnknown, reason: `schema must be ${HANDOFF_RECEIPT_SCHEMA}` };
   }
   if (value.status !== "received") {
-    return { ...base, reason: `status is ${JSON.stringify(value.status)}, not "received"` };
+    return { ...withUnknown, reason: `status is ${JSON.stringify(value.status)}, not "received"` };
   }
   const ticket = value.ticket;
   if (ticket === null || typeof ticket !== "object") {
-    return { ...base, reason: "ticket must be an object" };
+    return { ...withUnknown, reason: "ticket must be an object" };
   }
   let declared: string;
   try {
     declared = requireText((ticket as Record<string, unknown>).sha256, "ticket.sha256");
   } catch (error) {
-    return { ...base, reason: (error as Error).message };
+    return { ...withUnknown, reason: (error as Error).message };
   }
   if (!SHA256_PATTERN.test(declared)) {
-    return { ...base, reason: "ticket.sha256 must be sha256:<64 lowercase hex>" };
+    return { ...withUnknown, reason: "ticket.sha256 must be sha256:<64 lowercase hex>" };
   }
-  base.receiptTicketSha256 = declared;
+  withUnknown.receiptTicketSha256 = declared;
   if (declared !== expectedTicketSha256) {
     return {
-      ...base,
+      ...withUnknown,
       status: "mismatch",
       reason: "the receipt names a different ticket than this Producer emitted",
     };
   }
   const claimsValue = value.claims;
   if (claimsValue === null || typeof claimsValue !== "object" || Array.isArray(claimsValue)) {
-    return { ...base, reason: "claims must be an object" };
+    return { ...withUnknown, reason: "claims must be an object" };
   }
   const claims = claimsValue as Record<string, unknown>;
   const declaredClaimNames = Object.keys(claims);
@@ -175,7 +197,7 @@ export function reviewHandoffReceipt(
   );
   for (const name of ACCEPTABLE_CLAIMS) {
     if (!(name in claims) || typeof claims[name] !== "boolean") {
-      return { ...base, reason: `claims.${name} must be present and boolean` };
+      return { ...withUnknown, reason: `claims.${name} must be present and boolean` };
     }
   }
   // 権限・開示・書込み・意味受理は、Producer側でも同じ向きを要求する。
@@ -191,7 +213,7 @@ export function reviewHandoffReceipt(
   for (const name of mustBeFalse) {
     if (claims[name] !== false) {
       return {
-        ...base,
+        ...withUnknown,
         status: "receipt-authority",
         reason: `claims.${name} must be false (a receipt does not grant authority or cause effects)`,
       };
@@ -200,7 +222,7 @@ export function reviewHandoffReceipt(
   const nonAcceptable = NON_ACCEPTABLE_CLAIMS.filter((name) => claims[name] === true);
   if (nonAcceptable.length > 0) {
     return {
-      ...base,
+      ...withUnknown,
       status: "claim-not-accepted",
       nonAcceptableClaims: [...nonAcceptable],
       unknownClaims,
@@ -213,13 +235,13 @@ export function reviewHandoffReceipt(
     // 未知のclaimは落とさず運ぶ。 Producerが意味を知らないだけであり、
     // 「Consumerが嘘をついた」でも「安全」でもない。
     return {
-      ...base,
+      ...withUnknown,
       status: "matched",
       unknownClaims,
       reason: "ticket digests match. unknown claims are carried as unknown, not accepted",
     };
   }
-  return { ...base, status: "matched", reason: "ticket digests match" };
+  return { ...withUnknown, status: "matched", reason: "ticket digests match" };
 }
 
 /** Receiptは自分の票に対応するが、意味受理ではないことを型で示す。 */
