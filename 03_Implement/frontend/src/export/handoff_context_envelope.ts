@@ -32,14 +32,33 @@ const AUTHORITY_BEARING_KEYS = new Set([
 ]);
 
 /**
- * 直列化後の票に現れてはならない高シグナルの資格マーカー。
+ * 直列化後の票に現れてはならない**資格素材の形**。
+ *
  * `grant` や `token` のような一般語はIDや説明文に偶発的に現れ得るため、
  * key名の完全一致（AUTHORITY_BEARING_KEYS）で扱い、部分文字列探索には含めない。
+ * 同様に `credential` や `secret` を**単語として**禁じると、他製品の読み取り
+ * 専用観測を引用したときに偽陽性になる（TEIの参照Workspaceには
+ * `security.credential` や `security.authorization_grant` というsubject IDが
+ * 実在する）。ここに残すのは、自然文や業務の識別子にまず現れない、
+ * serializeされた資格素材の形だけである。
  */
 const AUTHORITY_MARKERS = [
-  "bearer ", "authorization:", "apikey", "api_key", "password", "passphrase",
-  "secret", "credential", "accesstoken", "access_token", "refreshtoken",
-  "refresh_token", "sessiontoken", "private key", "-----begin",
+  "-----begin",
+  "bearer ",
+  "authorization:",
+  "private key",
+  "api_key",
+  "apikey",
+  "access_token",
+  "accesstoken",
+  "refresh_token",
+  "refreshtoken",
+  "session_token",
+  "sessiontoken",
+  "password=",
+  "passphrase=",
+  "secret=",
+  "credential=",
 ];
 
 export type HandoffReference = {

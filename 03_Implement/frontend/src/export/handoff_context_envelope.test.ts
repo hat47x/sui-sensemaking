@@ -252,12 +252,48 @@ describe("yi.handoff.context/v1 Producer", () => {
     expect(Object.keys(envelope)).not.toContain("nested");
   });
 
-  it("権限系keyと権限マーカーを検出する", () => {
+  it("権限系keyと資格素材の形を検出する", () => {
     expect(findAuthorityBearingKey({ a: { grant: 1 } })).toBe("$.a.grant");
     expect(findAuthorityBearingKey({ a: [{ apiKey: 1 }] })).toBe("$.a[0].apiKey");
     expect(findAuthorityBearingKey({ a: 1 })).toBe(null);
     expect(findAuthorityMarker("hello")).toBe(null);
     expect(findAuthorityMarker('{"x":"Bearer abc"}')).toBe("bearer ");
+    expect(findAuthorityMarker("-----BEGIN RSA PRIVATE KEY-----")).toBe("-----begin");
+    expect(findAuthorityMarker("Authorization: Basic xyz")).toBe("authorization:");
+    expect(findAuthorityMarker("api_key=abc")).toBe("api_key");
+    expect(findAuthorityMarker("access_token=abc")).toBe("access_token");
+  });
+
+  it("他製品の読み取り専用観測を引用しても資格マーカーと誤判定しない", () => {
+    // TEI の参照Workspaceには security.credential / security.authorization_grant
+    // というsubject IDが実在する。業務語としての credential・secret・token・grant は
+    // key名の完全一致で扱い、部分文字列探索の対象にしない。
+    const teiObservation = {
+      claim: "TEI参照Workspaceの読み取り専用catalogに security.credential が存在する",
+      basis: "tei.cli.model/v0",
+      observedAt: "2026-11-11T00:00:00.000Z",
+      limitation: "catalogは派生read-only投影であり、sourceへの書込み権限を与えない",
+    };
+    const envelope = buildHandoffContextEnvelope(input({
+      evidence: [teiObservation],
+      references: [
+        {
+          kind: "tei-readonly-observation",
+          locator: "tei:reference/workspace:semantic-type:security.credential",
+          digest: "sha256:" + "c".repeat(64),
+          note: "TEI read-only CLIの観測。authorization_grant も同catalogに存在する。",
+        },
+        {
+          kind: "tei-readonly-observation",
+          locator: "tei:reference/workspace:semantic-capability:security.authorize",
+          digest: null,
+          note: "secret や token という語が業務識別子に含まれても資格素材ではない。",
+        },
+      ],
+    }));
+    expect(envelope.evidence[0].claim).toContain("security.credential");
+    expect(findAuthorityBearingKey(envelope)).toBe(null);
+    expect(findAuthorityMarker(serializeHandoffContextEnvelope(envelope))).toBe(null);
   });
 
   it("生成した票は権限系key・マーカーを含まない", () => {
