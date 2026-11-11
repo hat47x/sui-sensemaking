@@ -152,6 +152,15 @@ describe("SUI→SHO Handoff: TEI read-only観測の引用（G3）", () => {
     const markdown = renderReadOnlyMarkdownDraft(projection);
     const payloadBytes = new TextEncoder().encode(markdown);
     const payloadSha256 = hex(await crypto.subtle.digest("SHA-256", payloadBytes));
+    // revision.digest は SUI 自身の投影識別子から計算する（handoff_context_emit.test.ts
+    // と同じ規則）。TEI の modelRevision は references[] 側で運ぶ。
+    const revisionDigest = hex(await crypto.subtle.digest("SHA-256",
+      new TextEncoder().encode(JSON.stringify({
+        schema: "context-projection.v1",
+        docId: doc.id,
+        baseDocSignature: projection.baseDocSignature,
+        bundleHash: projection.bundleHash,
+      }))));
 
     const limitation =
       "TEI catalogは派生read-only投影であり、Sourceへの書込み・意味受理・実行権限を与えない。 " +
@@ -172,10 +181,14 @@ describe("SUI→SHO Handoff: TEI read-only観測の引用（G3）", () => {
         completionDefinition: "SHOがpayloadとTEI観測の引用を独立に再読取し、票の宣言と一致する受領Receiptを返す",
       },
       target: { product: "sui-sensemaking", kind: "document", id: doc.id },
+      // revision は SUI 自身の投影の同一性を表す。digest も SUI の canonical 識別子
+      // から計算する。TEI の modelRevision をここへ入れると、Consumer が
+      // revision.value から独立に検証できず、digest の出自が TEI に帰属してしまう。
+      // TEI の観測は references[] と evidence[] 側で独自に運ぶ（下記）。
       revision: {
         kind: "context-projection.baseDocSignature",
         value: projection.baseDocSignature,
-        digest: observation.modelRevision as `sha256:${string}`,
+        digest: `sha256:${revisionDigest}`,
         observedAt: "2026-11-11T00:00:00.000Z",
       },
       disclosure: {
@@ -208,7 +221,10 @@ describe("SUI→SHO Handoff: TEI read-only観測の引用（G3）", () => {
           kind: "tei-readonly-observation",
           locator: `tei:${TEI_COMMAND}:${observation.subject.kind}:${observation.subject.id}`,
           digest: observation.worldFingerprint,
-          note: `TEI read-only CLIの観測。sourceIndexFingerprint=${observation.sourceIndexFingerprint}`,
+          // TEI の modelRevision は SUI の revision.digest ではなく、観測の
+          // 参照としてここに載せる。revision.value から独立に検証できる形にする。
+          note: `TEI read-only CLIの観測。modelRevision=${observation.modelRevision} ` +
+            `sourceIndexFingerprint=${observation.sourceIndexFingerprint}`,
         },
       ],
       evidence: [
@@ -251,9 +267,16 @@ describe("SUI→SHO Handoff: TEI read-only観測の引用（G3）", () => {
       new TextEncoder().encode(serializeHandoffContextEnvelope(envelope)), { flag: "wx", mode: 0o600 });
 
     // 引用の形は本文から再確認できる。
-    expect(envelope.references.some((reference) => reference.kind === "tei-readonly-observation")).toBe(true);
-    expect(envelope.references.find((reference) => reference.kind === "tei-readonly-observation")?.digest)
-      .toBe(observation.worldFingerprint);
+    const teiReference = envelope.references.find((reference) => reference.kind === "tei-readonly-observation");
+    expect(teiReference).toBeDefined();
+    // TEI の観測は references[].digest として独立に運ぶ。
+    expect(teiReference?.digest).toBe(observation.worldFingerprint);
+    // TEI の modelRevision は revision.digest ではなく、観測の参照として載せる。
+    expect(teiReference?.note).toContain(observation.modelRevision);
+    // revision は SUI 自身の投影識別子。digest は value と同じ canonical 識別子から作る。
+    expect(envelope.revision.value).toBe(projection.baseDocSignature);
+    expect(envelope.revision.digest).toBe(`sha256:${revisionDigest}`);
+    expect(envelope.revision.digest).not.toBe(observation.modelRevision);
     expect(envelope.evidence[0].basis).toContain(TEI_COMMAND);
     for (const limit of observation.authorityLimits) {
       expect(envelope.evidence[0].limitation).toContain(limit);
