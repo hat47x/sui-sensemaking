@@ -1,4 +1,4 @@
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+﻿import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -233,8 +233,6 @@ describe("yi.handoff.receipt/v1 Producer側の照合（G2）", () => {
     const before = readFileSync(receiptPath);
     expect(readFileSync(receiptPath)).toEqual(before);
   });
-});
-
   it("Producer側も未知のReceipt欄を落とさず運ぶ", () => {
     // SHO Consumer が `ticket.unknownFields` を運ぶのと同じ規則を Producer 側にも
     // 敷く。Receipt に v1 語彙のない欄が増えても、過去のReceiptから拡張欄が
@@ -251,3 +249,4 @@ describe("yi.handoff.receipt/v1 Producer側の照合（G2）", () => {
     expect(review.status).toBe("matched");
     expect(review.unknownFields).toEqual({});
   });
+});
