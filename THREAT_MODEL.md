@@ -155,6 +155,7 @@ stdioの段階では、待ち受けのポートを開かず、外部から到達
 
 - 運用者が置くファイルを信頼する前提である。artifactの内容は検証せず、JSON objectとしてそのまま返す。検証は frontend consumer が行う。
 - `documentv1-projection` はカードの本文を運ぶ。運用者が (tenant, doc) に結ぶと、業務面からも返り得る。この経路には `textReviewed` やSafeModeに基づく除外がない。公開してよいかはOwner判断待ちである（#3369）。
+- `GET /docs/{doc_id}/tei/sui-reference` は同じartifactを読むが、本文・題名・要約・review attributionを返さない。未レビューのCardは参照だけを残して本文を伏せ、private/restricted entityはIDも件数も返さず、種別だけを返す。参照は `acceptedMeaning: false` であり、TEIの意味受理ではない。この経路は #3369 の本文公開の判断を先取りしない。
 - テナント間の分離は、`tenants/<tenantId>/<docId>/` の配置と、パス要素の検査（英数字で始まる128文字以内、`..` を含まない）に依存する。
 - ファイルの大きさは、1ファイル16 MiB（`TEI_REFERENCE_MAX_FILE_BYTES`）までとする。リクエストごとにファイル全体と `epistemic-bindings.json` を読み直し、`json.loads` で展開するため、誤配置の巨大ファイルがAPIプロセスのメモリを使い切らないようにする。超過は内容を返さず、`too-large` でfail closedする（管理面・業務面ともに `503 tei_reference_unavailable`）。上限は固定値で、設定にはしない。巨大ファイルでの実測はしていない。
 - 封じ込めは `Path.resolve()` の後で、基準ディレクトリの内側かを確かめる方式である。加えて、artifactファイル、`epistemic-bindings.json`、業務面の `tenants/`・`tenants/<tenantId>/`・`tenants/<tenantId>/<docId>/` がシンボリックリンクなら、`symlink` で拒否する。これで、あるテナントの配置から別のテナントのファイルを指すリンクによる共有を作れない。`SUI_TEI_REFERENCE_DIR` 自体がリンクであることは許す（運用者が選ぶ基準ディレクトリのため）。LinuxのWSLでの単体テストで確認した。Windowsではリンクを作れず、該当テストはskipされる。

@@ -21,7 +21,7 @@ implements that decision with the smallest reversible surface:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from sui_sensemaking_api.db import get_db
@@ -31,6 +31,11 @@ from sui_sensemaking_api.tei_reference_transport import (
     TeiReferenceReadFailure,
     read_bound_tei_reference_artifact,
     read_tei_epistemic_binding,
+)
+from sui_sensemaking_api.tei_sui_reference import (
+    REFERENCE_SCHEMA,
+    SuiReferenceError,
+    build_sui_reference,
 )
 
 router = APIRouter(prefix="/docs", tags=["docs"])
@@ -64,7 +69,7 @@ def get_document_epistemic_projection(
         read_only=True,
     )
     if access_request.auth.provider == "agent_credential":
-        # #3296 / ADR-0093追記: keep this route closed to agent credentials even
+        # #3296 / ADR-0093追記: keep these routes closed to agent credentials even
         # if a future change to _AGENT_ALLOWED_ROUTES would otherwise reach the
         # binding lookup. The response must not reveal whether a binding exists.
         raise HTTPException(
@@ -97,3 +102,99 @@ def get_document_epistemic_projection(
 
     response.headers["Cache-Control"] = "no-store"
     return {"ok": True, "artifact": artifact.payload}
+
+
+@router.get("/{doc_id}/tei/sui-reference")
+def get_document_sui_reference(
+    doc_id: str,
+    request: Request,
+    response: Response,
+    previous_digest: str | None = Query(default=None, min_length=1, max_length=256),
+    previous_source_revision: str | None = Query(
+        default=None, min_length=1, max_length=256
+    ),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    """Read a permitted subset of SUI data as typed TEI references.
+
+    The route reuses the same tenant authorization and ADR-0101/0102 local-I/O
+    binding as the epistemic projection. It does not return the artifact
+    verbatim: the reference envelope carries identities, relation shape,
+    review flags, canvas positions, revision fingerprints, and explicit
+    losses, but no card/island/document text. A Card reference is therefore
+    not a TEI Accepted Meaning.
+    """
+    access_request, decision, tenant = _authorize_request(
+        request=request,
+        db=db,
+        action="read",
+        doc_id=doc_id,
+        safe_mode=True,
+        read_only=True,
+    )
+    if access_request.auth.provider == "agent_credential":
+        # #3296 / ADR-0093追記: keep this route closed to agent credentials even
+        # if a future change to _AGENT_ALLOWED_ROUTES would otherwise reach the
+        # binding lookup. The response must not reveal whether a binding exists.
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "agent_route_not_enabled",
+                "message": "This route is not available to agent credentials.",
+            },
+        )
+
+    binding = read_tei_epistemic_binding(
+        settings.tei_reference_dir, tenant.tenant_id, doc_id
+    )
+    if isinstance(binding, TeiReferenceReadFailure):
+        code, status_code = _failure_code(binding.reason)
+        raise HTTPException(
+            status_code=status_code,
+            detail={"code": code, "message": "SUI TEI reference is not available."},
+        )
+    if binding.artifact_kind != "documentv1-projection":
+        # Do not reveal which artifact kind is bound: a binding to an
+        # epistemic artifact is not a SUI data reference.
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "sui_reference_binding_not_found",
+                "message": "No SUI reference binding is available for this document.",
+            },
+        )
+
+    artifact = read_bound_tei_reference_artifact(
+        settings.tei_reference_dir,
+        tenant.tenant_id,
+        doc_id,
+        binding.artifact_kind,
+    )
+    if isinstance(artifact, TeiReferenceReadFailure):
+        code, status_code = _failure_code(artifact.reason)
+        raise HTTPException(
+            status_code=status_code,
+            detail={"code": code, "message": "SUI TEI reference is not available."},
+        )
+
+    try:
+        reference = build_sui_reference(
+            artifact.payload,
+            previous_digest=previous_digest,
+            previous_source_revision=previous_source_revision,
+        )
+    except SuiReferenceError:
+        # The artifact was readable JSON but not a SUI reference source. Do
+        # not return partial content or the parser message.
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "sui_reference_unavailable",
+                "message": "SUI TEI reference is not available.",
+            },
+        )
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["ETag"] = f'"{reference.revision.document_digest}"'
+    response.headers["X-Sui-Reference-Schema"] = REFERENCE_SCHEMA
+    return {"ok": True, "reference": reference.as_json()}
