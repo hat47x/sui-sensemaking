@@ -53,7 +53,13 @@ def _failure_code(reason: str) -> tuple[str, int]:
     return "tei_reference_unavailable", 503
 
 
-def _authorize_tenant_document(request: Request, db: Session, doc_id: str):
+@router.get("/{doc_id}/epistemic/projection")
+def get_document_epistemic_projection(
+    doc_id: str,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
     access_request, decision, tenant = _authorize_request(
         request=request,
         db=db,
@@ -73,17 +79,6 @@ def _authorize_tenant_document(request: Request, db: Session, doc_id: str):
                 "message": "This route is not available to agent credentials.",
             },
         )
-    return tenant
-
-
-@router.get("/{doc_id}/epistemic/projection")
-def get_document_epistemic_projection(
-    doc_id: str,
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db),
-) -> dict[str, object]:
-    tenant = _authorize_tenant_document(request, db, doc_id)
 
     binding = read_tei_epistemic_binding(
         settings.tei_reference_dir, tenant.tenant_id, doc_id
@@ -129,7 +124,25 @@ def get_document_sui_reference(
     losses, but no card/island/document text. A Card reference is therefore
     not a TEI Accepted Meaning.
     """
-    tenant = _authorize_tenant_document(request, db, doc_id)
+    access_request, decision, tenant = _authorize_request(
+        request=request,
+        db=db,
+        action="read",
+        doc_id=doc_id,
+        safe_mode=True,
+        read_only=True,
+    )
+    if access_request.auth.provider == "agent_credential":
+        # #3296 / ADR-0093追記: keep this route closed to agent credentials even
+        # if a future change to _AGENT_ALLOWED_ROUTES would otherwise reach the
+        # binding lookup. The response must not reveal whether a binding exists.
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "agent_route_not_enabled",
+                "message": "This route is not available to agent credentials.",
+            },
+        )
 
     binding = read_tei_epistemic_binding(
         settings.tei_reference_dir, tenant.tenant_id, doc_id
