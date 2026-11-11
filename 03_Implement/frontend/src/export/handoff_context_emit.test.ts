@@ -266,6 +266,44 @@ describe("SUI→SHO Handoff: 単一操作のemit（Producer側）", () => {
     }
   });
 
+  it("票にも原本の生データが入らない（将来の編集に対するguard）", async () => {
+    // ADR-0117「本文の適用範囲」: 票へ載せてはならないのは原本の生データ
+    // （Document/Island/Card の原本・card meta の原本Source）。payload と同じ
+    // 除外を票側にも置く。将来の編集で自由文欄に原本が注入されても CI が通る
+    // 状態にしない。
+    const directory = scratch();
+    let emitted: Emission;
+    try {
+      emitted = await emitHandoff(directory);
+    } catch (error) {
+      rmSync(directory, { recursive: true, force: true });
+      throw error;
+    }
+    try {
+      const envelopeText = emitted.envelopeText;
+      // Document 題名
+      expect(envelopeText).not.toContain("Do not export this title");
+      // Island 題名
+      expect(envelopeText).not.toContain("secret island A");
+      expect(envelopeText).not.toContain("public island B");
+      // card meta の原本Source
+      expect(envelopeText).not.toContain("hidden:original-A");
+      // 未レビュー・保留中の本文
+      expect(envelopeText).not.toContain("非公開");
+      expect(envelopeText).not.toContain("レビュー済みだが保留");
+      expect(envelopeText).not.toContain("非公開の保留");
+      // SafeMode 外の露出を露出許可の証明として使う語
+      expect(envelopeText).not.toContain("sources:");
+      expect(envelopeText).not.toContain("verified:");
+      // レビュー済み投影文本字そのものは、ADR-0117 の解釈により payload 側の
+      // 既存 P0 契約として許容される。票側には現状載っていないことを確認する。
+      expect(envelopeText).not.toContain("公開された観測");
+      expect(envelopeText).not.toContain("疑似見出し");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("票はrequired欄・Task/根拠/義務/依存を運ぶ", async () => {
     const directory = scratch();
     let emitted: Emission;
