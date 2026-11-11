@@ -1,3 +1,5 @@
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   HANDOFF_RECEIPT_SCHEMA,
@@ -208,5 +210,27 @@ describe("yi.handoff.receipt/v1 Producer側の照合（G2）", () => {
     expect(review.status).toBe("matched");
     // Harnessの違いは資格や意味の差ではない。
     expect(review.nonAcceptableClaims).toEqual([]);
+  });
+
+  it("実ファイルから読んだReceiptを照合できる（明示指定時だけ）", {
+    skip: process.env.SUI_HANDOFF_RECEIPT_DIR === undefined,
+  }, () => {
+    const directory = process.env.SUI_HANDOFF_RECEIPT_DIR;
+    if (typeof directory !== "string") return;
+    expect(directory.length).toBeGreaterThan(0);
+    expect(isAbsolute(directory)).toBe(true);
+    // 呼び出し側が渡す票digest。Receiptの自己申告ではなくここから計算する。
+    const expected = process.env.SUI_HANDOFF_TICKET_SHA256;
+    if (typeof expected !== "string") return;
+    const receiptPath = join(directory, "ho-20261111-sui-sho-0001.receipt.json");
+    const parsed = JSON.parse(readFileSync(receiptPath, "utf8"));
+    const review = reviewHandoffReceipt(parsed, expected);
+    expect(review.status).toBe("matched");
+    expect(review.receiptTicketSha256).toBe(expected);
+    // 受領は意味受理でも権限でもない。
+    expect(review.nonAcceptableClaims).toEqual([]);
+    // 受領ファイルは書き換えない。
+    const before = readFileSync(receiptPath);
+    expect(readFileSync(receiptPath)).toEqual(before);
   });
 });
