@@ -34,7 +34,9 @@ from sui_sensemaking_api.tei_reference_transport import (
 )
 from sui_sensemaking_api.tei_sui_reference import (
     REFERENCE_SCHEMA,
+    SuiReferenceDisclosureRestricted,
     SuiReferenceError,
+    SuiReferenceSourceUnavailable,
     build_sui_reference,
 )
 
@@ -169,6 +171,29 @@ def get_document_sui_reference(
             artifact.payload,
             previous_digest=previous_digest,
             previous_source_revision=previous_source_revision,
+        )
+    except SuiReferenceSourceUnavailable as error:
+        # The source was revoked or expired. Do not serve a cached reference and
+        # do not reveal entity identities.
+        code = (
+            "sui_reference_source_revoked"
+            if error.status == "revoked"
+            else "sui_reference_source_expired"
+        )
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": code,
+                "message": "The SUI source of this reference is unavailable.",
+            },
+        )
+    except SuiReferenceDisclosureRestricted:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "sui_reference_disclosure_restricted",
+                "message": "This reference is outside the permitted disclosure scope.",
+            },
         )
     except SuiReferenceError:
         # The artifact was readable JSON but not a SUI reference source. Do
