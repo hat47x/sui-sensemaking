@@ -26,6 +26,13 @@ V3「レビュー」と P-07「self-host/privacy」に寄与する。SUIのread-
 4. **自動送出なし**：書き出しは呼び出し側の明示的操作だけ。このModuleはI/Oを行わない。自動送信・バックグラウンド送信・直接POSTの経路は存在しない。
 5. **transportは観測のみ**：`transport.authority` は常に `none`。Harness名・Sessionラベルは運搬の記録であり、資格・再送保証・継続許可を与えない。
 
+## 権限の混入を防ぐ二つの検査（2026-11-11 見直し）
+
+1. **key名の完全一致**（`AUTHORITY_BEARING_KEYS`）: `grant`・`token`・`credential`・`secret`・`password`・`authorization`・`permission`・`role`・`lease` 等を、大文字小文字を無視して**anywhere**で拒否する。票は閉じた型なので、この検査は「将来の編集が権限欄を足すこと」と「Consumerが受け取った票を改変して権限を足すこと」の両方を止める。
+2. **資格素材の形**（`AUTHORITY_MARKERS`）: 直列化後の票に `-----begin`・`bearer `・`authorization:`・`private key`・`api_key`・`access_token` 等が現れないことを確認する。
+
+**重要**：`credential` や `secret` を**単語として**禁じると、他製品の読み取り専用観測を引用したときに偽陽性になる。TEIの参照Workspaceには `security.credential`・`security.authorization_grant` というsubject IDが実在し、TEI read-only CLIのcatalog出力に現れる。したがって marker は**自然文や業務識別子にまず現れない、serializeされた資格素材の形だけ**に限定する。業務語の扱いは key名の完全一致側で行う。この見直しは `handoff_context_envelope.test.ts` の「他製品の読み取り専用観測を引用しても資格マーカーと誤判定しない」で固定する。
+
 ## 変更しないこと（安全不変条件）
 
 - Card本文・Island題名・Document題名・Narrative・要約・review attributionを票やpayloadへ載せない。
