@@ -20,7 +20,11 @@ import {
  * payload 1ファイルと Handoff票 1ファイルの組だけを書出す。
  *
  * - 既存の P0 byte契約（354 bytes / 固定SHA）をそのまま使う。期待を関数の出力から再生成しない。
- * - 書き出しは `SUI_HANDOFF_OUTPUT_DIR` が**明示されたときだけ**。未指定なら書かない。
+ * - 生産 Module（`handoff_context_envelope.ts`）は I/O を行わず、自動送信・
+ *   バックグラウンド送信・ネットワークの経路は存在しない。**書き出しは各テストが
+ *   明示的に渡す directory だけ**で行う。skip しないテストは `os.tmpdir()` の
+ *   scratch に書く。`SUI_HANDOFF_OUTPUT_DIR` を明示したときだけ、その所定の
+ *   出力先へ書く（Runner がこの経路を使う）。
  * - 自動送信・バックグラウンド送信・ネットワークの経路は存在しない。
  * - 原本（Card本文の生データ・Island題名・Document題名）は書出さない。
  */
