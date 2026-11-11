@@ -54,17 +54,29 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 SUIは最終的に、TEIの`.tei.md`（Canonical定義）とPluginによる設計〜実装へ移行します。2026-11-11に、その第一段階として「許可されたSUIデータの一部を、TEIから型付きで参照するread-only経路」を実装しました（PR #3429、`ADR-0116`、`api.md` §2.18）。この経路はDocument/Card/Island/Tree/Canvas/Relation/Revision/Reviewの対応と損失を実コードで確定させましたが、**移行そのものは未決定で、第二のデータ正本は作っていません**。
 
-SUI側で今後必要なタスクは、TEI側の[移行タスク分解](https://github.com/hat47x/tei-platform/pull/4298)（`hat47x/tei-platform` の `plan/design/SUI_TEI_MIGRATION_TASKS_2026-11.md`）にM0〜M6として整理済みです。SUI側の残作業は次のとおりです。
+SUI側で今後必要なタスクは、TEI側の[移行タスク分解](https://github.com/hat47x/tei-platform/blob/main/plan/design/SUI_TEI_MIGRATION_TASKS_2026-11.md)（`hat47x/tei-platform` の `plan/design/SUI_TEI_MIGRATION_TASKS_2026-11.md`）にM0〜M6として整理済みです。
 
-1. **artifact生成側（producer）との契約**: `source.status`（`active`/`revoked`/`expired`）と文書単位の開示宣言を、TEI側の生成契約にするか。未決の間はSUIは`unknown`として動かし、`active`へ読み替えません。
-2. **本文・題名の公開判断（#3369）**: 参照経路は本文を返しません。業務面へ出すかどうかは別判断で、SafeModeと未レビューの軸を条件として分けた形で検討します。
-3. **Tree/ForestとCanvas geometry**: 閲覧状態（折り畳み・focus）とpolygon・placardをCanonicalへ入れるか、native assetのままInteraction境界だけにするか。
-4. **版の同一視**: `documentDigest`は内容指紋であり、保存revisionではありません。両者を混同しない契約の載せ方を決めます。
-5. **review attribution**: 誰が・いつレビューしたかをDataとして持つか、監査・Source側に委ねるか。
-6. **性能**: 合成1,000カードで、参照経路はDocumentV1方式より遅く（127ms対39ms）、payloadは大きい（903KB対350KB）。用途は識別・関係・状態の伝達に限定し、速度を理由に既存経路を置き換えません。
-7. **越境試験のギャップ（TEIを待たずに着手できる）**: TEI側の設計 付録Aで未確認だった4経路、`GET /docs` の一覧、`export-audit`、保存された監査の読み取り、import時の権限非継承のHTTP経路試験が無い。同じdocIdを持つ別tenantの遮止を、これらの経路でも固定する。TEI側のM6（scope conformance）の最初の一手です。
+2026-11-12時点の現在地:
 
-**撤退条件**: 参照経路が第二の正本として使われ始めた場合（artifactを保存・編集する経路が生まれた場合）、または本文が不用意に載り始めた場合、経路をread-onlyのまま閉じ、判断をIssueへ戻します。意味契約やデータ正本の変更は、Owner判断まで確定させません。
+| 段階 | 状態 | 根拠 |
+| --- | --- | --- |
+| M0 read-only参照 | 統合済み | PR #3429（main `5be212ca`） |
+| M1 producer契約 | TAI側で実装済み（optional） | TAI PR #626（`source.status`・`disclosure.scope` をschemaで受理。consumerは無変更） |
+| M2 Canonical定義 | TEI側で限定実装済み | TEI PR #4346・#4394（`reference/sui-adoption/workspace-m2`） |
+| M6 scope conformance | TEI側で実装済み（限定） | TEI PR #4447（14経路の行列・checker）。SUI側は PR #3434 で参照routeの境界を追加済み |
+| M3・M4・M5 | 未着手 | 下記の残作業 |
+
+SUI側の残作業は次のとおりです。
+
+1. ~~**artifact生成側（producer）との契約**~~: TAI側で optional として受理済み（TAI PR #626）。SUIは引き続き、未宣言を `unknown` として扱い `active` へ読み替えません。producer が実際に宣言を埋める運用は未実装です。
+2. **本文・題名の公開判断（#3369）**: 参照経路は本文を返しません。この境界は維持します（オーナー判断の代行でも「出さない」で確定）。業務面へ出す場合の設計は M4 として未着手です。
+3. **Tree/ForestとCanvas geometry**: 閲覧状態と polygon・placard を Canonical へ入れない判断を維持しました（代行判断）。第二の Consumer が現れた場合に再検討します。
+4. **版の同一視**: `documentDigest`（内容指紋）と保存revisionを混同しない方針を維持。両者を別欄で持つ契約の載せ方は未確定です。
+5. **review attribution**: Data としては持たず、監査・Source 側に委ねる判断を維持（代行判断）。
+6. **性能**: 合成1,000カードで、参照経路は DocumentV1 方式より遅く（127ms対39ms）、payload は大きい（903KB対350KB）。用途は識別・関係・状態の伝達に限定し、速度を理由に既存経路を置き換えません。
+7. ~~**越境試験のギャップ**~~: 4経路（一覧・`export-audit`・監査読み取り・import権限非継承）は既に固定済みでした。残る `cache`（browser 保存の切り替え時破棄）が TEI 側の行列で `uncovered` として可視化されています。
+
+**撤退条件**: 参照経路が第二の正本として使われ始めた場合（artifactを保存・編集する経路が生まれた場合）、または本文が不用意に載り始めた場合、経路をread-onlyのまま閉じ、判断をIssueへ戻します。意味契約やデータ正本の変更は、正式なOwner判断まで確定させません（代行判断は設計文書 §7.1 に根拠と覆す条件つきで記録しています）。
 
 ## 将来の候補（約束ではありません）
 
