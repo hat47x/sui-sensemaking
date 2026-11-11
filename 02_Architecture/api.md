@@ -970,8 +970,10 @@ TEIがSUIの許可済み部分を参照できるようにする最初の経路�
 - query `previous_digest` と `previous_source_revision` は再参照の比較入力であり、省略時は初回参照として扱う。
 - 成功時は `200 {"ok": true, "reference": {...}}`、`Cache-Control: no-store`、`ETag: "<documentDigest>"`、`X-Sui-Reference-Schema: tai.reference.sui-document-reference/v0`。
 - 参照は `acceptedMeaning: false`、`authority: "sui-document"`、`semanticStatus: "reference-only"` を持つ。Cardを読めることはTEIのAccepted Meaningではない。
-- 返すもの: Document/Card/Island/Edge/Affiliationの不透明なID、向き・種別を持つRelation、多重Edgeの各ID、containmentとaffiliationの区別、`textReviewed`/`titleReviewed`のreview状態、Cardのcanvas座標、文書digest、任意のSUI source revision、欠落・未対応の明示。
+- 返すもの: Document/Card/Island/Edge/Affiliationの不透明なID、向き・種別を持つRelation、多重Edgeの各IDと `parallel`（同じfrom/to/typeの `groupRef`・1始まりの `index`・`count`）、containmentとaffiliationの区別、`textReviewed`/`titleReviewed`のreview状態、Cardのcanvas座標、`source.status`（`active`/`revoked`/`expired`/`unknown`）、文書digest、任意のSUI source revision、欠落・未対応の明示。
 - 返さないもの: Card本文、Island題名、Document題名、Narrative、要約、review attribution、private/restricted entityのIDと件数。未レビューのCardは参照だけを残し、`content.status="withheld-unreviewed"` とする。private/restricted entityは参照から除き、`restrictedKinds` と `hasRestrictedContent` だけを返す。したがって、この経路は #3369 の「カード本文を業務面へ出してよいか」の判断を先取りしない。
+- Source失効: `source.status="revoked"` は `409 sui_reference_source_revoked`、`"expired"` は `409 sui_reference_source_expired` で、参照・ID・件数を一切返さない。キャッシュ済みの参照へfallbackしない。`source.status` が無い場合は `unknown` とし、`losses[]` に `source-status: unresolved` を加える。`active` への読み替えはしない。
+- 開示制限: Document自体が `visibility`/`disclosure`/`access`/`scope` で `private`・`restricted` 等を示す場合、またはpayloadの `disclosure.scope` が制限を示す場合は `403 sui_reference_disclosure_restricted` とし、種別・ID・件数を返さない。entity単位の制限（`restrictedKinds`）は文書全体の制限より弱く、当該entityだけを除く。
 - 対応しないもの: Tree/Forest（DocumentV1投影v0に存在しない）、Canvasのtransform/z-order/zoom、Islandのpolygon/rect geometry、Review attribution、Narrative/要約/critique、Relationの根拠。これらは `losses[]` に `unsupported` または `partial` として明示する。
 - `documentDigest` はartifact内のDocument部分のcanonical JSONのSHA-256であり、SUIのrevisionそのものではない。`sourceRevision` がartifactに無い場合は `revisionStatus: "unknown"` とする。内容変更とsource revision変更は別の `change` 値で表し、旧参照が無効になったかを `previousReferenceInvalidated` で示す。
 - 性能・保守性の比較は、DocumentV1を直接読む既存方式とこの参照経路を同じ小規模Documentで照合した試験に限定する。実HTTP越しのTEI Consumer、実Provider、accepted meaningの受理は未検証である。

@@ -25,10 +25,12 @@ ARTIFACT = {
 }
 
 
-def _install(tmp_path, kind="documentv1-projection"):
+def _install(tmp_path, kind="documentv1-projection", artifact=None):
     bound = tmp_path / "tenants" / "tenant-a" / "doc-1"
     bound.mkdir(parents=True)
-    (bound / f"{kind}.json").write_text(json.dumps(ARTIFACT), encoding="utf-8")
+    (bound / f"{kind}.json").write_text(
+        json.dumps(artifact or ARTIFACT), encoding="utf-8"
+    )
     (tmp_path / "epistemic-bindings.json").write_text(
         json.dumps(
             {
@@ -161,3 +163,51 @@ def test_route_re_reference_marks_change(tmp_path, monkeypatch):
         second.json()["reference"]["revision"]["previousReferenceInvalidated"]
         is False
     )
+
+
+def _artifact_with_source_status(status):
+    artifact = json.loads(json.dumps(ARTIFACT))
+    artifact["source"] = dict(artifact["source"], status=status)
+    return artifact
+
+
+def test_route_revoked_source_fails_closed_without_identities(tmp_path, monkeypatch):
+    _install(tmp_path, artifact=_artifact_with_source_status("revoked"))
+    monkeypatch.setattr(settings, "tei_reference_dir", str(tmp_path))
+
+    with _client(monkeypatch) as client:
+        response = client.get("/docs/doc-1/tei/sui-reference")
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "sui_reference_source_revoked"
+    assert "card-1" not in response.text
+    assert "island-1" not in response.text
+
+
+def test_route_expired_source_fails_closed_without_identities(tmp_path, monkeypatch):
+    _install(tmp_path, artifact=_artifact_with_source_status("expired"))
+    monkeypatch.setattr(settings, "tei_reference_dir", str(tmp_path))
+
+    with _client(monkeypatch) as client:
+        response = client.get("/docs/doc-1/tei/sui-reference")
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "sui_reference_source_expired"
+    assert "card-1" not in response.text
+
+
+def test_route_document_disclosure_restriction_fails_closed(tmp_path, monkeypatch):
+    artifact = json.loads(json.dumps(ARTIFACT))
+    artifact["document"]["document"] = dict(
+        artifact["document"]["document"], visibility="restricted"
+    )
+    _install(tmp_path, artifact=artifact)
+    monkeypatch.setattr(settings, "tei_reference_dir", str(tmp_path))
+
+    with _client(monkeypatch) as client:
+        response = client.get("/docs/doc-1/tei/sui-reference")
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == "sui_reference_disclosure_restricted"
+    assert "card-1" not in response.text
+    assert "island-1" not in response.text

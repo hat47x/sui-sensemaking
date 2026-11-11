@@ -5,7 +5,9 @@ import pytest
 from sui_sensemaking_api.models import DocumentV1
 from sui_sensemaking_api.tei_sui_reference import (
     REFERENCE_SCHEMA,
+    SuiReferenceDisclosureRestricted,
     SuiReferenceError,
+    SuiReferenceSourceUnavailable,
     build_sui_reference,
     reference_digest,
     reference_to_json,
@@ -230,6 +232,95 @@ def test_reference_change_and_re_reference_invalidate_prior_reference():
     assert changed.revision.change == "content-changed"
     assert changed.revision.previous_reference_invalidated is True
     assert changed.revision.document_digest != first.revision.document_digest
+
+
+@pytest.mark.parametrize("status", ["revoked", "expired"])
+def test_revoked_or_expired_source_fails_closed_without_entities(status):
+    payload = artifact()
+    payload["source"] = dict(payload["source"], status=status)
+
+    with pytest.raises(SuiReferenceSourceUnavailable) as raised:
+        build_sui_reference(payload)
+
+    assert raised.value.status == status
+
+
+def test_active_source_is_reported_and_unknown_is_unresolved():
+    payload = artifact()
+    payload["source"] = dict(payload["source"], status="active")
+    active = build_sui_reference(payload)
+    assert active.source["status"] == "active"
+    assert not any(item["feature"] == "source-status" for item in active.losses)
+
+    unknown = build_sui_reference(artifact())
+    assert unknown.source["status"] == "unknown"
+    assert any(
+        item["feature"] == "source-status" and item["status"] == "unresolved"
+        for item in unknown.losses
+    )
+
+
+def test_document_level_restriction_fails_closed_without_kinds_or_counts():
+    payload = artifact()
+    payload["document"]["document"] = dict(
+        payload["document"]["document"], visibility="restricted"
+    )
+
+    with pytest.raises(SuiReferenceDisclosureRestricted):
+        build_sui_reference(payload)
+
+    payload = artifact()
+    payload["disclosure"] = {"scope": "restricted"}
+    with pytest.raises(SuiReferenceDisclosureRestricted):
+        build_sui_reference(payload)
+
+
+def test_parallel_edges_keep_group_and_occurrence_index():
+    payload = artifact(
+        edges=[
+            {
+                "id": "edge-a",
+                "fromId": "card-1",
+                "toId": "card-2",
+                "type": "supports",
+                "fromKind": "card",
+                "toKind": "card",
+            },
+            {
+                "id": "edge-b",
+                "fromId": "card-1",
+                "toId": "card-2",
+                "type": "supports",
+                "fromKind": "card",
+                "toKind": "card",
+            },
+            {
+                "id": "edge-c",
+                "fromId": "card-1",
+                "toId": "card-2",
+                "type": "negates",
+                "fromKind": "card",
+                "toKind": "card",
+            },
+        ]
+    )
+    reference = build_sui_reference(payload)
+    directed = [item for item in reference.relations if item.relation_kind == "directed"]
+    parallel = [item for item in directed if item.relation_type == "supports"]
+
+    assert {item.ref.id for item in directed} == {"edge-a", "edge-b", "edge-c"}
+    assert len({item.parallel_group for item in parallel}) == 1
+    assert sorted(item.parallel_index for item in parallel) == [1, 2]
+    assert {item.parallel_count for item in parallel} == {2}
+    single = next(item for item in directed if item.relation_type == "negates")
+    assert single.parallel_count == 1
+    body = next(
+        item
+        for item in reference_to_json(reference)["relations"]
+        if item["ref"]["id"] == "edge-a"
+    )
+    assert body["parallel"]["index"] in {1, 2}
+    assert body["parallel"]["count"] == 2
 
 
 def test_source_revision_change_is_distinct_from_content_change():

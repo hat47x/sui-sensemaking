@@ -47,6 +47,7 @@ REFERENCE_AUTHORITY = "sui-document"
 ACCEPTED_MEANING = False
 
 ReviewState = Literal["reviewed", "unreviewed", "unknown"]
+SourceStatus = Literal["active", "revoked", "expired", "unknown"]
 ChangeState = Literal[
     "initial",
     "unchanged",
@@ -59,6 +60,27 @@ CompletenessState = Literal["complete", "partial", "unknown"]
 
 class SuiReferenceError(ValueError):
     """Raised when an artifact cannot be read as a typed SUI reference."""
+
+
+class SuiReferenceSourceUnavailable(SuiReferenceError):
+    """Raised when the artifact's source was revoked or expired.
+
+    The caller must not fall back to the cached reference: the reference is
+    fail-closed and carries no entity identities.
+    """
+
+    def __init__(self, status: str) -> None:
+        super().__init__(f"source is {status}")
+        self.status = status
+
+
+class SuiReferenceDisclosureRestricted(SuiReferenceError):
+    """Raised when the document itself is outside the permitted disclosure.
+
+    Entity-level restrictions are omitted per entity; a document-level
+    restriction is stricter and returns nothing at all, so that even kinds or
+    counts do not leak.
+    """
 
 
 @dataclass(frozen=True)
@@ -120,15 +142,29 @@ class RelationReference:
     from_ref: EntityRef
     to_ref: EntityRef
     relation_type: str | None
+    #: For directed relations, the parallel-edge group this occurrence belongs
+    #: to. `index` is 1-based and `count` is the number of occurrences with the
+    #: same from/to/type. A consumer that groups by endpoints must not collapse
+    #: occurrences that share a group.
+    parallel_group: str | None = None
+    parallel_index: int = 1
+    parallel_count: int = 1
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "ref": self.ref.as_json(),
             "relationKind": self.relation_kind,
             "fromRef": self.from_ref.as_json(),
             "toRef": self.to_ref.as_json(),
             "relationType": self.relation_type,
         }
+        if self.relation_kind == "directed":
+            body["parallel"] = {
+                "groupRef": self.parallel_group,
+                "index": self.parallel_index,
+                "count": self.parallel_count,
+            }
+        return body
 
 
 @dataclass(frozen=True)
@@ -214,7 +250,38 @@ def _is_restricted(raw: Mapping[str, Any]) -> bool:
             "internal-only",
         }:
             return True
+        if isinstance(value, Mapping):
+            nested = value.get("scope") if key == "disclosure" else value.get("visibility")
+            if isinstance(nested, str) and nested.lower() in {
+                "private",
+                "restricted",
+                "secret",
+                "internal-only",
+            }:
+                return True
     return raw.get("private") is True or raw.get("restricted") is True
+
+
+def _source_status(source: Mapping[str, Any]) -> SourceStatus:
+    """Read the source lifecycle state declared by the artifact.
+
+    `unknown` means the artifact says nothing, so freshness cannot be
+    established. It is not treated as `active`.
+    """
+    value = source.get("status")
+    if value == "active":
+        return "active"
+    if value == "revoked":
+        return "revoked"
+    if value == "expired":
+        return "expired"
+    return "unknown"
+
+
+def _parallel_group_ref(
+    from_kind: str, from_id: str, to_kind: str, to_id: str, relation_type: str
+) -> str:
+    return f"directed:{from_kind}:{from_id}:{relation_type}:{to_kind}:{to_id}"
 
 
 def _source_revision(source: Mapping[str, Any]) -> str | None:
@@ -307,6 +374,24 @@ def build_sui_reference(
     source = payload.get("source")
     if not isinstance(source, Mapping):
         raise SuiReferenceError("source must be an object")
+
+    source_status = _source_status(source)
+    if source_status == "revoked":
+        raise SuiReferenceSourceUnavailable("revoked")
+    if source_status == "expired":
+        raise SuiReferenceSourceUnavailable("expired")
+
+    declared_disclosure = payload.get("disclosure")
+    raw_document_meta = raw_document.get("document")
+    document_restricted = _is_restricted(raw_document) or (
+        isinstance(raw_document_meta, Mapping) and _is_restricted(raw_document_meta)
+    )
+    if document_restricted or _is_restricted({"disclosure": declared_disclosure}):
+        # A document-level restriction is stricter than entity-level omission:
+        # return nothing, so that kinds and counts do not leak either.
+        raise SuiReferenceDisclosureRestricted(
+            "the document is outside the permitted disclosure"
+        )
 
     restricted_kinds: set[str] = set()
     visible_card_ids: set[str] = set()
@@ -409,6 +494,8 @@ def build_sui_reference(
             affiliation_count_by_island.get(affiliation.island_id, 0) + 1
         )
 
+    parallel_counts: dict[tuple[str, str, str, str, str], int] = {}
+    parallel_seen: dict[tuple[str, str, str, str, str], int] = {}
     for edge in document.edges:
         if edge.from_id not in (
             visible_card_ids if edge.from_kind == "card" else visible_island_ids
@@ -418,6 +505,20 @@ def build_sui_reference(
             visible_card_ids if edge.to_kind == "card" else visible_island_ids
         ):
             continue
+        key = (edge.from_kind, edge.from_id, edge.to_kind, edge.to_id, edge.type)
+        parallel_counts[key] = parallel_counts.get(key, 0) + 1
+
+    for edge in document.edges:
+        if edge.from_id not in (
+            visible_card_ids if edge.from_kind == "card" else visible_island_ids
+        ):
+            continue
+        if edge.to_id not in (
+            visible_card_ids if edge.to_kind == "card" else visible_island_ids
+        ):
+            continue
+        key = (edge.from_kind, edge.from_id, edge.to_kind, edge.to_id, edge.type)
+        parallel_seen[key] = parallel_seen.get(key, 0) + 1
         relations.append(
             RelationReference(
                 ref=EntityRef("sui.edge", edge.id),
@@ -425,6 +526,11 @@ def build_sui_reference(
                 from_ref=EntityRef(f"sui.{edge.from_kind}", edge.from_id),
                 to_ref=EntityRef(f"sui.{edge.to_kind}", edge.to_id),
                 relation_type=edge.type,
+                parallel_group=_parallel_group_ref(
+                    edge.from_kind, edge.from_id, edge.to_kind, edge.to_id, edge.type
+                ),
+                parallel_index=parallel_seen[key],
+                parallel_count=parallel_counts[key],
             )
         )
 
@@ -546,6 +652,17 @@ def build_sui_reference(
                 ),
             }
         )
+    if source_status == "unknown":
+        losses.append(
+            {
+                "feature": "source-status",
+                "status": "unresolved",
+                "detail": (
+                    "The artifact declares no source lifecycle state. Freshness is "
+                    "not established; this is not a claim that the source is active."
+                ),
+            }
+        )
 
     disclosure = {
         "mode": "references-only",
@@ -564,6 +681,7 @@ def build_sui_reference(
             "projectionContractVersion": document.contract_version,
             "teiCommit": document.tei_commit,
             "referenceOf": "SUI DocumentV1",
+            "status": source_status,
         },
         cards=cards_with_memberships,
         islands=islands_with_memberships,

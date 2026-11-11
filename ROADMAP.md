@@ -50,6 +50,22 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 **現在は調査と受入候補のみ**。最初に既存Card出典手掛かりを使う5 Cardの固定Fixtureと独立Expectedを用意し、Review/Sourceの観測範囲を確認する。Hybrid永続化、実Exporter、SHO/SEIの実受領、実利用によるT2の価値確認は未実施。全件検証や実認可に進む前にOwner判断を要する。
 
+## 検討候補：TEI（*.tei.md＋Plugin）への移行
+
+SUIは最終的に、TEIの`.tei.md`（Canonical定義）とPluginによる設計〜実装へ移行します。2026-11-11に、その第一段階として「許可されたSUIデータの一部を、TEIから型付きで参照するread-only経路」を実装しました（PR #3429、`ADR-0116`、`api.md` §2.18）。この経路はDocument/Card/Island/Tree/Canvas/Relation/Revision/Reviewの対応と損失を実コードで確定させましたが、**移行そのものは未決定で、第二のデータ正本は作っていません**。
+
+SUI側で今後必要なタスクは、TEI側の[移行タスク分解](https://github.com/hat47x/tei-platform/pull/4298)（`hat47x/tei-platform` の `plan/design/SUI_TEI_MIGRATION_TASKS_2026-11.md`）にM0〜M6として整理済みです。SUI側の残作業は次のとおりです。
+
+1. **artifact生成側（producer）との契約**: `source.status`（`active`/`revoked`/`expired`）と文書単位の開示宣言を、TEI側の生成契約にするか。未決の間はSUIは`unknown`として動かし、`active`へ読み替えません。
+2. **本文・題名の公開判断（#3369）**: 参照経路は本文を返しません。業務面へ出すかどうかは別判断で、SafeModeと未レビューの軸を条件として分けた形で検討します。
+3. **Tree/ForestとCanvas geometry**: 閲覧状態（折り畳み・focus）とpolygon・placardをCanonicalへ入れるか、native assetのままInteraction境界だけにするか。
+4. **版の同一視**: `documentDigest`は内容指紋であり、保存revisionではありません。両者を混同しない契約の載せ方を決めます。
+5. **review attribution**: 誰が・いつレビューしたかをDataとして持つか、監査・Source側に委ねるか。
+6. **性能**: 合成1,000カードで、参照経路はDocumentV1方式より遅く（127ms対39ms）、payloadは大きい（903KB対350KB）。用途は識別・関係・状態の伝達に限定し、速度を理由に既存経路を置き換えません。
+7. **越境試験のギャップ（TEIを待たずに着手できる）**: TEI側の設計 付録Aで未確認だった4経路、`GET /docs` の一覧、`export-audit`、保存された監査の読み取り、import時の権限非継承のHTTP経路試験が無い。同じdocIdを持つ別tenantの遮止を、これらの経路でも固定する。TEI側のM6（scope conformance）の最初の一手です。
+
+**撤退条件**: 参照経路が第二の正本として使われ始めた場合（artifactを保存・編集する経路が生まれた場合）、または本文が不用意に載り始めた場合、経路をread-onlyのまま閉じ、判断をIssueへ戻します。意味契約やデータ正本の変更は、Owner判断まで確定させません。
+
 ## 将来の候補（約束ではありません）
 
 位置づけと段階は [`ADR-0091`](01_Plans/adr/ADR-0091-positioning-for-the-agent-era.md) に従います。生成AIが普及した社会で、AIの要約の隣に置く「判断と異論の記録層」を目指し、既存の質的分析ツールからの移行（REFI-QDA）と来歴の受け渡し（W3C PROV）は、実際に必要な場面が確認されてから取り組みます。
