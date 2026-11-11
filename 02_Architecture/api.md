@@ -958,6 +958,24 @@ ADR-0102 は案B（文書単位の紐付けを管理面で登録し、テナン�
 - 成功時のみ `200 {"ok": true, "artifact": <TEI ReferenceのJSON objectそのもの>}`。`Cache-Control: no-store`。読み取り専用。epistemic データは Document / Canonical state へ保存・埋め込みしない。
 - レスポンス本体は artifact をそのまま返す。contract / schema の検証と drift 再計算は frontend consumer が行う。
 
+### 2.18 SUI→TEIの型付きread-only参照（限定移行、SUI #3401 / TEI #2497）
+
+TEIがSUIの許可済み部分を参照できるようにする最初の経路を、既存のTEI Reference機構（ADR-0101 Option A、ADR-0102の紐付け）とテナント認可の上に追加する。新しいデータ正本、意味Registry、Second Providerは作らない。入力は `documentv1-projection` artifactだけであり、DocumentV1を保存・変更しない。
+
+**GET** `/docs/{doc_id}/tei/sui-reference`
+
+- 認可: `GET /docs/{doc_id}` と同じ `_authorize_request`。agent credentialは `403 agent_route_not_enabled`、ゲストは文書の読み取りが許可されている場合だけ通る。
+- 紐付けは `/docs/{doc_id}/epistemic/projection` と同じ `SUI_TEI_REFERENCE_DIR/tenants/<tenantId>/<docId>/documentv1-projection.json` と `epistemic-bindings.json` を使う。未設定は `503 tei_reference_unconfigured`、紐付けなしは `503 tei_reference_unavailable`、`documentv1-projection` 以外の紐付けは `404 sui_reference_binding_not_found` で、artifact種別を明かさない。
+- artifactが読めてもSUI参照として解釈できない場合は `503 sui_reference_unavailable` を返し、部分内容を返さない。
+- query `previous_digest` と `previous_source_revision` は再参照の比較入力であり、省略時は初回参照として扱う。
+- 成功時は `200 {"ok": true, "reference": {...}}`、`Cache-Control: no-store`、`ETag: "<documentDigest>"`、`X-Sui-Reference-Schema: tai.reference.sui-document-reference/v0`。
+- 参照は `acceptedMeaning: false`、`authority: "sui-document"`、`semanticStatus: "reference-only"` を持つ。Cardを読めることはTEIのAccepted Meaningではない。
+- 返すもの: Document/Card/Island/Edge/Affiliationの不透明なID、向き・種別を持つRelation、多重Edgeの各ID、containmentとaffiliationの区別、`textReviewed`/`titleReviewed`のreview状態、Cardのcanvas座標、文書digest、任意のSUI source revision、欠落・未対応の明示。
+- 返さないもの: Card本文、Island題名、Document題名、Narrative、要約、review attribution、private/restricted entityのIDと件数。未レビューのCardは参照だけを残し、`content.status="withheld-unreviewed"` とする。private/restricted entityは参照から除き、`restrictedKinds` と `hasRestrictedContent` だけを返す。したがって、この経路は #3369 の「カード本文を業務面へ出してよいか」の判断を先取りしない。
+- 対応しないもの: Tree/Forest（DocumentV1投影v0に存在しない）、Canvasのtransform/z-order/zoom、Islandのpolygon/rect geometry、Review attribution、Narrative/要約/critique、Relationの根拠。これらは `losses[]` に `unsupported` または `partial` として明示する。
+- `documentDigest` はartifact内のDocument部分のcanonical JSONのSHA-256であり、SUIのrevisionそのものではない。`sourceRevision` がartifactに無い場合は `revisionStatus: "unknown"` とする。内容変更とsource revision変更は別の `change` 値で表し、旧参照が無効になったかを `previousReferenceInvalidated` で示す。
+- 性能・保守性の比較は、DocumentV1を直接読む既存方式とこの参照経路を同じ小規模Documentで照合した試験に限定する。実HTTP越しのTEI Consumer、実Provider、accepted meaningの受理は未検証である。
+
 ## 3. レスポンス例（概要）
 
 ### 3.1 DocumentV1（レスポンス）
