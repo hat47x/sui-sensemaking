@@ -860,3 +860,54 @@ SUI→TEIの意味ある接続を検証する際だけ、最低限、次を別�
 
 **資格と未了**：#4475/#4472は2026-11-12時点で静的指摘が先行するopen Issue。SHO #29の17-case CIを実VS Code/Dirty Buffer/正式Writer/Storage CASへ拡大解釈しない。HSC-G〜L、実SUI UI固定Pin、同一Sessionの外部Harness送信・SUI↔SHO↔TEI実共同Read/Write、Owner Meaning受理、T2価値は本節では**未実行・未採用**。既存正本・EffectのOwnerへ戻す。
 
+<!-- sui-raw-evidence-crosslane-20261112 -->
+### 18.13 SUIの選択正しさ・Harness配送・共同接続・認知価値を別々に実証する
+
+11月12日以降の[TAI #271](https://github.com/hat47x/tai-pleroma/issues/271)、[Draft #629](https://github.com/hat47x/tai-pleroma/pull/629)、[TAI #168](https://github.com/hat47x/tai-pleroma/issues/168)、[SUI #3400](https://github.com/hat47x/sui-sensemaking/issues/3400)を踏まえ、§18.7〜18.12の選択資格と外部Harnessの実行資格を**独立の四つの観測列**に切り分ける。これは共通ランタイムの追加や新しい正式Gate名ではなく、既存Ownerへ実験結果を返すための比較方法である。
+
+| 観測列（便宜名） | 当該Ownerが実際に示すこと | 示さないこと |
+| --- | --- | --- |
+| **S：SUI単独選択** | AI OFFで、既存Card/Island/Readerの安定した選択、対象補正、元Source/Revision再解決、非公開要素の非露出、保存/再開の実Outcome | 外部HarnessがToolを読めること、AIの認知増分、別製品での操作資格 |
+| **H：Harness単独配送** | 実OS read-deny・実送出byte・Tool args/Reply完全性と終端・受け手のContext、適格Session/隔離 | SUIの意味構造、現在のSUI Grant、元資料の全件性、GUIが使いやすいこと |
+| **J：SUI×Harness同一Attempt接合** | **SとHの両方が対象範囲で成立した後**、同じPin/Source/Scope/Request/Tool Reply/Recipient表示が正しく結びつく。遅着・別Audience・切断でも誤適用しない | Session共通化だけでOwnerのMeaning受理やBusiness Effectが生じること |
+| **C：認知的な価値の差** | AI OFFの通常KJ、一般的なAI提案、CSWの仮の分類/島案を同じ実務資料と条件で比較し、関係発見・異論維持・再開・誘導害/操作負荷を別観測 | Jの通信成功だけでSUI/CSWの価値が生じたこと、内部DogfoodをT2と数えること |
+
+**実施順**：SとHは相互を待たずに小規模な独立検証を進める。Jは**適格な実Product/実Harness**に限定して後段で同一Attemptを試す。CはSUIの基本価値[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)/ADR-0089を基準に、AI OFF・非Harness利用を有効な対照とする。Hの基線は[TAI #168](https://github.com/hat47x/tai-pleroma/issues/168)のG0物理Read拒否→G1送出→G2 Tool Reply完全性→独立H2/H3比較の順を変更せず、SUI選択UIを初回の追加Blocking条件にしない。複数画面同一Live Sessionが非対応なら、用途限定Activity Handoffを別Sessionで試し、同一Session成功と称さない。
+
+Sの必要要素を明示する最初の試験は、Syntheticの6〜12件で、同文別Item・同Itemの別表示Occurrence・未レビュー/伏せられた島・動的候補Qと人の除外E/追加A・元Source改版を組み合わせる。**表示が同じでも内部Identityと意味が一致するとは限らない**ことを必ず含める。現行DocumentV1でできることと、将来論理Item/Canvasに必要なことを別列にする。
+
+### 18.14 未整理Itemの「保管できた」と、後日読めるEvidence/Sourceの関係を分離する
+
+[TEI #4307](https://github.com/hat47x/tei-platform/issues/4307)、[#4481](https://github.com/hat47x/tei-platform/issues/4481)、[#4493](https://github.com/hat47x/tei-platform/issues/4493)、[#4494](https://github.com/hat47x/tei-platform/issues/4494)、[#4503](https://github.com/hat47x/tei-platform/issues/4503)の**保管と限定取得の設計・負例**を、SUIのRaw/Inbox/ReaderのConsumer試験へ接続する。TEIのEvidenceをSUI Itemへ全面移管する、SUIに全Evidenceを自動登録する、KON Dataspace/汎用Evidence Registryを新たな必須基盤とすることはしない。
+
+まずSUIの「保存」操作で、(a)利用者が残した**Item identity**、(b)実Raw bytesまたは外部Locatorの**Content/Source reference**、(c)保存・取得・観測した**revision/attempt/status**、(d)人間が後から付けた**見立て/Role/Review**、(e)Canvas上の**Display Occurrence**を独立して説明できるかを検証する。Rawの同一hashはbyte一致の証拠に限り、異Source/出典・実体の同一性やレビュー資格は自動統合しない。大量Rawを投入した時点でTask/Graph/OKF Conceptの強制生成を行わない。
+
+**参照の4段階の必要な違い**：
+1. **登録のみ**：URLやLocatorを保存。内容未取得なら実byte/全文検索・オフライン再読込成功を主張しない。
+2. **Raw保管**：ローカルContent Storeなどに実byteを保存した事実を示す。受け取ったbyte列・時刻・Scopeを追跡し、再Readに成功するかは別。解析・Index・意味の確認は任意。
+3. **参照結合**：元Source/Revision/取得位置/実byte digestとItem/抽出Candidateを明示的に結ぶ。移動・同名異物・A→B→A・Catalog消失では歴史的参照を残し、現在の根拠としてはunresolved/partialを返す。
+4. **用途別の取得／共有**：必要集合・現在のGrant/Disclosure/Recipient・実Read Scopeを確認し、AI/SHO/TEIへの限定Projection/送出を明示操作にする。Locatorやdigest、存在件数、private catalog自体も機微情報になり得る。**閲覧/Pin/read-onlyという表示だけで外部Network read・cache write・uploadゼロを保証しない**。
+
+**Git連動と物理保管の関係**：GitHubにRaw/証拠の実体や存在情報を送らない`local-only`も成立させる。Git-linked-privateではGitはSourceの版、Raw/証拠の実体はローカル/NAS/S3等、Git→Manifestの紐付けはGit外のprivate catalog/receiptで管理可能な候補とする。これはTEI #4307の設計Profileを参照する比較であり、SUIの標準Storage Mode Enum採用ではない。GitHub公開を絶対条件とせず、Local-onlyのReader／既存SUI保存機構を最小基線とする。
+
+**復元の反例**：Raw blobだけ復元してもどのSource/Itemに結び付くか不明なら`unresolved`。catalogだけ復元してblob欠損なら`unavailable/partial`。Remote Put ACKだけで後日のReader再取得・世代一式の完全性・Owner受理を保証しない。永続Evidenceの保全/Retention・Cache eviction、権限とGCは[TEI #2845](https://github.com/hat47x/tei-platform/issues/2845)等の既存Ownerと比較し、新しい強制的な共通保管サービスを先に作らない。
+
+### 18.15 最小利用経路と技術反例：Raw→Reader→Pin→限定Handoff
+
+**最短の縦断は、まずSUI単独で**「未整理Rawを保存→Inboxで見つける→Readerで実Contentを再取得→人が範囲を選択・Pin→抽出CandidateをKJに配置→元Rawへ戻る」。次にAI OFFのまま複数Canvasの非干渉を試し、必要性が認められた時にだけ外部Harness、SHO、TEIの限定Consumerを接続する。従来の3 Card KJの最小価値を壊さない。初期段階でNAS/S3、数万Item、Graph全域索引、全製品公開UIを必須にしない。
+
+| 既存Ownerへ戻す対照 | 入力・変更 | 期待する実Outcome／禁止推論 |
+| --- | --- | --- |
+| **SIR-01**：SUI §17 SI-RAW01/02・TEI #4307 GL-01 | GitHub未接続で長文Rawを一件保管、別プロセスで再読、URLのみ別Item登録 | 長文はContentを取得できるか否かを実Readで判定。URLだけの登録はunknown/unfetched、GitHub送信0。強制Card/Role/AI呼出し0 |
+| **SIR-02**：SI-RAW03/05・TEI #4493 DR-02/03 | 同byte別原典、blobのみ／private catalogのみ別Workspaceへ移行 | byte identityとSource/Item identityを別扱い、必要根拠が復元できなければunresolved/partial。元位置や人間Reviewを偽造しない |
+| **SIR-03**：SI-XC01/05・SUI #3400 SV-06/09 | 同Itemを二Canvasへ、別Itemに同じ本文、Readerへ元範囲復帰 | Display Occurrenceは別、元Item/Sourceは維持。説明・配置が一致しても元Worldの同一を推定せず、表示削除だけでSource削除しない |
+| **SIR-04**：SUI HSC-A/B/L・TAI #629/#271 | Q候補12件→人が1件除外1件追加→Pin後にSource/Grant変化 | S=(Q−E)∪Aの選択意図を保持し、現在のRef/Source/Scope/Grant不適格なら書込/外部送出0。履歴上のPinは残る |
+| **SIR-05**：TEI #4503 EC-06/07/08/09・SUI SI-RAW08/09 | 3 Evidence必要・2件のみ実取得。Redacted 1件のみ外部送出、Tool Reply途中切断 | Required closure partial、Rawは非送出。事前予定とcache/Network実作用、生成済みbyteと実Consumer受領を別列 |
+| **SIR-06**：SUI #3391・SHO #31〜33・TEI #2497 | 元SHOから選択RawをSUIで構造候補化、別Markdown Draftで再開 | 原Source/Scope/Document/StructureのRevision、公開Loss、実Reader/Writer再Readを独立記録。元SHO/SUIの無断上書き、意味受理の自動昇格0 |
+
+**評価・判断**：SIRは**既存の独立Expectedへ紐づけるための照合票であり新しい第二テスト正本ではない**。原Itemへ戻れた割合、必要な手数、誤った二重カウント、AI OFFでの関係発見、引用位置再到達率、実送出の限定率、権限/失効誤適用をそれぞれ観測する。SUI本体の価値T2は[ADR-0089](adr/ADR-0089-product-value-canon.md)/[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)を正本とし、技術Fixtureの合格をT2に加算しない。
+
+**Owner/工程**：SUI Item/CanvasとReaderはHybrid計画/§17・#3400、異種Sourceは#3401、外部投影は#3368/#3391/#3392、SHOのWriterはSHO #4/#19/#20、TEI Evidence Store/Private Catalog/ProviderはTEI #4307/#4481/#4493/#4494、意図・取得・開示は#4503/#2516/#2515、Harness実配信とSessionはTAI #168/#271/#232。分担を変更しない。新しいStorage/Role Registryや中央Agent Loop、NAS/S3のSUI必須化は**非目標**。
+
+**現時点の証拠と未完了**：本節は2026-11-12の横断設計・利用順の整理のみ。S/H/J/Cの実照合、SIR-01〜06、新しいSUI Raw Item DB・本番Reader改修・二Canvas UI・Local CAS→SUI正式Binding、NAS/S3・外部Harness実送出、SHO正式Writer、TEI Role/Meaning、実T2はこの追補では**NOT RUN／NOT ACCEPTED**。過去のGitHub Doc Readbackや合成CI成功から本実装のPASSを導かない。
+
