@@ -765,3 +765,47 @@ SUI→TEIの意味ある接続を検証する際だけ、最低限、次を別�
 **進める順**：（A）現在の3カード/KJ・AI OFFと既存ReaderでSI-RAW01/02および原文への復帰を検証、（B）固定選択と同一Itemの別Occurrenceをheadless Fixtureで比較、（C）SHO選択Handoff→SUI内部構造Draft→SHO候補の一往復、（D）TEI #4350のS1/S3が成立した範囲だけTEI表現Bindingの適格性を照合、（E）実需要があれば[#3401](https://github.com/hat47x/sui-sensemaking/issues/3401)のI1から異種3Source/PERT/外部Providerへ拡張。A/Bの利用価値はADR-0089のT2と別に設計実装証拠を保持し、SUI内部Dogfood/合成CIをSUI外の実務T2に加算しない。
 
 **所有と受理**：17章の正本と各Issue Ownerを維持し、TEI/SHO/SUIの第二Context/Source/Authority/Reader/Registry/Hostを増設しない。11月11日以降のG3/TEI #4350/安全性Issuesの具体化を、この接続順へ反映した**計画差分のみ**。新UI/API、Role Runtime、SUI→SHO往復E2E、TEI Function Binding、外部Task Provider、T2実務価値はいずれも本節ではNOT RUN・NOT ACCEPTED。
+
+### 18.7 安定選択を「固定集合＋動的条件＋現在資格」で具体化する（横断追補）
+
+共通Harness [TAI Draft #629](https://github.com/hat47x/tai-pleroma/pull/629)の§11.8を、**SUI利用者の選択体験が満たすべき限定条件**として取り入れる。TAIが外部Harness/Session/Transportを所有し、本節はSUI内部の選択・表示・操作対象の非同一性だけを所有する。共通Selection ABI、共有Session Store、製品埋込みHarness、特定のSession復元APIは**未採用**。
+
+- **Transient Focus**：一時的なホバー・クリック・エディタカーソル・現在表示中のViewport。Esc/画面切替で変わり得る。
+- **Pinned Work Set**：利用者が明示した、対象Kind・安定Ref・元のCanvas/Tree/Reader表示出現・Source/Revision・用途・選択条件と補正履歴を持つ対象集合。Highlightは固定集合の可視化であって正本ではない。移動・別タブ・Chat入力で不意に失わず、解除・再束縛は明示操作とする。
+- **Resolved Candidate Set**：自然言語検索またはQueryを**特定のScope・時点の実Read**で解決した候補Q。未探索/未公開を0件としない。動的条件そのものと、時点rで解決済みのID集合を別に保持する。
+- **Human Correction**：利用者による除外集合E／追加集合A。可視かつ実解決済み対象の範囲で `S=(Q−E)∪A` とし、同一Itemが別Canvasの二表示で現れても証拠数を2としない。追加Aを現在Grantを通さず対象確定・外部送信へ昇格させない。
+- **Qualified Apply Set**：最終Sの各Ref/Source/Revision/Scope/現在Grantを実際に再Readし、編集対象ID/Dependency/readSetとwriteSetを解決できたものだけ、条件付きPreview/Applyの対象とする。Sが固定でも、参照先の実在、現在のRowset/RLS、意味Role、許可は固定されない。
+
+**利用者に見せる最低状態**：「いま指している箇所」「固定した作業対象」「未解決・要再確認」「この操作で変更する対象」を分け、対象が一致しない場合は保留。Pinned集合を新しい永続ItemやDecisionとして自動記録せず、利用者が必要とするときだけ通常のSUI情報単位へ明示保存する。SUI内のAI候補を自由に比較する機能はAI OFF・手動補正でも成立し、CSW/TEI/SHOを常時起動しない。
+
+### 18.8 同一Harness Session・Activity引継ぎ・権限は別もの
+
+外部HarnessのSessionと各ProductのUI Viewを共有し得ても、**Session共有＝同一Activity、現在のSource read、現在のGrant、実業務Effect**ではない。AIの返信は起点Request/Attempt・Product・Pin・元Revision・Scopeを付けて表示し、他画面からの遅い応答を現在のPinへ誤貼付しない。
+
+- **実Live attachを確認**した場合のみ同一Sessionの継続と呼ぶ。Harnessが対応しなければ、用途限定のActivity Handoff（対象Ref・未決・Unknownの引渡し）として表現し、同一Conversation継続を偽らない（TAI #168/#271）。
+- **機密境界変更**：過去のSession文脈に秘密が残っている場合、後続の出力だけを伏せても隔離できない。Audience/Principal/Trust Boundaryを変更する場合は新しい隔離Sessionに分岐し、許可された情報だけを再取得する。複数画面の便宜よりDisclosureを優先する（TAI #232）。
+- **同World fingerprintでも異なるProvider可視集合**：DB Rowset、RLS、Scope/Grantが変わり得る（TAI #271の限定観測）。SUI/TEIとも構造Revisionの一致だけで「同じ検索結果・同じ権限・全件取得済み」を宣言しない。実Provider Read、cursor/終端、取得Scopeを個別確認。SUI [#3419](https://github.com/hat47x/sui-sensemaking/issues/3419)の1ページ目だけの探索欠落は実際の停止線。
+- **Toolの成功段階を分離**：送信予定、Tool要求、実Tool Reply、UIに表示されたResult、製品側の確認、正式Write/Receipt、再Readを別観測とする。LLM/CSWの整然とした回答や宣言されたCapabilityは、実受領・実行・完了の証拠ではない。
+
+### 18.9 意味Role・TraitとCSW協調は「推論・役割付け・実行」を分離する
+
+情報がTask/Action/Eventに見えるときも、**「そのことを記述したItem」「予定されるTask」「実際に生じたOccurrence/Event」「実行可能なOperation Contract」「実Effect/Receipt」**を同一のRole-tagでまとめない。異種情報からのEntity同定も同様に候補と受理を区別する（SUI #3401、TEI #2620/#2495）。
+
+- **SUI**：人間の違和感・未分類・多重所属・異論・仮の島/表札を保ったまま、複数の見立てをCard/Tree/Canvas上で試す。Roleは意味解釈の候補になり得るが、Roleが付いたというだけで実TaskやWorkflowは発生しない。
+- **CSW**：複数の分類・再配置・対照解釈を提案する任意の認知手法。SUIのIsland構造をCSWが自動受理したMeaningやTEIの組織Membershipへ変換しない。CSW不在のKJ-onlyと、通常AI提案と、CSWを用いた提案を分けて認知増分を測る（SUI #3400）。
+- **TEI**：正式モデルへ接続する場合、Roleの意味契約、Traitの実装義務/未履行（manual-requiredを含む）、Function Data Context、適格Provider、Data/Presentation/Operationの別資格を評価する。標準Representation Descriptorの書けたことを、Trait充足/受理済みModel/現在Grantにしない（TEI #4350/#4353）。
+- **SHO**：SUIから受け取る文章候補の著者による編集・採用はSHOの文書正本とし、元SUIの島・関係・Role・原出典を書き戻したことにしない。逆編集は対象とLossが一意に資格化できたときのみ候補提示（SUI #3430/#3431、SHO #31〜33）。
+
+#### 追補の独立判定対照（既存Expectedへ割り当て。未実行）
+
+| 対照 | 操作 | 期待結果／停止条件 | Owner・既存Expected |
+| --- | --- | --- | --- |
+| **HSC-A** | 曖昧Queryで12 Card候補→人が1件除外・1件追加、別Canvasへ移動 | Q・E・A・確定S、元ID/Revisionを追跡。二Occurrenceを別証拠数とせず、元Pin維持。新追加は現在Grantを確認 | TAI #629 §11.8 P1、SUI SI-XC01/07 |
+| **HSC-B** | Pin後に元SourceをA→B→A、別利用者が権限を変更 | 同byte/見た目を現行参照資格とせず、再解決・再Read/再Preview。権限の無いAction/送信0 | TAI #271、SUI SI-RAW03/07、#3399 |
+| **HSC-C** | 二画面で同一Harness Session attachを試み、古いReplyが後着 | 実attach可否を明示。Request/Pin/Revisionが違うReplyを現行結果へ適用しない。attach不可ならActivity Handoffのみ | TAI #629 P2、ADR-0111 |
+| **HSC-D** | 同一World/同じQueryでRLS可視行が変わる。MCPも途中ページだけ読む | Providerの実Rowset/Coverageを別証拠にし、0件・欠損・秘匿・partialを区別 | TAI #271、SUI #3419、SI-RAW09 |
+| **HSC-E** | CSWが仮の二島とTask Role案を提案し、人が片方を拒否 | 採用されない候補を保持し、KJ island≠TEI正式Membership、Task候補≠実Effect。AI OFFを基線に比較 | SUI #3400 SV-03/05、TEI #2620、#2507 |
+| **HSC-F** | SHO文書選択→SUI構造Draft→文章Candidate→明示採用 | 選択本文/原Source/構造/文書の版とLoss、Disclosure、実readbackを別列。SUI外部公開Projectionだけから元構造を復元しない | SUI #3430/#3431、SHO #31〜33、SI-XC05/06 |
+
+**最短の次実証**は、（1）SUIの固定Card 6〜12枚でAI OFFと限定検索Q＋人間補正Sを比較、（2）Pin維持／解除／失効再解決のheadless→実UI経路のGapを観測、（3）Document/Reader→SHO最小候補の実一往復を先行Ownerで照合、（4）必要となった範囲に限りTEI表現BindingとCSWの追加価値を検証、の順。TAI #629の外部Harness実Attach・CSW実技能・TEI Role/Trait Runtime・本番操作はこの節で採用/実装したとは言わない。**HSC-A〜Fは全て提案段階・NOT RUN。**
+
