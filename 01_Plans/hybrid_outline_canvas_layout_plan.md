@@ -809,3 +809,54 @@ SUI→TEIの意味ある接続を検証する際だけ、最低限、次を別�
 
 **最短の次実証**は、（1）SUIの固定Card 6〜12枚でAI OFFと限定検索Q＋人間補正Sを比較、（2）Pin維持／解除／失効再解決のheadless→実UI経路のGapを観測、（3）Document/Reader→SHO最小候補の実一往復を先行Ownerで照合、（4）必要となった範囲に限りTEI表現BindingとCSWの追加価値を検証、の順。TAI #629の外部Harness実Attach・CSW実技能・TEI Role/Trait Runtime・本番操作はこの節で採用/実装したとは言わない。**HSC-A〜Fは全て提案段階・NOT RUN。**
 
+<!-- sui-target-qualification-and-identity-20261112 -->
+### 18.10 固定した参照が「一意に解決できた」とは限らない：Product別の識別資格
+
+[TAI Draft #629 §11.8.5](https://github.com/hat47x/tai-pleroma/pull/629)と[Draft #630](https://github.com/hat47x/tai-pleroma/pull/630)、[TEI #4475](https://github.com/hat47x/tei-platform/issues/4475)/[#4472](https://github.com/hat47x/tei-platform/issues/4472)を横断照合。§18.7の`Pinned Work Set`は利用者の**選択意図を安定して保持**するが、参照の存在・一意性・出典真正性・現時点での操作資格を保証するものではない。
+
+**最初に分けて確認する条件**：
+1. **参照の精度**：Product/Workspace/Document、要素Kind、安定Ref、表示Occurrence、元Source/Revision・選択範囲を混同しない。Qualified Refの構文が正しいことと、Source上で一件へ解決できることを分離する。旧`(DocumentID, CardID)`や本文一致から新しい全域Item IDを捏造しない。
+2. **一意性と競合**：同Kind/同IDの重複、同名別ID、Graph同端点の多重Relation、同Item別Canvas表示、同じ文章の別引用箇所を反例にする。**Index/検索/表示の戻り値1件を「原Sourceに1件しかない」の証拠にしない**。0件についても、権限・取得Scope・ページ終端・Index欠落を検査せず不存在としない。
+3. **参照はあるが内容不明**：未取得URL、外部Source未許可、Reader未対応、失効・partial、派生Projectionの非単射、未レビューの構造を区別。曖昧・欠損・非開示がある場合は、その**開示可能な範囲で**選択解除なしに保留し、適格に解決済みの残りの要素へのread-only探索を妨げない。
+4. **識別と意味対応は別**：異なるSUI Item/Island、CSW仮の束、SHO段落、TEI Data/Function/Business、実世界のEntity/Eventを同一Subjectへ自動統合しない。跨製品の同一対象・因果・役割対応は、出典/範囲/版/Lossを持った**提案Relation**として人間が検討可能にし、実Host/Owner Meaningへ自動昇格しない。
+5. **判定の非破壊性**：識別資格を確認するread-only操作やFingerprint算出で、元のItem/Model/Authority/Review/Selectionが変わらないことを必要条件とする。[TEI #4475](https://github.com/hat47x/tei-platform/issues/4475)は`ThreeElementModel.Index()`の同Kind同ID縮約と`ModelFingerprint()`の入力Slice/AuthorityLimitsの破壊・自己参照を**静的ソース調査から指摘**している。修正・実Goテストは当該Ownerの未完了課題であり、本節でPASS認定しない。
+
+**SHOで永続Occurrence IDを強制しない**：[SHO PR #29](https://github.com/hat47x/sho-composer/pull/29)のUTF-16→UTF-8範囲写像は限定CI済み。[SHO Draft #38](https://github.com/hat47x/sho-composer/pull/38)で提案される原文位置の都度再解決を、SUIのCard/Display Occurrence IDへ合わせるために変更しない。Source byte、Origin、BOM/EOL、buffer/disk、位置/文字列の照合と現在Versionを組み合わせ、同一文字列の別箇所は区別する。再解決不可能なら保留。OS/Editor内の実Writerと永続Storage fenceは独立資格。
+
+### 18.11 画面に見える完全性、元モデルの完全性、送信できる完全性を分離する
+
+同じ観測列で、**SUIの選択→Preview→AI/SHO/TEIへ送出→結果を戻す**過程を比較する。ただし一つの全製品共通Receipt/Policy Engineへ集約せず、Product既存Reader/Projection/StorageとTAIのActivity Handoffの実証から組み立てる。
+
+| 段階 | 実際に確かめる対象 | 禁止推論 |
+| --- | --- | --- |
+| Source admission | 読めたRaw・Source位置・Source版・欠落・未取得・Permission | URLやhashだけで元文書を現在読めるとしない |
+| Identity resolution | Qualified Kind/Ref・解決集合の一意性・多重性・同名別対象 | 先頭Hit、Indexで縮約された1件を正しい唯一対象としない |
+| Model/Projection | 元Sourceの全構造と、Reader/Canvas/Tree/Graph/CRUD/Markdownが実際に含む構造の差・Loss | 画面にないEdge、明示CRUD、保留・異論を「元にも無い」としない |
+| Audience/Disclosure | 現在のGrant/開示Scope・非公開部分・未レビュー・相手/送信先 | 表示可・Pin可・Review済みを別製品への送出可としない |
+| Consumer delivery | 実際に渡したbytes・Tool args/Reply/終端・Receipt・Source再読取 | 生成成功、API ACK、Schemaがあるだけで完全配送や保存完了としない |
+| Editing/Effect | readSet/writeSet/expected Revision、再資格化、Preview、人の採用、実Provider Effect | 過去の選択、同一Session、AI/CSW候補を現在の書込権限としない |
+
+**三つの本質的な非同一性**：
+- [TEI #4472](https://github.com/hat47x/tei-platform/issues/4472)の静的指摘では、CRUD派生表の生成時にData索引を取り違えたり、明示定義だけのFunction×Data対や矛盾を落としたりする可能性がある。SUI/SHO/AIが表だけを取得した場合、「表示されなかった操作は存在しない」と推測できない。修正はTEI側へ委譲。
+- [TEI Draft #4489](https://github.com/hat47x/tei-platform/pull/4489)の限定Projection未解決と、[TEI Draft #4500](https://github.com/hat47x/tei-platform/pull/4500)の業務責任・Case変化は、同じ図や説明ができてもMeaning/権限/現在の業務状態が異なる反例。SUIのKJ Islandや仮Taskを組織の実責任・承認・実Eventへ昇格させない。
+- [SHO Draft #38](https://github.com/hat47x/sho-composer/pull/38)の原文位置都度解決と[SHO #33](https://github.com/hat47x/sho-composer/issues/33)の別Draft採用では、「内容を人が編集できる」と「元SUI/TEIモデルを更新できる」を区別する。SHO著者本文の後からの編集やA→B→Aを、SUI抽出Item/TEI Meaningへの自動逆反映としない。
+
+本章はSUIのKJ-only／AI OFFの自由探索を阻害しない。Sourceを読む・Canvasに並べる・違和感を残す操作は**未整理/意味未確定のまま成立**する。他方、秘密情報を公開しない、不適格な編集候補を停止することは既存SafeMode/ADR-0111に従う。完全性の不足は画面全体の利用禁止ではなく、要求された**用途に相対的な資格不足**として扱う。
+
+### 18.12 追加する検証差分とOwnerへの引渡し（技術負例／NOT RUN）
+
+新しい全製品横断Checkerや第二のExpected SSOTを作らず、既存§17〜18、[TAI #271](https://github.com/hat47x/tai-pleroma/issues/271)/[#629](https://github.com/hat47x/tai-pleroma/pull/629)/[#630](https://github.com/hat47x/tai-pleroma/pull/630)、TEI #4475/#4472、SHO E0/G2/G3の既存独立Expectedへ付帯条件を付ける。
+
+| 対照 | 小さな一因子変更 | 独立Expectedと停止 |
+| --- | --- | --- |
+| **HSC-G** | SUIの同ItemをCanvas A/Bに2表示、そこへ別Item同文を追加 | 2 Occurrence≠2根拠、別Item同文≠同一Subject。表示選択から本体の更新対象を無断決定しない（SI-XC01、SUI #3430） |
+| **HSC-H** | 1 Productの実Sourceに同Kind/同IDを2件置く、または同端点多重Edge | 一意性未証明を黙って1件に縮約せず、正しい診断/資格保留。SUIでTEIのIndexerを再実装しない（TEI #4475、#2497） |
+| **HSC-I** | 元TEI CRUDには明示操作/衝突があるが表示表では1行もない | 欠損・矛盾の根拠をSource側で確認し、表の空白をOperationなしと解釈しない（TEI #4472） |
+| **HSC-J** | 同じSHO文中に同一文字列が2度、元RawはBOM/CRLFを含む。Source改版 | UTF-8 byte span/実Origin/Source版で正しい選択範囲だけ再解決。永続Occurrence IDは要求しない（SHO PR #29/#38） |
+| **HSC-K** | TEI FingerprintをPin資格の照合で2度計算し、Model/Authorityを比較 | ModelとAuthorityLimitsがbefore/afterで不変。Fingerprint自己参照で履歴と一致判定が変わらない（TEI #4475、独立実Goテスト待ち） |
+| **HSC-L** | GUIで選んだItemをAI/SHOへ送り、Provider Scope/Grantが送出直前に変化 | 現在のSource/Scope/Disclosureを再確認、未許可送出なし。拒否/未取得/Tool Reply部分のみを正直に報告（TAI #630、SUI SI-RAW08/09、ADR-0111） |
+
+**実証順**：P0=SUI内部Reader/Canvas選択＋元Sourceへの再到達をAI OFFで確認 → P1=同Item二表示・同文別Item・未レビューの少数Fixtureで一意性/開示を観測 → P2=SHOの既存E0実span写像をSUI選択資料へ用途限定接続 → P3=TAI #168のG0〜G2が先に成立した適格Harnessのみ実Tool送出・Reply・適用先照合へ → P4=TEI #4475/#4472の実製品修正結果を再読し、モデル投影/操作候補の採否を判断。**SUI本体の新Item/Canvas Schema・元Sourceの実移行はP0〜P1の実需要を確認するまで先行実装しない**。
+
+**資格と未了**：#4475/#4472は2026-11-12時点で静的指摘が先行するopen Issue。SHO #29の17-case CIを実VS Code/Dirty Buffer/正式Writer/Storage CASへ拡大解釈しない。HSC-G〜L、実SUI UI固定Pin、同一Sessionの外部Harness送信・SUI↔SHO↔TEI実共同Read/Write、Owner Meaning受理、T2価値は本節では**未実行・未採用**。既存正本・EffectのOwnerへ戻す。
+
