@@ -911,3 +911,57 @@ Sの必要要素を明示する最初の試験は、Syntheticの6〜12件で、�
 
 **現時点の証拠と未完了**：本節は2026-11-12の横断設計・利用順の整理のみ。S/H/J/Cの実照合、SIR-01〜06、新しいSUI Raw Item DB・本番Reader改修・二Canvas UI・Local CAS→SUI正式Binding、NAS/S3・外部Harness実送出、SHO正式Writer、TEI Role/Meaning、実T2はこの追補では**NOT RUN／NOT ACCEPTED**。過去のGitHub Doc Readbackや合成CI成功から本実装のPASSを導かない。
 
+<!-- sui-consumer-claim-ceiling-20261112 -->
+### 18.16 最小実装への引渡し票：現行DocumentV1で証明できる事柄から始める
+
+§17〜18.15の広い設計を、**最初の実Product試験で証明できる有限の縦断**へ縮約する。ここでのOwnerはSUIの既存Hybrid計画、価値の判定は[ADR-0089](adr/ADR-0089-product-value-canon.md)と[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)。SHO/TEI/KONに新たな実装依存を設けない。
+
+**2026-11-12時点の実コード照合による制限**：
+- [`frontend/src/domain/types.ts`](../../03_Implement/frontend/src/domain/types.ts) の`DocumentV1`は`cards[]`、`edges[]`、`islands[]`とCanvas座標を保持する。一方`Card.meta.source`は**原資料へ戻るための自由記述**であり、検証済みSource ID/Revision/Raw bytes/spansを保証しない。文字列の一致・リンクらしさを根拠受理としない。
+- [`backend/src/sui_sensemaking_api/routes/docs.py`](../../03_Implement/backend/src/sui_sensemaking_api/routes/docs.py) は保存済みDocumentの`GET /docs/{doc_id}`とDocument単位のETagを持つが、**agent credential側は伏せられた内容からの漏えい防止でETagを公開しない**。そのため利用者内部のCASと外部Agent/SHO Consumerが同じRevision資格で操作できると解釈しない。
+- 同ファイルの`GET /docs`は`limit <= 500`・`X-Next-Cursor`の一覧。現[MCP #3419](https://github.com/hat47x/sui-sensemaking/issues/3419)は最初のページのみのmetadata探索を静的に指摘している。Inbox/探す機能のPoCでは**未列挙と不存在を必ず分離**する。
+- Rawの任意媒体Reader、Raw Source Reference Store、新しい全域Item ID、Display Occurrence独立永続化はこのファイル群からは**実装済みと確認できない**。既存Document保存をそのまま「汎用Raw Item Storeの完成」として扱わない。
+
+**差分を小さく保つ段階引渡し（入口／出口の独立実観測）**：
+
+| Slice | 実装・検証の入口とOwner | 独立したExit／実装しないもの |
+| --- | --- | --- |
+| **R0 現行Baseline** | 既存DocumentV1を2件（Card3枚／同文別Card、Held/Island含む）保存。別Process/ブラウザで再Read、既存ETag/CASとSafeMode・元Cardへの戻りを観測。SUI既存API/テストがOwner | 保存前後と再Read実bytes/構造の一致、選択外/未レビューのAgent向け非開示、途中失敗/409診断。新Item Schema/Graph Engineなし |
+| **R1 Raw最小Slice** | 小さい日本語長文Rawと外部URL Locatorを各1件。**技術選択前に**既存Document添付で足りるか、明示されたローカルSource Readerを薄く接続するかをFit/Gap比較。独立Raw正本を先に発明しない | 長文の実保存→再起動→Readerの対象byte readback、URLのみはunfetched、元Raw改版時の引用候補stale。実Readerがないときは`unavailable`とし成功にしない |
+| **R2 Human Extraction** | 人がRaw上の実範囲を選び、原資料位置と版を持つ抽出Candidateを既存Card表示へ繋ぐ。SUIの意味形成はAI OFFで行う | 「元Rawへ戻る／元Rawとの差を見る」が成立し、候補と原文の同一性を分離。元にない理由を勝手に作らない。Card.meta.source自由記述だけで精密spanを装わない |
+| **R3 Select/Share試験** | Headlessで同Card別Canvas表示の**合成Occurrence**、人のQ/E/A補正、Reader/Rawへ戻るルートを比較。SHOへの実Raw引渡しと公開Harnessは別Owner | 本体1・表示2・別Source同文の区別、含める範囲と送出scope、返答の起点Pinの適格性。不適格/非公開は遮断。**合成Occurrenceを二Canvas永続化済みと記録しない** |
+
+**判断点**：R1が実Reader/source spanを既存構成で表現できない場合、最小Blob/Source Bindingの採用案を比較し、**どの欠落のために新しいデータ境界が必要なのか**を独立Evidenceで示す。新テーブル／新API／新Providerはその証拠と別のOwner採否がある場合だけ起票する。R0〜R3を必ず直列化せず、固定Fixture準備・Headless読み取りは安全に並走できる。
+
+### 18.17 Consumerの成功主張に上限を持たせる：SHO G5負例からの横断反映
+
+[SHO #44](https://github.com/hat47x/sho-composer/issues/44)は、G5のテスト用RunnerでAの実行経路を「外部Harness名」で**ラベル表示しただけ**なのに実Session起動の証拠と誤読できること、Bへ不正Scopeを渡していないのに全体`widenedScopeRejected=true`と宣言したこと、Network/OS全Sinkを監視せず「無断送信なし」と宣言したことを、**実Source/Receipt照合で発見**した。Runner修正とB側負例実行は別途未完了。SUIからのHandoffでも、表現が整っていても実観測を上回る成功Claimを出さない。
+
+| Claim（外部に言える上限） | 実際に観測するWitness | まだ言えないこと |
+| --- | --- | --- |
+| `source-read` | Source/Readerの実bytes・digest・Locator/RevisionとRead/Scope | 原典が正しい、現在も必ず取得可、必要全員分をRead済み |
+| `candidate-built` | SUI内部の限定Projection・Loss・対象ID/Kind・Source/開示Scope | SHO/AI/TEIが受領、原Worldへ逆編集可能 |
+| `handoff-attempted` | Tool/Process実呼出・送信予定範囲・実bytes・Recipient・Attempt ID | 受け手が全文を受理した、送出外の全Sinkが空 |
+| `consumer-read` | **受け手の実Process**でbyte数・Digest/終端・実Parser出力を再Read | 実Harness同一Session接続、正式Editor Save・Owner意味受理 |
+| `save-verified` | Saveの実Response・別Reader再Open/世代・必要ならCAS/Grant照合 | 外部Task/業務Effect、古い出典の現時点適用、Retention |
+| `effect-verified` | 実Host/Providerの独立Read/Effect Receiptと現在権限・同一Attempt | モデルMeaning受理や未観測第三者への無送信 |
+
+**実験の観測列**：SUI Producer/Reader、SHO Consumer/Writer、外部Harness Loader/Tool/Session、Host/Network、TEI/Providerを一列の単一Booleanへ畳まず、各段で`observed / not-run / unknown / refused / partial`と、対象/Source/実観測地点を記録する。新しい正式Status Enumや共通Receiptを宣言しない。内部Script/テスト引数の`--harness`ラベルと本物のAgent起動は区別。Aで拒否した負例を未実行のBに流用しない。Consumerがdigest一致でも、開示スコープ外や未公開SourceがOS/Tool/Networkへ出ていないことの全証明にはならない。保護判断はADR-0111、TAI #232、TEI #2515/#2516と各Hostに戻す。
+
+### 18.18 負例の先行順位・停止条件・設計の収束
+
+既存SI-RAW/SI-XC/HSC/SIR、SHO #44/TEI #4503の独立Expectedを**第二の試験正本へ転記せず**、最初のR0〜R3で判別力が高い反例だけ先に接続する。
+
+| 選ぶ反例 | 結果の要求 | 主たる引渡し |
+| --- | --- | --- |
+| **AC-01 現DocumentとRawの境界** | DocumentV1の再Read成功と新Raw Reader成功を別列。現APIで未提供なら`not-supported`、架空のSource Spanは0 | §18.16 R0/R1、SUI #3400、SI-RAW01/02 |
+| **AC-02 同一文字列と別出現** | 同文別Sourceを統合せず、同Item別表示を別根拠数にしない。DisplayとSourceのIdentityを区別 | §17 SI-XC01、§18 HSC-G、SHO E0 |
+| **AC-03 不完全な探索** | 501件目を最初のページだけで検索したら`not-enumerated`とし、存在しないと主張しない。認可範囲外ID/件数は漏らさない | SUI #3419、SI-RAW09 |
+| **AC-04 Recipientなしの偽PASS** | 未起動Harness名、未実行B負例、途中切断Replyに成功判定0。生成済みファイルの存在で受領/保存/正式意味受理を宣言しない | SHO #44、TAI #168/#271、§18.17 |
+| **AC-05 読取でも起こる作用** | Raw FetchがCache File作成/Networkアクセス/Credential利用を伴うなら、許可条件と実作用を表示。read-only表記を無送信/無書込の証拠にしない | TEI #4503 EC-06、#3182、ADR-0111 |
+| **AC-06 実保存後の紛失・競合** | 保存成功応答が消えても自動重複適用0。別Readerの現状態と元Item・保留/異論を再Readし、不明Commitを成功/失敗に作り替えない | SUI #3399 CU-09、TEI #4307、§18.14 |
+
+**終了条件（次の設計追補を自動で増やすより優先）**：R0/R1で(1)現製品でできることとRaw固有の欠落が再現可能、(2)Required Source/Reader/Disclosureの何が不明か説明できる、(3)一つの実資料に出典回帰できる、の各判定を**実行結果**として揃える。これらが揃わない限り、SUIに新汎用Document/Graph/Reader Store、KON中心集約、独自Harness Loop、外部Task実行の実装計画を先行しない。逆に小さい既存Store/Readerを通せば実証できる場合、新たな共通Core提案へ進まない。正式に足りない機能・試験は各Ownerの既存Issueへ帰属させ、Docsのみの累積をProduct PASSとしない。
+
+**資格**：本節はSource確認に基づく計画とClaim Ceilingの設計。R0〜R3のSUI実試験、AC-01〜06、SHO G5 Runner修正、実OS/Network egress、二Canvas永続化、任意媒体のRaw Reader、正式SUI→SHO/TEI保存、Owner受理、実務T2はいずれもこの追補では**NOT RUN**。
+
