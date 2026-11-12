@@ -697,3 +697,71 @@ SUIをKJ法キャンバスとマインドマップを中心とする思考環境
 
 **証拠の上限**：本節は構想・現在の責務と受入順の設計反映のみ。Raw Itemの新製品API、実複数Canvas、Reader→Card抽出E2E、SUI→TEI人/AI翻訳の実モデル受理、SHO正式Writer、外部Task Provider、T2実利用価値の実測は今回NOT RUN。
 
+---
+
+<!-- sui-crossview-20261112 -->
+## 18. 2026-11-12 横断接合：情報の選択・意味の投影・SHO往復を実利用の認知順でつなぐ（設計候補／未受理）
+
+### 18.1 前提と増分：17章の繰返しでなく「対象を選んだ後」の欠けた接続を解く
+
+第17章のRaw Item/Content、Tree/Island/Graph、Canvas/Display Occurrence、Task/Action/Event Role、SHO/TEI正本分離はそのまま維持する。11月8日に#3393/#3398はmainへ統合済みだが、**複数Canvasと独立Item正本の実データ移行・GUI・外部Providerは完了していない**。ここでは、別チャットのSUI高度な文脈選択、異種データの状況理解、TEI標準型・構造・表現の段階実装、SHO往復編集の後続課題を、ひとつの作業における**接続資格・最初に観測すべき不足**として整理する。
+
+- **SUIの利用者価値は既存[ADR-0089](adr/ADR-0089-product-value-canon.md)、[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)**が正本。未整理素材を読み、意味として生きるまとまりで配置し、違和感・異論を残して理解を見直すことが主線。新しいPlatform、Ontology、Role Registry、一般Task同期をP0としない。
+- **異種情報統合は[#3401](https://github.com/hat47x/sui-sensemaking/issues/3401)**のI0〜I4が所有。別SourceにあるEntity・Event・時系列は、出典・時点・粒度・暫定同定を照合してから候補Relationを作る。Join表示、語の一致、検索hitから「同一人物／同じ実Event」を確定しない。
+- **SHO往復の正本**はSUI [#3391](https://github.com/hat47x/sui-sensemaking/issues/3391)とSHO [#19](https://github.com/hat47x/sho-composer/issues/19)。11月11日のSUI [#3430](https://github.com/hat47x/sui-sensemaking/issues/3430)・[#3431](https://github.com/hat47x/sui-sensemaking/issues/3431)、SHO [#31](https://github.com/hat47x/sho-composer/issues/31)〜[#33](https://github.com/hat47x/sho-composer/issues/33)は具体的な段階の受入提案。Issueのcloseだけで実製品の往復E2E PASSとはしない。
+- **TEIの表現とMapping**は新しい段階索引[#4350](https://github.com/hat47x/tei-platform/issues/4350)・[#4351](https://github.com/hat47x/tei-platform/issues/4351)〜[#4353](https://github.com/hat47x/tei-platform/issues/4353)と既存#2495/#2497/#2506/#2507/#4133が担当。SUI Canvasの自由配置や未分類Itemに、TEI Function Data Contextを無条件に必須化しない。
+
+### 18.2 安定した「対象・範囲・意図」の選択：GUI/CUI/AI Harnessをまたぐ作業単位
+
+SUIのCanvasで選択した範囲が、ズーム・パン・別のカードへのホバー・タブ切替で意図せず解除されると、AIへの指示が別対象へ向かい得る。既存の表示Selectionとは別に、**明示的に固定できる作業中の選択文脈**を求める。ただし新しい共通Context StoreやHostを先に作らず、現行Document/Revision/既存Action Proposalの一時的な束縛でFit/Gapを測る。
+
+| 操作面 | 同じ選択で説明できるべき内容 | 不明なら拒否／留保する内容 |
+| --- | --- | --- |
+| キャンバス上の複数Card/Island選択 | 対象の安定Ref、Canvasと表示Occurrence、Itemへの対応、選択根拠、選択範囲 | 重複表示を二つの独立証拠と数えない。表示IDから更新対象を決めない |
+| Tree/Outlineの選択 | Node occurrence、Tree版、親子・順序が候補か受理済みか、対象Item | 読順を親子関係や業務階層に変換しない |
+| Readerでの資料範囲選択 | 保存済みRaw／Locator、元Revision、UTF-8 byte/ページ/時刻等の実取得可能な位置 | 未取得URL・解析前PDFに精密Source Spanを捏造しない |
+| CUI/AI Harnessへの対象固定 | 対象の集合、用途、利用者の明示した意図、許可されたSource/Scope、base Revision、readSet、writeSet候補、Disclosure、Unknown | 単に「現在選択中」のUIカーソルや前回Harness返信から現行対象・権限を推定しない |
+
+「選択を固定」「文脈を追加」「対象を変更」「解除」は明示操作とし、人が視覚的に確認できる。生成AIは選択された**情報集合と関連構造・来歴を利用可能な範囲で参照**し、未取得・非開示を0件にしない。編集候補は選択対象と非選択依存を含むreadSet/expected Revisionに束縛してPreviewし、実Apply直前に再照合する。SUIの認知的提案と実業務Effect/Host Grantは別（ADR-0111／TEI #1174）。
+
+### 18.3 表現型とContextの適格性：TEIの新しい段階計画をSUIの異質Consumer試験へ
+
+TEI [#4350](https://github.com/hat47x/tei-platform/issues/4350)は「標準値型／標準データ構造／表現型／Function Data Context／Mapping」を分離し、read-only Reference検査 S1→S2/S3→合成損失へ進む。**まだ製品Rendererや正式TEI Function Bindingが実装済みであるとは扱わない**。
+
+SUI→TEIの意味ある接続を検証する際だけ、最低限、次を別々に観測する。元Source/World版、Subjectと表示Occurrenceの対応、重複と集合の粒度（1:N/N:M、Join fanout）、順序と由来、Null/missing/unfetched/withheld、取得Coverage、Domain/Observation/Presentation/Structural Time、表現上のLoss、候補逆編集と現在のOperation/Grant。例えば、同一Itemが2 Canvasに表示されても1 Subjectであり、Island群の件数はQuery/権限に依存し、PERTバーの表示時刻は実Event時刻と同義ではない。
+
+**適用境界**：SUIの自由なKJ Canvas・Inbox・資料Readerは、TEI Functionなしでも成立する。TEIモデルに接続された表現インスタンスは、該当FunctionのData Context/Scope/grain/SelectionとBindingが実証できたときに限り、TEIのModel/操作対象として扱える。Canvasの座標やGroupのまとまりを意味正本へ機械昇格しない。Graph/Tree/Markdownへの非単射投影からの自動書戻しは拒否（TEI #2497/#4353）。
+
+### 18.4 SHOとの「一往復」では原文・構造・文章の版を別々に固定する
+
+11月11日のG3-SHO/G3-SUI各Issueは、次の最小経路を具体化している（**各Issueの記述は受入候補であり、本節だけで実装済みとは認定しない**）。
+
+1. SHOの人間が選択したMarkdown原文の範囲（byte位置、実bytes、原文版、開示Scope）から**選択Handoff票**を作る。R0保存版とDirty bufferを混ぜず、選択外の秘密文書・リンク先実体を送らない（SHO #31）。
+2. SUIは**構造Draft候補**を作る。DocumentV1に存在するCanvas座標、Island所属/ネスト、Affiliation多重所属、非階層Relation、Hold/Contradiction/Voidと、別途入力された**未受理のTree候補**を区別し、Treeの親子をDocumentV1に実装済みと偽らない（SUI #3430）。
+3. SUIの**Markdownアウトライン候補**は、意味未受理・座標未投影・Source未照合・多重所属・非階層Relation・保留・異論などのLossを記録する。選択外/未レビューの本文・ID・件数を、Markdown/manifest/ハッシュ用入力へ漏らさない（SUI #3431）。
+4. SHOは元文書を無断上書きせず、別Draft・差分Preview・明示採用へ進む。古いSource Revision、未知schema、不一致digest、空のLossを「損失なし」と主張する場合は採用拒否。保存ACK、実readback、再Openを別資格で記録する（SHO #32/#33）。
+
+**要注意**：SUIの現行公開Projectionは内部DocumentV1の全Source/Topologyを提供しない。SUI [#3402](https://github.com/hat47x/sui-sensemaking/issues/3402)のIsland端点Edge、[#3418](https://github.com/hat47x/sui-sensemaking/issues/3418)の外部矛盾状態露出の差は、Issue closeだけで「すべての外部Consumerへ公開可能」にはならない。内部Authoringの選択可能性と外部Harness/MCPのDisclosureを別に判定する。実SUI→SHO同一Attempt、Writer保存、逆Patch/正式TEI Meaningは独立ゲート。
+
+### 18.5 権限・完全性と大規模化の追加停止線
+
+- SUI [#3419](https://github.com/hat47x/sui-sensemaking/issues/3419)のMCP文書一覧初ページだけの検索問題は、Inboxに大量Itemがある場合の「見つからない＝存在しない」誤認の具体例。ページ・cursor・実受領・終了MarkerとScopeを確認するまで全件不在と断定しない。
+- SUI [#3422](https://github.com/hat47x/sui-sensemaking/issues/3422)の外部PDPのreadOnly意味と、[#3425](https://github.com/hat47x/sui-sensemaking/issues/3425)のexport-audit SafeMode申告値は、外部書込・送出と現在認可の設計に直結。**「PDPが返した」「監査に記録された」「サーバが強制した」「外部Recipientが受領した」は別事実**。契約未確定の経路を安全・実行可能と宣言しない。解決は既存Security Ownerへ戻す。
+- 大量情報の取込/検索は、Item・Content保存、Source Reader実取得、索引更新、Agentへの部分出力、Consumer実受領を分離する。部分結果やHiddenを全世界の欠落とせず、AI ContextのToken上限と人間UIのSemantic Zoomを同一の情報集合と扱わない。
+- Task/Action/Event Role候補を見つけても、予定Task・実Occurrence・外部Issue/Provider・Execution ReceiptをIdentity上分離し、PERTや文章化だけで本番Effectを発火しない。
+
+### 18.6 最小の独立反例と検証優先度（既存Owner/SSOTを再利用）
+
+**新增の適合検査観点（新たな独立試験正本や全機能Blocking Gateではない）**：
+
+| 観点 | 既存試験・Owner | 別に観測すべき不足とExpected |
+| --- | --- | --- |
+| 固定した対象選択をUIパン/別タブ/AI入力をまたいで維持 | 17章SI-XC02/07、SUI #3399、ADR-0111 | 明示固定したItem/Island/出現集合は不変。実編集時だけ現在版/権限と再照合。違う対象への黙った書込0 |
+| 共有Itemを別Canvas/Tree/島で使う | 17章SI-RAW06/SI-XC01/04/05、#3400 SV-06/09 | 同じ元情報を独立証拠へ水増しせず、異なる文脈を保持。Undo/競合で他者の保留・異論を破棄しない |
+| 原文選択→構造Draft→候補→SHO別Draftの最小往復 | SUI #3430/#3431、SHO #31〜33、SUI #3391 | 実byte/選択Scope/構造版/損失/Consumer readbackの切れ目を検査。通常CIのSkipをE2E PASSへ算入しない |
+| 表示と正式Model Contextの境界 | TEI #4350/#4351/#4353・#2497・#2506 | SUI KJ-onlyはFunctionなしで成功、TEI Binding付きの場合はIdentity/grain/axis/Scopeが欠ければunqualified。選択から編集対象を推測しない |
+| 未取得/秘匿/部分取得・外部Policyの差 | SUI #3401 II-01〜08、#3419/#3422/#3425、17章SI-RAW02/08/09 | 実Read済みSubsetと未読込/Hidden/不明を区別し、明示許可がない書込・外部送信を停止。件数・ID等の二次漏えいを防ぐ |
+
+**進める順**：（A）現在の3カード/KJ・AI OFFと既存ReaderでSI-RAW01/02および原文への復帰を検証、（B）固定選択と同一Itemの別Occurrenceをheadless Fixtureで比較、（C）SHO選択Handoff→SUI内部構造Draft→SHO候補の一往復、（D）TEI #4350のS1/S3が成立した範囲だけTEI表現Bindingの適格性を照合、（E）実需要があれば[#3401](https://github.com/hat47x/sui-sensemaking/issues/3401)のI1から異種3Source/PERT/外部Providerへ拡張。A/Bの利用価値はADR-0089のT2と別に設計実装証拠を保持し、SUI内部Dogfood/合成CIをSUI外の実務T2に加算しない。
+
+**所有と受理**：17章の正本と各Issue Ownerを維持し、TEI/SHO/SUIの第二Context/Source/Authority/Reader/Registry/Hostを増設しない。11月11日以降のG3/TEI #4350/安全性Issuesの具体化を、この接続順へ反映した**計画差分のみ**。新UI/API、Role Runtime、SUI→SHO往復E2E、TEI Function Binding、外部Task Provider、T2実務価値はいずれも本節ではNOT RUN・NOT ACCEPTED。
