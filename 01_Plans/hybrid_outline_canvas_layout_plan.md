@@ -917,8 +917,8 @@ Sの必要要素を明示する最初の試験は、Syntheticの6〜12件で、�
 §17〜18.15の広い設計を、**最初の実Product試験で証明できる有限の縦断**へ縮約する。ここでのOwnerはSUIの既存Hybrid計画、価値の判定は[ADR-0089](adr/ADR-0089-product-value-canon.md)と[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)。SHO/TEI/KONに新たな実装依存を設けない。
 
 **2026-11-12時点の実コード照合による制限**：
-- [`frontend/src/domain/types.ts`](../../03_Implement/frontend/src/domain/types.ts) の`DocumentV1`は`cards[]`、`edges[]`、`islands[]`とCanvas座標を保持する。一方`Card.meta.source`は**原資料へ戻るための自由記述**であり、検証済みSource ID/Revision/Raw bytes/spansを保証しない。文字列の一致・リンクらしさを根拠受理としない。
-- [`backend/src/sui_sensemaking_api/routes/docs.py`](../../03_Implement/backend/src/sui_sensemaking_api/routes/docs.py) は保存済みDocumentの`GET /docs/{doc_id}`とDocument単位のETagを持つが、**agent credential側は伏せられた内容からの漏えい防止でETagを公開しない**。そのため利用者内部のCASと外部Agent/SHO Consumerが同じRevision資格で操作できると解釈しない。
+- [`frontend/src/domain/types.ts`](../03_Implement/frontend/src/domain/types.ts) の`DocumentV1`は`cards[]`、`edges[]`、`islands[]`とCanvas座標を保持する。一方`Card.meta.source`は**原資料へ戻るための自由記述**であり、検証済みSource ID/Revision/Raw bytes/spansを保証しない。文字列の一致・リンクらしさを根拠受理としない。
+- [`backend/src/sui_sensemaking_api/routes/docs.py`](../03_Implement/backend/src/sui_sensemaking_api/routes/docs.py) は保存済みDocumentの`GET /docs/{doc_id}`とDocument単位のETagを持つが、**agent credential側は伏せられた内容からの漏えい防止でETagを公開しない**。そのため利用者内部のCASと外部Agent/SHO Consumerが同じRevision資格で操作できると解釈しない。
 - 同ファイルの`GET /docs`は`limit <= 500`・`X-Next-Cursor`の一覧。現[MCP #3419](https://github.com/hat47x/sui-sensemaking/issues/3419)は最初のページのみのmetadata探索を静的に指摘している。Inbox/探す機能のPoCでは**未列挙と不存在を必ず分離**する。
 - Rawの任意媒体Reader、Raw Source Reference Store、新しい全域Item ID、Display Occurrence独立永続化はこのファイル群からは**実装済みと確認できない**。既存Document保存をそのまま「汎用Raw Item Storeの完成」として扱わない。
 
