@@ -2,7 +2,7 @@
 
 - 状態: **Proposal／未採用。実製品E2E・T2はNOT RUN**（2026-11-14）
 - 位置付け: ROADMAPから参照する**実施順と非干渉条件の索引**。仕様・実行権限・新Schemaの正本ではない
-- 一次価値: [ADR-0089](adr/ADR-0089-product-value-canon.md)、非後退: [ADR-0041](adr/ADR-0041-core-value-invariants.md)、外部接続: [ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)
+- 一次価値: [ADR-0089](adr/ADR-0089-product-value-canon.md)、非後退: ADR-0041、外部接続: [ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)
 - 設計Owner: [Hybrid Tree/KJ](hybrid_outline_canvas_layout_plan.md)（Draft [#3437](https://github.com/hat47x/sui-sensemaking/pull/3437)を含む）／[意味形成 #3400](https://github.com/hat47x/sui-sensemaking/issues/3400)／[高度情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)
 - 実証Owner: [R0/R1 #3438](https://github.com/hat47x/sui-sensemaking/issues/3438)、[R2 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)、[共同Undo #3399](https://github.com/hat47x/sui-sensemaking/issues/3399)、[SUI→SHO #3391](https://github.com/hat47x/sui-sensemaking/issues/3391)
 
@@ -50,15 +50,15 @@ Reader/KJ/Tree/Table/Timeline/Graph間の**表示上の選択引継ぎ**は、�
 
 | Gate | 実製品で実証すること | 合格・停止条件 | 正本 |
 | --- | --- | --- | --- |
-| **G0 基礎を保持** | AI OFF、既存3 Card KJ、Save/Read、Hold/Edge/Island | 新Reader導線なしでも基本編集が維持。従来操作を破壊しない | ADR-0089、R2-SRC-08 |
-| **G1 R2原文復帰** | 単一の許可Raw→人手選択→Card→保存→別Process/BrowserでReader復帰 | 元bytes/選択位置・Revision・Grantの独立再照合。R2-SRC-01〜08の負例を評価。Product接続が無ければ未達 | #3441 |
-| **G2 二資料対照** | 独立Raw A/BをReaderで選択→Cardに置き、関連候補・矛盾・保留を残す | 誤同定/別Root混合0、A/Bへの個別復帰、非公開漏出0。IB-01〜06を再利用 | #3401追補 |
-| **G3 限定異種統合** | G2成功後、構造化CSVまたはRDBの一Sourceと、遅着Event/時系列を追加 | Source別の対象/時刻/単位/Revision/coverageを保持。同時取得を共通Snapshotとは宣言しない。II-01〜08を評価 | #3401 I1/I2 |
-| **G4 複数View/Canvas** | 同一Itemを二Canvasへ別表示、Reader/KJ/Tree等を切替、分割・非干渉・差分Preview | 位置/Tree/Island/Affiliation/Edge/Reviewの非干渉、選択対象の再解決、CAS競合/Undo、跨る保存のpartialを観測 | Hybrid SI-XC、#3399 |
-| **G5 文書化・外部Consumer** | SUI構造候補→損失付きMarkdown→SHO Reader→筆者の採否・Writer保存後再Read | Loss/保留/異論/未公開範囲を維持。Source byte・Consumer byte・保存receiptを分離。元SUIへの自動逆編集0 | SUI #3391、SHO [#19](https://github.com/hat47x/sho-composer/issues/19) |
-| **G6 実務価値判断** | MaintainerのSUI自身を題材にしない実務資料で従来手法/KJのみ/統合表示を比較 | 新たに見えた関係、保留・異論の保持、元資料復帰、操作負担、誘導・害を個別評価。Fixture PASSをT2と呼ばない | ADR-0089、#3400、#3401 |
+| **IG0 基礎を保持** | AI OFF、既存3 Card KJ、Save/Read、Hold/Edge/Island | 新Reader導線なしでも基本編集が維持。従来操作を破壊しない | ADR-0089、R2-SRC-08 |
+| **IG1 R2原文復帰** | 単一の許可Raw→人手選択→Card→保存→別Process/BrowserでReader復帰 | 元bytes/選択位置・Revision・Grantの独立再照合。R2-SRC-01〜08の負例を評価。Product接続が無ければ未達 | #3441 |
+| **IG2 二資料対照** | 独立Raw A/BをReaderで選択→Cardに置き、関連候補・矛盾・保留を残す | 誤同定/別Root混合0、A/Bへの個別復帰、非公開漏出0。IB-01〜06を再利用 | #3401追補 |
+| **IG3 限定異種統合** | IG2成功後、構造化CSVまたはRDBの一Sourceと、遅着Event/時系列を追加 | Source別の対象/時刻/単位/Revision/coverageを保持。同時取得を共通Snapshotとは宣言しない。II-01〜08を評価 | #3401 I1/I2 |
+| **IG4 複数View/Canvas** | 同一Itemを二Canvasへ別表示、Reader/KJ/Tree等を切替、分割・非干渉・差分Preview | 位置/Tree/Island/Affiliation/Edge/Reviewの非干渉、選択対象の再解決、CAS競合/Undo、跨る保存のpartialを観測 | Hybrid SI-XC、#3399 |
+| **IG5 文書化・外部Consumer** | SUI構造候補→損失付きMarkdown→SHO Reader→筆者の採否・Writer保存後再Read | Loss/保留/異論/未公開範囲を維持。Source byte・Consumer byte・保存receiptを分離。元SUIへの自動逆編集0 | SUI #3391、SHO [#19](https://github.com/hat47x/sho-composer/issues/19) |
+| **IG6 実務価値判断** | MaintainerのSUI自身を題材にしない実務資料で従来手法/KJのみ/統合表示を比較 | 新たに見えた関係、保留・異論の保持、元資料復帰、操作負担、誘導・害を個別評価。Fixture PASSをT2と呼ばない | ADR-0089、#3400、#3401 |
 
-G4/G5はG1〜G3から切り離して技術研究できるが、G0/G1の製品完了条件を拡大しない。特にSHO側のEditor/Reader/WriterはSUIフルUIに依存させず、TEI Studioセルフビルドと双方の作業優先順位を尊重する。実務T2が価値を示さなければ、Source Reader＋KJと手動照合へ戻す。
+IG4/IG5はIG1〜IG3から切り離して技術研究できるが、IG0/IG1の製品完了条件を拡大しない。特にSHO側のEditor/Reader/WriterはSUIフルUIに依存させず、TEI Studioセルフビルドと双方の作業優先順位を尊重する。実務T2が価値を示さなければ、Source Reader＋KJと手動照合へ戻す。
 
 ## 5. 他製品へ渡すもの・渡さないもの
 
@@ -68,15 +68,15 @@ G4/G5はG1〜G3から切り離して技術研究できるが、G0/G1の製品完
 | TEI | 型付きread-onlyの対象・関係・状態・版/損失の候補。Graphは向き・多重辺IDを保持 | Source/Meaning/ActionのAuthority獲得、SUI Cardを受理済み業務Entityへ昇格 |
 | SEI/TAI/外部Harness | 許可された目的別Projection、Proposal、参照範囲、revision/partial等の状態 | AI出力のhuman_reviewed昇格、非公開Sourceの開示、Agentの実Effect許可 |
 
-TEIのData/Graph/時系列/標準表現・Go単一バイナリ・外部Host/Provider方針は**将来のConsumerと生成候補**として参照する。SUIのG0〜G2へTEI共通DSL、専用Host、汎用Role Resolver、Graph DB、RAG索引を導入しない。PERTは明示的なTask/Dependency/Duration/Calendarが揃う場合の**後段Projection**であり、KJ Card/IslandをTaskや因果関係に自動昇格しない。
+TEIのData/Graph/時系列/標準表現・Go単一バイナリ・外部Host/Provider方針は**将来のConsumerと生成候補**として参照する。SUIのIG0〜IG2へTEI共通DSL、専用Host、汎用Role Resolver、Graph DB、RAG索引を導入しない。PERTは明示的なTask/Dependency/Duration/Calendarが揃う場合の**後段Projection**であり、KJ Card/IslandをTaskや因果関係に自動昇格しない。
 
 ## 6. 実装担当への引渡しと証拠票
 
-次の変更で最初に行う仕事は、[#3439](https://github.com/hat47x/sui-sensemaking/pull/3439)と[#3440](https://github.com/hat47x/sui-sensemaking/pull/3440)の基線を再読して、[#3441](https://github.com/hat47x/sui-sensemaking/issues/3441)の**G1実製品R2**を最小差分で完成すること。新File/DB SchemaやHost Grantが要るなら、それらを既存Product入口とOwnerへ戻して決める。G1の合格前にG2以降の新機能を実装開始条件にしない。
+次の変更で最初に行う仕事は、[#3439](https://github.com/hat47x/sui-sensemaking/pull/3439)と[#3440](https://github.com/hat47x/sui-sensemaking/pull/3440)の基線を再読して、[#3441](https://github.com/hat47x/sui-sensemaking/issues/3441)の**IG1実製品R2**を最小差分で完成すること。新File/DB SchemaやHost Grantが要るなら、それらを既存Product入口とOwnerへ戻して決める。IG1の合格前にIG2以降の新機能を実装開始条件にしない。
 
 各Gateでは「対象Source/Scope・実byte・Source revision・Document revision・Reader/Writer process・具体的な操作・Expectedを先に記述・Actual/CI HEAD・未実施・部分/不明・Owner資格」を記録する。AIなし正常系、同内容別Root/同文二箇所、A→B→A、権限、保存409/ACK不明を一因子反例として扱う。外部送出後は**Producer成功・Transport成功・Consumer実Read・Writer commit・Meaning受理・外部Effect**を別行で報告する。
 
-**撤退条件**：全Sourceの中央取込、共有Registry、抽象APIの実装が先行して元資料への復帰や認知上の効果を示せない場合、G1/G2の小さなSource Reader・手動KJへ戻す。未実装を静かに成功扱いしない。
+**撤退条件**：全Sourceの中央取込、共有Registry、抽象APIの実装が先行して元資料への復帰や認知上の効果を示せない場合、IG1/IG2の小さなSource Reader・手動KJへ戻す。未実装を静かに成功扱いしない。
 
 ---
 
