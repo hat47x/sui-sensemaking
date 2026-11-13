@@ -90,6 +90,22 @@ def test_same_bytes_different_source_path_not_same_identity(tmp_path: Path) -> N
     assert first["source"]["relative_path"] != second["source"]["relative_path"]
 
 
+
+def test_cloned_root_is_not_identified_by_digest_and_relative_path(tmp_path: Path) -> None:
+    # This reference intentionally does NOT expose a stable workspace identity.
+    # Equal output from separate roots is a known gap, not Source sameness.
+    raw = "同じ作業領域の複製ではない".encode()
+    roots = [tmp_path / "workspace-a", tmp_path / "workspace-b"]
+    for root in roots:
+        root.mkdir()
+        (root / "raw.txt").write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    first_rc, first = _call(roots[0], "raw.txt", digest, 0, len(raw))
+    second_rc, second = _call(roots[1], "raw.txt", digest, 0, len(raw))
+    assert first_rc == second_rc == 0
+    assert first == second
+    # A Product binding must carry its own qualified Workspace/Source/Scope.
+
 @pytest.mark.parametrize(
     "path",
     ["../elsewhere.txt", "/absolute.txt", "nested/../../elsewhere.txt", "C:/external.txt"],
