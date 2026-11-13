@@ -57,6 +57,7 @@ jobs:
             tests/test_critique_history_model.py \
             tests/test_ai_safemode.py \
             tests/test_request_body_safety.py \
+            tests/test_r1_raw_source_probe.py \
             tests/test_context_bundle_routes.py \
             tests/test_agent_credential_http.py \
             tests/test_docs_access_control_integration.py \
