@@ -993,3 +993,14 @@ Sの必要要素を明示する最初の試験は、Syntheticの6〜12件で、�
 
 **実行上限**：この節自体はDocs-onlyで、SUI #3438のHTTP別Process試行、Raw Reader改修、実SHO/SUI/TEI同一Attempt、実Studio/CanvasのPin/書込、実外部Harness、Owner Meaning受理、T2は**NOT RUN**。TEI #4507・SHO #47等の実績は各々のOwnerが検証した限定範囲にのみ帰属する。
 
+<!-- sui-r0-test-and-cross-product-20261113 -->
+#### 2026-11-13：設計から実装テストへ移した範囲と、最新の横断実績
+
+- **SUI自身の実装差分**：[SUI Draft #3439](https://github.com/hat47x/sui-sensemaking/pull/3439)で[#3438](https://github.com/hat47x/sui-sensemaking/issues/3438) R0の独立プロセス再読込回帰を新規1ファイルに実装。現行HTTP `PUT /docs/{id}`→Writer TestClientとDB Engine終了→**新しいPythonプロセス**の同API `GET`→JSON/ETag照合という実行経路を用意。公開合成の3Card/同文別`meta.source`/Hold/Island/Edge、stale `If-Match` 409、別Process 404を検査する。**コードの存在≠実テストPASS**であり、PR exact HEAD CIは独立確認が必要。実Raw Reader/元資料byte span/Browser復帰/二Canvas永続化/二Client実競合はこのテスト対象外。
+- **TEIの実Readが前進**：[main統合 #4539](https://github.com/hat47x/tei-platform/pull/4539)は隔離PG16でEnvironment束縛→Driver Executor実Read→Function Data Context→限定Reference CLIの実行を確認した。ただし通常`tei` CLI・Studio・SUI/SHO Consumer・現在のHost Grantは未接続。0件でも全世界での不存在を宣言せず、RLS/列欠落/NULL/Join重複と取得Coverageを区別する実証は、SUIの異種Source Readerが持つべき**消費者側の停止線**の参考に限る。
+- **問いに必要な依存集合の区別**：[TEI main統合 #4550](https://github.com/hat47x/tei-platform/pull/4550)は申告Graph内の多段upstream unknownをRequired Consumerまで辿る改修。不要な依存で全成果をstaleにしない一方、必要な未取得Sourceを無視してcompleteとも言わない。SUIのReader/Canvas Pinでも「見えているカード・既知の関係の総数」と「この問いに必要で実取得済みの集合」を分ける。実Source Universeの完全性は別。
+- **編集逆写像を用途別に判定**：[TEI Draft #4538](https://github.com/hat47x/tei-platform/pull/4538)の限定Property行編集では、全体Graph→Tree Projectionがlossyでも**属性Slotの編集可否を操作相対で調べる必要**が明確になった。SUIでは、Canvas表示の座標移動、Card本文変更、原Raw span変更、SHO文章への書戻しを一つの「編集可」にしない。現在のDocumentV1ならCanvas上のCard座標の編集適格性を現行CASで扱う余地があるが、Item/Raw/SHOへの逆Patchは一意な元Ref/Scope/Revision/Grantを別に要求する。TEIの編集Ref結果をSUI実編集PASSへ転記しない。
+
+**次の受入依存**：まずSUI #3439の実Backend CIを確認し、RIR-01とRIR-03の限定範囲・失敗・未検証を#3438に記録。次にRaw実byteのSource Reader/Fit-GapとR2の人手抽出へ進む。**PR #3437は設計のReview用、#3439はProductコード/試験のReview用**として分け、共通Store・新Harness・第二Expected正本を先に採用しない。
+
+
