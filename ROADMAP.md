@@ -38,6 +38,18 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 機能の追加より、価値と認知の増分の確認を優先します。実際に使って、同じ摩擦が再現したものから、実装に昇格させます。
 
+## 実施順：原資料から情報統合へ（提案・未採用）
+
+[段階的な受入計画](01_Plans/information_integration_stage_gates_2026-11.md)に、Hybrid Tree/KJ・異種情報統合・TEI/SHO等の横断検討から、**今着手する最小の製品縦断と後段の依存順**を整理した。一次価値・安全・外部接続の正本は引き続きADR-0089/0041/0111。計画を文書化しただけで製品機能を実装・承認したとは扱わない。
+
+| 順序 | 内容・停止線 | 管理先 |
+| --- | --- | --- |
+| **IG0→IG1（最優先）** | AI OFFの3 Card KJを維持し、Raw Readerで人が選んだ原文範囲をCard化→保存→別Process/Browserから**同じSourceの同じ位置へ再到達**。Root/Scope/Revision/Grantを独立再検査。R0/R1は限定Draft試験で、R2製品縦断は未実証 | [R0/R1 #3438](https://github.com/hat47x/sui-sensemaking/issues/3438)、[R2 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441) |
+| **IG2（R2の後）** | 2つの独立Raw資料でCard間の関係候補・矛盾・保留を残し、個別Sourceへ復帰。同文別出典・別Root・改版・SafeMode・409/ACK不明を検査 | [情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)のIB-01〜06 |
+| **IG3以降（需要で選択）** | 構造化CSV/時系列、Tree/複数Canvasの独立Occurrence、表示横断、SHO文章化・TEI型付き投影へ段階拡張。Graphの向き/多重性・Loss/未解決・Source scope・読取/書込資格を別検証。PERT/Task同期や中央Query/Storeは必須にしない | [情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)、[Hybrid計画](01_Plans/hybrid_outline_canvas_layout_plan.md)、[SUI→SHO #3391](https://github.com/hat47x/sui-sensemaking/issues/3391) |
+
+**統合時の非干渉**：同一ItemのA/B Canvas表示で座標・島・Tree・意味Edgeは独立。Reader/KJ/Tree等の表示選択は現在Scope/版/Disclosureで再解決し、Projectionが同一でも元Sourceや逆Writeの同一性を推測しない。AI提案のApplyはreadSet/writeSetと現在Revisionを照合し、他者のHold・異論・Reviewを上書きしない。SUI→SHO Draft、TEI Canonical候補、Agent Proposal、正式Meaning受理、実Effectはそれぞれ別の受入段階。
+
 ## 検討候補：アウトライン／マインドマップとKJキャンバスの連携
 
 [計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)と[設計案](02_Architecture/hybrid-tree-canvas-layout-design.html)に、独立したアウトライン／マインドマップUIとKJキャンバスの連携、Tree由来の薄い背景枝、マインドマップからの初期配置、島を保つ粘性付き整形、人的アノテーション、変化量制御、Undo/Redo、指定版からの部分復元を整理した。**構想段階であり、採用・実装・T2の利用価値検証は未了**。
