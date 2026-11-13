@@ -59,6 +59,7 @@ jobs:
             tests/test_request_body_safety.py \
             tests/test_context_bundle_routes.py \
             tests/test_agent_credential_http.py \
+            tests/test_docs_cross_process_readback.py \
             tests/test_docs_access_control_integration.py \
             tests/test_docs_tenant_isolation_surfaces.py \
             tests/test_audit.py \
