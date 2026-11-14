@@ -155,7 +155,7 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 2026-11-14に[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)のHEAD `88dd09f5b24817cec3f1f574e94a74ddc5d5142b`で[単体CI #43572911307](https://github.com/hat47x/sui-sensemaking/actions/runs/43572911307)が失敗した原因は、**Raw DB行だけを改変したテストが422を期待したこと**。これは既存Content-addressed Revisionの検査が働いた事実であり、保全機能を外してテストを通してはならない。
 
-**修正した独立Expected**：①内部StoreによってDocument投影とRevision Head/Blobを**整合させた上で**予約Source欄を持つ保存済みDocumentを合成し、HTTP GETが**秘密Locator非反射の422**・`view`監査0件となること、②正常なRevision-backed DocumentのDB投影**だけ**を改変した場合は、**Revision不整合による503**・秘密非反射・`view`監査0件となること、③整合性とSchemaの両方が正常なGETのみ200・`view`監査1件となることを別々に検証する。修正HEAD `a572dd89885a138ebc308fa7bc299715b554ea87`の[CI #43579792062](https://github.com/hat47x/sui-sensemaking/actions/runs/43579792062)は更新時に確認中であり、**成功の確定はexact HEADログで別判定**する。
+**修正した独立Expected**：①内部StoreによってDocument投影とRevision Head/Blobを**整合させた上で**予約Source欄を持つ保存済みDocumentを合成し、HTTP GETが**秘密Locator非反射の422**・`view`監査0件となること、②正常なRevision-backed DocumentのDB投影**だけ**を改変した場合は、**Revision不整合による503**・秘密非反射・`view`監査0件となること、③整合性とSchemaの両方が正常なGETのみ200・`view`監査1件となることを別々に検証する。修正HEAD `a572dd89885a138ebc308fa7bc299715b554ea87`の[CI #43579792062](https://github.com/hat47x/sui-sensemaking/actions/runs/43579792062)は**completed/success**。Backend契約テスト**325件PASS**（本件でのGET二負例を含む）、Ruff PASS、Frontend単体・代表E2Eジョブもsuccess。同じHEADのNative Action・MCP/Agent関連Workflowもsuccess。**正常に動くRevision検査を残したまま、異なる失敗原因を別々に受け入れた**ことを証拠として記録する。
 
 この検査の受入上限は**Document保存Revision・契約・監査の整合**であって、Source Providerの現在Root/Scope/Grant、元Rawの閲覧拒否、Card保存後の別Process原文復帰を実証したものではない。Document ETag、Content Digest、元Source Revision、Host Grant、Meaning Acceptance、Consumer受領を一つの`verified`や単一Receiptにまとめない。
 
