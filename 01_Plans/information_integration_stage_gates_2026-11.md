@@ -106,6 +106,22 @@ TEIのData/Graph/時系列/標準表現・Go単一バイナリ・外部Host/Prov
 
 **負例（独立Expectedの重複SSOTは作らない）**：未宣言metaに記録した値がSave/GETで消える、同文2回の先頭へ誤ジャンプ、同内容・別Rootへ自動再束縛、If-MatchなしのLWWを安全な共同編集と主張、存在しないSourceを「抽出0件の正常系」と表示。既存[R2-SRC-01〜08 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)の検査方法として追加する。
 
+### 6.2.1 保存方式の技術的な優先候補と、採用前の拒否境界（2026-11-14）
+
+**Owner判断へ渡す結論**：R2の「1件のSourceからCard作成→既存Document Save→別Process GET」を最小化するには、**A（Card直下の型付き・省略可能なSource選択記録）を優先試験候補**とする。BはCardとDocument別Mapの整合責任が増えるためAの旧Client互換や開示条件を満たせない場合の比較案。Cは一つの操作に二つのCommit/ACK/Recoveryを持ち込むため、既存Providerが整合と現在Grantを既に保証できる場合に限り検討し、R2では先行採用しない。**技術的優先順位でありOwnerの正式採用ではない**。
+
+**現在の具体的な保存欠落**（現行mainを照合）：Python `CardBase`／`CardMeta`に出典byte spanの型がない。Pydantic既定の未知属性無視で未宣言の`sourceBinding`等は捨てられ得る。他方Frontend `validate_doc.ts`の厳密Importは未知Card/meta項目を拒否し、`validate.ts`の緩い`parseCards`は既知属性のみ再構成する。これは**保存成功らしく見えて出典情報だけを失う**非対称性であり、Current Source authorityの実装がなくても解消可能な不具合の入口である。
+
+**採用前の最小対策**：[別Draft PR #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)で、`PUT /docs/{id}`に未採用の**予約Source Binding候補欄**（Document `sourceBindings`/`sourceSelections`、Card/ Card.meta `sourceBinding`/`sourceBindings`/`sourceSelection`/`sourceSelections`）があれば、Backendの型変換で消す前に**HTTP 422・`source_binding_contract_unavailable`**を返す。エラーにRaw文字列、Locator、内部ID、byte span/件数を反射しない。既存`Card.meta.source`（自由記述）は維持し、任意の未知属性全般のポリシーには触れない。ASGI＋SQLiteで予約欄の拒否・保存前失敗・秘密非反射・旧資料PUT/GETの互換を回帰対象に固定。最新HEAD `ba482f0136d5eea4a49fa839b47e19d01d80ec88`のCIは確認時queuedで、**実テストPASS／正式採用は未認定**。これは出典の保存機能ではなく**黙った欠落を防ぐ拒否契約**である。
+
+**Aの正式化を検討する必須Gate**：
+1. **Model/Frontend/Importの対称性**：独立した型付きCard欄を採用するなら、Pythonモデル・Frontend型・厳密Import・緩い再読込・複製/削除/Undo・安全な旧Client読込まで同一Attemptで検証する。既存`Card.meta.source`や`Card.sources`（Card合成由来）を出典byte選択として流用しない。
+2. **Current Source資格と開示**：Document内に保存するものは選択時の**資格付きSource参照の候補**・Revision/digest・UTF-8 half-open byte範囲・選択byte digest・人間の選択という記録。Rootの実OSパス、Grant Token、Credential、Raw全文を含めない。**opaque参照やhashそのものも未許可閲覧者には開示の可能性がある**ため、Document共有やSafeMode/Agent Exportの実Projectionを検証し、現在Grantが不明なら保存・復帰を勝手に許可しない。
+3. **CASとCurrent readの分離**：新規Documentはcreate条件、既存更新は**明示的な最新ETag/If-Match**をR2のUI経路で必須とする（現行Local APIのIf-Match省略LWWと混同しない）。Writer終了→別Process GET後、Hostが**その時点のRoot/Scope/Grant**を確かめた実Sourceから再読。Source revision/Root identity/HistoryとDocument ETag/digestを別列で比較し、A→B→Aおよび別Root同byteは`unknown/refused`とする。
+4. **Card意味の非破棄**：Sourceから復帰不能でもCard本文・異論・Hold・人の意味判断を消さない。CardのDelete/Clone/Merge/分割でSource選択履歴の継承を暗黙に決めず、Ownerが明示的な規則を確定するまでは候補保持または操作保留とする。
+
+**統合順**：#3444の予約項目拒否（前段安全対策）→R2 OwnerのA/B/C採用票とProvider/開示Gate→採用された方式のSchema＋実Readerの小PR→Document CAS Save/別Process readback→同じSourceへの復帰R2-SRC-01〜08。独立したDocument/Source台帳、TEI Host、汎用Source RegistryやCRDTを先に作らない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
