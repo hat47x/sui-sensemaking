@@ -138,6 +138,23 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 **Evidenceの粒度**：予約項目が拒否されたこと（無送出・HTTP 422・Import拒否）／Documentが保存されたこと（ETag CAS）／実Sourceへ再到達できること（現在Root/Scope/Grant・Revision）／TEI/SHOなどの外部Consumerが今回実受領したこと／人間が意味を受理したことは、別々の結果欄に残す。内容ハッシュ一致で後の資格を代替しない。実装予定の`putDocument`事前拒否とAgent投影単体テストは[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)の新HEAD `6f864be6361b0d3f8f3dc2cf343e8fe524c64023`の[CI #43571702321](https://github.com/hat47x/sui-sensemaking/actions/runs/43571702321)は**completed/success**。実ログでBackend契約**323件PASS**（Agent投影ヘルパーの新負例を含む）、Frontend全体**1,943件PASS**、`client.test.ts` **63件PASS**（送信前拒否の2件を含む）、`validate.test.ts` **22件PASS**、代表E2E・型検査/build・native Action/MCP/agent各Workflowもsuccess。ただし実HTTPのAgent/Guest別Source資格、Documentへ正式な型付きSource保存、別Processからの現在原文再Readは**未実装／NOT RUN**。
 
+### 6.2.3 Document閲覧とSource閲覧の差分受入（R2・実装対象の固定）
+
+**二つの権限を混同しない**：現行の`GET /docs/{id}`はDocumentのreadを判定するが、Source Reader／現在Root・Scope・Grantに関する判定器を持たない。Agent向けにDocument投影があっても、**Document readをSource readへ昇格できない**。このため「Documentを読めるがSourceを読めないPrincipal」の**製品E2Eは、現時点で実行不能・NOT RUN**。ダミーのGrantフラグや内容ハッシュ一致を正式なSource権威に見立てて合格させない。
+
+| Documentの現在権限 | Sourceの現在資格 | 予定する受入観測 | 今回確認済みの証拠 |
+|---|---|---|---|
+| 許可 | 許可・同じRoot／Revisionも検査済み | Cardと出典位置を示せる。ただしHuman Meaning受理は別 | **Source Provider未実装：NOT RUN** |
+| 許可 | 拒否／失効 | Card本文・Hold・異論は維持し、出典Locator／opaque ID／digest／存在数や原文位置を出さない。必要なら出典状態を「確認できない」とだけ示す | **Source Grant差分：NOT RUN** |
+| 許可 | 不明／Provider障害／partial | Rootや内容一致を推測せず、原文再到達を保留。既存Cardは消さない | **Source Provider：NOT RUN** |
+| 拒否 | 許可 | Source資格からDocumentの存在・Card内容を逆算しない | Documentの認可試験は既存、**組合せ試験未実施** |
+| AgentのDocument閲覧が許可 | Sourceは拒否／不明 | 人間がレビュー済みの本文だけをAgent投影し、出典欄・未レビューID・ETagを出さない | Agent allowlist単体検査のみ。**Agent HTTP×Source権限：NOT RUN** |
+| Documentが許可 | 同じ内容・別Root／A→B→A | 内容一致だけで現在Grantや同一出典・履歴連続性と判定しない | **内容CheckpointのReferenceのみPASS** |
+
+**今回の実在するGETの負例**：[独立Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)で、通常APIを通らずに**未採用のSource Binding候補が既存DB行へ残ったケース**をSQLiteへ投入。Document GETがその欄を黙って除いたHTTP 200を返すのではなく、**秘密Locator非反射のHTTP 422**となることを検証する。同時に、**検証拒否されたGETで`view`監査イベントを作らず、正常に読めたGETでのみ1件記録する**順序へ修正。成功したように見えるDocument ReadやAudit Receiptを出典資格へ誤昇格させない。これは移行・破損データに対する**文書契約の防護**であり、実Source Access Denyを試験したものではない。exact HEADとCIはこの節の後続の更新で照合する。
+
+**正式受入の最小接続**：Sourceの権威は既存Host/Provider側に置き、Doc readの確認とは独立に`SourceRef + Workspace/Root + 現在Grant + Revision/epoch + 選択byte span`を照合する。Cardへ永続保存する属性集合はA/B/C Owner選定と閲覧Projectionが成立してから確定する。未許可のPrincipalがハッシュ・参照個数・存在の推定をできないこと、権限失効後に既存Cardが残ること、Doc ETag/If-Match競合で他者変更を失わないことを**独立Readと実HTTP**で確認する。EvidenceはSource取得、Document CAS、Consumer受領、人間の意味受理を別票とし、F0〜F5をすべての読取用途に一律の直列Gateとして要求しない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
