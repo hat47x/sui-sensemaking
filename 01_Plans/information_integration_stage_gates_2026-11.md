@@ -298,6 +298,39 @@ R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進める
 
 **証拠の上限**：現行Agent投影の静的コードからは「レビュー済み本文を返す」ことまで確認できるが、**Source由来本文の二次開示制御・Member/Guest/Agent実HTTP・外部Consumer/Derived Content非漏洩の製品E2EはNOT RUN**。本節の追加はR2-SRC-01/05/06/08の受入観点であり、IG1の公開合成Raw・AI OFFの最小縦断を、実装されていない全製品公開契約の整備まで止めるものではない。
 
+### 6.2.9 次の実装PRへ渡す同一試行の証拠票と停止条件（2026-11-15）
+
+これ以上の抽象的な設計追加ではなく、**#3441のR2-SRC-01〜08を実コードで一段進める**ための、F0-S限定の実装・観測票である。TEIのSource→Loader→Provider→Consumerで採用する「宣言や同byteの一致だけで実到達を主張しない」原則を利用するが、SUIへTEI Hostや共通Evidence DBは導入しない。前節§6.2.5〜8は採否と安全境界の説明、本節は**次の小PRの順序**だけに限定する。
+
+#### 6.2.9.1 まず現行コードで判断できること
+
+- `content_store.py`の`ContentBlob.from_text`は文字列をUTF-8へエンコードする**Document等向けのContent表現**であり、外部Rawの元byte保存契約ではない。`ContentBlobRow.representation`の既存制約は`full_json/gzip_json/gzip_delta`なので、これに便乗して任意RawをJSONとして偽装保存しない。使用可能な実Blob経路があれば、元byte fidelity・読取資格・Blob/Documentの別Commitを独立検査してから採用を判断する。
+- `03_Implement/backend/experiments/r1_raw_source_probe.py`は元byteの読取とUTF-8選択範囲を検査する**Reference**で、実Hostの権限・race-free OS readやSource履歴は保証しない。`tests/test_r1_raw_source_probe.py`の成果を実Product Provider試験へ転用しない。
+- `03_Implement/backend/tests/test_docs_cross_process_readback.py`は実Documentの別Process GET、`frontend/src/source/raw_utf8_selection_reference.ts`はRaw byte→選択位置の局所的な検査である。**両方がPASSしても、同じCardのSourceを別Processで再Readした試行にはならない**。
+
+#### 6.2.9.2 一つのAttemptで残す最小観測列
+
+| 同じ試行で記録する列 | 合格のための独立した実観測 | その観測だけでは保証しないこと |
+| --- | --- | --- |
+| **Raw input** | 取込Occurrenceと元byte長・SHA-256、Snapshotの実保存bytes。BOM/混在EOL/二つの同文の位置を固定 | 元OS Fileの現在版や保存元Rootの履歴 |
+| **Snapshot Store** | 実StoreのCommit結果と**Writer終了後の別Process Read**。保存失敗・ACK不明・partialを別状態にする | Card保存・Documentの正式Revision |
+| **Selected evidence** | 同じSource snapshotに対するhalf-open UTF-8 byte spanと選択byte digest、同文二箇所の区別 | 表示文字列や`Card.text`を元Raw byteそのものとみなすこと |
+| **Document/Card** | 同Card IDの採用Bindingを明示ETag/If-MatchでSaveし、別Process GETで必要情報が消失していない | Sourceの現在Grant・Reader資格・意味受理 |
+| **Read/Disclosure** | 現在のSnapshot資格を独立確認し、その資格で上記元byteを再読。Document可×Snapshot不可の拒否/非開示は別負例 | `textReviewed`やContent digestによる二次公開の許可 |
+| **復帰結果** | Card→選択した元byte位置へ実復帰しExpected/ActualとCI exact HEADを記録 | 元Originへの外部再接続、SHO/TEI実受領、実務T2 |
+
+**新しい公開Schema/証拠正本は作らない**。これらは既存#3441の一試行に付随する検査欄であり、各欄を`PASS/FAIL/UNKNOWN/NOT RUN`として独立に記す。未取得・空集合・permission denied・revision不一致・部分成功を一つの成功値に畳まない。実Sourceの出力本文や秘密Locatorを無権限のEvidence/CIログへ流さない。
+
+#### 6.2.9.3 実装PRの最小分割と完成の呼び方
+
+**最初の差分**はF0-S実Raw byte保存・別Process取得の可否を判定する小さな実験とし、既存Contentの使用可否・Scope・失敗状態をコードとテストで示す。必要なら独立したRaw Providerを**最小の用途限定部品**として比較するが、グローバルSource Registry、KON独立Service、全形式Normalizerは先行実装しない。この差分の成功は「Snapshot保存と別Process Readの限定実証」に留める。
+
+**次の差分**はOwnerがSの読取・開示境界を認めた場合に、A/B/Cのうち適格なBindingと実Document CAS・Readerの接続を行う。旧Clientが未認識欄を欠落させる正常ETag更新、Doc可×Snapshot不可、二Commit部分成功、A→B→A/別Origin同byteなどの既存R2-SRC負例を通す。未受理のSrc由来本文をAgent/SHO/TEIへ送らない。
+
+**文字コードの境界**：R2の現行対象はUTF-8（先頭BOM可）。UTF-16LEなどを表示目的でUTF-8へ変換する場合、**原byteのDigestと変換後DataのDigestを別にし、表示用変換物を原本と名乗らない**。ただしUTF-16LE等の取込/Span復帰をIG1の新しい合格条件に加えず、現行Readerが扱えない入力は明示拒否する。
+
+**停止条件**：対応する実Provider Call Site・権限・元byte再読が見つからなければF0-Sを未資格として記録し、Ownerへ具体的な不足を戻す。技術的な独立PASSを一つの統合E2Eへ合算しない。次の正式報告では、**コード変更と独立試験のないDocs-only追補をIG1実装進捗に数えない**。本節自体は文書改訂であり、F0-S実保存・別Process Raw再読・Card Bindingの製品E2E・外部受領は**NOT RUN**。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
