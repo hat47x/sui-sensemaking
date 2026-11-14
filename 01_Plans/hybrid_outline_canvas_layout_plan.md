@@ -1001,6 +1001,4 @@ Sの必要要素を明示する最初の試験は、Syntheticの6〜12件で、�
 - **問いに必要な依存集合の区別**：[TEI main統合 #4550](https://github.com/hat47x/tei-platform/pull/4550)は申告Graph内の多段upstream unknownをRequired Consumerまで辿る改修。不要な依存で全成果をstaleにしない一方、必要な未取得Sourceを無視してcompleteとも言わない。SUIのReader/Canvas Pinでも「見えているカード・既知の関係の総数」と「この問いに必要で実取得済みの集合」を分ける。実Source Universeの完全性は別。
 - **編集逆写像を用途別に判定**：[TEI Draft #4538](https://github.com/hat47x/tei-platform/pull/4538)の限定Property行編集では、全体Graph→Tree Projectionがlossyでも**属性Slotの編集可否を操作相対で調べる必要**が明確になった。SUIでは、Canvas表示の座標移動、Card本文変更、原Raw span変更、SHO文章への書戻しを一つの「編集可」にしない。現在のDocumentV1ならCanvas上のCard座標の編集適格性を現行CASで扱う余地があるが、Item/Raw/SHOへの逆Patchは一意な元Ref/Scope/Revision/Grantを別に要求する。TEIの編集Ref結果をSUI実編集PASSへ転記しない。
 
-**次の受入依存**：SUI #3439の実Backend試験の限定合格と未実証範囲を#3438へ記録済み。次にRaw実byteのSource Reader/Fit-GapとR2の人手抽出へ進む。**PR #3437は設計のReview用、#3439はProductコード/試験のReview用**として分け、共通Store・新Harness・第二Expected正本を先に採用しない。
-
-
+**次の受入依存**：SUI #3439の実Backend試験の限定合格と未実証範囲を#3438へ記録済み。次にRaw実byteのSource Reader/Fit-GapとR2の人手抽出へ進む。**PR #3437は設計候補、#3439はmain統合済みのProduct試験**として分け、共通Store・新Harness・第二Expected正本を先に採用しない。
