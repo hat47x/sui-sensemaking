@@ -10,13 +10,13 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import sessionmaker
 
 from sui_sensemaking_api.db import _normalize_database_url, get_db
 from sui_sensemaking_api.main import app
 from sui_sensemaking_api.routes.docs import _agent_document_view
-from sui_sensemaking_api.models import Base
+from sui_sensemaking_api.models import Base, DocumentRow
 
 
 @pytest.fixture()
@@ -186,3 +186,45 @@ def test_agent_projection_does_not_expose_reserved_source_candidates() -> None:
     assert "sourceBindings" not in projected
     assert "sourceBinding" not in projected["cards"][0]
     assert "meta" not in projected["cards"][0]
+
+
+def test_existing_stored_unadopted_source_binding_get_is_rejected_without_reflection(
+    sqlite_client: TestClient, tmp_path,
+) -> None:
+    """Migration/old-store negative: Document read is not a Source-read grant.
+
+    This seeds an out-of-contract row directly; no public API permits writing
+    this shape. The GET must not return a scrubbed success or secret locator.
+    """
+    doc_id = "r2-old-row-unsupported-source"
+    base = _document(doc_id)
+    stored = sqlite_client.put(f"/docs/{doc_id}", json=base)
+    assert stored.status_code == 200
+
+    secret = "private://root/old-locator-must-not-be-reflected"
+    with_binding = _document(doc_id)
+    with_binding["cards"][0]["sourceBinding"] = {
+        "qualifiedSourceRef": secret,
+        "startByte": 38,
+        "endByte": 57,
+        "rawSha256": "a" * 64,
+    }
+    path = tmp_path / "source_binding_unaccepted.sqlite3"
+    engine = create_engine(_normalize_database_url(f"sqlite:///{path}"))
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(
+                update(DocumentRow)
+                .where(DocumentRow.id == doc_id)
+                .values(payload_json=json.dumps(with_binding, ensure_ascii=False))
+            )
+            assert result.rowcount == 1
+    finally:
+        engine.dispose()
+
+    response = sqlite_client.get(f"/docs/{doc_id}")
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "source_binding_contract_unavailable"
+    assert secret not in response.text
+    assert "card-1" not in response.text
+    assert "sourceBinding" not in response.text
