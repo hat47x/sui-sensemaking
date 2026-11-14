@@ -333,6 +333,24 @@ R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進める
 
 **停止条件**：対応する実Provider Call Site・権限・元byte再読が見つからなければF0-Sを未資格として記録し、Ownerへ具体的な不足を戻す。技術的な独立PASSを一つの統合E2Eへ合算しない。次の正式報告では、**コード変更と独立試験のないDocs-only追補をIG1実装進捗に数えない**。本節自体は文書改訂であり、F0-S実保存・別Process Raw再読・Card Bindingの製品E2E・外部受領は**NOT RUN**。
 
+### 6.2.10 Snapshot不変保存のReferenceと正式Providerの差（2026-11-15）
+
+F0-Sの実装判断を、保存・別Process再読の**実証できた部分だけ**で前へ進める。マージ前の[Draft #3449](https://github.com/hat47x/sui-sensemaking/pull/3449)で既存`NasContentStore`のUTF-8内容復元と同`content_id`上書きを実テストへ移し、**exact HEAD `1b32195944bd6cf02ee86f071c152b4a3b6877b5`のUnit CI #43640647344はcompleted/success、backend-contract 340件PASS**を確認。これは現行Storeの挙動の検証であり、不変性PASSではない。
+
+この不足に対する局所Referenceとして[Draft #3450](https://github.com/hat47x/sui-sensemaking/pull/3450)は、信頼されたローカルRoot上で、1MiB以下の妥当なUTF-8 Rawを一回の`tenant/capture`単位で上書きせず保存する方式を試す。tmpファイルのflush/fsync後に`os.link`で非置換公開することで、**同じcaptureに違うbytesを再保存する要求をConflict**とし、同じbytesの再試行を`already-present`として独立照合できるか検証する。元byte/BOM/EOLと二番目の同文、別Capture同byte、改ざん・不正入力・別Python Processの読取をテストへ固定する。CI成功前に正式PASSへ昇格しない。
+
+| 軸 | 今回のReferenceで反証すること | 正式R2で未受理のまま残すもの |
+| --- | --- | --- |
+| 保存時の置換 | 同captureの異byte書込を黙って受け入れない。既存NASの`os.replace`と挙動を分離 | 正式不変Source Store・ストレージ障害/OS競合・Retention/削除 |
+| 再試行とACK不明 | 同bytesの再実行で元byteを別物に置換せず既存結果と照合できる | 複合操作の二Commit Recovery、Sourceの履歴連続性 |
+| 取込Occurrenceと内容Digest | 同bytesでも別Captureを自動同一視しない | 元Originの現在版への再接続、真正なSource identity |
+| 読取・開示 | テスト側が指定する信頼済みRoot内の内容一致だけを証明 | 現在のHost Root/Scope/Grant、Principal別非開示、Card由来本文の二次公開 |
+| UI/Consumer | 原bytesと選択範囲の限定実装をつなぐ準備 | DocumentV1 Binding、正式CAS、Browser縦断、SHO/TEI Consumer Receipt |
+
+**正式採用前のOwner Gate**：このReferenceを製品APIへ公開しない。Hostが現在資格を持つSource管理先を決定し、OSアクセス競合・プロセス障害時の永続性・古いPendingの回収・複数Writerの原子的な応答・テナント隔離・引用本文の開示・実存の二Commit/ACK不明を実証してから、適切な最小Providerの採否を決める。`os.link`という方法自体を全Targetの標準としない。原byte保持で成功したことを`Card/Source`連携や人間の意味受理へ転記しない。
+
+**当面の実行順**：①#3449の実績を現行NASのFit/Gapとして確定→②#3450のexact HEAD CI・単体負例を評価→③Ownerが用途限定Providerへ進めるか判断→④#3441既存R2-SRC-01〜08にSource Grant・Card CAS・別Process再読をつなぐ。PR #3448はこの判断の索引であり、新しいSource契約や独立したテスト正本ではない。**正式Raw Provider/Host Grant/二Commit Recovery/Card連携/Product E2EはNOT RUN**。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
