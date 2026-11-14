@@ -222,9 +222,32 @@ def test_existing_stored_unadopted_source_binding_get_is_rejected_without_reflec
     finally:
         engine.dispose()
 
-    response = sqlite_client.get(f"/docs/{doc_id}")
-    assert response.status_code == 422
-    assert response.json()["detail"]["code"] == "source_binding_contract_unavailable"
-    assert secret not in response.text
-    assert "card-1" not in response.text
-    assert "sourceBinding" not in response.text
+    class AuditSpy:
+        def __init__(self) -> None:
+            self.events: list[object] = []
+
+        def emit(self, event: object, *, dedup_key=None):  # noqa: ANN001
+            self.events.append(event)
+
+    spy = AuditSpy()
+    old_dispatcher = getattr(sqlite_client.app.state, "audit_dispatcher", None)
+    sqlite_client.app.state.audit_dispatcher = spy
+    try:
+        response = sqlite_client.get(f"/docs/{doc_id}")
+        assert response.status_code == 422
+        assert response.json()["detail"]["code"] == "source_binding_contract_unavailable"
+        assert secret not in response.text
+        assert "card-1" not in response.text
+        assert "sourceBinding" not in response.text
+        # A refused read must not be reported as an actual Document view.
+        assert [event.eventType for event in spy.events if event.eventType == "view"] == []
+
+        # Restoring a valid payload allows the reader to view again. This is
+        # a local-mode fixture, not Source access or multi-client CAS proof.
+        repaired = sqlite_client.put(f"/docs/{doc_id}", json=base)
+        assert repaired.status_code == 200
+        readback = sqlite_client.get(f"/docs/{doc_id}")
+        assert readback.status_code == 200
+        assert len([event for event in spy.events if event.eventType == "view"]) == 1
+    finally:
+        sqlite_client.app.state.audit_dispatcher = old_dispatcher
