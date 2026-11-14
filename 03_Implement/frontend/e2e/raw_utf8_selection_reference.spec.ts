@@ -437,7 +437,7 @@ test("R2 observed selection A-B-A while hashing cannot confirm the old span", as
   await preview.getByTestId("raw-local-file-input").setInputFiles({
     name: "same-occurrences.txt",
     mimeType: "text/plain",
-    buffer: Buffer.from("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊"),
+    buffer: Buffer.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊")]),
   });
   await expect(preview.getByTestId("raw-local-source-text"))
     .toHaveText("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊");
