@@ -362,3 +362,67 @@ test("R2 delayed old File read cannot replace a newer preview or revive a cleare
   await disclosure.locator("summary").click();
   await expect(page.getByTestId("raw-local-source-text")).toHaveCount(0);
 });
+
+
+test("R2 preview clear cannot erase a different workspace DOM selection", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  await page.getByTestId("raw-local-preview-disclosure").locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  const fileInput = preview.getByTestId("raw-local-file-input");
+  await fileInput.setInputFiles({
+    name: "read-only.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("原文の一時選択"),
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveText("原文の一時選択");
+
+  // A different editor/workspace may own window.getSelection(). Dispatch
+  // the real DOM click handler without letting a pointer-focus side effect
+  // obscure whether the preview itself removed another pane's selection.
+  const outsideSelection = await page.evaluate(() => {
+    const other = document.createElement("p");
+    other.textContent = "別の作業領域で選択された文字";
+    other.setAttribute("data-r2-external-selection", "true");
+    document.body.appendChild(other);
+    const otherText = other.firstChild;
+    const selection = window.getSelection();
+    const button = document.querySelector<HTMLButtonElement>('[data-testid="raw-local-clear"]');
+    if (!otherText || !selection || !button) throw new Error("missing-external-selection-elements");
+    const range = document.createRange();
+    range.selectNodeContents(otherText);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    button.click();
+    return { text: selection.toString(), anchorIsOther: selection.anchorNode === otherText };
+  });
+  expect(outsideSelection).toEqual({
+    text: "別の作業領域で選択された文字",
+    anchorIsOther: true,
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
+
+  // Conversely, the preview can discard the current selection it owns.
+  await fileInput.setInputFiles({
+    name: "read-only.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("もう一度原文を選択する"),
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveText("もう一度原文を選択する");
+  const ownSelection = await page.evaluate(() => {
+    const root = document.querySelector('[data-testid="raw-local-source-text"]');
+    const ownText = root?.firstChild;
+    const selection = window.getSelection();
+    const button = document.querySelector<HTMLButtonElement>('[data-testid="raw-local-clear"]');
+    if (!ownText || !selection || !button) throw new Error("missing-own-selection-elements");
+    const range = document.createRange();
+    range.selectNodeContents(ownText);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    button.click();
+    return { rangeCount: selection.rangeCount };
+  });
+  expect(ownSelection).toEqual({ rangeCount: 0 });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
+});
