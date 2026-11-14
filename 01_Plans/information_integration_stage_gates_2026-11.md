@@ -90,6 +90,36 @@ TEIのData/Graph/時系列/標準表現・Go単一バイナリ・外部Host/Prov
 
 作業順は **F0 既存入口・保存先のFit/Gap／Owner決定 → F1 許可済みRawの手動選択 → F2 明示If-Match保存と別Process GET → F3 現在Source再照合と負例 → F4 Browser実操作**。適切なSource Authorityが存在しないならF1以前で停止して`unqualified`と記録し、合成Referenceとしてのみ検証を継続する。既存R2-SRC-01〜08を使い、新たなExpected正本を作らない。**全F0〜F4の製品実装・E2Eは今回NOT RUN。**
 
+### 6.2 Source Bindingの保存候補と採否ゲート（F0判断票・未採用）
+
+**R2の重要な区別**：Cardに保存すべきものは「人がどのSourceのどの範囲を選んだか」という**選択の履歴**であり、「いまSourceを読んでよい」という**現在のGrant**ではない。Raw原文とCardの解釈を一つの本文に畳まない。Host/Providerはその時点のRoot/Scope/Grantを再解決し、保存済みDigest・相対path・Workspace名・旧PermissionをCurrent Authorityの代用にしない（TEI [#4504](https://github.com/hat47x/tei-platform/issues/4504)の同Manifest別Rootの読取反例と整合）。
+
+| F0の候補 | 長所 | 未解決・棄却の条件 |
+| --- | --- | --- |
+| **A：Card内の任意・型付きSource選択記録** | 既存DocumentのSave/GET・ETag・Card IDと一緒に扱える。第二の書込単位が増えない。**最初にFit/Gapを見る候補** | 現CardMetaの未知属性は消える。Python/TSの双方で明示契約、旧Document互換、外部Projectionの除外を確認するまで採用しない。説明用meta.sourceへ隠しJSONを入れない |
+| **B：Document内のCard ID→Source選択記録** | 同じDocument CASでCardとの関係を維持できる | 新DocumentV1欄の仕様判断、Card削除・改名・複製時の孤児参照、Frontendでの保存往復を解決できなければ不適格 |
+| **C：既存Providerの独立したSource参照記録** | 既に実Source管理能力があるProviderならDocument型を変えずに使える | Card保存とSource参照が別Commit/Receiptになる。部分失敗・ACK不明・孤児・独立ReadとRecoveryを説明できないならR2の最小経路として棄却。新共通CASや中央台帳は作らない |
+
+最低限区別する**設計上の列**は、Document/Card identity、qualified source locator、選択時点のSource revisionとdigest、Selector kind（R2ではUTF-8 half-open byte span）、start/end、選択原bytesのdigest、Card側の解釈・Holdとの分離。**これらはまだ永続化JSON Schemaではない。** Rootの実OS path、Grant Token、CredentialをCardに直接記録しない。Source Locator自体も、現在の開示権限に応じて伏せる。
+
+**採否Gate**：①独立ExpectedのRaw byte位置を人が選ぶ、②既存Documentへ明示If-Matchで保存、③Writer終了後の別Process Product GETで同Card ID・必要な選択情報を読める、④現在許可されたRoot/Scope/GrantとRaw bytesを再照合、⑤不一致ならCard・異論・Holdを保ったまま出典復帰だけ停止、⑥許可外のAgent/SHO/TEI投影からLocatorや隠れたID・件数を開示しない。この**一つの縦断**が通るまでA/B/Cの選択を「実証済み」にしない。Ownerは実験着手時に最小案を選ぶ。
+
+**負例（独立Expectedの重複SSOTは作らない）**：未宣言metaに記録した値がSave/GETで消える、同文2回の先頭へ誤ジャンプ、同内容・別Rootへ自動再束縛、If-MatchなしのLWWを安全な共同編集と主張、存在しないSourceを「抽出0件の正常系」と表示。既存[R2-SRC-01〜08 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)の検査方法として追加する。
+
+### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
+
+全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
+
+| 変化 | 再確認する部分 | 条件付きで保持できる部分 |
+| --- | --- | --- |
+| Raw Source内容/Revision、A→B→A | 原文復帰、引用根拠、Source依存の解釈・同定候補。Digest一致で履歴連続を推定しない | Cardに残った人間の見立て・違和感・保留の履歴。ただし根拠の現在性は別表示 |
+| Card本文・意味・Hold変更 | それに依存した島の説明・共有候補・構造Draft | 独立したRaw Source、無関係のCard、別Canvasの表示 |
+| Canvas位置・Tree表示だけの変更 | 位置依存の説明・当該Viewと選択epoch | 原Raw、Card本文、意味Edge、独立Occurrence |
+| Grant・Disclosure失効 | Rawの新規Read、AI/SHOへの新規送信、派生Index/Cacheの利用資格 | 人間が残したCard記録自体。過去に送出した情報の消去保証はしない |
+| Harness/Skill/Plugin/Consumer版の変更 | 当該Instruction/Toolの実Load、対象情報の開示、実行権限とConsumer受領 | AI OFFの手動KJ・関係ない既存Card・別のProduct |
+
+IG1は**Source・Document・現在Grant**の必要部分だけを検査する。後段IG4では選択epoch、IG5では外部ConsumerやSkillの資格を追加し、**初回R2の追加Blocking条件にはしない**。変更無影響を主張するときは依存するSubject/Source/Scopeを説明し、根拠なしに「問題なし」と判断しない。TEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)、TAI [#271](https://github.com/hat47x/tai-pleroma/issues/271)を参考とし、新Reactive Runtimeや中央Evidence台帳は作らない。
+
 ## 7. 表示選択の再資格化と反応的な再取得（IG4の実証契約）
 
 TEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)のFunction Data Context／選択epoch、[#2500](https://github.com/hat47x/tei-platform/issues/2500)の逆編集資格、[#2497](https://github.com/hat47x/tei-platform/issues/2497)の非単射を、**SUI固有のRead/Preview/Applyの負例**として取り込む。TEI Reactive Runtimeを待たず、SUIの最初の受入は独立したread-only照合。UI selectionを新しい永続SSOTやAction資格にしない。
