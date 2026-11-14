@@ -153,6 +153,8 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 **今回の実在するGETの負例**：[独立Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)で、通常APIを通らずに**未採用のSource Binding候補が既存DB行へ残ったケース**をSQLiteへ投入。Document GETがその欄を黙って除いたHTTP 200を返すのではなく、**秘密Locator非反射のHTTP 422**となることを検証する。同時に、**検証拒否されたGETで`view`監査イベントを作らず、正常に読めたGETでのみ1件記録する**順序へ修正。成功したように見えるDocument ReadやAudit Receiptを出典資格へ誤昇格させない。これは移行・破損データに対する**文書契約の防護**であり、実Source Access Denyを試験したものではない。exact HEADとCIはこの節の後続の更新で照合する。
 
+**既存TEI Referenceの再利用範囲**：SUI側にはすでに`tei_sui_reference.py`の**読み取り専用Artifact投影**があり、`source.status`の`active/revoked/expired/unknown`を区別し、revoked/expiredを内容非返却にし、private/restrictedエンティティのID・数を出さず、unknownをactiveと見なさない。これは**Artifactが宣言する状態と参照投影**の実装であり、現在のHostから任意のRaw資料を取得するSource Reader／Root・Scope・Grant認可ではない。非開示・失効・部分性の**負例設計の参考**には使うが、これをそのままR2のSource権威や新しい共通Storeへ流用しない。TEI Referenceの`ACCEPTED_MEANING=False`と同様に、資料の可読性をOwner意味受理に昇格させない。
+
 **正式受入の最小接続**：Sourceの権威は既存Host/Provider側に置き、Doc readの確認とは独立に`SourceRef + Workspace/Root + 現在Grant + Revision/epoch + 選択byte span`を照合する。Cardへ永続保存する属性集合はA/B/C Owner選定と閲覧Projectionが成立してから確定する。未許可のPrincipalがハッシュ・参照個数・存在の推定をできないこと、権限失効後に既存Cardが残ること、Doc ETag/If-Match競合で他者変更を失わないことを**独立Readと実HTTP**で確認する。EvidenceはSource取得、Document CAS、Consumer受領、人間の意味受理を別票とし、F0〜F5をすべての読取用途に一律の直列Gateとして要求しない。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
