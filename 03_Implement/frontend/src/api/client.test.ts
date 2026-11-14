@@ -1620,6 +1620,9 @@ describe("R2 pre-network Source selection rejection", () => {
     const spy = vi.spyOn(globalThis, "fetch").mockRejectedValue(
       new Error("network must not be touched"),
     );
+    // Other tests can leave prior GET calls on an underlying mocked fetch.
+    // Only calls made during this preflight attempt are evidence of egress.
+    const beforeCalls = spy.mock.calls.length;
     const secret = "private://the-source-locator-must-not-leave-the-browser";
     const selection = { qualifiedSourceRef: secret, startByte: 38, endByte: 57 };
     const base = createDocument();
@@ -1645,7 +1648,7 @@ describe("R2 pre-network Source selection rejection", () => {
         expect(apiError.message).not.toContain(secret);
       }
     }
-    expect(spy).not.toHaveBeenCalled();
+    expect(spy.mock.calls.slice(beforeCalls)).toEqual([]);
   });
 
   it("continues to send an existing free-text Card.meta.source note normally", async () => {
