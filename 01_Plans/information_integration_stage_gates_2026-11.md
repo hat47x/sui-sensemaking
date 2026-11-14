@@ -366,6 +366,53 @@ TEI Studioの[Web/Desktop共通部品方針 #1824](https://github.com/hat47x/tei
 
 本節は**受入の非干渉条件**であり、新Runtime・新Schema・リアルタイム共同編集・実Desktop/外部Consumerを実装したものではない。これら後段の新試験はすべてNOT RUN。
 
+## 11. IG4の鳥瞰・選択・再開を一つの操作契約にする（2026-11-14／後段の設計候補・NOT RUN）
+
+SUIの巨大CanvasやMind Map/Tree/KJ/Graphの切替では、描画の速さだけでなく、**同じ情報へ戻れること、見えていないものを不存在と誤認しないこと、利用者の編集中の判断を失わないこと**を受入対象にする。これは[Hybrid計画 §17](hybrid_outline_canvas_layout_plan.md)のItem/Canvas/Display Occurrence分離、[同計画のDraft #3437](https://github.com/hat47x/sui-sensemaking/pull/3437)の選択・投影候補、本計画§7・§10、[共同Undo #3399](https://github.com/hat47x/sui-sensemaking/issues/3399)を**実際の操作として検証する入口**であり、新しいItem Store、汎用Selection Service、Reactive Runtime、全形式変換Engineを採用するものではない。IG1のSource復帰・IG2の二資料比較を遅らせない。
+
+### 11.1 四つの状態を一つに畳まない
+
+| 対象 | 保持・変更すること | 混同してはいけないこと |
+| --- | --- | --- |
+| **情報と意味** | Item/Source/Relation、Tree・Island・Affiliation・Review、各Revisionと開示範囲 | 描画されないItemを削除済み、非公開を不存在、近接を因果・親子としない |
+| **Viewと表示** | Canvas/Tree/Mind Mapなどの表示方式、各Display Occurrenceの配置、ズーム・表示集約 | 表示座標や集約ラベルを意味正本、別Canvasの同一Itemを独立証拠としない |
+| **作業対象** | Focus、一時Selection、明示的に固定したWork Setの候補、選択の基準版 | 画面内・描画済み要素の集合を、AIへ渡す完全な作業対象や現在のApply資格としない |
+| **編集と再開** | 未保存編集、選択/Viewportの一時状態、明示Save/Undo/Redo、別Processの実Read | 画面移動・非同期Layout完了を保存、Commit、意味受理としない |
+
+特に「同じItemを別Canvasで二つ表示」「同じCanvasで同じItemを二度表示」「同文だが別Source/別Item」の三つを区別する。画面上の選択はDisplay Occurrenceを起点にしても、実操作対象へ移るときはItem/Sourceの識別とScopeを明示的に解決する。一意に解決できなければ候補提示に留める。
+
+### 11.2 ズーム・Fit・分割はまずView操作とする
+
+- **全体Fit、選択範囲Fit、領域Fit、前の視点へ戻る**はViewportの移動を基本とし、Card本文、Tree親子、Island/Group所属、Relation、Review、保持すべき人手配置を変更しない。選択範囲Fitで非表示・権限外の対象を無断追加しない。
+- 鳥瞰では必要に応じてCard本文を点・輪郭・代表ラベルなどへ省略し、拡大で内容を表示する。ただし、**LOD（描画密度）による省略と、検索・選択・出典復帰の可能性を分ける**。元のItem/Occurrenceへの移動経路を失った集約は、単なる見た目の最適化として受理しない。
+- Treeの背景枝、KJの島、意味Edge、Canvas間リンクを異なる表示層として扱う。島を囲む形や重なり、画面上の近接から自動でSemantic Relationを確定しない。非単射の投影から元構造を逆編集する場合はLossと必要な人手判断を示す。
+- 分割・Share・表示削除は[Hybrid §17.4](hybrid_outline_canvas_layout_plan.md)の候補操作に従う。一方のCanvasのOccurrenceを削除してもItem、他ViewのOccurrence、Source、Relationは消えない。明示的なItem削除は別の操作・権限・確認とする。
+
+### 11.3 非同期描画と選択の継続性
+
+Viewを切り替えたり、ズーム・検索・絞り込みが更新されたりしたとき、描画が遅れて届いた旧結果は、**現在のView/Selection/Sourceの世代に照合できた場合だけ**表示へ反映する。A→B→Aのように見た目や同一IDへ戻っただけで旧結果を復権させない。ここでの世代は局所的な無効化のための候補であり、Sourceの現在Grantや永続Revisionを置き換えない。
+
+集約表示から詳細へ移る場合、Focusや明示固定した対象の**意図**と、現在の閲覧・編集資格を分ける。対象が削除・非公開・未取得・部分取得・改版された場合、古い対象へ無条件に書き込まず、元の選択意図を保持したまま現在の資格をunknown/unresolved等として扱う。未保存のCard編集やHold/異論を、View切替・AI整形・後着Layoutによって破棄しない。
+
+集約値・島の件数・検索件数・Canvas Mapの線・「他にもある」表示は、**許可された取得範囲のみに基づく**。公開投影が同一で非公開Itemだけ異なる二世界の差を、件数・空白・重なり・診断文で漏らさないことを検査する。情報をまだ読み切っていない場合は、0件ではなく取得範囲の制限を示す。AI向けContextの完全性は画面LODと独立に検証する。
+
+### 11.4 既存Gateに追加する試験観点と測定
+
+新しいExpected正本やIG1のBlocking Gateは作らず、[情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)・Hybrid HC-01〜17/SI-XC・[共同Undo #3399](https://github.com/hat47x/sui-sensemaking/issues/3399)の既存Ownerで次を評価する。
+
+| 観測する操作 | 独立Expected／失格例 |
+| --- | --- |
+| 同一Itemを二Canvasへ表示し、Aを拡大・移動・表示削除 | Bの配置・本文・Review・Sourceに副作用0。Aの表示消去がItem削除に化けない |
+| 鳥瞰の集約からCardへ辿り、Canvas/Treeを切替え元へ戻る | Item/Occurrence/Sourceの帰属を維持。折り畳みやLODで選択・読取対象の同一性を失わない |
+| 表示更新・検索・非同期Layout中に別の選択／未保存編集を行う | 後着の旧結果が現在Selection・Dirty Buffer・明示固定位置を上書きしない。Undo対象とView操作を混ぜない |
+| 取得範囲がpartial、または隠れたItem/Edgeの数が異なる | 0件・全件・Consensusを誤表示せず、許可されない件数・連結関係・IDを漏らさない |
+| 画面上は同じ同文Card、またはA→B→Aの操作列 | 出典と実Identity、更新世代、現在のRead/Apply資格を再確認し、表示一致を同一性の証拠にしない |
+
+性能は合成**30〜50件→1,000件→10,000件**の順に測り、最初に役立つ表示までの時間、パン/ズームの応答分布（p50/p95）、メモリ、選択から詳細/原文復帰までの時間、集約から再展開した際の情報欠落を区別して記録する。計測環境、取得範囲、描画要素数、AI OFF/ON、現行Baseline、コードHEADを必ず併記する。根拠のない固定SLAや、表示の高速化だけによる正式受入を宣言しない。必要なら描画省略・部分取得・Canvas分割の順に小さく導入し、専用Graph DBや分散Storeを先行要件にしない。
+
+**到達条件**：IG4では、少数Itemの実UIで「鳥瞰→選択→詳細→原文へ戻る」「別Canvasへ移って戻る」「非公開/未取得を誤表示しない」を人手操作とBrowser回帰で実証し、それから規模を増やす。実務価値はADR-0089／[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)のT2で判断する。**この節の新たなUI/E2E・性能測定はNOT RUN**。IG1の正式Raw Source復帰が成立したとの主張ではない。
+
+
 ---
 
 本書は既存Issueに散在する受入の**実施順索引**であり、既存ADR・Hybrid Draft・R2作業票の上書きではない。新たな権限、Schema、共通技術基盤、製品機能の正式採択を意味しない。
