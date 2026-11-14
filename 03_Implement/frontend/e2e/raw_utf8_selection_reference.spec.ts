@@ -236,6 +236,33 @@ test("R2 StartPanel File preview is user-visible, local-only and cleared when co
   });
   await preview.getByTestId("raw-local-confirm-selection").click();
   await expect(preview.getByTestId("raw-local-span")).toContainText("[38, 57)");
+
+  // A later human selection must not keep showing the previous byte span.
+  // The first and second Japanese sentences have the same text, but not
+  // the same Raw UTF-8 offsets. Neither position is a durable Source Pin.
+  await page.evaluate(() => {
+    const textNode = document.querySelector('[data-testid="raw-local-source-text"]')?.firstChild;
+    const selection = window.getSelection();
+    if (!textNode || !selection) throw new Error("missing-second-selection");
+    const range = document.createRange();
+    range.setStart(textNode, 4);
+    range.setEnd(textNode, 11);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await expect(preview.getByTestId("raw-local-span")).toContainText("[11, 30)");
+
+  // Replacing a selected file must clear both the previous selection and
+  // its position. Matching filename or previous digest is not identity.
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "human-chosen-raw.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from(new TextEncoder().encode("別の資料に更新されました。")),
+  });
+  await expect(source).toHaveText("別の資料に更新されました。");
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
   expect(observedWrites).toEqual([]);
 
   await disclosure.locator("summary").click();
