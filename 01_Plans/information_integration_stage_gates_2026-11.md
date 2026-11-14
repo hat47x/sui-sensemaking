@@ -196,6 +196,8 @@ IV-01/02/06/08は[Hybrid計画](hybrid_outline_canvas_layout_plan.md)のSI-XCと
 
 この表は新Receipt ABIや第二Evidence台帳を作るものではない。いずれかの段階が未観測なら、その段階は NOT RUN / unknown / partial のまま報告し、他段階のPASSで補わない。IDや失敗理由を記録する場合も現在のDisclosureを再判定する。SUI→SHOの実受領が狭く成功していても、G5全体の正式な完了とは別である。
 
+**同一AttemptによるConsumer対照（IG5後段）**：TEI [#2586](https://github.com/hat47x/tei-platform/issues/2586)／[計画PR #4619](https://github.com/hat47x/tei-platform/pull/4619)のD1に合わせ、同じSUI出典選択と同じ実Source/Document revisionから生成した**一つの候補Artifact**を、SHO Readerと別の許可されたConsumerへ渡す場合は、Producer実HEAD・選択Source版・候補Raw digest・試行ID・各実Consumer版・実ReadされたScope・Loss・拒否/部分成功を**Consumer別**に観測する。別々の合成Fixtureで得たdigest一致だけを「同一試行で二Consumerが受領」とは呼ばない。片側が未実行なら片側だけNOT RUN。TEIやSHOのConsumer/Writer実行、現在Host Grant、意味受理はそれぞれのOwnerへ戻す。IG1のR2完成を、この二Consumer試験でブロックしない。
+
 ### 8.1 外部Skill/Harnessの三つの独立閉包（IG5の後段・任意）
 
 YIC/TAIの[Skill適合 #488](https://github.com/hat47x/tai-pleroma/issues/488)と[Activity選択的再資格 #271](https://github.com/hat47x/tai-pleroma/issues/271)の成熟した境界を、SUI [外部Skill #3368](https://github.com/hat47x/sui-sensemaking/issues/3368)の**開示・受領判定**に限定して参照する。SUI内の独自Agent Loop、常時TAI Skill Load、第二のResolver/Hostは作らない。Product API単独／Tool-only／Product Skill／任意TAI Skillは別の選択肢として評価する。
