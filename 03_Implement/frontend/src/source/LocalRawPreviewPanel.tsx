@@ -123,3 +123,27 @@ export function LocalRawPreviewPanel() {
     </section>
   );
 }
+
+
+/**
+ * Collapsing the disclosure unmounts the preview (and discards its File data).
+ * The enclosing StartPanel also unmounts it when the Start panel closes.
+ */
+export function LocalRawPreviewDisclosure() {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      data-testid="raw-local-preview-disclosure"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      style={{
+        display: "grid", gap: 8, borderTop: "1px solid #e2e8f0",
+        paddingTop: 10, minWidth: 0,
+      }}
+    >
+      <summary style={{ fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#334155" }}>
+        {t("raw_preview.title")}
+      </summary>
+      {open ? <LocalRawPreviewPanel /> : null}
+    </details>
+  );
+}
