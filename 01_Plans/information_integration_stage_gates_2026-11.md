@@ -178,33 +178,23 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 IG1は**Source・Document・現在Grant**の必要部分だけを検査する。後段IG4では選択epoch、IG5では外部ConsumerやSkillの資格を追加し、**初回R2の追加Blocking条件にはしない**。変更無影響を主張するときは依存するSubject/Source/Scopeを説明し、根拠なしに「問題なし」と判断しない。TEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)、TAI [#271](https://github.com/hat47x/tai-pleroma/issues/271)を参考とし、新Reactive Runtimeや中央Evidence台帳は作らない。
 
 
-### 6.4 ブラウザ選択から元Raw byte範囲への橋（F1/F4の実証条件）
+### 6.4 ブラウザで選んだ文字列を、元のRawバイト位置へ結び付ける（F1/F4）
 
-[実装担当 #3441のUTF-16/UTF-8 Fit/Gap追補](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6869843018)を、実際のUIとReaderの**未接続部分**として取り込む。R1 Referenceは厳密な元Raw UTF-8 byte [start,end)を読み、BrowserはDOM Text node/Rangeの位置やJS UTF-16 code unit位置から選択を得る。この両者を**文字数・substring検索・表示コピー文字列だけで対応付けない**。Web標準の参考：[DOM Range](https://developer.mozilla.org/en-US/docs/Web/API/AbstractRange/startOffset)／[TextEncoderのread（UTF-16）とwritten（UTF-8）](https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder/encodeInto)／[TextDecoder BOM](https://developer.mozilla.org/en-US/docs/Web/API/TextDecoder/TextDecoder)。
+**目的**：利用者が原文から選んだ箇所を、表示上の文字位置ではなく、保存された元Rawの**UTF-8バイト範囲 `[start,end)`**として正確に特定する。画面のコピー文字列や部分文字列検索から位置を逆算しない。表示上の位置を特定できたことと、Sourceの現在の閲覧資格、Cardへの保存、後日の再到達は別々に検証する。[R2実装担当 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)が受入の正本。
 
-**手順と非依存条件**：
-1. **F0/F1**：現在許可済みのRaw Source bytesから、元byteの範囲に対応付いた表示用Text Runを生成。BrowserのDOM選択両端をその対応表へ解決する。行番号・装飾・自動折り返しはRawの選択対象にしない。BOM・CRLF/LF/CR・Unicode正規化・HTML描画による相違を暗黙に取り除かない。
-2. **選択境界**：DOMの非Sourceノード、UTF-16 surrogate pairの内部、複数Runで連続Raw範囲を確定できない場合は、byte offsetを推測して保存せず未資格とする。選択範囲が同じ文字列の2箇所目であれば2箇所目の位置を保持する。
-3. **F2**：Ownerが承認したSource選択の保存方式（§6.2案A/B/C）だけで、同Card IDに出典候補のbyte [start,end)と選択時Source版を保持。ブラウザで選択文字列を見たこと自体はRoot/Grantや出典継続性の証拠にならない。
-4. **F3/F4**：Writer終了→別Process Product GET→現在Root/Scope/Grantで同Sourceの実byte範囲を再読し、原文の同じOccurrenceへ戻る。表示上の選択→Card保存→Reader再開を実Browserで操作し、R1の局所CLI試験と別に観測する。現在Sourceと一致しない場合もCard本文/異論/保留は消さない。
+**対応付けの条件**：元Rawから、各文字のUTF-16境界とUTF-8バイト境界の対応を保ったText Runを表示する。DOMのSelection/Rangeが、そのText Runのどこを選んだかを特定してからバイト位置を求める。BOM、CRLF/LF/CR、絵文字、同じ文字列の繰り返しを考慮し、表示用の折返しや装飾ノードを原文の一部と混同しない。選択が複数Runにまたがる場合、DOMが原文を正規化した場合、サロゲートペアの内部を選択境界にした場合は、位置を推定せず拒否する。参考： [DOM Range](https://developer.mozilla.org/en-US/docs/Web/API/AbstractRange/startOffset)／[TextEncoder](https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder/encodeInto)／[TextDecoder](https://developer.mozilla.org/en-US/docs/Web/API/TextDecoder/TextDecoder)。
 
-**固定の最小独立Expected（既存R2-SRC-01/02/05に紐付け、新規試験正本は作らない）**：
+**独立した期待値（R2-SRC-01/02/05を再利用）**：原文は `BOM(ef bb bf) + UTF-8("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊")` の**57バイト**。同じ「同じ言葉。🌊」でも、前半はUTF-16位置`[4,11)`・元Rawバイト`[11,30)`、後半はUTF-16位置`[15,22)`・元Rawバイト`[38,57)`。BOMは画面に表示しないが、元Rawの先頭3バイトとして残す。位置が分からないとき、ファイルが空のとき、元Sourceが欠落・改版・権限失効したときの結果を、いずれも「正常な0件」にまとめない。
 
-- Raw byteを `BOM(ef bb bf) + UTF-8("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊")` とする。原byte長は**57**。検索文字列のUTF-8 byte長は**19**。表示ではBOMを除くが元Sourceに3 byteある事実は残す。
-- 最初の「同じ言葉。🌊」は byte `[11,30)`、**2箇所目**はbyte `[38,57)`。BOMを表示しないText Runで、先頭からのUTF-16 code unit位置は最初 `[4,11)`、2箇所目 `[15,22)`（改行コードを元の2単位CRLFと1単位LF/CRとして保持する場合の期待）。この表示条件自体を変えるRendererでは、表示/元byteの対応表を変更して同じ元byte位置へ導くこと。
-- この対応が取れないRenderer・Readerは「正確な原文範囲に戻れた」と申告しない。surrogate内部を境界とする選択、未知DOM Text Run、元Raw改版、同path別Rootは拒否/再照合。Sourceが無いこと、空選択、選択未取得、権限拒否を「正常に0件」とまとめない。
+**2026-11-14時点の実装と実証**：[Draft #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)では、元RawバイトとDOMの単一Text node選択との対応を実装し、選択時Raw全体・選択範囲のSHA-256を、同一Snapshotから計算する。非同期計算中に入力バイト列や選択記述子が変更されても、異なる時点の値を混ぜない。チェックポイントの比較結果は`content-match-only`または`stale-content`に限り、内容一致をSourceの同一性・現在Grant・A→B→Aの履歴連続性へ昇格させない。
 
-**実装済みReferenceの証拠（#3443、製品とは区別）**：[Draft PR #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)に、UTF-16↔UTF-8の元byte位置対応・単一DOM Text nodeのSelection・BOM/改行/絵文字/同文二箇所・Raw/選択byteのSHA-256内容Checkpointを実装。非同期WebCrypto開始時にRaw bytesと選択/比較記述子を独立snapshotに固定する。同byte別RootやA→B→Aでは、結果はあくまで`content-match-only`であり現在Root/Scope/Grantの証明ではない。初回HEAD `08a4aa58`の[CI #43545589557](https://github.com/hat47x/sui-sensemaking/actions/runs/43545589557)、DOM検証HEAD `dd11826e`の[CI #43548333212](https://github.com/hat47x/sui-sensemaking/actions/runs/43548333212)、Checkpoint HEAD `7665442c`の[CI #43549516493](https://github.com/hat47x/sui-sensemaking/actions/runs/43549516493)はそれぞれ**completed/success**。最後のHEADで対象Vitest **11件PASS**、代表E2E **11件PASS**（うちDOM新2件）、Frontend型検査/build、Backend契約ジョブ成功を実ログで確認。
+そのうえで、既存SUIのStartPanelに**「原文の一時確認（保存しません）」**を追加した。利用者が選んだ1 MiB以下のUTF-8ファイルを実File APIで読み、元BOM/改行を保持したまま表示して、選択した範囲のバイト位置を確認できる。空ファイル・容量超過・不正UTF-8を拒否し、パネルを閉じるとReact上の一時状態を破棄する。文書の通常読込とは別の機能であり、CardやDocumentにSource Bindingを保存したり、AIや外部Providerへ送ったりはしない。**原ファイルの削除、ブラウザメモリの完全消去、すべての通信経路での送出禁止まで保証したものではない**。
 
-**F1.5の限定File API入口（最新Draft）**：同PRに`readLocalRawFilePreview(File)`を追加。ブラウザで明示的に選択したFileの実byteをFile APIから読み、**元BOM/EOLを保った単一Text node→DOM選択→[start,end)→内容Checkpoint**へ受け渡す。1 MiBを上限とし、空/過大/不正UTF-8を拒否。戻り値を明示的に`unqualified-local-file-preview`とする。ファイル名、MIME、最終更新時刻、同digestをSource Identityや継続的再読取権限に昇格させず、Rawの保存・外部送信・Card書込みはしない。合成Fileを実Browserの`input[type=file]`へ与えるPlaywright 1件とVitest 2件を新設したが、**人間のOSファイル選択・SUI製品Readerへの組込みを実証するものではない**。最新コードHEAD `be8f210b76e64608e555966c0feb2ad665ca6033`の[CI #43553871864](https://github.com/hat47x/sui-sensemaking/actions/runs/43553871864)は確認時queued。**13件Vitest／新E2Eを含む12件のexact HEAD PASSは未判定**。古いHEADのPASSを最新へ転記しない。
+最新コードHEAD `3b27d865ace0d6b73c6a7d51f0fd142776a883a0`の[CI #43583154802](https://github.com/hat47x/sui-sensemaking/actions/runs/43583154802)は**completed/success**。実StartPanelを操作するChromium代表E2Eは**13件PASS**、Frontend単体は**1,954件PASS**（4件skip）、型検査・ビルド・Backend契約ジョブも成功。合成FileをPlaywrightで入力した試験であり、人間によるOSファイルダイアログ操作や、実Hostの永続的Source Reader接続は含まない。選択後の位置の鮮度とPinの区別は次の§6.4.1で扱う。
 
-**F1.5実UIに到達した範囲（Draft #3443・正式Source資格なし）**：前項の一時File Readerを、既存SUI `StartPanel`の展開時にのみ現れる「原文の一時確認」に接続した。**明示File入力→元RawのText表示→利用者選択のDOM Range→UTF-8 byte [start,end)と内容Checkpoint**を、DocumentV1に書かないまま画面で確認できる。Previewは1MiB以下・UTF-8厳密で、表示は単一Text nodeに限定。折りたたみを閉じる、またはStartPanelを閉じるとComponentをunmountし、Fileのraw bufferと選択情報のReact stateを破棄する。日本語／英語の説明を加え、既存の「文書ファイル読込」と明確に分離。JavaScriptのData保持・開示停止はこの画面の局所状態であり、OS上の元File消去、Browserメモリーの完全消去、全Network Sink非送信の保証と呼ばない。
+**製品として次に必要なこと**：現在許可されたSourceから実Readerが取得したバイト列を、そのSourceのRevision・Root/Scope/Grantとともに表示へ接続する。Ownerが§6.2のA/B/Cから正式な保存方式を選んだ後、Cardに出典候補を保存し、Documentの条件付きSave、Writer終了、別プロセスのGET、現在のSource権限による再読取を一続きで検証する。戻れない場合もCard本文・保留・異論は保持する。**PDF座標、音声Selector、複数形式のReader、共通Source RegistryはIG1の前提へ加えない**。
 
-**F1.5の新しい独立Expected**：実ChromiumでStartPanelを展開→原文プレビューを開く→合成`File`を指定→日本語同文の2箇所目を手動Selectionと同じDOM APIで選ぶ→`[38,57)`が表示される→非GET/HEADのRequestが増えないことをその試行で観測→折りたたんだらRaw表示と選択状態が消える。StartPanelの日本語／英語・compact時にプレビューが現れないことも回帰対象。**合成Fileの`setInputFiles`は人間によるOSファイルダイアログ操作の実証ではなく、正式R2-SRC-01のProduct Source→Save→再開とは異なる**。最新コードHEAD `6eed48ba123c606b7fbdf696f56e73ae8af2baad` の[CI #43557030239](https://github.com/hat47x/sui-sensemaking/actions/runs/43557030239)は**completed/success**。frontend-e2eの実ログにStartPanelの一時原文プレビュー試験があり、代表Chromium **13件PASS**。frontend-unitでは従来Byte/Checkpoint **11件**、File API **2件**、StartPanelの和英/compact **5件**の各スイートPASS、型検査/build、backend-contractジョブもsuccess。前HEADのcancelledは現在HEADの成功とは別記録する。UIの表示文言は「選択byte範囲のSHA-256を採取した」と表記し、別Processでの原文再読取による内容一致確認とは区別する。
-
-**次のProduct接合（F1.5）**：実Readerが現在許可Sourceから表示するText nodeと元Raw byteを関連づけ、ユーザーのDOM SelectionをAdapterで解決して**byte [start,end)・選択Raw bytesの実比較**を行う。ただし、Source選択履歴を保存するCard/Document型は§6.2のOwner決定を要する。SUI Reader画面の実人手操作、実Host Root/Grant、Document Save/別Process Product GET、A→B→Aの現在性は、この限定Adapterと合成pre/Chromiumの成功からは一切証明されない。
-
-**停止線**：R2のReaderと最小Browser操作を次に実証し、PDF座標・音声時刻・多形式Selectorや共有Editorを先行導入しない。限定Reference成功は**R2-SRC-01/02/05の一部のみ**であり、R2 Product E2E／Owner意味受理／外部Consumer受領は**NOT RUN**。
+**受入の上限**：ここまでの合格は**一時Rawプレビューと原文byte位置対応の限定Reference**であり、正式なR2-SRC-01〜08全件、Product Reader/Source認可、Document保存→別プロセス復帰、外部Consumer受領、Ownerによる意味受理は**NOT RUN**。
 
 ### 6.4.1 一時選択の鮮度と、将来のPin意図を分ける（2026-11-14）
 
