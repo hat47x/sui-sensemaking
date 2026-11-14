@@ -48,6 +48,10 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 | **IG2（R2の後）** | 2つの独立Raw資料でCard間の関係候補・矛盾・保留を残し、個別Sourceへ復帰。同文別出典・別Root・改版・SafeMode・409/ACK不明を検査 | [情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)のIB-01〜06 |
 | **IG3以降（需要で選択）** | 構造化CSV/時系列、Tree/複数Canvasの独立Occurrence、表示横断、SHO文章化・TEI型付き投影へ段階拡張。Graphの向き/多重性・Loss/未解決・Source scope・読取/書込資格を別検証。PERT/Task同期や中央Query/Storeは必須にしない | [情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)、[Hybrid計画](01_Plans/hybrid_outline_canvas_layout_plan.md)、[SUI→SHO #3391](https://github.com/hat47x/sui-sensemaking/issues/3391) |
 
+**後段の横断受入**：IG4では選択のWindow/epochと現在のSource/Document Revision・Disclosureを照合し、遅延応答の誤反映、同一Itemの別Canvas表示の相互汚染、非単射Projectionの自動逆Patchを拒否する。IG3では部分取得の集計・NOT EXISTS/Top-N等を現在の確定事実へ昇格しない。検査は[段階的受入計画 §7](01_Plans/information_integration_stage_gates_2026-11.md)とTEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)・[#4351](https://github.com/hat47x/tei-platform/issues/4351)の既存参照基準を使う。**SUIに新Runtime/Schemaを追加する計画ではない。**
+
+**Handoffの現在地**：[merged #3433](https://github.com/hat47x/sui-sensemaking/pull/3433)でStructure Draft／損失付きOutline候補とSHO Runnerとの限定往復を確認済み。ただし正式SHO Writer、実Harness/Agent接続、全Sourceへ戻れること、外部Effectを主張しない。IG5では[計画 §8](01_Plans/information_integration_stage_gates_2026-11.md)に従いProducer、Transport、Consumer、Writer、Owner受理を別々に観測する。外部開示経路の既存認可・SafeMode課題は[計画 §9](01_Plans/information_integration_stage_gates_2026-11.md)から参照し、IG1ローカルAI OFFの前提には増やさない。
+
 **統合時の非干渉**：同一ItemのA/B Canvas表示で座標・島・Tree・意味Edgeは独立。Reader/KJ/Tree等の表示選択は現在Scope/版/Disclosureで再解決し、Projectionが同一でも元Sourceや逆Writeの同一性を推測しない。AI提案のApplyはreadSet/writeSetと現在Revisionを照合し、他者のHold・異論・Reviewを上書きしない。SUI→SHO Draft、TEI Canonical候補、Agent Proposal、正式Meaning受理、実Effectはそれぞれ別の受入段階。
 
 ## 検討候補：アウトライン／マインドマップとKJキャンバスの連携
