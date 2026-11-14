@@ -337,7 +337,7 @@ R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進める
 
 F0-Sの実装判断を、保存・別Process再読の**実証できた部分だけ**で前へ進める。マージ前の[Draft #3449](https://github.com/hat47x/sui-sensemaking/pull/3449)で既存`NasContentStore`のUTF-8内容復元と同`content_id`上書きを実テストへ移し、**exact HEAD `1b32195944bd6cf02ee86f071c152b4a3b6877b5`のUnit CI #43640647344はcompleted/success、backend-contract 340件PASS**を確認。これは現行Storeの挙動の検証であり、不変性PASSではない。
 
-この不足に対する局所Referenceとして[Draft #3450](https://github.com/hat47x/sui-sensemaking/pull/3450)は、信頼されたローカルRoot上で、1MiB以下の妥当なUTF-8 Rawを一回の`tenant/capture`単位で上書きせず保存する方式を試す。tmpファイルのflush/fsync後に`os.link`で非置換公開することで、**同じcaptureに違うbytesを再保存する要求をConflict**とし、同じbytesの再試行を`already-present`として独立照合できるか検証する。元byte/BOM/EOLと二番目の同文、別Capture同byte、改ざん・不正入力・別Python Processの読取をテストへ固定する。CI成功前に正式PASSへ昇格しない。
+この不足に対する局所Referenceとして[Draft #3450](https://github.com/hat47x/sui-sensemaking/pull/3450)は、信頼されたローカルRoot上で、1MiB以下の妥当なUTF-8 Rawを一回の`tenant/capture`単位で上書きせず保存する方式を試す。tmpファイルのflush/fsync後に`os.link`で非置換公開することで、**同じcaptureに違うbytesを再保存する要求をConflict**とし、同じbytesの再試行を`already-present`として独立照合できるか検証する。元byte/BOM/EOLと二番目の同文、別Capture同byte、改ざん・不正入力・別Python Processの読取をテストへ固定する。[exact HEAD `312b28a2ad7f4aa29fc5b15462a5de3bf65a7c5d`のUnit CI #43644075515](https://github.com/hat47x/sui-sensemaking/actions/runs/43644075515)はcompleted/success。backend-contract 342件PASS（今回のReference 4試験を含む）、Frontend単体/E2E jobもsuccessを確認。これは**信頼されたローカルRootでの限定ReferenceのPASS**であり、正式Snapshot Provider・Host Grant・Card結合の製品PASSへ昇格しない。
 
 | 軸 | 今回のReferenceで反証すること | 正式R2で未受理のまま残すもの |
 | --- | --- | --- |
