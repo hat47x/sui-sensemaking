@@ -49,6 +49,20 @@ describe("StartPanel", () => {
     expect(html).toContain("セーフモード: ON");
   });
 
+  it("offers a temporary Raw preview only when expanded", () => {
+    setActiveLocale("ja");
+    const expanded = renderToStaticMarkup(React.createElement(StartPanel, buildProps()));
+    expect(expanded).toContain("原文の一時確認（保存しません）");
+    expect(expanded).toContain('data-testid="raw-local-preview-disclosure"');
+
+    const compact = renderToStaticMarkup(React.createElement(StartPanel, buildProps({
+      expanded: false,
+      onExpandedChange: vi.fn(),
+    })));
+    expect(compact).not.toContain("原文の一時確認");
+    expect(compact).not.toContain('data-testid="raw-local-preview-disclosure"');
+  });
+
   it("uses English copy when the locale is English", () => {
     setActiveLocale("en");
 
