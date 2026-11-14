@@ -113,6 +113,26 @@ describe("R2 content-only checkpoints (never Source authority)", () => {
     expect(await comparison).toBe("content-match-only");
   });
 
+  it("snapshots mutable span and checkpoint descriptors before async digests", async () => {
+    const projection = projectRawUtf8Bytes(rawBytes);
+    const selected = { ...resolveSingleTextRunSelection(projection, projection.text, 15, 22) };
+    const promise = captureRawContentCheckpoint(rawBytes, selected);
+    selected.startByte = 11; // caller races the async digest
+    selected.endByte = 30;
+    selected.selectedText = "another sentence";
+    const checkpoint = await promise;
+    expect([checkpoint.startByte, checkpoint.endByte]).toEqual([38, 57]);
+    expect(checkpoint.selectedSha256)
+      .toBe("6b39ef0ed8a5f5771807dc348b88b79fc716b3ec6cdf541b24fbd6f4b0f53df7");
+
+    const mutableCheckpoint = { ...checkpoint };
+    const comparison = compareRawContentCheckpoint(rawBytes, mutableCheckpoint);
+    mutableCheckpoint.rawSha256 = "not-the-original-hash";
+    mutableCheckpoint.startByte = 11;
+    mutableCheckpoint.endByte = 30;
+    expect(await comparison).toBe("content-match-only");
+  });
+
   it("rejects forged bounds and a selected text inconsistent with supplied Raw bytes", async () => {
     const selected = resolveSingleTextRunSelection(
       projectRawUtf8Bytes(rawBytes), rawText, 15, 22,
