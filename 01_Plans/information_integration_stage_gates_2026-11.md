@@ -151,7 +151,13 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 | AgentのDocument閲覧が許可 | Sourceは拒否／不明 | 人間がレビュー済みの本文だけをAgent投影し、出典欄・未レビューID・ETagを出さない | Agent allowlist単体検査のみ。**Agent HTTP×Source権限：NOT RUN** |
 | Documentが許可 | 同じ内容・別Root／A→B→A | 内容一致だけで現在Grantや同一出典・履歴連続性と判定しない | **内容CheckpointのReferenceのみPASS** |
 
-**今回の実在するGETの負例**：[独立Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)で、通常APIを通らずに**未採用のSource Binding候補が既存DB行へ残ったケース**をSQLiteへ投入。Document GETがその欄を黙って除いたHTTP 200を返すのではなく、**秘密Locator非反射のHTTP 422**となることを検証する。同時に、**検証拒否されたGETで`view`監査イベントを作らず、正常に読めたGETでのみ1件記録する**順序へ修正。成功したように見えるDocument ReadやAudit Receiptを出典資格へ誤昇格させない。これは移行・破損データに対する**文書契約の防護**であり、実Source Access Denyを試験したものではない。exact HEADとCIはこの節の後続の更新で照合する。
+**実Document GETの二段階拒否（#3444・Revision検査を優先）**：現行`GET /docs/{id}`は、まず`DatabaseDocumentContentStore.load`で保存済みDocument投影とRevision Headの内容一致を検証し、その後にDocumentV1/予約Source項目を検証して、正常な応答を返せる場合だけ`view`監査を記録する。従って、**DB行`payload_json`だけに未採用Source欄を手動混入させると、Revisionとの不整合が先に検出され、HTTP 503となる**。この503を「Source契約422の失敗」や「Source閲覧権限拒否」と読み替えない。
+
+2026-11-14に[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)のHEAD `88dd09f5b24817cec3f1f574e94a74ddc5d5142b`で[単体CI #43572911307](https://github.com/hat47x/sui-sensemaking/actions/runs/43572911307)が失敗した原因は、**Raw DB行だけを改変したテストが422を期待したこと**。これは既存Content-addressed Revisionの検査が働いた事実であり、保全機能を外してテストを通してはならない。
+
+**修正した独立Expected**：①内部StoreによってDocument投影とRevision Head/Blobを**整合させた上で**予約Source欄を持つ保存済みDocumentを合成し、HTTP GETが**秘密Locator非反射の422**・`view`監査0件となること、②正常なRevision-backed DocumentのDB投影**だけ**を改変した場合は、**Revision不整合による503**・秘密非反射・`view`監査0件となること、③整合性とSchemaの両方が正常なGETのみ200・`view`監査1件となることを別々に検証する。修正HEAD `a572dd89885a138ebc308fa7bc299715b554ea87`の[CI #43579792062](https://github.com/hat47x/sui-sensemaking/actions/runs/43579792062)は更新時に確認中であり、**成功の確定はexact HEADログで別判定**する。
+
+この検査の受入上限は**Document保存Revision・契約・監査の整合**であって、Source Providerの現在Root/Scope/Grant、元Rawの閲覧拒否、Card保存後の別Process原文復帰を実証したものではない。Document ETag、Content Digest、元Source Revision、Host Grant、Meaning Acceptance、Consumer受領を一つの`verified`や単一Receiptにまとめない。
 
 **既存TEI Referenceの再利用範囲**：SUI側にはすでに`tei_sui_reference.py`の**読み取り専用Artifact投影**があり、`source.status`の`active/revoked/expired/unknown`を区別し、revoked/expiredを内容非返却にし、private/restrictedエンティティのID・数を出さず、unknownをactiveと見なさない。これは**Artifactが宣言する状態と参照投影**の実装であり、現在のHostから任意のRaw資料を取得するSource Reader／Root・Scope・Grant認可ではない。非開示・失効・部分性の**負例設計の参考**には使うが、これをそのままR2のSource権威や新しい共通Storeへ流用しない。TEI Referenceの`ACCEPTED_MEANING=False`と同様に、資料の可読性をOwner意味受理に昇格させない。
 
