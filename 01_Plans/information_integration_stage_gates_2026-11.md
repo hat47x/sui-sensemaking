@@ -137,6 +137,8 @@ IG1は**Source・Document・現在Grant**の必要部分だけを検査する。
 - 最初の「同じ言葉。🌊」は byte `[11,30)`、**2箇所目**はbyte `[38,57)`。BOMを表示しないText Runで、先頭からのUTF-16 code unit位置は最初 `[4,11)`、2箇所目 `[15,22)`（改行コードを元の2単位CRLFと1単位LF/CRとして保持する場合の期待）。この表示条件自体を変えるRendererでは、表示/元byteの対応表を変更して同じ元byte位置へ導くこと。
 - この対応が取れないRenderer・Readerは「正確な原文範囲に戻れた」と申告しない。surrogate内部を境界とする選択、未知DOM Text Run、元Raw改版、同path別Rootは拒否/再照合。Sourceが無いこと、空選択、選択未取得、権限拒否を「正常に0件」とまとめない。
 
+**限定Referenceの実コード（Draft #3443）**：[実装PR #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)に、上記のBOM/CRLF/LF/CR・同文二箇所・🌊の固定Expectedを用いる**純粋TypeScript UTF-16→Raw UTF-8 byte位置対応**とVitest 6ケースを追加。ローカルの単一TSファイルstrict型検査とNode 22による主要AssertはPASS。GitHubのPR exact HEAD CI（[Unit run #43545589557](https://github.com/hat47x/sui-sensemaking/actions/runs/43545589557)）は初回確認時queuedで、Vitest/全Typecheckの実結果は未確定。このReferenceは1つの忠実な表示Text Runのみを扱い、実DOM Range・複数Textノード・Current Root/Grant・DocumentV1の型付きSource保存・実Product Save→別Process GETへ接続していない。**限定Reference PASSをR2-SRC-01/02/05全体やIG1製品合格へ昇格しない**。Owner引渡しは[担当#3441の追補](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6870088873)を使う。
+
 **停止線**：ここで必要なのはR2のReaderと最小Browser操作だけであり、一般的なText Mapping Engine、PDF座標・音声時刻・他形式の完全Selector、TEI/SHO共通Editorを先に作らない。最小Fixtureの位置は設計上の独立Expectedとして記録したのみで、**Frontend実装・実Browser試験はNOT RUN**。
 
 ## 7. 表示選択の再資格化と反応的な再取得（IG4の実証契約）
