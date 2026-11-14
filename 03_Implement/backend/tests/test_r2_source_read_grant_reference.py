@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 from hashlib import sha256
 
 import pytest
@@ -19,6 +20,7 @@ from sui_sensemaking_api.access_control import (
     AuthContext,
     NoopAccessControlAdapter,
     resolve_access_decision,
+    _serialize_external_policy_request,
 )
 from sui_sensemaking_api.tenant_context import TenantContext
 
@@ -187,3 +189,30 @@ def test_invalid_capture_or_identity_rejected_before_binding_lookup() -> None:
               principal=AuthContext(actor_ref="actor-a", provider=None))
     assert resolver.calls == 0
     assert not policy.seen and reader.calls == 0
+
+
+def test_existing_external_policy_transport_distinguishes_source_kind() -> None:
+    """Transport can send kind; whether the real PDP enforces it is unproved."""
+    policy = KindAwarePolicy(allow_source=True)
+    assert _read(policy=policy) == RAW
+    source_request = policy.seen[0]
+    source_wire = json.loads(_serialize_external_policy_request(
+        source_request, auth_source=PRINCIPAL, subject_key="subject",
+    ))
+    document_wire = json.loads(_serialize_external_policy_request(
+        AccessRequest(
+            action="read", auth=PRINCIPAL, tenant=TENANT,
+            resource=AccessResource(
+                doc_id="document-a", kind="document",
+                tenant_id="tenant-a", visibility="Restricted",
+                policy_ref="document-policy",
+            ),
+        ),
+        auth_source=PRINCIPAL, subject_key="subject",
+    ))
+    assert source_wire["resource"]["kind"] == "source_snapshot"
+    assert source_wire["resource"]["tenantId"] == "tenant-a"
+    assert source_wire["resource"]["policyRef"] == "source-policy"
+    assert document_wire["resource"]["kind"] == "document"
+    assert document_wire["resource"]["policyRef"] == "document-policy"
+    assert source_wire["resource"] != document_wire["resource"]
