@@ -99,25 +99,42 @@ export function LocalRawPreviewPanel() {
     setError(null);
     setSpan(null);
     setBusy(true);
+    // A final offset comparison alone misses an observed A -> B -> A
+    // selection change during asynchronous hashing. Track intervening
+    // changes for this one attempt; do not promote a stale confirmation.
+    let selectionChangedWhileHashing = false;
+    let removeSelectionListener: (() => void) | null = null;
     try {
       const selected = resolveSingleDomTextNodeSelection(
         preview.projection, root, window.getSelection(),
       );
+      const observeSelectionChange = () => {
+        try {
+          const current = resolveSingleDomTextNodeSelection(
+            preview.projection, root, window.getSelection(),
+          );
+          if (current.startByte !== selected.startByte || current.endByte !== selected.endByte) {
+            selectionChangedWhileHashing = true;
+          }
+        } catch {
+          selectionChangedWhileHashing = true;
+        }
+      };
+      document.addEventListener("selectionchange", observeSelectionChange);
+      removeSelectionListener = () =>
+        document.removeEventListener("selectionchange", observeSelectionChange);
       // Compute the same in-memory byte checkpoint; do not persist/egress.
       await captureRawContentCheckpoint(preview.rawBytes, selected);
       if (requestId.current !== id) return;
-      // The user may have changed the selection during async WebCrypto. The
-      // hash still describes its original snapshot, not the current focus.
-      const current = resolveSingleDomTextNodeSelection(
-        preview.projection, root, window.getSelection(),
-      );
-      if (current.startByte !== selected.startByte || current.endByte !== selected.endByte) {
+      observeSelectionChange();
+      if (selectionChangedWhileHashing) {
         throw new Error("selection-changed-during-checkpoint");
       }
       setSpan(selected);
     } catch {
       if (requestId.current === id) setError("selection");
     } finally {
+      removeSelectionListener?.();
       if (requestId.current === id) setBusy(false);
     }
   };
