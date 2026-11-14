@@ -1959,5 +1959,15 @@
   "epistemic.detail.current_state_label": "Current reading",
   "epistemic.detail.actions_reusable": "{count} actions opened from this detail can be reused",
   "epistemic.detail.actions_blocked": "Actions opened from this detail are not reusable. Refresh the projection and check again.",
-  "epistemic.detail.data_only_note": "This detail is displayed as reference data only. It grants neither approval of readings nor operation authority."
+  "epistemic.detail.data_only_note": "This detail is displayed as reference data only. It grants neither approval of readings nor operation authority.",
+  "raw_preview.title": "Temporary Raw preview (not saved)",
+  "raw_preview.hint": "Inspect your selected text in this panel only. No Card is created, nothing is saved to a server, and nothing is sent to AI. Continued access to the original Source is unverified.",
+  "raw_preview.file_label": "UTF-8 text file (1 MiB max)",
+  "raw_preview.invalid_file": "Unable to read this file. Choose a nonempty UTF-8 text file of at most 1 MiB.",
+  "raw_preview.unqualified": "Temporary preview only. This is not a registered Source.",
+  "raw_preview.source_text": "Raw text (select a range to inspect)",
+  "raw_preview.check_selection": "Verify selected byte range",
+  "raw_preview.invalid_selection": "Cannot resolve this selection to original bytes. Select a contiguous range in the displayed Raw text.",
+  "raw_preview.span": "Original byte range: [{start}, {end}) (exclusive end). Content-only check; Source identity and permissions are unverified.",
+  "raw_preview.clear": "Discard temporary data"
 }
