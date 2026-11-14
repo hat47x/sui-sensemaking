@@ -121,7 +121,57 @@ def _raise_a1_validation_error(*, code: str, contract_id: str, message: str) -> 
     raise HTTPException(status_code=422, detail=payload.model_dump(mode="json"))
 
 
+# R2-SRC-STORE-PREFLIGHT: DocumentV1 cannot yet persist a typed Source
+# selection or guarantee the current Host's Root/Scope/Grant. Pydantic's
+# default extra="ignore" would silently erase a field submitted ahead of the
+# agreed A/B/C contract. Reject the currently proposed field names before
+# validation; do not turn a stale candidate into apparent saved provenance.
+#
+# This is deliberately narrow, not a general unknown-field policy. Other
+# forward-compatible DocumentV1 keys keep their existing behavior.
+_UNACCEPTED_CARD_SOURCE_KEYS = frozenset(
+    {"sourceBinding", "sourceBindings", "sourceSelection", "sourceSelections"}
+)
+_UNACCEPTED_DOCUMENT_SOURCE_KEYS = frozenset(
+    {"sourceBindings", "sourceSelections"}
+)
+
+
+def _reject_unaccepted_source_binding_fields(document_payload: object) -> None:
+    if not isinstance(document_payload, dict):
+        return
+    if _UNACCEPTED_DOCUMENT_SOURCE_KEYS.intersection(document_payload):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "source_binding_contract_unavailable",
+                "message": "Typed Source selection is not supported by this DocumentV1 contract.",
+            },
+        )
+
+    cards = document_payload.get("cards")
+    if not isinstance(cards, list):
+        return
+    for card in cards:
+        if not isinstance(card, dict):
+            continue
+        meta = card.get("meta")
+        if _UNACCEPTED_CARD_SOURCE_KEYS.intersection(card) or (
+            isinstance(meta, dict)
+            and _UNACCEPTED_CARD_SOURCE_KEYS.intersection(meta)
+        ):
+            # Do not echo IDs, locators, Raw text, digests, or indices.
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "source_binding_contract_unavailable",
+                    "message": "Typed Source selection is not supported by this DocumentV1 contract.",
+                },
+            )
+
+
 def _validate_document_payload_with_a1_contract(document_payload: object) -> DocumentPayload:
+    _reject_unaccepted_source_binding_fields(document_payload)
     try:
         document = document_payload_adapter.validate_python(document_payload)
     except ValidationError as exc:
