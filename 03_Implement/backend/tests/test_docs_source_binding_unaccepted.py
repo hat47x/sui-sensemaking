@@ -10,13 +10,16 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, update
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, select, update
+from sqlalchemy.orm import Session, sessionmaker
 
+from sui_sensemaking_api.content_store import ContentBlob
+from sui_sensemaking_api.database_content_store import DatabaseDocumentContentStore
 from sui_sensemaking_api.db import _normalize_database_url, get_db
 from sui_sensemaking_api.main import app
 from sui_sensemaking_api.routes.docs import _agent_document_view
 from sui_sensemaking_api.models import Base, DocumentRow
+from sui_sensemaking_api.tenant_context import LOCAL_DEFAULT_TENANT_CONTEXT
 
 
 @pytest.fixture()
@@ -193,7 +196,7 @@ def test_existing_stored_unadopted_source_binding_get_is_rejected_without_reflec
 ) -> None:
     """Migration/old-store negative: Document read is not a Source-read grant.
 
-    This seeds an out-of-contract row directly; no public API permits writing
+    This seeds an out-of-contract revision via the internal store; no public API permits writing
     this shape. The GET must not return a scrubbed success or secret locator.
     """
     doc_id = "r2-old-row-unsupported-source"
@@ -209,16 +212,21 @@ def test_existing_stored_unadopted_source_binding_get_is_rejected_without_reflec
         "endByte": 57,
         "rawSha256": "a" * 64,
     }
+    # Keep the revision head, stored blob and materialized projection
+    # consistent. Altering only DocumentRow.payload_json would correctly
+    # trip the revision-integrity guard (503) BEFORE Source preflight.
     path = tmp_path / "source_binding_unaccepted.sqlite3"
     engine = create_engine(_normalize_database_url(f"sqlite:///{path}"))
     try:
-        with engine.begin() as conn:
-            result = conn.execute(
-                update(DocumentRow)
-                .where(DocumentRow.id == doc_id)
-                .values(payload_json=json.dumps(with_binding, ensure_ascii=False))
+        with Session(engine) as db:
+            DatabaseDocumentContentStore(db).save(
+                tenant=LOCAL_DEFAULT_TENANT_CONTEXT,
+                doc_id=doc_id,
+                version=1,
+                updated_at=with_binding["updatedAt"],
+                content=ContentBlob.from_text(json.dumps(with_binding, ensure_ascii=False)),
             )
-            assert result.rowcount == 1
+            db.commit()
     finally:
         engine.dispose()
 
@@ -251,3 +259,66 @@ def test_existing_stored_unadopted_source_binding_get_is_rejected_without_reflec
         assert len([event for event in spy.events if event.eventType == "view"]) == 1
     finally:
         sqlite_client.app.state.audit_dispatcher = old_dispatcher
+
+
+def test_tampered_revision_projection_returns_503_without_view_audit(
+    sqlite_client: TestClient, tmp_path,
+) -> None:
+    """Revision divergence and unsupported fields are different failure gates.
+
+    Directly modifying a materialized row without updating the immutable
+    revision must fail at integrity verification, not report Source 422.
+    """
+    doc_id = "r2-diverged-revision"
+    payload = _document(doc_id)
+    created = sqlite_client.put(f"/docs/{doc_id}", json=payload)
+    assert created.status_code == 200
+    original_etag = created.headers["ETag"]
+
+    path = tmp_path / "source_binding_unaccepted.sqlite3"
+    engine = create_engine(_normalize_database_url(f"sqlite:///{path}"))
+    secret = "private://must-not-escape-on-revision-divergence"
+    changed = _document(doc_id)
+    changed["cards"][0]["sourceBinding"] = {"qualifiedSourceRef": secret}
+    try:
+        with engine.begin() as conn:
+            before = conn.execute(
+                select(DocumentRow.payload_json).where(DocumentRow.id == doc_id)
+            ).scalar_one()
+            conn.execute(
+                update(DocumentRow)
+                .where(DocumentRow.id == doc_id)
+                .values(payload_json=json.dumps(changed, ensure_ascii=False))
+            )
+
+        class AuditSpy:
+            def __init__(self) -> None:
+                self.events: list[object] = []
+
+            def emit(self, event: object, *, dedup_key=None):  # noqa: ANN001
+                self.events.append(event)
+
+        spy = AuditSpy()
+        old_dispatcher = getattr(sqlite_client.app.state, "audit_dispatcher", None)
+        sqlite_client.app.state.audit_dispatcher = spy
+        try:
+            rejected = sqlite_client.get(f"/docs/{doc_id}")
+            assert rejected.status_code == 503
+            assert secret not in rejected.text
+            assert [event.eventType for event in spy.events if event.eventType == "view"] == []
+        finally:
+            sqlite_client.app.state.audit_dispatcher = old_dispatcher
+
+        # Repair the projection only in this synthetic fixture; it is not a
+        # migration or product recovery procedure.
+        with engine.begin() as conn:
+            conn.execute(
+                update(DocumentRow)
+                .where(DocumentRow.id == doc_id)
+                .values(payload_json=before)
+            )
+        recovered = sqlite_client.get(f"/docs/{doc_id}")
+        assert recovered.status_code == 200
+        assert recovered.headers["ETag"] == original_etag
+    finally:
+        engine.dispose()
