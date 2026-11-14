@@ -74,7 +74,7 @@ def test_existing_nas_store_preserves_raw_utf8_bytes_in_fresh_process(
 ) -> None:
     # Exactly the original bytes: leading UTF-8 BOM, mixed CRLF/LF/CR,
     # Japanese text and a non-BMP character. No BOM/EOL normalization.
-    raw = b"\\xef\\xbb\\xbf" + "前文\\r\\n同じ言葉。🌊\\n後文\\r同じ言葉。🌊".encode("utf-8")
+    raw = b"\xef\xbb\xbf" + "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊".encode("utf-8")
     repeated = "同じ言葉。🌊".encode("utf-8")
     first = raw.index(repeated)
     second = raw.index(repeated, first + len(repeated))
