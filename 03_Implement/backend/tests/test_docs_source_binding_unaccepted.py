@@ -5,8 +5,8 @@ No Source storage, Root, Grant, Reader, or Schema adoption is introduced here.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 import json
+from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
