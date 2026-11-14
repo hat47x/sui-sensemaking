@@ -59,7 +59,17 @@ export function LocalRawPreviewPanel() {
     setError(null);
     setBusy(false);
     if (inputRef.current) inputRef.current.value = "";
-    window.getSelection()?.removeAllRanges();
+    // Selection is window-global. Clearing this optional preview must not
+    // collapse a user's selection in another Card, Editor or workspace pane.
+    const sourceTextNode = rawRef.current?.firstChild;
+    const currentSelection = window.getSelection();
+    if (sourceTextNode && currentSelection?.rangeCount === 1) {
+      const range = currentSelection.getRangeAt(0);
+      if (range.startContainer === sourceTextNode &&
+          range.endContainer === sourceTextNode) {
+        currentSelection.removeAllRanges();
+      }
+    }
   };
 
   const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
