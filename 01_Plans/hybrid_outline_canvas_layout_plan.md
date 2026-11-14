@@ -706,8 +706,8 @@ SUIをKJ法キャンバスとマインドマップを中心とする思考環境
 
 第17章のRaw Item/Content、Tree/Island/Graph、Canvas/Display Occurrence、Task/Action/Event Role、SHO/TEI正本分離はそのまま維持する。11月8日に#3393/#3398はmainへ統合済みだが、**複数Canvasと独立Item正本の実データ移行・GUI・外部Providerは完了していない**。ここでは、別チャットのSUI高度な文脈選択、異種データの状況理解、TEI標準型・構造・表現の段階実装、SHO往復編集の後続課題を、ひとつの作業における**接続資格・最初に観測すべき不足**として整理する。
 
-- **SUIの利用者価値は既存[ADR-0089](adr/ADR-0089-product-value-canon.md)、[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)**が正本。未整理素材を読み、意味として生きるまとまりで配置し、違和感・異論を残して理解を見直すことが主線。新しいPlatform、Ontology、Role Registry、一般Task同期をP0としない。
-- **異種情報統合は[#3401](https://github.com/hat47x/sui-sensemaking/issues/3401)**のI0〜I4が所有。別SourceにあるEntity・Event・時系列は、出典・時点・粒度・暫定同定を照合してから候補Relationを作る。Join表示、語の一致、検索hitから「同一人物／同じ実Event」を確定しない。
+- **SUIの利用者価値は既存[ADR-0089](adr/ADR-0089-product-value-canon.md)、[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)** が正本。未整理素材を読み、意味として生きるまとまりで配置し、違和感・異論を残して理解を見直すことが主線。新しいPlatform、Ontology、Role Registry、一般Task同期をP0としない。
+- **異種情報統合は[#3401](https://github.com/hat47x/sui-sensemaking/issues/3401)** のI0〜I4が所有。別SourceにあるEntity・Event・時系列は、出典・時点・粒度・暫定同定を照合してから候補Relationを作る。Join表示、語の一致、検索hitから「同一人物／同じ実Event」を確定しない。
 - **SHO往復の正本**はSUI [#3391](https://github.com/hat47x/sui-sensemaking/issues/3391)とSHO [#19](https://github.com/hat47x/sho-composer/issues/19)。11月11日のSUI [#3430](https://github.com/hat47x/sui-sensemaking/issues/3430)・[#3431](https://github.com/hat47x/sui-sensemaking/issues/3431)、SHO [#31](https://github.com/hat47x/sho-composer/issues/31)〜[#33](https://github.com/hat47x/sho-composer/issues/33)は具体的な段階の受入提案。Issueのcloseだけで実製品の往復E2E PASSとはしない。
 - **TEIの表現とMapping**は新しい段階索引[#4350](https://github.com/hat47x/tei-platform/issues/4350)・[#4351](https://github.com/hat47x/tei-platform/issues/4351)〜[#4353](https://github.com/hat47x/tei-platform/issues/4353)と既存#2495/#2497/#2506/#2507/#4133が担当。SUI Canvasの自由配置や未分類Itemに、TEI Function Data Contextを無条件に必須化しない。
 
@@ -789,7 +789,7 @@ SUI→TEIの意味ある接続を検証する際だけ、最低限、次を別�
 
 ### 18.9 意味Role・TraitとCSW協調は「推論・役割付け・実行」を分離する
 
-情報がTask/Action/Eventに見えるときも、**「そのことを記述したItem」「予定されるTask」「実際に生じたOccurrence/Event」「実行可能なOperation Contract」「実Effect/Receipt」**を同一のRole-tagでまとめない。異種情報からのEntity同定も同様に候補と受理を区別する（SUI #3401、TEI #2620/#2495）。
+情報がTask/Action/Eventに見えるときも、**「そのことを記述したItem」「予定されるTask」「実際に生じたOccurrence/Event」「実行可能なOperation Contract」「実Effect/Receipt」** を同一のRole-tagでまとめない。異種情報からのEntity同定も同様に候補と受理を区別する（SUI #3401、TEI #2620/#2495）。
 
 - **SUI**：人間の違和感・未分類・多重所属・異論・仮の島/表札を保ったまま、複数の見立てをCard/Tree/Canvas上で試す。Roleは意味解釈の候補になり得るが、Roleが付いたというだけで実TaskやWorkflowは発生しない。
 - **CSW**：複数の分類・再配置・対照解釈を提案する任意の認知手法。SUIのIsland構造をCSWが自動受理したMeaningやTEIの組織Membershipへ変換しない。CSW不在のKJ-onlyと、通常AI提案と、CSWを用いた提案を分けて認知増分を測る（SUI #3400）。
