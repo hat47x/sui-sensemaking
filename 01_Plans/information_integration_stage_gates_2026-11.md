@@ -120,6 +120,25 @@ TEIのData/Graph/時系列/標準表現・Go単一バイナリ・外部Host/Prov
 
 IG1は**Source・Document・現在Grant**の必要部分だけを検査する。後段IG4では選択epoch、IG5では外部ConsumerやSkillの資格を追加し、**初回R2の追加Blocking条件にはしない**。変更無影響を主張するときは依存するSubject/Source/Scopeを説明し、根拠なしに「問題なし」と判断しない。TEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)、TAI [#271](https://github.com/hat47x/tai-pleroma/issues/271)を参考とし、新Reactive Runtimeや中央Evidence台帳は作らない。
 
+
+### 6.4 ブラウザ選択から元Raw byte範囲への橋（F1/F4の実証条件）
+
+[実装担当 #3441のUTF-16/UTF-8 Fit/Gap追補](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6869843018)を、実際のUIとReaderの**未接続部分**として取り込む。R1 Referenceは厳密な元Raw UTF-8 byte [start,end)を読み、BrowserはDOM Text node/Rangeの位置やJS UTF-16 code unit位置から選択を得る。この両者を**文字数・substring検索・表示コピー文字列だけで対応付けない**。Web標準の参考：[DOM Range](https://developer.mozilla.org/en-US/docs/Web/API/AbstractRange/startOffset)／[TextEncoderのread（UTF-16）とwritten（UTF-8）](https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder/encodeInto)／[TextDecoder BOM](https://developer.mozilla.org/en-US/docs/Web/API/TextDecoder/TextDecoder)。
+
+**手順と非依存条件**：
+1. **F0/F1**：現在許可済みのRaw Source bytesから、元byteの範囲に対応付いた表示用Text Runを生成。BrowserのDOM選択両端をその対応表へ解決する。行番号・装飾・自動折り返しはRawの選択対象にしない。BOM・CRLF/LF/CR・Unicode正規化・HTML描画による相違を暗黙に取り除かない。
+2. **選択境界**：DOMの非Sourceノード、UTF-16 surrogate pairの内部、複数Runで連続Raw範囲を確定できない場合は、byte offsetを推測して保存せず未資格とする。選択範囲が同じ文字列の2箇所目であれば2箇所目の位置を保持する。
+3. **F2**：Ownerが承認したSource選択の保存方式（§6.2案A/B/C）だけで、同Card IDに出典候補のbyte [start,end)と選択時Source版を保持。ブラウザで選択文字列を見たこと自体はRoot/Grantや出典継続性の証拠にならない。
+4. **F3/F4**：Writer終了→別Process Product GET→現在Root/Scope/Grantで同Sourceの実byte範囲を再読し、原文の同じOccurrenceへ戻る。表示上の選択→Card保存→Reader再開を実Browserで操作し、R1の局所CLI試験と別に観測する。現在Sourceと一致しない場合もCard本文/異論/保留は消さない。
+
+**固定の最小独立Expected（既存R2-SRC-01/02/05に紐付け、新規試験正本は作らない）**：
+
+- Raw byteを `BOM(ef bb bf) + UTF-8("前文\\r\\n同じ言葉。🌊\\n後文\\r同じ言葉。🌊")` とする。原byte長は**57**。検索文字列のUTF-8 byte長は**19**。表示ではBOMを除くが元Sourceに3 byteある事実は残す。
+- 最初の「同じ言葉。🌊」は byte `[11,30)`、**2箇所目**はbyte `[38,57)`。BOMを表示しないText Runで、先頭からのUTF-16 code unit位置は最初 `[4,11)`、2箇所目 `[15,22)`（改行コードを元の2単位CRLFと1単位LF/CRとして保持する場合の期待）。この表示条件自体を変えるRendererでは、表示/元byteの対応表を変更して同じ元byte位置へ導くこと。
+- この対応が取れないRenderer・Readerは「正確な原文範囲に戻れた」と申告しない。surrogate内部を境界とする選択、未知DOM Text Run、元Raw改版、同path別Rootは拒否/再照合。Sourceが無いこと、空選択、選択未取得、権限拒否を「正常に0件」とまとめない。
+
+**停止線**：ここで必要なのはR2のReaderと最小Browser操作だけであり、一般的なText Mapping Engine、PDF座標・音声時刻・他形式の完全Selector、TEI/SHO共通Editorを先に作らない。最小Fixtureの位置は設計上の独立Expectedとして記録したのみで、**Frontend実装・実Browser試験はNOT RUN**。
+
 ## 7. 表示選択の再資格化と反応的な再取得（IG4の実証契約）
 
 TEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)のFunction Data Context／選択epoch、[#2500](https://github.com/hat47x/tei-platform/issues/2500)の逆編集資格、[#2497](https://github.com/hat47x/tei-platform/issues/2497)の非単射を、**SUI固有のRead/Preview/Applyの負例**として取り込む。TEI Reactive Runtimeを待たず、SUIの最初の受入は独立したread-only照合。UI selectionを新しい永続SSOTやAction資格にしない。
