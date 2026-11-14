@@ -1624,7 +1624,8 @@ describe("R2 pre-network Source selection rejection", () => {
     const selection = { qualifiedSourceRef: secret, startByte: 38, endByte: 57 };
     const base = createDocument();
 
-    const cases = [
+    // Simulate runtime JSON/caller objects that bypass TypeScript's excess-key checks.
+    const cases: unknown[] = [
       { ...base, sourceBindings: { c1: selection } },
       { ...base, sourceSelections: [selection] },
       { ...base, cards: [{ ...base.cards[0], sourceBinding: selection }] },
@@ -1634,7 +1635,7 @@ describe("R2 pre-network Source selection rejection", () => {
     ];
     for (const document of cases) {
       try {
-        await putDocument(document.id, document);
+        await putDocument(base.id, document as DocumentV1);
         throw new Error("a reserved Source candidate was accepted");
       } catch (error) {
         expect(error).toBeInstanceOf(ApiError);
