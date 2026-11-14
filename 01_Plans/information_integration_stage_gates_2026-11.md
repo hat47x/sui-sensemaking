@@ -347,6 +347,8 @@ F0-Sの実装判断を、保存・別Process再読の**実証できた部分だ�
 | 読取・開示 | テスト側が指定する信頼済みRoot内の内容一致だけを証明 | 現在のHost Root/Scope/Grant、Principal別非開示、Card由来本文の二次公開 |
 | UI/Consumer | 原bytesと選択範囲の限定実装をつなぐ準備 | DocumentV1 Binding、正式CAS、Browser縦断、SHO/TEI Consumer Receipt |
 
+**同時Writer・中断時の追加確認（#3450の限定試験）**：[Draft #3450](https://github.com/hat47x/sui-sensemaking/pull/3450)の同一ブランチに、二つの独立Python Processを同時に`put_once`へ進める競合負例と、一時`.pending`だけが残った場合のread拒否・改めての保存を追加した。**同Capture同byte**なら`created`と`already-present`、**同Capture異byte**なら`created`と`conflict`に分かれ、確定済み原byteの勝手な置換がないことを検査する。未確定`.pending`は公開済みSnapshotではなく、自動回収は主張しない。これは**同一ローカルRootに対する二Processの限定競合試験**であり、停電・クラッシュ、NFS/S3の原子操作、Windows等での動作、Sourceの現在Grant、Documentとの二Commit、回収・保存Receiptの製品保証へ拡大しない。CIの実行結果は**exact HEADの確認後だけ**実証欄へ記入し、CI未完了時はNOT RUNではなく「実行中／結果未確認」と明記する。
+
 **正式採用前のOwner Gate**：このReferenceを製品APIへ公開しない。Hostが現在資格を持つSource管理先を決定し、OSアクセス競合・プロセス障害時の永続性・古いPendingの回収・複数Writerの原子的な応答・テナント隔離・引用本文の開示・実存の二Commit/ACK不明を実証してから、適切な最小Providerの採否を決める。`os.link`という方法自体を全Targetの標準としない。原byte保持で成功したことを`Card/Source`連携や人間の意味受理へ転記しない。
 
 **当面の実行順**：①#3449の実績を現行NASのFit/Gapとして確定→②#3450のexact HEAD CI・単体負例を評価→③Ownerが用途限定Providerへ進めるか判断→④#3441既存R2-SRC-01〜08にSource Grant・Card CAS・別Process再読をつなぐ。PR #3448はこの判断の索引であり、新しいSource契約や独立したテスト正本ではない。**正式Raw Provider/Host Grant/二Commit Recovery/Card連携/Product E2EはNOT RUN**。
