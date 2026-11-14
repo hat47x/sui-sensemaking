@@ -63,7 +63,7 @@ def _document(doc_id: str) -> dict:
     }
 
 
-@pytest.mark.parametrize("location", ["card", "card-meta", "document"])
+@pytest.mark.parametrize("location", ["card", "card-meta", "card-plural", "card-meta-plural", "document"])
 def test_put_rejects_unaccepted_typed_source_fields_without_saving_or_leaking(
     sqlite_client: TestClient, location: str,
 ) -> None:
@@ -80,6 +80,10 @@ def test_put_rejects_unaccepted_typed_source_fields_without_saving_or_leaking(
         payload["cards"][0]["sourceBinding"] = proposed_binding
     elif location == "card-meta":
         payload["cards"][0]["meta"] = {"sourceBinding": proposed_binding}
+    elif location == "card-plural":
+        payload["cards"][0]["sourceBindings"] = [proposed_binding]
+    elif location == "card-meta-plural":
+        payload["cards"][0]["meta"] = {"sourceBindings": [proposed_binding]}
     else:
         payload["sourceBindings"] = {"card-1": proposed_binding}
 
