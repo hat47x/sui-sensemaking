@@ -141,6 +141,10 @@ IG1は**Source・Document・現在Grant**の必要部分だけを検査する。
 
 **F1.5の限定File API入口（最新Draft）**：同PRに`readLocalRawFilePreview(File)`を追加。ブラウザで明示的に選択したFileの実byteをFile APIから読み、**元BOM/EOLを保った単一Text node→DOM選択→[start,end)→内容Checkpoint**へ受け渡す。1 MiBを上限とし、空/過大/不正UTF-8を拒否。戻り値を明示的に`unqualified-local-file-preview`とする。ファイル名、MIME、最終更新時刻、同digestをSource Identityや継続的再読取権限に昇格させず、Rawの保存・外部送信・Card書込みはしない。合成Fileを実Browserの`input[type=file]`へ与えるPlaywright 1件とVitest 2件を新設したが、**人間のOSファイル選択・SUI製品Readerへの組込みを実証するものではない**。最新コードHEAD `be8f210b76e64608e555966c0feb2ad665ca6033`の[CI #43553871864](https://github.com/hat47x/sui-sensemaking/actions/runs/43553871864)は確認時queued。**13件Vitest／新E2Eを含む12件のexact HEAD PASSは未判定**。古いHEADのPASSを最新へ転記しない。
 
+**F1.5実UIに到達した範囲（Draft #3443・正式Source資格なし）**：前項の一時File Readerを、既存SUI `StartPanel`の展開時にのみ現れる「原文の一時確認」に接続した。**明示File入力→元RawのText表示→利用者選択のDOM Range→UTF-8 byte [start,end)と内容Checkpoint**を、DocumentV1に書かないまま画面で確認できる。Previewは1MiB以下・UTF-8厳密で、表示は単一Text nodeに限定。折りたたみを閉じる、またはStartPanelを閉じるとComponentをunmountし、Fileのraw bufferと選択情報のReact stateを破棄する。日本語／英語の説明を加え、既存の「文書ファイル読込」と明確に分離。JavaScriptのData保持・開示停止はこの画面の局所状態であり、OS上の元File消去、Browserメモリーの完全消去、全Network Sink非送信の保証と呼ばない。
+
+**F1.5の新しい独立Expected**：実ChromiumでStartPanelを展開→原文プレビューを開く→合成`File`を指定→日本語同文の2箇所目を手動Selectionと同じDOM APIで選ぶ→`[38,57)`が表示される→非GET/HEADのRequestが増えないことをその試行で観測→折りたたんだらRaw表示と選択状態が消える。StartPanelの日本語／英語・compact時にプレビューが現れないことも回帰対象。**合成Fileの`setInputFiles`は人間によるOSファイルダイアログ操作の実証ではなく、正式R2-SRC-01のProduct Source→Save→再開とは異なる**。コードHEAD `0586f2a525b2790aea659b978bbf56d72b40ce48` の[CI #43556902586](https://github.com/hat47x/sui-sensemaking/actions/runs/43556902586)は初回確認時queuedで、**UI統合後の実Browser PASSは未認定**。
+
 **次のProduct接合（F1.5）**：実Readerが現在許可Sourceから表示するText nodeと元Raw byteを関連づけ、ユーザーのDOM SelectionをAdapterで解決して**byte [start,end)・選択Raw bytesの実比較**を行う。ただし、Source選択履歴を保存するCard/Document型は§6.2のOwner決定を要する。SUI Reader画面の実人手操作、実Host Root/Grant、Document Save/別Process Product GET、A→B→Aの現在性は、この限定Adapterと合成pre/Chromiumの成功からは一切証明されない。
 
 **停止線**：R2のReaderと最小Browser操作を次に実証し、PDF座標・音声時刻・多形式Selectorや共有Editorを先行導入しない。限定Reference成功は**R2-SRC-01/02/05の一部のみ**であり、R2 Product E2E／Owner意味受理／外部Consumer受領は**NOT RUN**。
