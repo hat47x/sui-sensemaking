@@ -129,3 +129,39 @@ def test_rejects_source_selection_plural_alias_at_document_and_card(
         response = sqlite_client.put(f"/docs/{doc_id}", json=payload)
         assert response.status_code == 422
         assert response.json()["detail"]["code"] == "source_binding_contract_unavailable"
+
+
+def test_rejected_binding_update_keeps_prior_card_hold_and_critique(
+    sqlite_client: TestClient,
+) -> None:
+    doc_id = "r2-existing-hold"
+    original = _document(doc_id)
+    original["cards"][0]["holdState"] = "held"
+    original["cards"][0]["critique"] = "An unresolved human objection"
+    saved = sqlite_client.put(f"/docs/{doc_id}", json=original)
+    assert saved.status_code == 200
+    previous_etag = saved.headers["ETag"]
+
+    attempted = _document(doc_id)
+    attempted["cards"][0]["text"] = "unaccepted replacement"
+    attempted["cards"][0]["sourceBinding"] = {
+        "qualifiedSourceRef": "private://must-not-be-saved",
+        "startByte": 38,
+        "endByte": 57,
+    }
+    rejected = sqlite_client.put(
+        f"/docs/{doc_id}",
+        json=attempted,
+        headers={"If-Match": previous_etag},
+    )
+    assert rejected.status_code == 422
+    assert rejected.json()["detail"]["code"] == "source_binding_contract_unavailable"
+
+    reread = sqlite_client.get(f"/docs/{doc_id}")
+    assert reread.status_code == 200
+    assert reread.headers["ETag"] == previous_etag
+    card = reread.json()["cards"][0]
+    assert card["text"] == original["cards"][0]["text"]
+    assert card["holdState"] == "held"
+    assert card["critique"] == "An unresolved human objection"
+    assert "sourceBinding" not in card
