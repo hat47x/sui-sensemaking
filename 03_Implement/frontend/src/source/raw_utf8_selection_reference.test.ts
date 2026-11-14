@@ -96,6 +96,23 @@ describe("R2 content-only checkpoints (never Source authority)", () => {
     expect(await compareRawContentCheckpoint(a, checkpoint)).toBe("content-match-only");
   });
 
+  it("snapshots a mutable caller buffer before asynchronous hashing", async () => {
+    const p = projectRawUtf8Bytes(rawBytes);
+    const selected = resolveSingleTextRunSelection(p, p.text, 15, 22);
+    const mutable = Uint8Array.from(rawBytes);
+    const promised = captureRawContentCheckpoint(mutable, selected);
+    mutable[5] ^= 1; // caller mutation after invocation, during awaited WebCrypto
+    const checkpoint = await promised;
+    expect(checkpoint.rawSha256)
+      .toBe("0d92d8f8852fffe376d1af5655ffea572b4989de7a77de64b182ee47a8ff20cf");
+    expect(await compareRawContentCheckpoint(mutable, checkpoint)).toBe("stale-content");
+
+    const original = Uint8Array.from(rawBytes);
+    const comparison = compareRawContentCheckpoint(original, checkpoint);
+    original[5] ^= 1;
+    expect(await comparison).toBe("content-match-only");
+  });
+
   it("rejects forged bounds and a selected text inconsistent with supplied Raw bytes", async () => {
     const selected = resolveSingleTextRunSelection(
       projectRawUtf8Bytes(rawBytes), rawText, 15, 22,
