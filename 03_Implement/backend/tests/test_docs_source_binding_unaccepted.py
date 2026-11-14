@@ -6,6 +6,7 @@ No Source storage, Root, Grant, Reader, or Schema adoption is introduced here.
 from __future__ import annotations
 
 from collections.abc import Iterator
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 
 from sui_sensemaking_api.db import _normalize_database_url, get_db
 from sui_sensemaking_api.main import app
+from sui_sensemaking_api.routes.docs import _agent_document_view
 from sui_sensemaking_api.models import Base
 
 
@@ -165,3 +167,22 @@ def test_rejected_binding_update_keeps_prior_card_hold_and_critique(
     assert card["holdState"] == "held"
     assert card["critique"] == "An unresolved human objection"
     assert "sourceBinding" not in card
+
+
+def test_agent_projection_does_not_expose_reserved_source_candidates() -> None:
+    """Projection-only negative case, not a real agent credential or Grant."""
+    doc = _document("r2-agent-projection")
+    secret = "private://raw-location-secret"
+    doc["sourceBindings"] = {"card-1": {"locator": secret}}
+    doc["cards"][0]["textReviewed"] = True
+    doc["cards"][0]["sourceBinding"] = {"locator": secret, "startByte": 38}
+    doc["cards"][0]["meta"] = {"source": secret, "sourceSelection": {"locator": secret}}
+
+    projected = _agent_document_view(doc)
+    assert [card["id"] for card in projected["cards"]] == ["card-1"]
+    assert projected["cards"][0]["text"] == doc["cards"][0]["text"]
+    as_json = json.dumps(projected, ensure_ascii=False)
+    assert secret not in as_json
+    assert "sourceBindings" not in projected
+    assert "sourceBinding" not in projected["cards"][0]
+    assert "meta" not in projected["cards"][0]
