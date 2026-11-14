@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { projectRawUtf8Bytes, resolveSingleTextRunSelection } from "./raw_utf8_selection_reference";
+import {
+  captureRawContentCheckpoint,
+  compareRawContentCheckpoint,
+  projectRawUtf8Bytes,
+  resolveSingleTextRunSelection,
+} from "./raw_utf8_selection_reference";
 
 const rawText = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
 const rawBytes = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(rawText)]);
@@ -51,5 +56,55 @@ describe("R2 single-text-run byte offset reference (NOT Product DOM / Source aut
     expect(p.text).toBe("\ufeffA");
     expect(resolveSingleTextRunSelection(p, p.text, 1, 2))
       .toEqual({ startByte: 6, endByte: 7, selectedText: "A" });
+  });
+});
+
+
+describe("R2 content-only checkpoints (never Source authority)", () => {
+  it("fixes independently computed Raw/selected SHA-256 and detects byte drift", async () => {
+    const p = projectRawUtf8Bytes(rawBytes);
+    const selection = resolveSingleTextRunSelection(p, p.text, 15, 22);
+    const checkpoint = await captureRawContentCheckpoint(rawBytes, selection);
+    expect(checkpoint).toEqual({
+      rawSha256: "0d92d8f8852fffe376d1af5655ffea572b4989de7a77de64b182ee47a8ff20cf",
+      selectedSha256: "6b39ef0ed8a5f5771807dc348b88b79fc716b3ec6cdf541b24fbd6f4b0f53df7",
+      startByte: 38,
+      endByte: 57,
+    });
+    expect(await compareRawContentCheckpoint(Uint8Array.from(rawBytes), checkpoint))
+      .toBe("content-match-only");
+    const sameLengthChanged = Uint8Array.from(rawBytes);
+    sameLengthChanged[5] ^= 1; // a different Raw byte OUTSIDE the selected span
+    expect(await compareRawContentCheckpoint(sameLengthChanged, checkpoint))
+      .toBe("stale-content");
+  });
+
+  it("same bytes at two roots and A→B→A cannot establish Root or historical continuity", async () => {
+    const selected = resolveSingleTextRunSelection(
+      projectRawUtf8Bytes(rawBytes),
+      projectRawUtf8Bytes(rawBytes).text,
+      15, 22,
+    );
+    const a = Uint8Array.from(rawBytes);
+    const checkpoint = await captureRawContentCheckpoint(a, selected);
+    const anotherRootSameContent = Uint8Array.from(a); // synthetic copy, not a Host Root grant
+    expect(await compareRawContentCheckpoint(anotherRootSameContent, checkpoint))
+      .toBe("content-match-only");
+    a[5] ^= 1; // A→B
+    expect(await compareRawContentCheckpoint(a, checkpoint)).toBe("stale-content");
+    a[5] ^= 1; // B→A: bytes equal again, but history and current Grant are NOT proven
+    expect(await compareRawContentCheckpoint(a, checkpoint)).toBe("content-match-only");
+  });
+
+  it("rejects forged bounds and a selected text inconsistent with supplied Raw bytes", async () => {
+    const selected = resolveSingleTextRunSelection(
+      projectRawUtf8Bytes(rawBytes), rawText, 15, 22,
+    );
+    await expect(captureRawContentCheckpoint(rawBytes, { ...selected, startByte: 39 }))
+      .rejects.toThrow("unqualified-selection");
+    await expect(captureRawContentCheckpoint(rawBytes, { ...selected, selectedText: "別の言葉" }))
+      .rejects.toThrow("unqualified-selection");
+    await expect(captureRawContentCheckpoint(rawBytes, { ...selected, startByte: 38.5 }))
+      .rejects.toThrow("unqualified-selection");
   });
 });
