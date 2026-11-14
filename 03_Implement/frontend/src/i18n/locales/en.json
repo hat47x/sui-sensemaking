@@ -1968,6 +1968,6 @@
   "raw_preview.source_text": "Raw text (select a range to inspect)",
   "raw_preview.check_selection": "Verify selected byte range",
   "raw_preview.invalid_selection": "Cannot resolve this selection to original bytes. Select a contiguous range in the displayed Raw text.",
-  "raw_preview.span": "Original byte range: [{start}, {end}) (exclusive end). Content-only check; Source identity and permissions are unverified.",
+  "raw_preview.span": "Original byte range: [{start}, {end}) (exclusive end). The selection hash was computed; Source identity and current access permissions are unverified.",
   "raw_preview.clear": "Discard temporary data"
 }
