@@ -132,24 +132,27 @@ export async function captureRawContentCheckpoint(
   sourceBytes: Uint8Array,
   selected: RawByteSpan,
 ): Promise<RawContentCheckpoint> {
-  const projection = projectRawUtf8Bytes(sourceBytes);
+  // Freeze one local byte snapshot before any await: the caller may mutate
+  // its Uint8Array while WebCrypto digests are being computed.
+  const snapshot = Uint8Array.from(sourceBytes);
+  const projection = projectRawUtf8Bytes(snapshot);
   if (!Number.isSafeInteger(selected.startByte) ||
       !Number.isSafeInteger(selected.endByte) ||
-      selected.startByte < 0 || selected.endByte > sourceBytes.length ||
+      selected.startByte < 0 || selected.endByte > snapshot.length ||
       selected.startByte >= selected.endByte ||
       !projection.utf16ToByte.includes(selected.startByte) ||
       !projection.utf16ToByte.includes(selected.endByte)) {
     throw new Error("unqualified-selection");
   }
 
-  const selectedBytes = sourceBytes.subarray(selected.startByte, selected.endByte);
+  const selectedBytes = snapshot.subarray(selected.startByte, selected.endByte);
   const currentText = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
     .decode(selectedBytes);
   if (currentText !== selected.selectedText) {
     throw new Error("unqualified-selection");
   }
   return {
-    rawSha256: await sha256RawBytes(sourceBytes),
+    rawSha256: await sha256RawBytes(snapshot),
     selectedSha256: await sha256RawBytes(selectedBytes),
     startByte: selected.startByte,
     endByte: selected.endByte,
@@ -165,16 +168,19 @@ export async function compareRawContentCheckpoint(
   currentBytes: Uint8Array,
   checkpoint: RawContentCheckpoint,
 ): Promise<"content-match-only" | "stale-content"> {
-  projectRawUtf8Bytes(currentBytes); // strict UTF-8; still no Host grant.
-  const rawSha256 = await sha256RawBytes(currentBytes);
+  // Compare a single immutable-by-convention local snapshot, never two
+  // different observations of a mutable byte buffer across an await.
+  const snapshot = Uint8Array.from(currentBytes);
+  projectRawUtf8Bytes(snapshot); // strict UTF-8; still no Host grant.
+  const rawSha256 = await sha256RawBytes(snapshot);
   if (rawSha256 !== checkpoint.rawSha256) {
     return "stale-content";
   }
   if (checkpoint.startByte < 0 || checkpoint.startByte >= checkpoint.endByte ||
-      checkpoint.endByte > currentBytes.length) {
+      checkpoint.endByte > snapshot.length) {
     throw new Error("unqualified-selection");
   }
-  const currentSelected = currentBytes.subarray(checkpoint.startByte, checkpoint.endByte);
+  const currentSelected = snapshot.subarray(checkpoint.startByte, checkpoint.endByte);
   return (await sha256RawBytes(currentSelected)) === checkpoint.selectedSha256
     ? "content-match-only"
     : "stale-content";
