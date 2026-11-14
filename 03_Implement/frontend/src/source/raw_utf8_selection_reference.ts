@@ -110,3 +110,72 @@ export function resolveSingleDomTextNodeSelection(
     range.endOffset,
   );
 }
+
+/**
+ * Content-only checkpoint for an independently re-read Raw byte sequence.
+ * NEVER treat matching digests as the same authorized Source, the same Root,
+ * or uninterrupted freshness (A -> B -> A is indistinguishable).
+ */
+export interface RawContentCheckpoint {
+  readonly rawSha256: string;
+  readonly selectedSha256: string;
+  readonly startByte: number;
+  readonly endByte: number;
+}
+
+async function sha256RawBytes(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", Uint8Array.from(bytes));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function captureRawContentCheckpoint(
+  sourceBytes: Uint8Array,
+  selected: RawByteSpan,
+): Promise<RawContentCheckpoint> {
+  const projection = projectRawUtf8Bytes(sourceBytes);
+  if (!Number.isSafeInteger(selected.startByte) ||
+      !Number.isSafeInteger(selected.endByte) ||
+      selected.startByte < 0 || selected.endByte > sourceBytes.length ||
+      selected.startByte >= selected.endByte ||
+      !projection.utf16ToByte.includes(selected.startByte) ||
+      !projection.utf16ToByte.includes(selected.endByte)) {
+    throw new Error("unqualified-selection");
+  }
+
+  const selectedBytes = sourceBytes.subarray(selected.startByte, selected.endByte);
+  const currentText = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
+    .decode(selectedBytes);
+  if (currentText !== selected.selectedText) {
+    throw new Error("unqualified-selection");
+  }
+  return {
+    rawSha256: await sha256RawBytes(sourceBytes),
+    selectedSha256: await sha256RawBytes(selectedBytes),
+    startByte: selected.startByte,
+    endByte: selected.endByte,
+  };
+}
+
+/**
+ * May return "content-match-only", never "source-verified" or "authorized".
+ * The caller must independently re-resolve current Host Root/Scope/Grant and
+ * reliable Source revision/history before permitting a Source return.
+ */
+export async function compareRawContentCheckpoint(
+  currentBytes: Uint8Array,
+  checkpoint: RawContentCheckpoint,
+): Promise<"content-match-only" | "stale-content"> {
+  projectRawUtf8Bytes(currentBytes); // strict UTF-8; still no Host grant.
+  const rawSha256 = await sha256RawBytes(currentBytes);
+  if (rawSha256 !== checkpoint.rawSha256) {
+    return "stale-content";
+  }
+  if (checkpoint.startByte < 0 || checkpoint.startByte >= checkpoint.endByte ||
+      checkpoint.endByte > currentBytes.length) {
+    throw new Error("unqualified-selection");
+  }
+  const currentSelected = currentBytes.subarray(checkpoint.startByte, checkpoint.endByte);
+  return (await sha256RawBytes(currentSelected)) === checkpoint.selectedSha256
+    ? "content-match-only"
+    : "stale-content";
+}
