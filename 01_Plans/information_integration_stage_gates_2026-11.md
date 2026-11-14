@@ -308,6 +308,8 @@ R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進める
 - `03_Implement/backend/experiments/r1_raw_source_probe.py`は元byteの読取とUTF-8選択範囲を検査する**Reference**で、実Hostの権限・race-free OS readやSource履歴は保証しない。`tests/test_r1_raw_source_probe.py`の成果を実Product Provider試験へ転用しない。
 - `03_Implement/backend/tests/test_docs_cross_process_readback.py`は実Documentの別Process GET、`frontend/src/source/raw_utf8_selection_reference.ts`はRaw byte→選択位置の局所的な検査である。**両方がPASSしても、同じCardのSourceを別Processで再Readした試行にはならない**。
 
+**F0-S実コードの再評価（2026-11-15／テストDraft）**：現行`external_content_store.py`には`NasContentStore.put/get`と`S3ContentStore.put/get`があり、NAS版は`ContentBlob.text.encode("utf-8")`を保存してDigest・byte長を検査する。**現行IG1で扱う妥当なUTF-8原文**なら、元bytesを`decode("utf-8")`でBOMを削らずに取り込み、そのまま再エンコードして一致させられる可能性がある。R2の[特性テストDraft #3449](https://github.com/hat47x/sui-sensemaking/pull/3449)は、BOM・混在改行・同文二箇所・別Python Process Readを実Store上で試す。また、**同一tenant/content_idの`put`は`os.replace`で既存Locatorを上書きし得る**ため、これをSource Snapshotの不変性証明として採用しない。別`content_id`で別Locatorになっても、Originのidentity・取込Occurrenceの正式Bindingや現在のRead Grantは証明しない。`get`はLocator/Digest/byte長を受けるが現在Principal/Source Grantを引数に取らず、上位の認可なしで公開Source APIへ流用しない。既存`ContentBlobRow`のJSON表現制約・管理領域・削除規則も別途Fit/Gapが必要。**#3449が成功した場合でも、既存NASの限定的なbyte復元能力が確認できただけ**であり、正式なRaw Source Store、非UTF-8一般、Card Binding、IG1受入はNOT RUNとする。
+
 #### 6.2.9.2 一つのAttemptで残す最小観測列
 
 | 同じ試行で記録する列 | 合格のための独立した実観測 | その観測だけでは保証しないこと |
