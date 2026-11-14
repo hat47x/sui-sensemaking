@@ -180,6 +180,18 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 **採用後、最初に実装・実測する縦断**：[R2-SRC-01〜08 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)の既存Expectedに沿って、(1)現在許可された実RawをProduct Readerから表示、(2)人が二番目の同文を選択、(3)Card本文と出典候補を分けて明示If-Matchで保存、(4)Writer終了後に**別プロセス**からDocument GET、(5)現在のSource権限とRevisionを改めて確認して元バイトへ戻る。この往復と並行し、Doc許可×Source拒否、同byte別Root、Source改版・欠落、409/ACK不明、Agent非開示を個別に反証する。**Card本文・Hold・異論を出典失効とともに消さない**。Productにまだ接続していないReference、擬似Grant、HTTPを通らない単体Projection、合成DOMだけのPASSから縦断成功を推論しない。
 
+**Providerから受け取った情報の完全性を、現在の権限とは別に判定する**。TEI Studioの実Read/Context設計で整理している「取得範囲が足りているか」と「それを現在使ってよいか」の区別を、R2のSource復帰にも取り込む。ただし、新しい共通Result型を採用するのではなく、最初の縦断試験で実Providerの返却内容から確認できる事実を記録する。
+
+| 確認する性質 | 合格の根拠 | 不明・不足の場合 |
+| --- | --- | --- |
+| **Readの実行と対象** | 呼出したHost/Provider、実際に解決されたRoot/Source、呼出Principal・Scopeが追跡できる | 同名・同内容・保存済みLocatorへの推測接続をせず、Source復帰を保留 |
+| **読めた範囲の完全性** | 元Raw全体のbyte長と取得byteの完全性を実Readerが証明でき、選択`[start,end)`が範囲内にある | `partial/unavailable/unknown`を「全文一致」「0件」「許可済み」にしない。選択箇所だけ読めても、全RawのSHA一致は主張しない |
+| **版と現在性** | 読取時のRevisionまたはHostが保証するSource世代、選択時点との差分、改版履歴の確認可能性 | A→B→AでHashが再一致しても継続した同一性としない。必要な履歴証拠がなければ`unknown` |
+| **閲覧・開示資格** | Docのreadとは独立した現在のSource Grantと、Principalごとの出力Projectionの検査 | 取得できたbyteをCard閲覧者やAgentへ自動送出しない。非許可の存在数・Locator・Hashも伏せる |
+| **保存後の継続性** | 既存Document CASの書込Result、別ProcessのGET、再Read結果を別のAttempt/Receiptとして照合 | 保存ACK不明を成功にしない。Card本文・Hold・異論は維持し、Source復帰のみ未解決にする |
+
+**試験の組み立て**：まず単一Root・1MiB以下の公開合成Rawで`complete`を確認し、次に同じReader入口で`partial`・`unavailable`・`permission-denied`・`not-found`・`stale`を独立に起こせるか調べる。表現できない状態は擬似ステータスを作って成功とせず、Provider能力不足としてOwnerへ返す。特に`ContentObjectReference.state=READY`は**Documentコンテンツの保管状態**であり、任意のRawへの現在Grantや全文取得の完了を意味しない。SHOのProvenance、TEIのモデルRevision、TAIのActivity/Consumer受領もそれぞれ別の結果として照合する。**情報が揃ったか・実読取したか・現在閲覧可能か・保存されたか・意味を受理したか**を一つの`verified`にまとめない。
+
 **成果物と着手順**：まずOwner判断票にHost/Providerの**実在する読み取り入口**と開示責任を記録し、その次にA/B/Cを一つ選び、必要な最小Schema・Reader・権限Projection・保存経路を別々にレビューする。全テストの成功と実際の元資料への復帰が揃うまで、`R2 Product accepted`とは記録しない。SHO Writer、TEI意味受理、外部Harnessや中央Registryは、この縦断の必須依存にしない。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
