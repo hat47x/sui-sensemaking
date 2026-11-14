@@ -194,6 +194,21 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 **成果物と着手順**：まずOwner判断票にHost/Providerの**実在する読み取り入口**と開示責任を記録し、その次にA/B/Cを一つ選び、必要な最小Schema・Reader・権限Projection・保存経路を別々にレビューする。全テストの成功と実際の元資料への復帰が揃うまで、`R2 Product accepted`とは記録しない。SHO Writer、TEI意味受理、外部Harnessや中央Registryは、この縦断の必須依存にしない。
 
+### 6.2.5 F0の判断順：Source再読の権威とBinding保存先を分離する（2026-11-15／未採用）
+
+[実装Owner #3441のF0補強](https://github.com/hat47x/sui-sensemaking/issues/3441)に従い、**元Sourceを何として再読するか**と、**選択履歴をCard/Document/Providerのどこへ保存するか**を別の判断とする。A/B/Cは後者の比較であり、どの案も現在のSource Authorityを自動提供しない。
+
+| 先に確認する再読方式 | 実際に戻る対象 | F0で証明すること |
+| --- | --- | --- |
+| **S：管理された取込時Snapshot** | 利用者が明示的に取り込んだ**時点**のRaw bytes | 永続Raw格納入口、実Source read認可、byte保持、別Process再Read、開示/削除/失効。元の外部Fileの現在状態と同一視しない |
+| **L：外部Source再接続** | 元File/Workspace等の**現在**のSource | Hostが解決するRoot/Scope/Grantとrevision/history、安全な再読、別Root同byte・A→B→A・更新/失効への応答 |
+
+現行`content_store.py`はDocument/Bundle/Logの`ContentBlob.from_text`、`ContentBlobRow`はJSON表現のContent管理を中心に扱い、`ContentObjectReference.ready`だけでは任意のRawの現在Grantを示さない。`GET /docs/{id}`はDocumentのreadを判定するが、SourceごとのGrantを独立に解決した実証ではない。ブラウザの`File`一時プレビューも別ProcessのSource参照にはならない。したがって**既存保存機構をRaw Providerとして採用済みと書かない**。
+
+**次の実装着手順**：公開合成Raw 1件でSを最小Fit/Gapし、既存の許可済みL経路が実在すれば対照比較する。選んだ方式のReader/Principal/Scope/Revision・開示境界を実コードと試験名で示し、その後に限りA/B/Cのうち最小Bindingを採用検討する。Sを採る場合の到達点は「取り込んだ原文Snapshotへの復帰」であって、「元OS Fileの現在版へ復帰」ではない。Document可×Source不可のReader/Agent/GuestでLocator・opaque ID・digest・件数を漏らす場合はA/Bを採用せず、既存Provider側のCを再比較する。両方式ともSource資格が実証できなければ`unqualified`として停止する。
+
+R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進めるための設計判断であり、Raw Source API・S/L採用・正式Grant・Save→別Process再Read・IG1 Product受入はNOT RUN**。IG2〜IG6、KON、TEI Host、SHO Consumerを新たな前提にしない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
