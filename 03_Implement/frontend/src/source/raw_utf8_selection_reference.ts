@@ -73,3 +73,40 @@ export function resolveSingleTextRunSelection(
   }
   return { startByte, endByte, selectedText: projection.text.slice(startUtf16, endUtf16) };
 }
+
+/**
+ * DOM boundary of the same R2 Reference. Accept exactly one faithful native
+ * DOM Text node, contained directly by the supplied element. Other layouts
+ * require a separate, explicit source-run map; never guess DOM offsets.
+ *
+ * This only reads in-memory DOM state. It does NOT establish Source identity,
+ * current Host/Root authorization, or persisted Document bindings.
+ */
+export function resolveSingleDomTextNodeSelection(
+  projection: RawTextProjection,
+  sourceElement: Element,
+  selection: Selection | null,
+): RawByteSpan {
+  const textNode = sourceElement.firstChild;
+  if (sourceElement.childNodes.length !== 1 ||
+      textNode?.nodeType !== 3 ||
+      textNode.nodeValue !== projection.text ||
+      selection?.rangeCount !== 1) {
+    throw new Error("unqualified-dom-selection");
+  }
+
+  const range = selection.getRangeAt(0);
+  if (range.startContainer !== textNode ||
+      range.endContainer !== textNode ||
+      selection.anchorNode !== textNode ||
+      selection.focusNode !== textNode) {
+    throw new Error("unqualified-dom-selection");
+  }
+
+  return resolveSingleTextRunSelection(
+    projection,
+    textNode.nodeValue,
+    range.startOffset,
+    range.endOffset,
+  );
+}
