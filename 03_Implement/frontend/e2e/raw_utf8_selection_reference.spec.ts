@@ -83,6 +83,15 @@ test("R2 DOM selection reference refuses decorated nodes, normalized text, and s
     element.lastChild?.remove();
 
     element.textContent = projection.text.replace(/\r\n/g, "\n");
+    const normalizedNode = element.firstChild;
+    if (!normalizedNode) throw new Error("missing-normalized-text");
+    const normalizedRange = document.createRange();
+    normalizedRange.setStart(normalizedNode, 4);
+    normalizedRange.setEnd(normalizedNode, 11);
+    selection.removeAllRanges();
+    selection.addRange(normalizedRange);
+    // This must reject the normalized SOURCE TEXT, not merely a stale Range
+    // whose Text node was detached during the mutation.
     const normalizedTextRejected = rejects();
 
     element.textContent = projection.text;
