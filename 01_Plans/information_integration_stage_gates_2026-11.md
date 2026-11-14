@@ -206,6 +206,18 @@ IG1は**Source・Document・現在Grant**の必要部分だけを検査する。
 
 **停止線**：R2のReaderと最小Browser操作を次に実証し、PDF座標・音声時刻・多形式Selectorや共有Editorを先行導入しない。限定Reference成功は**R2-SRC-01/02/05の一部のみ**であり、R2 Product E2E／Owner意味受理／外部Consumer受領は**NOT RUN**。
 
+### 6.4.1 一時選択の鮮度と、将来のPin意図を分ける（2026-11-14）
+
+TEI Studioの[Subject Pin検討 #4515](https://github.com/hat47x/tei-platform/issues/4515)では、**一時的なFocus/Selectionと、利用者が明示的に固定したPinの意図を分ける**。これをSUIのIG1へそのまま「Pin実装」として移植しない。現行SUIの一時Rawプレビューは、明示選択したFileの**その時点のDOM選択をbyte位置へ対応付けるだけ**であり、Cardへの出典保存、持続的Pin、現在のSource Grantを持たない。
+
+**直ちに必要なUIの不変条件**：一時プレビューが確認済み`[start,end)`を表示している間に、利用者が同じ原文の別Occurrenceを選択したり、別ファイルを指定したり、プレビューを閉じたりすれば、**古い位置を現在の選択結果として残さない**。非同期ハッシュ処理が終わるまでにSelectionが変わった場合も、開始時のHashを別の現在選択へ転用しない。表示原文・元byte Snapshot・選択位置の整合性が確認できたときにだけ現在の位置を示す。ファイル名一致・同文字列・同SHA・DOM Node/描画LabelはSource資格やPinの継続性の証明にならない。
+
+**今回の限定実装とテスト**：[実装Draft #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)の`LocalRawPreviewPanel`に、Selection変更の監視と非同期SHA完了後の**現在DOM Range再照合**を追加。実StartPanelのChromium回帰に、後方同文を選択して`[38,57)`→前方同文へ選び直すと表示を消す→再確認すると`[11,30)`→同名で異内容の別ファイルへ差し替えると範囲を消す→閉じると状態が無い、という独立Expectedを追加。文書保存、外部送信、Persisted Source Pinは行わない。HEAD `3b27d865ace0d6b73c6a7d51f0fd142776a883a0`の[単体CI #43583154802](https://github.com/hat47x/sui-sensemaking/actions/runs/43583154802)は本節更新時に実行中。**exact HEAD合格までは新回帰のPASSを主張しない**。
+
+**将来の明示Pinが必要になった場合**：Pinned Intent（何を見直したいか）と、現在解決できるSource（Host/Root/Scope/Grant/Revision）を別に保持する。別Workspace、Source A→B→A、同offset別Occurrence、後着旧応答では元意図を別Sourceへ黙って付け替えず、現在の資格を`unknown/unresolved`とする。Pinned IntentをUndoで戻してもSource Grantは戻らない。Pinは[TEI #4515](https://github.com/hat47x/tei-platform/issues/4515)の判断を待ち、R2縦断の必須API／新Registryにはしない。
+
+**横断Handoffの上限**：[TAI #271](https://github.com/hat47x/tai-pleroma/issues/271)に合わせ、Product Selection、Activity、Harness Session、実Document/Source Read、書込Operation Attempt、Consumer Receiptを別の資格として扱う。SUIの現在選択はSHO/TEI/AIが再解決すべき**候補**であり、Session継続・Selectionの再表示・同Digestによって別Productが実Read済み、Current Grantが有効、意味受理済みとはしない。[SHO #19](https://github.com/hat47x/sho-composer/issues/19)のWriter/Raw DraftとTEI Meaning Acceptanceは後段IG5の独立受入とし、IG1に新しい必須依存を加えない。
+
 ## 7. 表示選択の再資格化と反応的な再取得（IG4の実証契約）
 
 TEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)のFunction Data Context／選択epoch、[#2500](https://github.com/hat47x/tei-platform/issues/2500)の逆編集資格、[#2497](https://github.com/hat47x/tei-platform/issues/2497)の非単射を、**SUI固有のRead/Preview/Applyの負例**として取り込む。TEI Reactive Runtimeを待たず、SUIの最初の受入は独立したread-only照合。UI selectionを新しい永続SSOTやAction資格にしない。
