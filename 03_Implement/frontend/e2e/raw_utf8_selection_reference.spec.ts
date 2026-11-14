@@ -1,0 +1,245 @@
+import { expect, test } from "@playwright/test";
+
+/**
+ * Real Chromium DOM/Selection boundary, but only a synthetic Raw fixture.
+ * No Product Reader, permitted Host Root, Card Save, or Source Binding.
+ */
+test("R2 single DOM Text selection keeps second Japanese occurrence at the original raw byte span", async ({ page }) => {
+  await page.goto("/");
+
+  const result = await page.evaluate(async () => {
+    const {
+      captureRawContentCheckpoint, compareRawContentCheckpoint,
+      projectRawUtf8Bytes, resolveSingleDomTextNodeSelection,
+    } =
+      await import("/src/source/raw_utf8_selection_reference.ts");
+
+    const text = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
+    const raw = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(text)]);
+    const projection = projectRawUtf8Bytes(raw);
+
+    const element = document.createElement("pre");
+    element.textContent = projection.text;
+    document.body.appendChild(element);
+    const node = element.firstChild;
+    const selection = window.getSelection();
+    if (!node || !selection) throw new Error("browser-selection-unavailable");
+
+    const range = document.createRange();
+    range.setStart(node, 15);
+    range.setEnd(node, 22);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    const second = resolveSingleDomTextNodeSelection(projection, element, selection);
+    const checkpoint = await captureRawContentCheckpoint(raw, second);
+    const contentCheck = await compareRawContentCheckpoint(Uint8Array.from(raw), checkpoint);
+    const roundtrip = new TextDecoder("utf-8", { fatal: true })
+      .decode(raw.subarray(second.startByte, second.endByte));
+
+    selection.removeAllRanges();
+    element.remove();
+
+    return { totalBytes: raw.length, second, checkpoint, contentCheck, roundtrip };
+  });
+
+  expect(result).toEqual({
+    totalBytes: 57,
+    second: { startByte: 38, endByte: 57, selectedText: "同じ言葉。🌊" },
+    checkpoint: {
+      rawSha256: "0d92d8f8852fffe376d1af5655ffea572b4989de7a77de64b182ee47a8ff20cf",
+      selectedSha256: "6b39ef0ed8a5f5771807dc348b88b79fc716b3ec6cdf541b24fbd6f4b0f53df7",
+      startByte: 38,
+      endByte: 57,
+    },
+    contentCheck: "content-match-only",
+    roundtrip: "同じ言葉。🌊",
+  });
+});
+
+test("R2 DOM selection reference refuses decorated nodes, normalized text, and surrogate boundaries", async ({ page }) => {
+  await page.goto("/");
+
+  const rejected = await page.evaluate(async () => {
+    const { projectRawUtf8Bytes, resolveSingleDomTextNodeSelection } =
+      await import("/src/source/raw_utf8_selection_reference.ts");
+
+    const text = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
+    const projection = projectRawUtf8Bytes(new TextEncoder().encode(text));
+    const element = document.createElement("pre");
+    element.textContent = projection.text;
+    document.body.appendChild(element);
+    const node = element.firstChild;
+    const selection = window.getSelection();
+    if (!node || !selection) throw new Error("browser-selection-unavailable");
+
+    function select(start: number, end: number): void {
+      const range = document.createRange();
+      range.setStart(node!, start);
+      range.setEnd(node!, end);
+      selection!.removeAllRanges();
+      selection!.addRange(range);
+    }
+    function rejects(): boolean {
+      try {
+        resolveSingleDomTextNodeSelection(projection, element, selection);
+        return false;
+      } catch {
+        return true;
+      }
+    }
+
+    select(15, 22);
+    element.appendChild(document.createElement("span")); // an extra DOM node
+    const extraChildRejected = rejects();
+    element.lastChild?.remove();
+
+    element.textContent = projection.text.replace(/\r\n/g, "\n");
+    const normalizedNode = element.firstChild;
+    if (!normalizedNode) throw new Error("missing-normalized-text");
+    const normalizedRange = document.createRange();
+    normalizedRange.setStart(normalizedNode, 4);
+    normalizedRange.setEnd(normalizedNode, 11);
+    selection.removeAllRanges();
+    selection.addRange(normalizedRange);
+    // This must reject the normalized SOURCE TEXT, not merely a stale Range
+    // whose Text node was detached during the mutation.
+    const normalizedTextRejected = rejects();
+
+    element.textContent = projection.text;
+    const restoredNode = element.firstChild;
+    if (!restoredNode) throw new Error("missing-restored-text");
+    const brokenRange = document.createRange();
+    brokenRange.setStart(restoredNode, 21);
+    brokenRange.setEnd(restoredNode, 22);
+    selection.removeAllRanges();
+    selection.addRange(brokenRange);
+    const splitSurrogateRejected = rejects();
+
+    selection.removeAllRanges();
+    element.remove();
+    return { extraChildRejected, normalizedTextRejected, splitSurrogateRejected };
+  });
+
+  expect(rejected).toEqual({
+    extraChildRejected: true,
+    normalizedTextRejected: true,
+    splitSurrogateRejected: true,
+  });
+});
+
+
+test("R2 browser File input preview preserves raw bytes and keeps the selected span unqualified", async ({ page }) => {
+  await page.goto("/");
+
+  await page.evaluate(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.setAttribute("data-r2-local-preview", "1");
+    document.body.appendChild(input);
+  });
+
+  const rawText = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
+  const raw = Buffer.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(rawText)]);
+  await page.locator('[data-r2-local-preview="1"]').setInputFiles({
+    name: "same-text-is-not-source-identity.txt",
+    mimeType: "text/plain",
+    buffer: raw,
+  });
+
+  const result = await page.evaluate(async () => {
+    const { readLocalRawFilePreview } =
+      await import("/src/source/local_raw_file_preview_reference.ts");
+    const {
+      captureRawContentCheckpoint,
+      resolveSingleDomTextNodeSelection,
+    } = await import("/src/source/raw_utf8_selection_reference.ts");
+
+    const input = document.querySelector<HTMLInputElement>('[data-r2-local-preview="1"]');
+    const preview = await readLocalRawFilePreview(input?.files?.item(0) ?? null);
+    const element = document.createElement("pre");
+    element.textContent = preview.projection.text;
+    document.body.appendChild(element);
+    const node = element.firstChild;
+    const selection = window.getSelection();
+    if (!node || !selection) throw new Error("missing-file-selection");
+    const range = document.createRange();
+    range.setStart(node, 15);
+    range.setEnd(node, 22);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    const span = resolveSingleDomTextNodeSelection(preview.projection, element, selection);
+    const checkpoint = await captureRawContentCheckpoint(preview.rawBytes, span);
+    const extracted = new TextDecoder("utf-8", { fatal: true })
+      .decode(preview.rawBytes.subarray(span.startByte, span.endByte));
+
+    selection.removeAllRanges();
+    element.remove();
+    input?.remove();
+    return {
+      qualification: preview.qualification,
+      byteLength: preview.rawBytes.length,
+      selectedSpan: [span.startByte, span.endByte],
+      selectedSha256: checkpoint.selectedSha256,
+      extracted,
+    };
+  });
+
+  expect(result).toEqual({
+    qualification: "unqualified-local-file-preview",
+    byteLength: 57,
+    selectedSpan: [38, 57],
+    selectedSha256: "6b39ef0ed8a5f5771807dc348b88b79fc716b3ec6cdf541b24fbd6f4b0f53df7",
+    extracted: "同じ言葉。🌊",
+  });
+});
+
+
+test("R2 StartPanel File preview is user-visible, local-only and cleared when collapsed", async ({ page }) => {
+  const observedWrites: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() !== "GET" && request.method() !== "HEAD") {
+      observedWrites.push(request.method() + " " + request.url());
+    }
+  });
+
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await expect(panel).toBeVisible();
+  await panel.locator("[data-start-expand]").click();
+  const disclosure = page.getByTestId("raw-local-preview-disclosure");
+  await disclosure.locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  await expect(preview).toBeVisible();
+
+  const text = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "human-chosen-raw.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(text)]),
+  });
+  const source = preview.getByTestId("raw-local-source-text");
+  await expect(source).toHaveText(text);
+  await expect(preview.getByTestId("raw-local-unqualified")).toContainText("正式な出典として登録されていません");
+
+  await page.evaluate(() => {
+    const element = document.querySelector('[data-testid="raw-local-source-text"]');
+    const node = element?.firstChild;
+    const selection = window.getSelection();
+    if (!node || !selection) throw new Error("missing-product-raw-text-node");
+    const range = document.createRange();
+    range.setStart(node, 15);
+    range.setEnd(node, 22);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await expect(preview.getByTestId("raw-local-span")).toContainText("[38, 57)");
+  expect(observedWrites).toEqual([]);
+
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-preview")).toHaveCount(0);
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-source-text")).toHaveCount(0);
+});
