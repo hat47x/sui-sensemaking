@@ -38,6 +38,36 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 機能の追加より、価値と認知の増分の確認を優先します。実際に使って、同じ摩擦が再現したものから、実装に昇格させます。
 
+## 実施順：原資料から情報統合へ（提案・未採用）
+
+[段階的な受入計画](01_Plans/information_integration_stage_gates_2026-11.md)に、Hybrid Tree/KJ・異種情報統合・TEI/SHO等の横断検討から、**今着手する最小の製品縦断と後段の依存順**を整理した。一次価値・安全・外部接続の正本は引き続きADR-0089/0041/0111。計画を文書化しただけで製品機能を実装・承認したとは扱わない。
+
+| 順序 | 内容・停止線 | 管理先 |
+| --- | --- | --- |
+| **IG0→IG1（最優先）** | AI OFFの3 Card KJを維持し、Raw Readerで人が選んだ原文範囲をCard化→保存→別Process/Browserから**同じSourceの同じ位置へ再到達**。Root/Scope/Revision/Grantを独立再検査。R0/R1は限定Draft試験で、R2製品縦断は未実証 | [R0/R1 #3438](https://github.com/hat47x/sui-sensemaking/issues/3438)、[R2 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441) |
+| **IG2（R2の後）** | 2つの独立Raw資料でCard間の関係候補・矛盾・保留を残し、個別Sourceへ復帰。同文別出典・別Root・改版・SafeMode・409/ACK不明を検査 | [情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)のIB-01〜06 |
+| **IG3以降（需要で選択）** | 構造化CSV/時系列、Tree/複数Canvasの独立Occurrence、表示横断、SHO文章化・TEI型付き投影へ段階拡張。Graphの向き/多重性・Loss/未解決・Source scope・読取/書込資格を別検証。PERT/Task同期や中央Query/Storeは必須にしない | [情報統合 #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)、[Hybrid計画](01_Plans/hybrid_outline_canvas_layout_plan.md)、[SUI→SHO #3391](https://github.com/hat47x/sui-sensemaking/issues/3391) |
+
+**IG1実装上の先行確認**：[R2 #3441の実コードFit/Gap追補](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6869227748)を参照。現行`CardMeta`の未知属性は保存時に消え、文字列`source`/`sources`は検証済みRaw Bindingではない。単一TenantのDocument PUTは`If-Match`を省くとLWWになる。既存入口/権限/保存先をOwnerが確認してから、**許可済みRaw→人手選択→Card→明示If-Match Save→別Process GET→現在Sourceへの再Read**を一本で検証する。実Hostの認可が無ければ正式Raw Reader APIを公開せず停止。これは[受入計画 §6.1](01_Plans/information_integration_stage_gates_2026-11.md)への導線であり、新Schemaの採用を意味しない。
+
+**R2原文選択の実装ReferenceとF1.5入口**：[Draft #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)で、UTF-16選択→元Raw byte範囲・BOM/EOL/重複文・単一DOM Range・同一SnapshotからのRaw/選択SHA-256照合を実装。[exact HEAD CI #43549516493](https://github.com/hat47x/sui-sensemaking/actions/runs/43549516493)では**Vitest 11件・代表Chromium E2E 11件（新2件）・型検査/build・Backend契約ジョブ成功**。さらに明示的に選択されたローカルFileのbyteをFile APIから読む**1 MiB以下の一時プレビュー（`unqualified-local-file-preview`）**と、DOM選択・内容Checkpointへ至る試験を追加。最新HEAD `be8f210b`の[CI #43553871864](https://github.com/hat47x/sui-sensemaking/actions/runs/43553871864)は確認時queued（新Vitest 13件・代表E2E 12件のPASS未判定）。**ファイル選択・内容hashだけでは現在Host Root/Scope/Grantや継続Revisionを確認できない。SUI製品Readerへの組込み、Card Source Binding、Document CAS Save→別Process GET→同Source再Readは未接続**。[受入計画 §6.4](01_Plans/information_integration_stage_gates_2026-11.md)と[担当#3441](https://github.com/hat47x/sui-sensemaking/issues/3441)へ接続し、IG1完成扱いにしない。
+
+**R2出典保存方式の採用前ガード**：現行DocumentV1のBackend `CardMeta`は未知の`sourceBinding`を黙って落とし、Frontend厳密Importは拒否・緩い読込は再構成時に消す。**A=Card直下の省略可能な型付きSource選択欄を優先試験候補**（Owner未採用）、B=Document Mapは孤児・複製整合、C=Provider独立保存は二段Commit/Recoveryを比較条件とする。[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)では予約欄をBackend `PUT`で**HTTP 422拒否**し、Frontend緩いImportでも拒否。旧`meta.source`を維持し、エラーにRaw/Locator/IDを反射しない。既存Cardの本文/`held`/異論/ETag不変もHTTP負例に追加。[exact HEAD `e776c198`のCI #43559145376](https://github.com/hat47x/sui-sensemaking/actions/runs/43559145376)は**Backend 322件PASS（新8件）**、Frontend Import `validate.test.ts` **22件PASS**、型検査/build・代表E2E成功。**これは採用前の欠落防止であり、Source保存/Grant/実Readの資格ではない**。[計画§6.2.1](01_Plans/information_integration_stage_gates_2026-11.md)と[担当#3441](https://github.com/hat47x/sui-sensemaking/issues/3441)でOwner Gateを維持。
+
+**R2 F1.5の実画面入口**：[実装Draft #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)で、SUIの作業開始パネル（StartPanel）に折りたたみ式の「原文の一時確認」を追加。利用者がFileを選択し、元byteのまま表示→DOMで範囲選択→SHA-256の内容Checkpoint採取を行い、閉じるとRaw/選択stateを破棄する。既存Document JSONの読込とは別で、Card・Document更新やAI送信は行わない。日本語/英語の説明・実画面Chromium試験・compact状態の回帰を追加。[exact HEAD `6eed48ba` のCI #43557030239](https://github.com/hat47x/sui-sensemaking/actions/runs/43557030239)は**completed/success**：実SUI StartPanelプレビュー操作を含む代表Chromium E2E **13件PASS**、Raw/Checkpoint 11件・File API 2件・StartPanel 5件の各単体Suite、Frontend型検査/build、Backend契約も成功。**本UIは一時プレビューであり、持続的Source ID/現在Host Root/Grant/Revision/Doc CAS Save/別Process Source再取得の正式実装ではない**。[計画§6.4](01_Plans/information_integration_stage_gates_2026-11.md)・[R2 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)へ接続。正式R2の合格とは分離する。
+
+**R2 Browser選択のbyte忠実性**：Browser DOM/UTF-16の選択位置を、Readerが扱う元Raw UTF-8 byte範囲へ**Sourceに紐付く位置対応**で変換し、同文の別Occurrence、BOM、CRLF/LF/CR、絵文字、DOM装飾と境界を検証する。文字数やsubstring検索だけによる再位置決めは禁止。[実装担当 #3441追補](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6869843018)、[受入計画 §6.4](01_Plans/information_integration_stage_gates_2026-11.md)に元Rawの固定byte Expectedを整理済み。正式Source Reader/Frontend/UI E2E合格は未実施。これはIG1の実装契約であり、PDF/音声/汎用文字位置Engineを先行導入しない。
+
+**R2の保存候補と外部Skill資格**：F0では[受入計画 §6.2〜6.3](01_Plans/information_integration_stage_gates_2026-11.md)により「Cardに任意・型付きSource選択を保持」「Document内のCard ID対応」「既存Providerの独立記録」の3案を比較し、**過去の選択事実と現在のHost Grantを分離**する。採用はOwnerと同一CardのSave/別Process GET/現在Source再Readの実証が前提。Raw改版・Card解釈改版・Canvas配置改版では依存する部分だけ再資格化する。IG5の外部Harness/Skillは[§8.1](01_Plans/information_integration_stage_gates_2026-11.md)に従いInstruction／Subject-Information／Capability-Authorityの3閉包を別評価するが、IG1 AI OFFの追加依存にはしない。R2の具体的判断票は[#3441コメント](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6869447106)。
+
+**後段の横断受入**：IG4では選択のWindow/epochと現在のSource/Document Revision・Disclosureを照合し、遅延応答の誤反映、同一Itemの別Canvas表示の相互汚染、非単射Projectionの自動逆Patchを拒否する。IG3では部分取得の集計・NOT EXISTS/Top-N等を現在の確定事実へ昇格しない。検査は[段階的受入計画 §7](01_Plans/information_integration_stage_gates_2026-11.md)とTEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)・[#4351](https://github.com/hat47x/tei-platform/issues/4351)の既存参照基準を使う。**SUIに新Runtime/Schemaを追加する計画ではない。**
+
+**Handoffの現在地**：[merged #3433](https://github.com/hat47x/sui-sensemaking/pull/3433)でStructure Draft／損失付きOutline候補とSHO Runnerとの限定往復を確認済み。ただし正式SHO Writer、実Harness/Agent接続、全Sourceへ戻れること、外部Effectを主張しない。IG5では[計画 §8](01_Plans/information_integration_stage_gates_2026-11.md)に従いProducer、Transport、Consumer、Writer、Owner受理を別々に観測する。外部開示経路の既存認可・SafeMode課題は[計画 §9](01_Plans/information_integration_stage_gates_2026-11.md)から参照し、IG1ローカルAI OFFの前提には増やさない。
+
+**Desktop/Web作業面への展開**：SUIは[ADR-0076](01_Plans/adr/ADR-0076-collaboration-concurrency-model.md)のサーバ権威・Document CAS/保存時同期を維持し、TEI StudioのDesktop（独立Workspace/Git）・Web（共有サーバ）構想から、**Source参照の可搬性と権限再照合**だけを後段の圧力ケースとして利用する。SUI Document ETag、Raw Source revision、外部Git/TEI Model revisionは異なる正本であり、同じbyte/同じbranch/同じ画面でも自動的な書戻し・意味受理を許さない。二Clientの競合/Undoは[#3399](https://github.com/hat47x/sui-sensemaking/issues/3399)、連携移動の境界は[受入計画 §10](01_Plans/information_integration_stage_gates_2026-11.md)へ接続。**新Desktop/CRDT/WebSocket/中央Workspace基盤をIG1の前提にしない。**
+
+**統合時の非干渉**：同一ItemのA/B Canvas表示で座標・島・Tree・意味Edgeは独立。Reader/KJ/Tree等の表示選択は現在Scope/版/Disclosureで再解決し、Projectionが同一でも元Sourceや逆Writeの同一性を推測しない。AI提案のApplyはreadSet/writeSetと現在Revisionを照合し、他者のHold・異論・Reviewを上書きしない。SUI→SHO Draft、TEI Canonical候補、Agent Proposal、正式Meaning受理、実Effectはそれぞれ別の受入段階。
+
 ## 検討候補：アウトライン／マインドマップとKJキャンバスの連携
 
 [計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)と[設計案](02_Architecture/hybrid-tree-canvas-layout-design.html)に、独立したアウトライン／マインドマップUIとKJキャンバスの連携、Tree由来の薄い背景枝、マインドマップからの初期配置、島を保つ粘性付き整形、人的アノテーション、変化量制御、Undo/Redo、指定版からの部分復元を整理した。**構想段階であり、採用・実装・T2の利用価値検証は未了**。
