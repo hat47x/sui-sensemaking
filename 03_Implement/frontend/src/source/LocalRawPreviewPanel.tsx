@@ -23,6 +23,35 @@ export function LocalRawPreviewPanel() {
 
   useEffect(() => () => { requestId.current += 1; }, []);
 
+  // A confirmed byte span belongs to the selection at confirmation time,
+  // not to a later focus/selection elsewhere in the workspace. This preview
+  // has no Pin or persistent Source identity; never display a stale span as
+  // though it still described the current user's DOM selection.
+  useEffect(() => {
+    if (!span || !preview) return;
+    const invalidateOnSelectionChange = () => {
+      const root = rawRef.current;
+      if (!root) {
+        setSpan(null);
+        return;
+      }
+      try {
+        const current = resolveSingleDomTextNodeSelection(
+          preview.projection, root, window.getSelection(),
+        );
+        if (current.startByte !== span.startByte || current.endByte !== span.endByte) {
+          setSpan(null);
+        }
+      } catch {
+        setSpan(null);
+      }
+    };
+    document.addEventListener("selectionchange", invalidateOnSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", invalidateOnSelectionChange);
+    };
+  }, [preview, span]);
+
   const clear = () => {
     requestId.current += 1;
     setPreview(null);
@@ -66,7 +95,16 @@ export function LocalRawPreviewPanel() {
       );
       // Compute the same in-memory byte checkpoint; do not persist/egress.
       await captureRawContentCheckpoint(preview.rawBytes, selected);
-      if (requestId.current === id) setSpan(selected);
+      if (requestId.current !== id) return;
+      // The user may have changed the selection during async WebCrypto. The
+      // hash still describes its original snapshot, not the current focus.
+      const current = resolveSingleDomTextNodeSelection(
+        preview.projection, root, window.getSelection(),
+      );
+      if (current.startByte !== selected.startByte || current.endByte !== selected.endByte) {
+        throw new Error("selection-changed-during-checkpoint");
+      }
+      setSpan(selected);
     } catch {
       if (requestId.current === id) setError("selection");
     } finally {
