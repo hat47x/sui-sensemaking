@@ -127,3 +127,70 @@ test("R2 DOM selection reference refuses decorated nodes, normalized text, and s
     splitSurrogateRejected: true,
   });
 });
+
+
+test("R2 browser File input preview preserves raw bytes and keeps the selected span unqualified", async ({ page }) => {
+  await page.goto("/");
+
+  await page.evaluate(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.setAttribute("data-r2-local-preview", "1");
+    document.body.appendChild(input);
+  });
+
+  const rawText = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
+  const raw = Buffer.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(rawText)]);
+  await page.locator('[data-r2-local-preview="1"]').setInputFiles({
+    name: "same-text-is-not-source-identity.txt",
+    mimeType: "text/plain",
+    buffer: raw,
+  });
+
+  const result = await page.evaluate(async () => {
+    const { readLocalRawFilePreview } =
+      await import("/src/source/local_raw_file_preview_reference.ts");
+    const {
+      captureRawContentCheckpoint,
+      resolveSingleDomTextNodeSelection,
+    } = await import("/src/source/raw_utf8_selection_reference.ts");
+
+    const input = document.querySelector<HTMLInputElement>('[data-r2-local-preview="1"]');
+    const preview = await readLocalRawFilePreview(input?.files?.item(0) ?? null);
+    const element = document.createElement("pre");
+    element.textContent = preview.projection.text;
+    document.body.appendChild(element);
+    const node = element.firstChild;
+    const selection = window.getSelection();
+    if (!node || !selection) throw new Error("missing-file-selection");
+    const range = document.createRange();
+    range.setStart(node, 15);
+    range.setEnd(node, 22);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    const span = resolveSingleDomTextNodeSelection(preview.projection, element, selection);
+    const checkpoint = await captureRawContentCheckpoint(preview.rawBytes, span);
+    const extracted = new TextDecoder("utf-8", { fatal: true })
+      .decode(preview.rawBytes.subarray(span.startByte, span.endByte));
+
+    selection.removeAllRanges();
+    element.remove();
+    input?.remove();
+    return {
+      qualification: preview.qualification,
+      byteLength: preview.rawBytes.length,
+      selectedSpan: [span.startByte, span.endByte],
+      selectedSha256: checkpoint.selectedSha256,
+      extracted,
+    };
+  });
+
+  expect(result).toEqual({
+    qualification: "unqualified-local-file-preview",
+    byteLength: 57,
+    selectedSpan: [38, 57],
+    selectedSha256: "6b39ef0ed8a5f5771807dc348b88b79fc716b3ec6cdf541b24fbd6f4b0f53df7",
+    extracted: "同じ言葉。🌊",
+  });
+});
