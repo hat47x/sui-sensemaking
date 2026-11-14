@@ -133,7 +133,7 @@ IG1は**Source・Document・現在Grant**の必要部分だけを検査する。
 
 **固定の最小独立Expected（既存R2-SRC-01/02/05に紐付け、新規試験正本は作らない）**：
 
-- Raw byteを `BOM(ef bb bf) + UTF-8("前文\\r\\n同じ言葉。🌊\\n後文\\r同じ言葉。🌊")` とする。原byte長は**57**。検索文字列のUTF-8 byte長は**19**。表示ではBOMを除くが元Sourceに3 byteある事実は残す。
+- Raw byteを `BOM(ef bb bf) + UTF-8("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊")` とする。原byte長は**57**。検索文字列のUTF-8 byte長は**19**。表示ではBOMを除くが元Sourceに3 byteある事実は残す。
 - 最初の「同じ言葉。🌊」は byte `[11,30)`、**2箇所目**はbyte `[38,57)`。BOMを表示しないText Runで、先頭からのUTF-16 code unit位置は最初 `[4,11)`、2箇所目 `[15,22)`（改行コードを元の2単位CRLFと1単位LF/CRとして保持する場合の期待）。この表示条件自体を変えるRendererでは、表示/元byteの対応表を変更して同じ元byte位置へ導くこと。
 - この対応が取れないRenderer・Readerは「正確な原文範囲に戻れた」と申告しない。surrogate内部を境界とする選択、未知DOM Text Run、元Raw改版、同path別Rootは拒否/再照合。Sourceが無いこと、空選択、選択未取得、権限拒否を「正常に0件」とまとめない。
 
