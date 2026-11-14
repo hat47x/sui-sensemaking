@@ -136,7 +136,7 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 **A案優先の停止条件**：Cardに保存する出典参照が、Documentを閲覧可能でも元Sourceを閲覧できないPrincipalに露出する場合、A案は**まだ採用不可**。opaque handleやSHA-256でもID・参照の存在・関係数が情報になり得る。権威あるServer投影で「Document read ≠ Source read」を実装し、Guest/Member/Agent/SafeModeでRaw/Locator/Handle/Hash/ID・件数/ETagを独立に検査するまでは、Aを最有力の**技術候補**から正式Schemaへ昇格させない。もしDocument内に一切のSource参照を安全に配置できないなら、既存Providerが別Root/Grantを保護できることを条件に**Cを再評価**する。BのDocument別Mapも閲覧時の漏洩問題を解消しないため、Aの単純な代替として選ばない。
 
-**Evidenceの粒度**：予約項目が拒否されたこと（無送出・HTTP 422・Import拒否）／Documentが保存されたこと（ETag CAS）／実Sourceへ再到達できること（現在Root/Scope/Grant・Revision）／TEI/SHOなどの外部Consumerが今回実受領したこと／人間が意味を受理したことは、別々の結果欄に残す。内容ハッシュ一致で後の資格を代替しない。実装予定の`putDocument`事前拒否とAgent投影単体テストは[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)の新HEAD `6f864be6361b0d3f8f3dc2cf343e8fe524c64023`、[CI #43571702321](https://github.com/hat47x/sui-sensemaking/actions/runs/43571702321)は初回確認時pending。**このHEADのCI結果は別に判定し、既存HEADの成功を流用しない。**
+**Evidenceの粒度**：予約項目が拒否されたこと（無送出・HTTP 422・Import拒否）／Documentが保存されたこと（ETag CAS）／実Sourceへ再到達できること（現在Root/Scope/Grant・Revision）／TEI/SHOなどの外部Consumerが今回実受領したこと／人間が意味を受理したことは、別々の結果欄に残す。内容ハッシュ一致で後の資格を代替しない。実装予定の`putDocument`事前拒否とAgent投影単体テストは[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)の新HEAD `6f864be6361b0d3f8f3dc2cf343e8fe524c64023`の[CI #43571702321](https://github.com/hat47x/sui-sensemaking/actions/runs/43571702321)は**completed/success**。実ログでBackend契約**323件PASS**（Agent投影ヘルパーの新負例を含む）、Frontend全体**1,943件PASS**、`client.test.ts` **63件PASS**（送信前拒否の2件を含む）、`validate.test.ts` **22件PASS**、代表E2E・型検査/build・native Action/MCP/agent各Workflowもsuccess。ただし実HTTPのAgent/Guest別Source資格、Documentへ正式な型付きSource保存、別Processからの現在原文再Readは**未実装／NOT RUN**。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
