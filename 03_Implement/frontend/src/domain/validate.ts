@@ -1124,9 +1124,31 @@ function parseIsoDate(value: unknown, fallback: string): string {
   return new Date(timestamp).toISOString();
 }
 
+// R2: the tolerant importer must not silently drop a future Source selection
+// while reconstructing known Card fields. Do not blanket-reject unrelated
+// unknown keys: this is only the explicitly reserved, unadopted Source shape.
+function hasUnacceptedSourceBindingFields(value: Record<string, unknown>): boolean {
+  const documentKeys = ["sourceBindings", "sourceSelections"];
+  const cardKeys = ["sourceBinding", "sourceBindings", "sourceSelection", "sourceSelections"];
+  if (documentKeys.some((key) => Object.prototype.hasOwnProperty.call(value, key))) {
+    return true;
+  }
+  if (!Array.isArray(value.cards)) return false;
+  return value.cards.some((card: unknown) => {
+    if (!isRecord(card)) return false;
+    if (cardKeys.some((key) => Object.prototype.hasOwnProperty.call(card, key))) return true;
+    return isRecord(card.meta) &&
+      cardKeys.some((key) => Object.prototype.hasOwnProperty.call(card.meta, key));
+  });
+}
+
 export function validateImportedDocument(value: unknown): ValidateResult {
   if (!isRecord(value)) {
     return { ok: false, error: "Imported data must be a JSON object." };
+  }
+
+  if (hasUnacceptedSourceBindingFields(value)) {
+    return { ok: false, error: "Source binding contract is unavailable; the selection cannot be imported safely." };
   }
 
   if (!("version" in value)) {
