@@ -1,0 +1,55 @@
+import { describe, expect, it } from "vitest";
+import { projectRawUtf8Bytes, resolveSingleTextRunSelection } from "./raw_utf8_selection_reference";
+
+const rawText = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
+const rawBytes = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(rawText)]);
+
+describe("R2 single-text-run byte offset reference (NOT Product DOM / Source authority)", () => {
+  it("locates both equal substrings by ORIGINAL bytes despite BOM and mixed EOL", () => {
+    const projection = projectRawUtf8Bytes(rawBytes);
+    expect(projection.sourceByteLength).toBe(57); // hand-authored independent expected
+    expect(projection.text).toBe(rawText);
+    expect(resolveSingleTextRunSelection(projection, projection.text, 4, 11))
+      .toEqual({ startByte: 11, endByte: 30, selectedText: "同じ言葉。🌊" });
+    expect(resolveSingleTextRunSelection(projection, projection.text, 15, 22))
+      .toEqual({ startByte: 38, endByte: 57, selectedText: "同じ言葉。🌊" });
+  });
+
+  it("refuses a UTF-16 boundary inside the surrogate pair", () => {
+    const p = projectRawUtf8Bytes(rawBytes);
+    expect(() => resolveSingleTextRunSelection(p, p.text, 21, 22))
+      .toThrow("unqualified-selection");
+  });
+
+  it("refuses a renderer that silently normalizes CRLF / CR or NFC", () => {
+    const p = projectRawUtf8Bytes(rawBytes);
+    expect(() => resolveSingleTextRunSelection(p, p.text.replace(/\r\n/g, "\n"), 4, 11))
+      .toThrow("unqualified-selection");
+    expect(() => resolveSingleTextRunSelection(p, p.text.replace(/\r/g, "\n"), 4, 11))
+      .toThrow("unqualified-selection");
+    const decomposed = projectRawUtf8Bytes(new TextEncoder().encode("e\u0301"));
+    expect(() => resolveSingleTextRunSelection(decomposed, "é", 0, 1))
+      .toThrow("unqualified-selection");
+  });
+
+  it("refuses empty, out-of-range and non-integer selections", () => {
+    const p = projectRawUtf8Bytes(rawBytes);
+    for (const [a, b] of [[0, 0], [-1, 1], [5, 99], [2.5, 4], [5, 4]]) {
+      expect(() => resolveSingleTextRunSelection(p, p.text, a, b))
+        .toThrow("unqualified-selection");
+    }
+  });
+
+  it("refuses invalid UTF-8 instead of decoding replacement characters", () => {
+    expect(() => projectRawUtf8Bytes(new Uint8Array([0xff, 0xfe])))
+      .toThrow("invalid-utf8");
+  });
+
+  it("does not drop a second BOM byte sequence after the leading one", () => {
+    const b = new Uint8Array([0xef, 0xbb, 0xbf, 0xef, 0xbb, 0xbf, 0x41]);
+    const p = projectRawUtf8Bytes(b);
+    expect(p.text).toBe("\ufeffA");
+    expect(resolveSingleTextRunSelection(p, p.text, 1, 2))
+      .toEqual({ startByte: 6, endByte: 7, selectedText: "A" });
+  });
+});
