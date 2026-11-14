@@ -23,6 +23,35 @@ export function LocalRawPreviewPanel() {
 
   useEffect(() => () => { requestId.current += 1; }, []);
 
+  // A confirmed byte span belongs to the selection at confirmation time,
+  // not to a later focus/selection elsewhere in the workspace. This preview
+  // has no Pin or persistent Source identity; never display a stale span as
+  // though it still described the current user's DOM selection.
+  useEffect(() => {
+    if (!span || !preview) return;
+    const invalidateOnSelectionChange = () => {
+      const root = rawRef.current;
+      if (!root) {
+        setSpan(null);
+        return;
+      }
+      try {
+        const current = resolveSingleDomTextNodeSelection(
+          preview.projection, root, window.getSelection(),
+        );
+        if (current.startByte !== span.startByte || current.endByte !== span.endByte) {
+          setSpan(null);
+        }
+      } catch {
+        setSpan(null);
+      }
+    };
+    document.addEventListener("selectionchange", invalidateOnSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", invalidateOnSelectionChange);
+    };
+  }, [preview, span]);
+
   const clear = () => {
     requestId.current += 1;
     setPreview(null);
@@ -30,7 +59,17 @@ export function LocalRawPreviewPanel() {
     setError(null);
     setBusy(false);
     if (inputRef.current) inputRef.current.value = "";
-    window.getSelection()?.removeAllRanges();
+    // Selection is window-global. Clearing this optional preview must not
+    // collapse a user's selection in another Card, Editor or workspace pane.
+    const sourceTextNode = rawRef.current?.firstChild;
+    const currentSelection = window.getSelection();
+    if (sourceTextNode && currentSelection?.rangeCount === 1) {
+      const range = currentSelection.getRangeAt(0);
+      if (range.startContainer === sourceTextNode &&
+          range.endContainer === sourceTextNode) {
+        currentSelection.removeAllRanges();
+      }
+    }
   };
 
   const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -60,16 +99,42 @@ export function LocalRawPreviewPanel() {
     setError(null);
     setSpan(null);
     setBusy(true);
+    // A final offset comparison alone misses an observed A -> B -> A
+    // selection change during asynchronous hashing. Track intervening
+    // changes for this one attempt; do not promote a stale confirmation.
+    let selectionChangedWhileHashing = false;
+    let removeSelectionListener: (() => void) | null = null;
     try {
       const selected = resolveSingleDomTextNodeSelection(
         preview.projection, root, window.getSelection(),
       );
+      const observeSelectionChange = () => {
+        try {
+          const current = resolveSingleDomTextNodeSelection(
+            preview.projection, root, window.getSelection(),
+          );
+          if (current.startByte !== selected.startByte || current.endByte !== selected.endByte) {
+            selectionChangedWhileHashing = true;
+          }
+        } catch {
+          selectionChangedWhileHashing = true;
+        }
+      };
+      document.addEventListener("selectionchange", observeSelectionChange);
+      removeSelectionListener = () =>
+        document.removeEventListener("selectionchange", observeSelectionChange);
       // Compute the same in-memory byte checkpoint; do not persist/egress.
       await captureRawContentCheckpoint(preview.rawBytes, selected);
-      if (requestId.current === id) setSpan(selected);
+      if (requestId.current !== id) return;
+      observeSelectionChange();
+      if (selectionChangedWhileHashing) {
+        throw new Error("selection-changed-during-checkpoint");
+      }
+      setSpan(selected);
     } catch {
       if (requestId.current === id) setError("selection");
     } finally {
+      removeSelectionListener?.();
       if (requestId.current === id) setBusy(false);
     }
   };

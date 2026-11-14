@@ -236,10 +236,303 @@ test("R2 StartPanel File preview is user-visible, local-only and cleared when co
   });
   await preview.getByTestId("raw-local-confirm-selection").click();
   await expect(preview.getByTestId("raw-local-span")).toContainText("[38, 57)");
+
+  // A later human selection must not keep showing the previous byte span.
+  // The first and second Japanese sentences have the same text, but not
+  // the same Raw UTF-8 offsets. Neither position is a durable Source Pin.
+  await page.evaluate(() => {
+    const textNode = document.querySelector('[data-testid="raw-local-source-text"]')?.firstChild;
+    const selection = window.getSelection();
+    if (!textNode || !selection) throw new Error("missing-second-selection");
+    const range = document.createRange();
+    range.setStart(textNode, 4);
+    range.setEnd(textNode, 11);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await expect(preview.getByTestId("raw-local-span")).toContainText("[11, 30)");
+
+  // Replacing a selected file must clear both the previous selection and
+  // its position. Matching filename or previous digest is not identity.
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "human-chosen-raw.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from(new TextEncoder().encode("別の資料に更新されました。")),
+  });
+  await expect(source).toHaveText("別の資料に更新されました。");
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
   expect(observedWrites).toEqual([]);
 
   await disclosure.locator("summary").click();
   await expect(page.getByTestId("raw-local-preview")).toHaveCount(0);
   await disclosure.locator("summary").click();
   await expect(page.getByTestId("raw-local-source-text")).toHaveCount(0);
+});
+
+
+test("R2 delayed old File read cannot replace a newer preview or revive a cleared preview", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  const disclosure = page.getByTestId("raw-local-preview-disclosure");
+  await disclosure.locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  const fileInput = preview.getByTestId("raw-local-file-input");
+  const source = preview.getByTestId("raw-local-source-text");
+
+  // Hold one actual browser File.arrayBuffer() call while allowing the next
+  // selected file to complete. No mock server or durable Source is involved.
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    let holdNext = true;
+    const releases: Array<() => Promise<void>> = [];
+    File.prototype.arrayBuffer = function () {
+      if (holdNext) {
+        holdNext = false;
+        const chosenFile = this;
+        return new Promise<ArrayBuffer>((resolve, reject) => {
+          releases.push(async () => {
+            try { resolve(await original.call(chosenFile)); }
+            catch (reason) { reject(reason); }
+          });
+        });
+      }
+      return original.call(this);
+    };
+    Object.assign(window, {
+      holdNextLocalFileRead: () => { holdNext = true; },
+      releaseHeldLocalFileRead: async () => {
+        const release = releases.shift();
+        if (!release) throw new Error("no-held-file-read");
+        await release();
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      },
+    });
+  });
+
+  await fileInput.setInputFiles({
+    name: "same-name.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("先に選んだ原文"),
+  });
+  await expect(source).toHaveCount(0);
+
+  await fileInput.setInputFiles({
+    name: "same-name.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("後から選んだ原文"),
+  });
+  await expect(source).toHaveText("後から選んだ原文");
+
+  await page.evaluate(async () => {
+    const release = (window as Window & { releaseHeldLocalFileRead?: () => Promise<void> })
+      .releaseHeldLocalFileRead;
+    if (!release) throw new Error("missing-release-hook");
+    await release();
+  });
+  await expect(source).toHaveText("後から選んだ原文");
+
+  // A newly selected file is also delayed; clear the preview BEFORE the
+  // read completes. The eventual response must not resurrect the old panel.
+  await page.evaluate(() => {
+    const hold = (window as Window & { holdNextLocalFileRead?: () => void })
+      .holdNextLocalFileRead;
+    if (!hold) throw new Error("missing-hold-hook");
+    hold();
+  });
+  await fileInput.setInputFiles({
+    name: "same-name.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("破棄する予定の原文"),
+  });
+  await expect(source).toHaveCount(0);
+  await preview.getByTestId("raw-local-clear").click();
+  await page.evaluate(async () => {
+    const release = (window as Window & { releaseHeldLocalFileRead?: () => Promise<void> })
+      .releaseHeldLocalFileRead;
+    if (!release) throw new Error("missing-release-hook");
+    await release();
+  });
+  await expect(source).toHaveCount(0);
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-preview")).toHaveCount(0);
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-source-text")).toHaveCount(0);
+});
+
+
+test("R2 preview clear cannot erase a different workspace DOM selection", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  await page.getByTestId("raw-local-preview-disclosure").locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  const fileInput = preview.getByTestId("raw-local-file-input");
+  await fileInput.setInputFiles({
+    name: "read-only.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("原文の一時選択"),
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveText("原文の一時選択");
+
+  // A different editor/workspace may own window.getSelection(). Dispatch
+  // the real DOM click handler without letting a pointer-focus side effect
+  // obscure whether the preview itself removed another pane's selection.
+  const outsideSelection = await page.evaluate(() => {
+    const other = document.createElement("p");
+    other.textContent = "別の作業領域で選択された文字";
+    other.setAttribute("data-r2-external-selection", "true");
+    document.body.appendChild(other);
+    const otherText = other.firstChild;
+    const selection = window.getSelection();
+    const button = document.querySelector<HTMLButtonElement>('[data-testid="raw-local-clear"]');
+    if (!otherText || !selection || !button) throw new Error("missing-external-selection-elements");
+    const range = document.createRange();
+    range.selectNodeContents(otherText);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    button.click();
+    return { text: selection.toString(), anchorIsOther: selection.anchorNode === otherText };
+  });
+  expect(outsideSelection).toEqual({
+    text: "別の作業領域で選択された文字",
+    anchorIsOther: true,
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
+
+  // Conversely, the preview can discard the current selection it owns.
+  await fileInput.setInputFiles({
+    name: "read-only.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("もう一度原文を選択する"),
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveText("もう一度原文を選択する");
+  const ownSelection = await page.evaluate(() => {
+    const root = document.querySelector('[data-testid="raw-local-source-text"]');
+    const ownText = root?.firstChild;
+    const selection = window.getSelection();
+    const button = document.querySelector<HTMLButtonElement>('[data-testid="raw-local-clear"]');
+    if (!ownText || !selection || !button) throw new Error("missing-own-selection-elements");
+    const range = document.createRange();
+    range.selectNodeContents(ownText);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    button.click();
+    return { rangeCount: selection.rangeCount };
+  });
+  expect(ownSelection).toEqual({ rangeCount: 0 });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
+});
+
+
+test("R2 observed selection A-B-A while hashing cannot confirm the old span", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  await page.getByTestId("raw-local-preview-disclosure").locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "same-occurrences.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊")]),
+  });
+  await expect(preview.getByTestId("raw-local-source-text"))
+    .toHaveText("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊");
+
+  // Keep the first real WebCrypto digest pending; the UI still uses its
+  // actual digest call when released, not synthetic bytes or an API mock.
+  await page.evaluate(() => {
+    const subtle = crypto.subtle;
+    const originalDigest = subtle.digest.bind(subtle);
+    let release: (() => void) | null = null;
+    Object.defineProperty(subtle, "digest", {
+      configurable: true,
+      value: (algorithm: AlgorithmIdentifier, data: BufferSource): Promise<ArrayBuffer> => {
+        if (release) return originalDigest(algorithm, data);
+        return new Promise<ArrayBuffer>((resolve, reject) => {
+          release = () => { void originalDigest(algorithm, data).then(resolve, reject); };
+        });
+      },
+    });
+    Object.assign(window, {
+      r2CheckpointHeld: () => release !== null,
+      r2ReleaseCheckpoint: () => {
+        if (!release) throw new Error("digest-not-held");
+        release();
+      },
+    });
+  });
+
+  const choose = async (start: number, end: number) => {
+    await page.evaluate(({ start, end }) => {
+      const textNode = document.querySelector('[data-testid="raw-local-source-text"]')?.firstChild;
+      const selection = window.getSelection();
+      if (!textNode || !selection) throw new Error("missing-selection");
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, end);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      // Observe one real DOM Selection with deliberately controlled timing.
+      document.dispatchEvent(new Event("selectionchange"));
+    }, { start, end });
+  };
+
+  await choose(15, 22);
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await page.waitForFunction(() =>
+    (window as Window & { r2CheckpointHeld?: () => boolean }).r2CheckpointHeld?.() === true,
+  );
+
+  // During one pending confirmation, choose the first occurrence, then
+  // return to the same second occurrence and offsets. An end-only comparison
+  // would incorrectly treat the old confirmation as still current.
+  await choose(4, 11);
+  await choose(15, 22);
+  await page.evaluate(() =>
+    (window as Window & { r2ReleaseCheckpoint?: () => void }).r2ReleaseCheckpoint?.(),
+  );
+
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
+  await expect(preview.getByRole("alert")).toContainText("元のバイト位置を特定できません");
+
+  // The user can confirm the current selection anew; this is not a Pin.
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await expect(preview.getByTestId("raw-local-span")).toContainText("[38, 57)");
+});
+
+
+test("R2 clearing a Raw preview preserves actual SUI Canvas Card selection and text", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const cards = page.locator("[data-card-id]");
+  await expect(cards).toHaveCount(3);
+  const originalLabels = await cards.allTextContents();
+
+  // Canvas cards intentionally use CSS user-select:none; their real
+  // selection is the product's aria-pressed state, not a DOM text Range.
+  await cards.first().click();
+  await expect(cards.first()).toHaveAttribute("aria-pressed", "true");
+
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  await page.getByTestId("raw-local-preview-disclosure").locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "temporary-local-raw.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("原文の一時的な確認"),
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveText("原文の一時的な確認");
+  await expect(cards.first()).toHaveAttribute("aria-pressed", "true");
+
+  // Clearing the independent Raw preview must not mutate SUI's real Card
+  // selection state, text or the number of Cards.
+  await preview.getByTestId("raw-local-clear").click();
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
+  await expect(cards.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(cards).toHaveCount(3);
+  expect(await cards.allTextContents()).toEqual(originalLabels);
 });
