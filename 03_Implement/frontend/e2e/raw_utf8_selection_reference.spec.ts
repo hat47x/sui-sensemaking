@@ -286,23 +286,28 @@ test("R2 delayed old File read cannot replace a newer preview or revive a cleare
   // selected file to complete. No mock server or durable Source is involved.
   await page.evaluate(() => {
     const original = File.prototype.arrayBuffer;
-    let held = false;
-    const releases: Array<() => void> = [];
+    let holdNext = true;
+    const releases: Array<() => Promise<void>> = [];
     File.prototype.arrayBuffer = function () {
-      if (!held) {
-        held = true;
+      if (holdNext) {
+        holdNext = false;
         const chosenFile = this;
         return new Promise<ArrayBuffer>((resolve, reject) => {
-          releases.push(() => { void original.call(chosenFile).then(resolve, reject); });
+          releases.push(async () => {
+            try { resolve(await original.call(chosenFile)); }
+            catch (reason) { reject(reason); }
+          });
         });
       }
       return original.call(this);
     };
     Object.assign(window, {
-      releaseHeldLocalFileRead: () => {
+      holdNextLocalFileRead: () => { holdNext = true; },
+      releaseHeldLocalFileRead: async () => {
         const release = releases.shift();
         if (!release) throw new Error("no-held-file-read");
-        release();
+        await release();
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       },
     });
   });
@@ -321,19 +326,39 @@ test("R2 delayed old File read cannot replace a newer preview or revive a cleare
   });
   await expect(source).toHaveText("後から選んだ原文");
 
-  await page.evaluate(() => {
-    const release = (window as Window & { releaseHeldLocalFileRead?: () => void })
+  await page.evaluate(async () => {
+    const release = (window as Window & { releaseHeldLocalFileRead?: () => Promise<void> })
       .releaseHeldLocalFileRead;
     if (!release) throw new Error("missing-release-hook");
-    release();
+    await release();
   });
   await expect(source).toHaveText("後から選んだ原文");
 
-  // Next, explicitly discard the newer bytes and confirm the older promise
-  // cannot resurrect them. This only proves local UI state isolation.
+  // A newly selected file is also delayed; clear the preview BEFORE the
+  // read completes. The eventual response must not resurrect the old panel.
+  await page.evaluate(() => {
+    const hold = (window as Window & { holdNextLocalFileRead?: () => void })
+      .holdNextLocalFileRead;
+    if (!hold) throw new Error("missing-hold-hook");
+    hold();
+  });
+  await fileInput.setInputFiles({
+    name: "same-name.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("破棄する予定の原文"),
+  });
+  await expect(source).toHaveCount(0);
   await preview.getByTestId("raw-local-clear").click();
+  await page.evaluate(async () => {
+    const release = (window as Window & { releaseHeldLocalFileRead?: () => Promise<void> })
+      .releaseHeldLocalFileRead;
+    if (!release) throw new Error("missing-release-hook");
+    await release();
+  });
   await expect(source).toHaveCount(0);
   await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
   await disclosure.locator("summary").click();
   await expect(page.getByTestId("raw-local-preview")).toHaveCount(0);
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-source-text")).toHaveCount(0);
 });
