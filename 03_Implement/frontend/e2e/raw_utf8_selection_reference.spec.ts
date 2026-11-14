@@ -270,3 +270,70 @@ test("R2 StartPanel File preview is user-visible, local-only and cleared when co
   await disclosure.locator("summary").click();
   await expect(page.getByTestId("raw-local-source-text")).toHaveCount(0);
 });
+
+
+test("R2 delayed old File read cannot replace a newer preview or revive a cleared preview", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  const disclosure = page.getByTestId("raw-local-preview-disclosure");
+  await disclosure.locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  const fileInput = preview.getByTestId("raw-local-file-input");
+  const source = preview.getByTestId("raw-local-source-text");
+
+  // Hold one actual browser File.arrayBuffer() call while allowing the next
+  // selected file to complete. No mock server or durable Source is involved.
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    let held = false;
+    const releases: Array<() => void> = [];
+    File.prototype.arrayBuffer = function () {
+      if (!held) {
+        held = true;
+        const chosenFile = this;
+        return new Promise<ArrayBuffer>((resolve, reject) => {
+          releases.push(() => { void original.call(chosenFile).then(resolve, reject); });
+        });
+      }
+      return original.call(this);
+    };
+    Object.assign(window, {
+      releaseHeldLocalFileRead: () => {
+        const release = releases.shift();
+        if (!release) throw new Error("no-held-file-read");
+        release();
+      },
+    });
+  });
+
+  await fileInput.setInputFiles({
+    name: "same-name.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("先に選んだ原文"),
+  });
+  await expect(source).toHaveCount(0);
+
+  await fileInput.setInputFiles({
+    name: "same-name.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("後から選んだ原文"),
+  });
+  await expect(source).toHaveText("後から選んだ原文");
+
+  await page.evaluate(() => {
+    const release = (window as Window & { releaseHeldLocalFileRead?: () => void })
+      .releaseHeldLocalFileRead;
+    if (!release) throw new Error("missing-release-hook");
+    release();
+  });
+  await expect(source).toHaveText("後から選んだ原文");
+
+  // Next, explicitly discard the newer bytes and confirm the older promise
+  // cannot resurrect them. This only proves local UI state isolation.
+  await preview.getByTestId("raw-local-clear").click();
+  await expect(source).toHaveCount(0);
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-preview")).toHaveCount(0);
+});
