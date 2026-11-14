@@ -269,6 +269,35 @@ R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進める
 
 **到達上限と優先度**：本節はF2の正式Schema切替時に必要な拒否/保持の受入条件を追加するもので、F0-Sの原byte保存・Reader Fit/Gapを遅らせない。新Client/旧Clientの正式Source Binding移行、Guest/Member別Source Grant、実Update/Import/Export縦断は**NOT RUN**。新Registry、共通Client Version Service、第二のExpected正本を作らず、既存[#3441](https://github.com/hat47x/sui-sensemaking/issues/3441) R2-SRC-01〜08を用いる。
 
+### 6.2.8 原文から作られたCard本文の開示を、Source参照の開示と分けて検証する（2026-11-15／提案）
+
+**新しい論点**：前節までのSource Binding/Raw Snapshotの非開示は、**Sourceの一節をCard.textへ転記した場合の内容漏洩**を防ぐとは限らない。現行`routes/docs.py`の`_agent_document_view`は、`textReviewed=true`のCardの本文をAgentへ渡す。ここに元SourceのCurrent Grantや二次開示の検査は結び付いていない。また通常の`GET /docs/{id}`ではDocumentを読む権限とSourceを読む権限が一致するとは限らない。**人間が本文を確認したこと／出典を特定できること／その本文を相手へ公開できることは三つの別条件**である。既存の公開範囲・SafeModeに関する判断は[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)、既存の業務面Artifact公開経路のOwnerは[#3369](https://github.com/hat47x/sui-sensemaking/issues/3369)とする。
+
+#### 6.2.8.1 最小の操作上の区別（まだ新Schemaを設けない）
+
+| 生成物・操作 | 成立すること | 成立したとは言えないこと |
+| --- | --- | --- |
+| **選択範囲** | 現在閲覧中のSnapshot/Source内のbyte位置を人間が指定した | 取込後の継続Source資格、Card保存、他者への引用・共有許可 |
+| **原文からの直接転記・引用候補** | Snapshotに含まれていた文字列をCardに使う候補がある | Documentの権限だけで、Sourceの内容を含む本文を他Principalへ開示してよい |
+| **人間が記述した解釈・違和感・保留** | Cardとして独立に残せる人間の判断がある | 要約・言い換えだから秘密情報を含まない、出典の受理・真偽が確定した |
+| **Review・共有・Export・外部Handoff** | 目的別の確認・送出操作が行われ得る | `textReviewed`、Document GET成功、AIによる要約をSource二次開示の許可へ昇格できる |
+
+**R2初期の閉じた経路**：公開合成Raw、AI OFF、権限・送出範囲が確定しているDocumentで「選択→Card」を検証する。一時プレビューや人間のCard編集を、他者/Agent/SHO/TEIへの公開と連結しない。共有DocumentでSource由来の本文の送出資格が検証できない場合は、原文転記を伴う**永続Card作成・再配布を未資格として停止**し、Raw閲覧だけができることを保存資格の証明としない。未保存の元資料や本文を別経路で自動送信しない。
+
+#### 6.2.8.2 縦断で確認する公開経路と負例
+
+| 既存Caseを使う操作 | 合格条件・停止条件 |
+| --- | --- |
+| **R2-SRC-01/06**：非公開Sourceから選択した原文をCard.textへ転記し、Document自体は閲覧可能 | Sourceの読取・二次開示が未許可のPrincipalに、**参照だけでなく転記本文**が露出しない。現行Document GETと新Card化入口双方を検証。未実装経路なら公開を禁止 |
+| **R2-SRC-06**：Card `textReviewed=true`、Source read拒否/不明、Agent `GET /docs/{id}` | 人間によるReviewだけで原文由来テキストがAgentへ渡らないこと。既存`_agent_document_view`の`textReviewed`判定は独立のSource Grantではないため、実HTTPで再検査する |
+| **R2-SRC-06**：同じCardをExport/SHO Handoff/TEI投影/AI Context/検索・派生説明へ利用 | それぞれのConsumerとDisclosure Scopeで再判断。許可外Raw byte・転記・Locator・ID・件数・一部の存在を開示しない。本文を運ばないread-only TEI参照の現状を勝手に拡張しない |
+| **R2-SRC-05/06**：Snapshot Read拒否・Origin失効後のCard/異論/保留の再開 | 人間の履歴としてCardを自動消去しない。ただし**以後の外部公開・再送**を以前のGrantで正当化しない。元Originの失効と管理Snapshotの資格/Retentionは別判断で、過去の漏洩や第三者コピーの消去を保証しない |
+| **R2-SRC-06/08**：自動要約/人手の言い換えに原資料の機密事項が混入 | 「解釈だから公開可能」と自動判定しない。公開時の人間の再確認と対象先の許可を必要とする。任意の言い換えから秘密を完全検出できたとは主張しない |
+
+**実装選択肢の順序**：①公開合成資料で、Source由来の選択文字列と人間の記述を画面・試験で混同しない最小経路を確保、②Source本文の共有・二次開示を持つ製品用途が現れた段階で、既存Document/Source権限と操作別Exportのどこに実判定を置くかOwnerが決める、③必要なSource/Derived Disclosure表現だけを既存Card/Projection/Providerへ加える。これに先立って汎用Taint Engine・一括本文分類器・新Policy Host・新OKF Authorityを導入しない。既存Cardの意味やHold/異論を出典の失効に連動して自動破棄しない。
+
+**証拠の上限**：現行Agent投影の静的コードからは「レビュー済み本文を返す」ことまで確認できるが、**Source由来本文の二次開示制御・Member/Guest/Agent実HTTP・外部Consumer/Derived Content非漏洩の製品E2EはNOT RUN**。本節の追加はR2-SRC-01/05/06/08の受入観点であり、IG1の公開合成Raw・AI OFFの最小縦断を、実装されていない全製品公開契約の整備まで止めるものではない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
