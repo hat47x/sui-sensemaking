@@ -137,9 +137,13 @@ IG1は**Source・Document・現在Grant**の必要部分だけを検査する。
 - 最初の「同じ言葉。🌊」は byte `[11,30)`、**2箇所目**はbyte `[38,57)`。BOMを表示しないText Runで、先頭からのUTF-16 code unit位置は最初 `[4,11)`、2箇所目 `[15,22)`（改行コードを元の2単位CRLFと1単位LF/CRとして保持する場合の期待）。この表示条件自体を変えるRendererでは、表示/元byteの対応表を変更して同じ元byte位置へ導くこと。
 - この対応が取れないRenderer・Readerは「正確な原文範囲に戻れた」と申告しない。surrogate内部を境界とする選択、未知DOM Text Run、元Raw改版、同path別Rootは拒否/再照合。Sourceが無いこと、空選択、選択未取得、権限拒否を「正常に0件」とまとめない。
 
-**限定Referenceの実コード（Draft #3443）**：[実装PR #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)に、上記のBOM/CRLF/LF/CR・同文二箇所・🌊の固定Expectedを用いる**純粋TypeScript UTF-16→Raw UTF-8 byte位置対応**とVitest 6ケースを追加。ローカルの単一TSファイルstrict型検査とNode 22による主要AssertはPASS。GitHubのPR exact HEAD CI（[Unit run #43545589557](https://github.com/hat47x/sui-sensemaking/actions/runs/43545589557)）は初回確認時queuedで、Vitest/全Typecheckの実結果は未確定。このReferenceは1つの忠実な表示Text Runのみを扱い、実DOM Range・複数Textノード・Current Root/Grant・DocumentV1の型付きSource保存・実Product Save→別Process GETへ接続していない。**限定Reference PASSをR2-SRC-01/02/05全体やIG1製品合格へ昇格しない**。Owner引渡しは[担当#3441の追補](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6870088873)を使う。
+**限定Referenceの実コード（Draft #3443）**：[実装PR #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)の初回HEAD `08a4aa5851fc1926e368e91f25e7952635c710f9`では、原文BOM・混在EOL・絵文字・同文二箇所・不正UTF-16境界を扱うTypeScript純粋変換とVitest 6件を実装。[exact HEAD CI #43545589557](https://github.com/hat47x/sui-sensemaking/actions/runs/43545589557)は**completed/success**。frontend-unitで当該`raw_utf8_selection_reference.test.ts` **6 tests PASS**、frontend全体の型検査・286 test files PASS（他2 skipped）・本番build成功、backend-contract/既存代表e2eも同Workflowでsuccess。ただし、この初回HEADには実DOM Adapterの試験は含まれない。
 
-**停止線**：ここで必要なのはR2のReaderと最小Browser操作だけであり、一般的なText Mapping Engine、PDF座標・音声時刻・他形式の完全Selector、TEI/SHO共通Editorを先に作らない。最小Fixtureの位置は設計上の独立Expectedとして記録したのみで、**Frontend実装・実Browser試験はNOT RUN**。
+**単一DOM Text nodeの実Browser検証へ拡張（同Draft・新HEAD）**：`resolveSingleDomTextNodeSelection`は、実`Selection/Range`の両境界が同じ1つのText nodeにあり、表示文字列がSource projectionと厳密一致する場合だけ元byte位置へ解決する。複数child・別ノード・Rendererによる文字列変形・surrogate内部はfail-closed。新`e2e/raw_utf8_selection_reference.spec.ts`に、**実Chromiumで作成した合成pre/Text nodeの後方Occurrence**を選択しRaw byteを逆decodeして確認する試験と、DOM装飾/改行変形/不正境界の拒否試験を追加。代表E2E Workflowにも対象を加えた。新HEAD `d3ddcdf8d935974cd7ec3f22e811e7071b59d9b5`の[CI #43548041021](https://github.com/hat47x/sui-sensemaking/actions/runs/43548041021)は**確認時pending／新Browser試験PASS未認定**。初回HEADのsuccessを新HEADへ流用しない。
+
+**次のProduct接合（F1.5）**：実Readerが現在許可Sourceから表示するText nodeと元Raw byteを関連づけ、ユーザーのDOM SelectionをAdapterで解決して**byte [start,end)・選択Raw bytesの実比較**を行う。ただし、Source選択履歴を保存するCard/Document型は§6.2のOwner決定を要する。SUI Reader画面の実人手操作、実Host Root/Grant、Document Save/別Process Product GET、A→B→Aの現在性は、この限定Adapterと合成pre/Chromiumの成功からは一切証明されない。
+
+**停止線**：R2のReaderと最小Browser操作を次に実証し、PDF座標・音声時刻・多形式Selectorや共有Editorを先行導入しない。限定Reference成功は**R2-SRC-01/02/05の一部のみ**であり、R2 Product E2E／Owner意味受理／外部Consumer受領は**NOT RUN**。
 
 ## 7. 表示選択の再資格化と反応的な再取得（IG4の実証契約）
 
