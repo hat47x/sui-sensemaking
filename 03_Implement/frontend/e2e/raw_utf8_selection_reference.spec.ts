@@ -505,11 +505,16 @@ test("R2 observed selection A-B-A while hashing cannot confirm the old span", as
 });
 
 
-test("R2 clearing a Raw preview preserves the selection inside an actual SUI Canvas Card", async ({ page }) => {
+test("R2 clearing a Raw preview preserves actual SUI Canvas Card selection and text", async ({ page }) => {
   await page.goto("/?locale=ja");
   const cards = page.locator("[data-card-id]");
   await expect(cards).toHaveCount(3);
   const originalLabels = await cards.allTextContents();
+
+  // Canvas cards intentionally use CSS user-select:none; their real
+  // selection is the product's aria-pressed state, not a DOM text Range.
+  await cards.first().click();
+  await expect(cards.first()).toHaveAttribute("aria-pressed", "true");
 
   const panel = page.locator('[data-panel="start-document-entry"]');
   await panel.locator("[data-start-expand]").click();
@@ -521,39 +526,13 @@ test("R2 clearing a Raw preview preserves the selection inside an actual SUI Can
     buffer: Buffer.from("原文の一時的な確認"),
   });
   await expect(preview.getByTestId("raw-local-source-text")).toHaveText("原文の一時的な確認");
+  await expect(cards.first()).toHaveAttribute("aria-pressed", "true");
 
-  // This is a genuine SUI Canvas Card, not an injected synthetic <p>.
-  // Trigger the actual preview-clear button without a pointer focus change.
-  const cardSelection = await page.evaluate(() => {
-    const card = document.querySelector("[data-card-id]");
-    const clearButton = document.querySelector<HTMLButtonElement>('[data-testid="raw-local-clear"]');
-    const selection = window.getSelection();
-    if (!card || !clearButton || !selection) throw new Error("missing-real-card-or-clear");
-    const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
-    let cardTextNode: Node | null = null;
-    while (walker.nextNode()) {
-      if ((walker.currentNode.textContent ?? "").trim()) {
-        cardTextNode = walker.currentNode;
-        break;
-      }
-    }
-    if (!cardTextNode) throw new Error("missing-real-card-text");
-    const range = document.createRange();
-    range.selectNodeContents(cardTextNode);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    const originalText = selection.toString();
-    if (!originalText.trim()) throw new Error("empty-real-card-selection");
-    clearButton.click();
-    return {
-      originalText,
-      afterClearText: selection.toString(),
-      anchorStillInCard: !!selection.anchorNode && card.contains(selection.anchorNode),
-    };
-  });
-  expect(cardSelection.afterClearText).toBe(cardSelection.originalText);
-  expect(cardSelection.anchorStillInCard).toBe(true);
+  // Clearing the independent Raw preview must not mutate SUI's real Card
+  // selection state, text or the number of Cards.
+  await preview.getByTestId("raw-local-clear").click();
   await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
+  await expect(cards.first()).toHaveAttribute("aria-pressed", "true");
   await expect(cards).toHaveCount(3);
   expect(await cards.allTextContents()).toEqual(originalLabels);
 });
