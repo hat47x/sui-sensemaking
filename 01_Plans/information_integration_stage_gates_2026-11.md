@@ -252,6 +252,23 @@ R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進める
 
 **着手順と到達上限**：最初に1 MiB以下の公開日本語RawについてSの既存Store Fit/Gap、原byte保存/独立再読、Source開示を検証する。採否が可能になったときだけ最小Provider/Bindingを作る。実Browser一時選択の既存[Draft #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)・予約欄拒否の[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)の限界を維持し、既存[#3441](https://github.com/hat47x/sui-sensemaking/issues/3441)のR2-SRC-01〜08に実結果を戻す。**本節の新たなRaw永続API、別Process Snapshot/Origin再Read、Grant/部分Commit/Recovery試験はNOT RUN**。IG2以降、KON、TEI Host、SHO Writer、Harness Sessionを新しい必須依存にしない。
 
+### 6.2.7 正式採用後の旧Client再保存と秘匿欄の消失を防ぐ（移行時Gate・NOT RUN）
+
+**これまでの安全策から生じる次の課題**：マージ済み[#3444](https://github.com/hat47x/sui-sensemaking/pull/3444)は、未採用の`sourceBinding`等を現在のFrontend/Backendで拒否し、未知項目だけ失って保存成功に見える事故を限定的に防いでいる。しかし、将来A/B/Cのいずれかを正式採用した後は、**旧ClientやSourceを閲覧できないDocument編集者が、Source情報を含まないDocumentを正しいETagで再保存する場合**を別途防ぐ必要がある。`If-Match`が最新であることは、更新者が非表示のSource Bindingを理解・保持していることを意味しない。
+
+**最小の採用前不変条件**：保存済みSource選択を、単なるPUT payload内の欠落から黙って削除しない。旧Clientが新欄を読込時に省略した場合、またはDocumentのread/write資格はあるがSnapshot/Originの参照欄を表示できない場合、**(a) Serverが既存Bindingを安全に維持することを契約とテストで証明するか、(b) 当該更新を明示拒否する**。初期実装では(b)を比較の第一候補とし、既存Clientの無条件編集継続を優先してSourceを消失させない。明示的なBinding削除は、通常のDocument上書きとは区別して現在資格・対象Revision・意図を検査する。既存APIに根拠のない一律Version/Headerを新設したとは扱わない。
+
+| 既存の受入Caseに組み入れる負例 | 合格条件 |
+| --- | --- |
+| **R2-SRC-07**：新ClientがSource選択を保存したDocumentを、旧ClientがGET/parseした後、現在ETagでBinding欄なしPUT | Source選択の黙った消失0。Serverによる保持か、明示的な互換性拒否。409競合だけではこの試験を代用しない |
+| **R2-SRC-06/07**：Document編集可・Snapshot/Origin参照不可のPrincipalが、Redaction済みDocumentを保存 | 非開示参照の漏洩0、黙示的な削除/再束縛0。Agent read-onlyとGuest/Memberの実権限を別試験とする |
+| **R2-SRC-01/05**：旧Documentを新Clientが開く／新Documentを別Processで再開する | 旧形式は出典が「無い」ことを許し、新形式の出典は採用Schemaで保持。Source読取不能でもCard本文/異論/Holdを維持 |
+| **R2-SRC-07**：Card複製・分割・Merge・削除・Undoの操作でBindingが残存／消失する | 継承・除去はOwner決定の操作に限る。曖昧な操作は保留し、旧Clientの全文置換で参照を勝手に破棄しない |
+
+**実装開始前のチェック**：採用するA/B/Cについて、Frontendの厳密Importと緩い再読込、Pythonの検証、Document GETのPrincipal別Projection、PUTの全置換/条件付き更新、Export/Agent/Handoffの公開範囲を、**同じ保存済みSource選択**で縦断確認する。特に「GET時には伏せた欄が、PUTで省略された」場合の規則を明文化する。`ContentObjectReference.ready`、Document ETag、Snapshot digestだけで移行互換や現在Grantを代用しない。#3444の予約欄拒否は**採用前**の保護であり、採用後の黙示消失を防ぐ保証ではない。
+
+**到達上限と優先度**：本節はF2の正式Schema切替時に必要な拒否/保持の受入条件を追加するもので、F0-Sの原byte保存・Reader Fit/Gapを遅らせない。新Client/旧Clientの正式Source Binding移行、Guest/Member別Source Grant、実Update/Import/Export縦断は**NOT RUN**。新Registry、共通Client Version Service、第二のExpected正本を作らず、既存[#3441](https://github.com/hat47x/sui-sensemaking/issues/3441) R2-SRC-01〜08を用いる。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
