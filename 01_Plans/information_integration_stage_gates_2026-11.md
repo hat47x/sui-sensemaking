@@ -126,6 +126,18 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 **統合順**：#3444の予約項目拒否（前段安全対策）→R2 OwnerのA/B/C採用票とProvider/開示Gate→採用された方式のSchema＋実Readerの小PR→Document CAS Save/別Process readback→同じSourceへの復帰R2-SRC-01〜08。独立したDocument/Source台帳、TEI Host、汎用Source RegistryやCRDTを先に作らない。
 
+### 6.2.2 送信前の境界と閲覧権限（A/B/C採否の独立条件）
+
+**今回発見した不足**：Backendが未採用の出典選択項目をHTTP 422で拒否しても、`PUT /docs/{id}`を発行した時点で、非公開のSource Locatorなどが**通信のRequest Bodyへ送出されている**。画面側の型注釈と保存後の拒否だけでは、出典情報の外部開示境界を守れない。
+
+**限定実装（Draft #3444拡張）**：Frontend `putDocument`へ、緩いImportと共通の`hasUnacceptedSourceBindingFields`を接続した。Card/Meta/Documentの**未採用の予約Source選択キー**が一つでもあれば、通信前に`ApiError(422, source_binding_contract_unavailable)`として中止。新`client.test.ts`の拒否負例で**呼出し前後にHTTP追加0件、秘密Locatorを例外に反射0件**を確認する。旧`meta.source`の自由記述は、従来のDocument PUTを維持する。これにより保存前／サーバ保存／Importの3入口で、**予約語だけ**が無断に保存成功・欠落・送出にならないよう合わせる。Blob Upload、別Agent/Exportの全経路に同一保証があるとは主張しない。
+
+**Document閲覧とSource閲覧は別資格**：現行`GET /docs/{id}`はDocumentに対するreadを確認し、`agent_credential`では`_agent_document_view`による許可リスト投影を使用する。他方、それ以外の許可済みDocument Readerでは**Document payloadをそのまま返す経路**があり、Source単位の別Grantや出典Locatorの属性別Redactionは現時点で実装確認できない。採用前の単体負例として、仮のSource候補を含む入力を`_agent_document_view`へ渡し、Agent投影へRaw Locator/Metaが漏れないことを検査するが、**実Agent資格によるHTTP egressやGuest/Member間のSource権限差の実証ではない**。
+
+**A案優先の停止条件**：Cardに保存する出典参照が、Documentを閲覧可能でも元Sourceを閲覧できないPrincipalに露出する場合、A案は**まだ採用不可**。opaque handleやSHA-256でもID・参照の存在・関係数が情報になり得る。権威あるServer投影で「Document read ≠ Source read」を実装し、Guest/Member/Agent/SafeModeでRaw/Locator/Handle/Hash/ID・件数/ETagを独立に検査するまでは、Aを最有力の**技術候補**から正式Schemaへ昇格させない。もしDocument内に一切のSource参照を安全に配置できないなら、既存Providerが別Root/Grantを保護できることを条件に**Cを再評価**する。BのDocument別Mapも閲覧時の漏洩問題を解消しないため、Aの単純な代替として選ばない。
+
+**Evidenceの粒度**：予約項目が拒否されたこと（無送出・HTTP 422・Import拒否）／Documentが保存されたこと（ETag CAS）／実Sourceへ再到達できること（現在Root/Scope/Grant・Revision）／TEI/SHOなどの外部Consumerが今回実受領したこと／人間が意味を受理したことは、別々の結果欄に残す。内容ハッシュ一致で後の資格を代替しない。実装予定の`putDocument`事前拒否とAgent投影単体テストは[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)の新HEAD `6f864be6361b0d3f8f3dc2cf343e8fe524c64023`、[CI #43571702321](https://github.com/hat47x/sui-sensemaking/actions/runs/43571702321)は初回確認時pending。**このHEADのCI結果は別に判定し、既存HEADの成功を流用しない。**
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
