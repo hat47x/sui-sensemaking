@@ -1968,6 +1968,6 @@
   "raw_preview.source_text": "原文（確認する範囲を選択してください）",
   "raw_preview.check_selection": "選択範囲の位置を確認",
   "raw_preview.invalid_selection": "元のバイト位置を特定できません。表示された原文内から続けて文字を選択してください。",
-  "raw_preview.span": "原文のバイト位置: [{start}, {end})（末尾を含みません）。内容一致だけの確認であり、出典の同一性や権限は未確認です。",
+  "raw_preview.span": "原文のバイト位置: [{start}, {end})（末尾を含みません）。選択範囲のハッシュを計算しましたが、出典の同一性や現在の参照権限は未確認です。",
   "raw_preview.clear": "一時データを破棄"
 }
