@@ -204,6 +204,38 @@ IG1（ローカルRaw＋AI OFF）の最小縦断を止めない。一方、IG2�
 実装者は各Source/Consumerごとに既存Testと未実行を列挙する。Access Provider未接続・宣言不明の場合は独断で公開/実行可と判定しない。既存Issueの現時点の状態を将来も固定と見なさず、採用前に実コードと最新の回帰結果を再確認する。
 
 
+
+## 10. 作業面を跨ぐSource選択・共同編集・Draftの保存（IG4〜IG5後段／未採用）
+
+TEI Studioの[Web/Desktop共通部品方針 #1824](https://github.com/hat47x/tei-platform/issues/1824)と、Desktop＝独立Workspace/Git共有・Web＝共有サーバ編集という別チャットの構想を、SUIの**参照資格と編集競合の圧力ケース**として利用する。ただし、SUIは現行のWebサーバ権威Document製品であり、TEI側のGit/Branch運用へSUIの正本を移さない。
+
+**既採用との整合**：[ADR-0076](adr/ADR-0076-collaboration-concurrency-model.md)はサーバ権威・既存ETag/CAS・保存時同期から開始し、保留・少数意見を失うプロパティ単位Mergeを無条件採用しない。[共同Undo #3399](https://github.com/hat47x/sui-sensemaking/issues/3399)のCU-01〜10がSUIの競合検証Owner。TEIで将来テキストCRDT/Yjs等を検討しても、SUIのCard/Island/Reviewの意味的合流へ自動適用しない。
+
+| 作業面・Consumer | 実Source・変更のOwner | 受取時に確認すること |
+| --- | --- | --- |
+| **SUI Web Document** | SUI DocumentV1・サーバ保存ETag、Actor/tenant | 版・現在Scope・可視CardとSource。明示If-Matchで古い更新409。単一tenant LWW既定でもR2の保存試験はCASを使う |
+| **Local Workspace（将来のDesktop/TEI連携候補）** | そのHostの許可Rootと実Source bytes。Gitを使うなら独立したSource版の証拠 | 相対path・同SHA・同ManifestをグローバルRoot ID/Grantとみなさない。別Rootへ移設時は候補参照として再束縛要否を提示 |
+| **TEI Studio Web共有サーバ候補** | TEI Workspace/Branch/ChangeSet/Model revisionと編集AuthorityはTEI Owner | Git mergeやTEI Model revisionとSUI Document ETagを同一視しない。TEI側で採用した編集がSUIのCardの意味受理にはならない |
+| **SHO/SEI/外部Harness** | 受取先のDraft/判断/Session、実Consumer/Writerの観測 | Loss、出典の現在Scope/Disclosure、Consumer版、未解決。Activity/Session継続は実Writer commitや現在Grantの証明ではない |
+
+**可搬なものと可搬でないもの**：過去の人手選択・Cardの解釈・Hold/異論・許可された論理Source参照・byte位置は次の作業面へ「候補」として渡し得る。しかし現在OS Root、Access Token、Provider Credential、過去Grant、非公開Node/EdgeのIDや件数は自動継承しない。別Hostが現在Sourceを再解決できなければ、元Cardと判断履歴は残して原文復帰だけunknown/unresolvedとする。同byte/相対pathのSourceへ無言で繋ぎ替えない。
+
+**三つの版を分離**：SUI Document ETag、原Source revision/digest、必要に応じ外部Git/Workspace/TEI Model revisionを別の証拠として参照する。これらを共通の「最新版」や同一revision番号へ畳まない。特に[API仕様](../02_Architecture/api.md) §1.2〜1.3のupdatedAtはクライアント提供文字列で、CAS版の証明ではない。
+
+### 後段で反証する代表条件（新たなExpected正本は作らない）
+
+| 例 | 検証Ownerと棄却条件 |
+| --- | --- |
+| 同内容・同相対pathのLocal Root A→BへSource選択を移動 | R2-SRC-03/04：現在Root/Grantを再確認。Digest一致で自動再束縛しない |
+| 二つのWeb Clientが同一ETagを起点に、一方は配置、他方はHoldを保存 | #3399 CU-01〜03/09：旧版409、dirty buffer・保留を維持、無条件自動Mergeなし |
+| Git mergeで元資料が同じbytesへ戻る | R2-SRC-04／IV-06：過去の出典資格・Current Grant・A→B→Aの履歴を自動復権させない |
+| TEI/Webのテキスト編集が収束したあとSUIへ意味Patchを適用 | IV-02/08／CU-05〜08：readSet/writeSet・現在の意味判断・Holdを別検査。CRDT収束≠意味受理 |
+| SUI→SHO Handoff後にSource Disclosureが失効 | [#3391](https://github.com/hat47x/sui-sensemaking/issues/3391)・SHO #19・[TAI #271](https://github.com/hat47x/tai-pleroma/issues/271)：次のRead/送出を再資格化し、過去に送出した内容を回収したと推定しない |
+
+**実装順**：(1) IG1/R2の単一許可Rootを完成、(2) IG4で現行Document CAS/Undoの二Client保存試験、(3) IG5で許可済みSource参照のConsumer移動とLoss/Grantの再照合、(4) WebSocket・Presence・Yjs/CRDT・Git双方向同期・中央Workspace Registryは実利用価値/安全性が確認された場合にのみ別Ownerで比較。TEI Studio Web/SUI Desktopの完成をIG1の新Hard Gateにしない。
+
+本節は**受入の非干渉条件**であり、新Runtime・新Schema・リアルタイム共同編集・実Desktop/外部Consumerを実装したものではない。これら後段の新試験はすべてNOT RUN。
+
 ---
 
 本書は既存Issueに散在する受入の**実施順索引**であり、既存ADR・Hybrid Draft・R2作業票の上書きではない。新たな権限、Schema、共通技術基盤、製品機能の正式採択を意味しない。
