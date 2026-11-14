@@ -426,3 +426,80 @@ test("R2 preview clear cannot erase a different workspace DOM selection", async 
   expect(ownSelection).toEqual({ rangeCount: 0 });
   await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
 });
+
+
+test("R2 observed selection A-B-A while hashing cannot confirm the old span", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  await page.getByTestId("raw-local-preview-disclosure").locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "same-occurrences.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊"),
+  });
+  await expect(preview.getByTestId("raw-local-source-text"))
+    .toHaveText("前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊");
+
+  // Keep the first real WebCrypto digest pending; the UI still uses its
+  // actual digest call when released, not synthetic bytes or an API mock.
+  await page.evaluate(() => {
+    const subtle = crypto.subtle;
+    const originalDigest = subtle.digest.bind(subtle);
+    let release: (() => void) | null = null;
+    Object.defineProperty(subtle, "digest", {
+      configurable: true,
+      value: (algorithm: AlgorithmIdentifier, data: BufferSource): Promise<ArrayBuffer> => {
+        if (release) return originalDigest(algorithm, data);
+        return new Promise<ArrayBuffer>((resolve, reject) => {
+          release = () => { void originalDigest(algorithm, data).then(resolve, reject); };
+        });
+      },
+    });
+    Object.assign(window, {
+      r2CheckpointHeld: () => release !== null,
+      r2ReleaseCheckpoint: () => {
+        if (!release) throw new Error("digest-not-held");
+        release();
+      },
+    });
+  });
+
+  const choose = async (start: number, end: number) => {
+    await page.evaluate(({ start, end }) => {
+      const textNode = document.querySelector('[data-testid="raw-local-source-text"]')?.firstChild;
+      const selection = window.getSelection();
+      if (!textNode || !selection) throw new Error("missing-selection");
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, end);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      // Observe one real DOM Selection with deliberately controlled timing.
+      document.dispatchEvent(new Event("selectionchange"));
+    }, { start, end });
+  };
+
+  await choose(15, 22);
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await page.waitForFunction(() =>
+    (window as Window & { r2CheckpointHeld?: () => boolean }).r2CheckpointHeld?.() === true,
+  );
+
+  // During one pending confirmation, choose the first occurrence, then
+  // return to the same second occurrence and offsets. An end-only comparison
+  // would incorrectly treat the old confirmation as still current.
+  await choose(4, 11);
+  await choose(15, 22);
+  await page.evaluate(() =>
+    (window as Window & { r2ReleaseCheckpoint?: () => void }).r2ReleaseCheckpoint?.(),
+  );
+
+  await expect(preview.getByTestId("raw-local-span")).toHaveCount(0);
+  await expect(preview.getByRole("alert")).toContainText("元のバイト位置を特定できません");
+
+  // The user can confirm the current selection anew; this is not a Pin.
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await expect(preview.getByTestId("raw-local-span")).toContainText("[38, 57)");
+});
