@@ -135,27 +135,28 @@ export async function captureRawContentCheckpoint(
   // Freeze one local byte snapshot before any await: the caller may mutate
   // its Uint8Array while WebCrypto digests are being computed.
   const snapshot = Uint8Array.from(sourceBytes);
+  const { startByte, endByte, selectedText } = selected; // pin caller-provided fields
   const projection = projectRawUtf8Bytes(snapshot);
-  if (!Number.isSafeInteger(selected.startByte) ||
-      !Number.isSafeInteger(selected.endByte) ||
-      selected.startByte < 0 || selected.endByte > snapshot.length ||
-      selected.startByte >= selected.endByte ||
-      !projection.utf16ToByte.includes(selected.startByte) ||
-      !projection.utf16ToByte.includes(selected.endByte)) {
+  if (!Number.isSafeInteger(startByte) ||
+      !Number.isSafeInteger(endByte) ||
+      startByte < 0 || endByte > snapshot.length ||
+      startByte >= endByte ||
+      !projection.utf16ToByte.includes(startByte) ||
+      !projection.utf16ToByte.includes(endByte)) {
     throw new Error("unqualified-selection");
   }
 
-  const selectedBytes = snapshot.subarray(selected.startByte, selected.endByte);
+  const selectedBytes = snapshot.subarray(startByte, endByte);
   const currentText = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
     .decode(selectedBytes);
-  if (currentText !== selected.selectedText) {
+  if (currentText !== selectedText) {
     throw new Error("unqualified-selection");
   }
   return {
     rawSha256: await sha256RawBytes(snapshot),
     selectedSha256: await sha256RawBytes(selectedBytes),
-    startByte: selected.startByte,
-    endByte: selected.endByte,
+    startByte,
+    endByte,
   };
 }
 
@@ -171,17 +172,19 @@ export async function compareRawContentCheckpoint(
   // Compare a single immutable-by-convention local snapshot, never two
   // different observations of a mutable byte buffer across an await.
   const snapshot = Uint8Array.from(currentBytes);
+  const { rawSha256: expectedRawSha256, selectedSha256: expectedSelectedSha256,
+    startByte, endByte } = checkpoint; // pin the comparison descriptor
   projectRawUtf8Bytes(snapshot); // strict UTF-8; still no Host grant.
   const rawSha256 = await sha256RawBytes(snapshot);
-  if (rawSha256 !== checkpoint.rawSha256) {
+  if (rawSha256 !== expectedRawSha256) {
     return "stale-content";
   }
-  if (checkpoint.startByte < 0 || checkpoint.startByte >= checkpoint.endByte ||
-      checkpoint.endByte > snapshot.length) {
+  if (!Number.isSafeInteger(startByte) || !Number.isSafeInteger(endByte) ||
+      startByte < 0 || startByte >= endByte || endByte > snapshot.length) {
     throw new Error("unqualified-selection");
   }
-  const currentSelected = snapshot.subarray(checkpoint.startByte, checkpoint.endByte);
-  return (await sha256RawBytes(currentSelected)) === checkpoint.selectedSha256
+  const currentSelected = snapshot.subarray(startByte, endByte);
+  return (await sha256RawBytes(currentSelected)) === expectedSelectedSha256
     ? "content-match-only"
     : "stale-content";
 }
