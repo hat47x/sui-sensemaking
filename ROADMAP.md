@@ -56,6 +56,8 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 **Handoffの現在地**：[merged #3433](https://github.com/hat47x/sui-sensemaking/pull/3433)でStructure Draft／損失付きOutline候補とSHO Runnerとの限定往復を確認済み。ただし正式SHO Writer、実Harness/Agent接続、全Sourceへ戻れること、外部Effectを主張しない。IG5では[計画 §8](01_Plans/information_integration_stage_gates_2026-11.md)に従いProducer、Transport、Consumer、Writer、Owner受理を別々に観測する。外部開示経路の既存認可・SafeMode課題は[計画 §9](01_Plans/information_integration_stage_gates_2026-11.md)から参照し、IG1ローカルAI OFFの前提には増やさない。
 
+**Desktop/Web作業面への展開**：SUIは[ADR-0076](01_Plans/adr/ADR-0076-collaboration-concurrency-model.md)のサーバ権威・Document CAS/保存時同期を維持し、TEI StudioのDesktop（独立Workspace/Git）・Web（共有サーバ）構想から、**Source参照の可搬性と権限再照合**だけを後段の圧力ケースとして利用する。SUI Document ETag、Raw Source revision、外部Git/TEI Model revisionは異なる正本であり、同じbyte/同じbranch/同じ画面でも自動的な書戻し・意味受理を許さない。二Clientの競合/Undoは[#3399](https://github.com/hat47x/sui-sensemaking/issues/3399)、連携移動の境界は[受入計画 §10](01_Plans/information_integration_stage_gates_2026-11.md)へ接続。**新Desktop/CRDT/WebSocket/中央Workspace基盤をIG1の前提にしない。**
+
 **統合時の非干渉**：同一ItemのA/B Canvas表示で座標・島・Tree・意味Edgeは独立。Reader/KJ/Tree等の表示選択は現在Scope/版/Disclosureで再解決し、Projectionが同一でも元Sourceや逆Writeの同一性を推測しない。AI提案のApplyはreadSet/writeSetと現在Revisionを照合し、他者のHold・異論・Reviewを上書きしない。SUI→SHO Draft、TEI Canonical候補、Agent Proposal、正式Meaning受理、実Effectはそれぞれ別の受入段階。
 
 ## 検討候補：アウトライン／マインドマップとKJキャンバスの連携
