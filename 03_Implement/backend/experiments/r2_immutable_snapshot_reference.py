@@ -17,7 +17,7 @@ from typing import Literal
 from uuid import uuid4
 
 MAX_BYTES = 1024 * 1024
-_DIGEST_RE = re.compile(r"[0-9a-f]{64}\\Z")
+_DIGEST_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 
 class SnapshotReferenceError(RuntimeError):
