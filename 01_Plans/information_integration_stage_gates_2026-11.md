@@ -177,6 +177,20 @@ IV-01/02/06/08は[Hybrid計画](hybrid_outline_canvas_layout_plan.md)のSI-XCと
 
 この表は新Receipt ABIや第二Evidence台帳を作るものではない。いずれかの段階が未観測なら、その段階は NOT RUN / unknown / partial のまま報告し、他段階のPASSで補わない。IDや失敗理由を記録する場合も現在のDisclosureを再判定する。SUI→SHOの実受領が狭く成功していても、G5全体の正式な完了とは別である。
 
+### 8.1 外部Skill/Harnessの三つの独立閉包（IG5の後段・任意）
+
+YIC/TAIの[Skill適合 #488](https://github.com/hat47x/tai-pleroma/issues/488)と[Activity選択的再資格 #271](https://github.com/hat47x/tai-pleroma/issues/271)の成熟した境界を、SUI [外部Skill #3368](https://github.com/hat47x/sui-sensemaking/issues/3368)の**開示・受領判定**に限定して参照する。SUI内の独自Agent Loop、常時TAI Skill Load、第二のResolver/Hostは作らない。Product API単独／Tool-only／Product Skill／任意TAI Skillは別の選択肢として評価する。
+
+| 閉包（評価上の区別） | 具体的に再照合する入力 | その閉包だけでは成立しないこと |
+| --- | --- | --- |
+| **Instruction** | Product Skillの実ファイルとdigest・版・実Harness Loader/Tool Profile・読み込んだ指示範囲 | Skillファイルの存在＝実Load/遵守、ツール名の表示＝実Invoke |
+| **Subject / Information** | 現在Card/Source/SelectionのIdentityとrevision、許可されたProjection、取得範囲・Loss・現在Disclosure | 同じContext hash＝原文の現在性、未公開ID/件数の送信資格、部分投影＝全Source |
+| **Capability / Authority** | Host/Providerの現在Actor/Scope/Grant、read-onlyとWrite/Export/Effectの区別、実操作TargetとReceipt | SkillやHandoffの宣言＝権限、Runnerの成功＝全Network/OS Sinkの非送信、ACK＝Effect確定 |
+
+**失効は閉包ごと**に評価する。Source改版ならInstruction自体の版は失効しないがそのSourceを含むProjectionは再照合する。Skill改版なら保存済みCardが自動的にstaleになるわけではない。Grant失効ならSkill/Source Digestが同じでも新しい外部送信を止める。同一Harness Session IDやActivity継続は現在Grant・対象同一性を保証しない。過去に公開した情報を「Grant撤回で回収した」と主張しない。
+
+**後段の最小独立反証**：H1＝Skillの実Loadなしで回答やReceiptだけが正常、H2＝別Rootの同文Cardを同一Sourceとして再使用、H3＝現Grantが失効したのに旧HandoffからRawを再送、H4＝A側CLIの悪性Scope拒否をB側実Harnessの拒否へ転記、H5＝Tool Replyは返るがSHO実Read・Writer Saveは未観測。別試験Suiteを新設せず、TAI #168/#488/#271・[SHO #44](https://github.com/hat47x/sho-composer/issues/44)・SUI #3368の既存Expected/Trialを参照する。最初のIG1/R2はAIなし・Harnessなしでも合格可能に保つ。
+
 ## 9. 認可・誤判定・品質の先行検査（新しいG0依存は作らない）
 
 IG1（ローカルRaw＋AI OFF）の最小縦断を止めない。一方、IG2以降の外部Reader、Agent、共有、派生索引、外部Sourceを**有効化する当該経路**では、以下の既存Issueを回帰・未対応一覧へ結び付ける。
