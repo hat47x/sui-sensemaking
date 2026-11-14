@@ -697,3 +697,308 @@ SUIをKJ法キャンバスとマインドマップを中心とする思考環境
 
 **証拠の上限**：本節は構想・現在の責務と受入順の設計反映のみ。Raw Itemの新製品API、実複数Canvas、Reader→Card抽出E2E、SUI→TEI人/AI翻訳の実モデル受理、SHO正式Writer、外部Task Provider、T2実利用価値の実測は今回NOT RUN。
 
+---
+
+<!-- sui-crossview-20261112 -->
+## 18. 2026-11-12 横断接合：情報の選択・意味の投影・SHO往復を実利用の認知順でつなぐ（設計候補／未受理）
+
+### 18.1 前提と増分：17章の繰返しでなく「対象を選んだ後」の欠けた接続を解く
+
+第17章のRaw Item/Content、Tree/Island/Graph、Canvas/Display Occurrence、Task/Action/Event Role、SHO/TEI正本分離はそのまま維持する。11月8日に#3393/#3398はmainへ統合済みだが、**複数Canvasと独立Item正本の実データ移行・GUI・外部Providerは完了していない**。ここでは、別チャットのSUI高度な文脈選択、異種データの状況理解、TEI標準型・構造・表現の段階実装、SHO往復編集の後続課題を、ひとつの作業における**接続資格・最初に観測すべき不足**として整理する。
+
+- **SUIの利用者価値は既存[ADR-0089](adr/ADR-0089-product-value-canon.md)、[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)** が正本。未整理素材を読み、意味として生きるまとまりで配置し、違和感・異論を残して理解を見直すことが主線。新しいPlatform、Ontology、Role Registry、一般Task同期をP0としない。
+- **異種情報統合は[#3401](https://github.com/hat47x/sui-sensemaking/issues/3401)** のI0〜I4が所有。別SourceにあるEntity・Event・時系列は、出典・時点・粒度・暫定同定を照合してから候補Relationを作る。Join表示、語の一致、検索hitから「同一人物／同じ実Event」を確定しない。
+- **SHO往復の正本**はSUI [#3391](https://github.com/hat47x/sui-sensemaking/issues/3391)とSHO [#19](https://github.com/hat47x/sho-composer/issues/19)。11月11日のSUI [#3430](https://github.com/hat47x/sui-sensemaking/issues/3430)・[#3431](https://github.com/hat47x/sui-sensemaking/issues/3431)、SHO [#31](https://github.com/hat47x/sho-composer/issues/31)〜[#33](https://github.com/hat47x/sho-composer/issues/33)は具体的な段階の受入提案。Issueのcloseだけで実製品の往復E2E PASSとはしない。
+- **TEIの表現とMapping**は新しい段階索引[#4350](https://github.com/hat47x/tei-platform/issues/4350)・[#4351](https://github.com/hat47x/tei-platform/issues/4351)〜[#4353](https://github.com/hat47x/tei-platform/issues/4353)と既存#2495/#2497/#2506/#2507/#4133が担当。SUI Canvasの自由配置や未分類Itemに、TEI Function Data Contextを無条件に必須化しない。
+
+### 18.2 安定した「対象・範囲・意図」の選択：GUI/CUI/AI Harnessをまたぐ作業単位
+
+SUIのCanvasで選択した範囲が、ズーム・パン・別のカードへのホバー・タブ切替で意図せず解除されると、AIへの指示が別対象へ向かい得る。既存の表示Selectionとは別に、**明示的に固定できる作業中の選択文脈**を求める。ただし新しい共通Context StoreやHostを先に作らず、現行Document/Revision/既存Action Proposalの一時的な束縛でFit/Gapを測る。
+
+| 操作面 | 同じ選択で説明できるべき内容 | 不明なら拒否／留保する内容 |
+| --- | --- | --- |
+| キャンバス上の複数Card/Island選択 | 対象の安定Ref、Canvasと表示Occurrence、Itemへの対応、選択根拠、選択範囲 | 重複表示を二つの独立証拠と数えない。表示IDから更新対象を決めない |
+| Tree/Outlineの選択 | Node occurrence、Tree版、親子・順序が候補か受理済みか、対象Item | 読順を親子関係や業務階層に変換しない |
+| Readerでの資料範囲選択 | 保存済みRaw／Locator、元Revision、UTF-8 byte/ページ/時刻等の実取得可能な位置 | 未取得URL・解析前PDFに精密Source Spanを捏造しない |
+| CUI/AI Harnessへの対象固定 | 対象の集合、用途、利用者の明示した意図、許可されたSource/Scope、base Revision、readSet、writeSet候補、Disclosure、Unknown | 単に「現在選択中」のUIカーソルや前回Harness返信から現行対象・権限を推定しない |
+
+「選択を固定」「文脈を追加」「対象を変更」「解除」は明示操作とし、人が視覚的に確認できる。生成AIは選択された**情報集合と関連構造・来歴を利用可能な範囲で参照**し、未取得・非開示を0件にしない。編集候補は選択対象と非選択依存を含むreadSet/expected Revisionに束縛してPreviewし、実Apply直前に再照合する。SUIの認知的提案と実業務Effect/Host Grantは別（ADR-0111／TEI #1174）。
+
+### 18.3 表現型とContextの適格性：TEIの新しい段階計画をSUIの異質Consumer試験へ
+
+TEI [#4350](https://github.com/hat47x/tei-platform/issues/4350)は「標準値型／標準データ構造／表現型／Function Data Context／Mapping」を分離し、read-only Reference検査 S1→S2/S3→合成損失へ進む。**まだ製品Rendererや正式TEI Function Bindingが実装済みであるとは扱わない**。
+
+SUI→TEIの意味ある接続を検証する際だけ、最低限、次を別々に観測する。元Source/World版、Subjectと表示Occurrenceの対応、重複と集合の粒度（1:N/N:M、Join fanout）、順序と由来、Null/missing/unfetched/withheld、取得Coverage、Domain/Observation/Presentation/Structural Time、表現上のLoss、候補逆編集と現在のOperation/Grant。例えば、同一Itemが2 Canvasに表示されても1 Subjectであり、Island群の件数はQuery/権限に依存し、PERTバーの表示時刻は実Event時刻と同義ではない。
+
+**適用境界**：SUIの自由なKJ Canvas・Inbox・資料Readerは、TEI Functionなしでも成立する。TEIモデルに接続された表現インスタンスは、該当FunctionのData Context/Scope/grain/SelectionとBindingが実証できたときに限り、TEIのModel/操作対象として扱える。Canvasの座標やGroupのまとまりを意味正本へ機械昇格しない。Graph/Tree/Markdownへの非単射投影からの自動書戻しは拒否（TEI #2497/#4353）。
+
+### 18.4 SHOとの「一往復」では原文・構造・文章の版を別々に固定する
+
+11月11日のG3-SHO/G3-SUI各Issueは、次の最小経路を具体化している（**各Issueの記述は受入候補であり、本節だけで実装済みとは認定しない**）。
+
+1. SHOの人間が選択したMarkdown原文の範囲（byte位置、実bytes、原文版、開示Scope）から**選択Handoff票**を作る。R0保存版とDirty bufferを混ぜず、選択外の秘密文書・リンク先実体を送らない（SHO #31）。
+2. SUIは**構造Draft候補**を作る。DocumentV1に存在するCanvas座標、Island所属/ネスト、Affiliation多重所属、非階層Relation、Hold/Contradiction/Voidと、別途入力された**未受理のTree候補**を区別し、Treeの親子をDocumentV1に実装済みと偽らない（SUI #3430）。
+3. SUIの**Markdownアウトライン候補**は、意味未受理・座標未投影・Source未照合・多重所属・非階層Relation・保留・異論などのLossを記録する。選択外/未レビューの本文・ID・件数を、Markdown/manifest/ハッシュ用入力へ漏らさない（SUI #3431）。
+4. SHOは元文書を無断上書きせず、別Draft・差分Preview・明示採用へ進む。古いSource Revision、未知schema、不一致digest、空のLossを「損失なし」と主張する場合は採用拒否。保存ACK、実readback、再Openを別資格で記録する（SHO #32/#33）。
+
+**要注意**：SUIの現行公開Projectionは内部DocumentV1の全Source/Topologyを提供しない。SUI [#3402](https://github.com/hat47x/sui-sensemaking/issues/3402)のIsland端点Edge、[#3418](https://github.com/hat47x/sui-sensemaking/issues/3418)の外部矛盾状態露出の差は、Issue closeだけで「すべての外部Consumerへ公開可能」にはならない。内部Authoringの選択可能性と外部Harness/MCPのDisclosureを別に判定する。実SUI→SHO同一Attempt、Writer保存、逆Patch/正式TEI Meaningは独立ゲート。
+
+### 18.5 権限・完全性と大規模化の追加停止線
+
+- SUI [#3419](https://github.com/hat47x/sui-sensemaking/issues/3419)のMCP文書一覧初ページだけの検索問題は、Inboxに大量Itemがある場合の「見つからない＝存在しない」誤認の具体例。ページ・cursor・実受領・終了MarkerとScopeを確認するまで全件不在と断定しない。
+- SUI [#3422](https://github.com/hat47x/sui-sensemaking/issues/3422)の外部PDPのreadOnly意味と、[#3425](https://github.com/hat47x/sui-sensemaking/issues/3425)のexport-audit SafeMode申告値は、外部書込・送出と現在認可の設計に直結。**「PDPが返した」「監査に記録された」「サーバが強制した」「外部Recipientが受領した」は別事実**。契約未確定の経路を安全・実行可能と宣言しない。解決は既存Security Ownerへ戻す。
+- 大量情報の取込/検索は、Item・Content保存、Source Reader実取得、索引更新、Agentへの部分出力、Consumer実受領を分離する。部分結果やHiddenを全世界の欠落とせず、AI ContextのToken上限と人間UIのSemantic Zoomを同一の情報集合と扱わない。
+- Task/Action/Event Role候補を見つけても、予定Task・実Occurrence・外部Issue/Provider・Execution ReceiptをIdentity上分離し、PERTや文章化だけで本番Effectを発火しない。
+
+### 18.6 最小の独立反例と検証優先度（既存Owner/SSOTを再利用）
+
+**新增の適合検査観点（新たな独立試験正本や全機能Blocking Gateではない）**：
+
+| 観点 | 既存試験・Owner | 別に観測すべき不足とExpected |
+| --- | --- | --- |
+| 固定した対象選択をUIパン/別タブ/AI入力をまたいで維持 | 17章SI-XC02/07、SUI #3399、ADR-0111 | 明示固定したItem/Island/出現集合は不変。実編集時だけ現在版/権限と再照合。違う対象への黙った書込0 |
+| 共有Itemを別Canvas/Tree/島で使う | 17章SI-RAW06/SI-XC01/04/05、#3400 SV-06/09 | 同じ元情報を独立証拠へ水増しせず、異なる文脈を保持。Undo/競合で他者の保留・異論を破棄しない |
+| 原文選択→構造Draft→候補→SHO別Draftの最小往復 | SUI #3430/#3431、SHO #31〜33、SUI #3391 | 実byte/選択Scope/構造版/損失/Consumer readbackの切れ目を検査。通常CIのSkipをE2E PASSへ算入しない |
+| 表示と正式Model Contextの境界 | TEI #4350/#4351/#4353・#2497・#2506 | SUI KJ-onlyはFunctionなしで成功、TEI Binding付きの場合はIdentity/grain/axis/Scopeが欠ければunqualified。選択から編集対象を推測しない |
+| 未取得/秘匿/部分取得・外部Policyの差 | SUI #3401 II-01〜08、#3419/#3422/#3425、17章SI-RAW02/08/09 | 実Read済みSubsetと未読込/Hidden/不明を区別し、明示許可がない書込・外部送信を停止。件数・ID等の二次漏えいを防ぐ |
+
+**進める順**：（A）現在の3カード/KJ・AI OFFと既存ReaderでSI-RAW01/02および原文への復帰を検証、（B）固定選択と同一Itemの別Occurrenceをheadless Fixtureで比較、（C）SHO選択Handoff→SUI内部構造Draft→SHO候補の一往復、（D）TEI #4350のS1/S3が成立した範囲だけTEI表現Bindingの適格性を照合、（E）実需要があれば[#3401](https://github.com/hat47x/sui-sensemaking/issues/3401)のI1から異種3Source/PERT/外部Providerへ拡張。A/Bの利用価値はADR-0089のT2と別に設計実装証拠を保持し、SUI内部Dogfood/合成CIをSUI外の実務T2に加算しない。
+
+**所有と受理**：17章の正本と各Issue Ownerを維持し、TEI/SHO/SUIの第二Context/Source/Authority/Reader/Registry/Hostを増設しない。11月11日以降のG3/TEI #4350/安全性Issuesの具体化を、この接続順へ反映した**計画差分のみ**。新UI/API、Role Runtime、SUI→SHO往復E2E、TEI Function Binding、外部Task Provider、T2実務価値はいずれも本節ではNOT RUN・NOT ACCEPTED。
+
+### 18.7 安定選択を「固定集合＋動的条件＋現在資格」で具体化する（横断追補）
+
+共通Harness [TAI Draft #629](https://github.com/hat47x/tai-pleroma/pull/629)の§11.8を、**SUI利用者の選択体験が満たすべき限定条件**として取り入れる。TAIが外部Harness/Session/Transportを所有し、本節はSUI内部の選択・表示・操作対象の非同一性だけを所有する。共通Selection ABI、共有Session Store、製品埋込みHarness、特定のSession復元APIは**未採用**。
+
+- **Transient Focus**：一時的なホバー・クリック・エディタカーソル・現在表示中のViewport。Esc/画面切替で変わり得る。
+- **Pinned Work Set**：利用者が明示した、対象Kind・安定Ref・元のCanvas/Tree/Reader表示出現・Source/Revision・用途・選択条件と補正履歴を持つ対象集合。Highlightは固定集合の可視化であって正本ではない。移動・別タブ・Chat入力で不意に失わず、解除・再束縛は明示操作とする。
+- **Resolved Candidate Set**：自然言語検索またはQueryを**特定のScope・時点の実Read**で解決した候補Q。未探索/未公開を0件としない。動的条件そのものと、時点rで解決済みのID集合を別に保持する。
+- **Human Correction**：利用者による除外集合E／追加集合A。可視かつ実解決済み対象の範囲で `S=(Q−E)∪A` とし、同一Itemが別Canvasの二表示で現れても証拠数を2としない。追加Aを現在Grantを通さず対象確定・外部送信へ昇格させない。
+- **Qualified Apply Set**：最終Sの各Ref/Source/Revision/Scope/現在Grantを実際に再Readし、編集対象ID/Dependency/readSetとwriteSetを解決できたものだけ、条件付きPreview/Applyの対象とする。Sが固定でも、参照先の実在、現在のRowset/RLS、意味Role、許可は固定されない。
+
+**利用者に見せる最低状態**：「いま指している箇所」「固定した作業対象」「未解決・要再確認」「この操作で変更する対象」を分け、対象が一致しない場合は保留。Pinned集合を新しい永続ItemやDecisionとして自動記録せず、利用者が必要とするときだけ通常のSUI情報単位へ明示保存する。SUI内のAI候補を自由に比較する機能はAI OFF・手動補正でも成立し、CSW/TEI/SHOを常時起動しない。
+
+### 18.8 同一Harness Session・Activity引継ぎ・権限は別もの
+
+外部HarnessのSessionと各ProductのUI Viewを共有し得ても、**Session共有＝同一Activity、現在のSource read、現在のGrant、実業務Effect**ではない。AIの返信は起点Request/Attempt・Product・Pin・元Revision・Scopeを付けて表示し、他画面からの遅い応答を現在のPinへ誤貼付しない。
+
+- **実Live attachを確認**した場合のみ同一Sessionの継続と呼ぶ。Harnessが対応しなければ、用途限定のActivity Handoff（対象Ref・未決・Unknownの引渡し）として表現し、同一Conversation継続を偽らない（TAI #168/#271）。
+- **機密境界変更**：過去のSession文脈に秘密が残っている場合、後続の出力だけを伏せても隔離できない。Audience/Principal/Trust Boundaryを変更する場合は新しい隔離Sessionに分岐し、許可された情報だけを再取得する。複数画面の便宜よりDisclosureを優先する（TAI #232）。
+- **同World fingerprintでも異なるProvider可視集合**：DB Rowset、RLS、Scope/Grantが変わり得る（TAI #271の限定観測）。SUI/TEIとも構造Revisionの一致だけで「同じ検索結果・同じ権限・全件取得済み」を宣言しない。実Provider Read、cursor/終端、取得Scopeを個別確認。SUI [#3419](https://github.com/hat47x/sui-sensemaking/issues/3419)の1ページ目だけの探索欠落は実際の停止線。
+- **Toolの成功段階を分離**：送信予定、Tool要求、実Tool Reply、UIに表示されたResult、製品側の確認、正式Write/Receipt、再Readを別観測とする。LLM/CSWの整然とした回答や宣言されたCapabilityは、実受領・実行・完了の証拠ではない。
+
+### 18.9 意味Role・TraitとCSW協調は「推論・役割付け・実行」を分離する
+
+情報がTask/Action/Eventに見えるときも、**「そのことを記述したItem」「予定されるTask」「実際に生じたOccurrence/Event」「実行可能なOperation Contract」「実Effect/Receipt」** を同一のRole-tagでまとめない。異種情報からのEntity同定も同様に候補と受理を区別する（SUI #3401、TEI #2620/#2495）。
+
+- **SUI**：人間の違和感・未分類・多重所属・異論・仮の島/表札を保ったまま、複数の見立てをCard/Tree/Canvas上で試す。Roleは意味解釈の候補になり得るが、Roleが付いたというだけで実TaskやWorkflowは発生しない。
+- **CSW**：複数の分類・再配置・対照解釈を提案する任意の認知手法。SUIのIsland構造をCSWが自動受理したMeaningやTEIの組織Membershipへ変換しない。CSW不在のKJ-onlyと、通常AI提案と、CSWを用いた提案を分けて認知増分を測る（SUI #3400）。
+- **TEI**：正式モデルへ接続する場合、Roleの意味契約、Traitの実装義務/未履行（manual-requiredを含む）、Function Data Context、適格Provider、Data/Presentation/Operationの別資格を評価する。標準Representation Descriptorの書けたことを、Trait充足/受理済みModel/現在Grantにしない（TEI #4350/#4353）。
+- **SHO**：SUIから受け取る文章候補の著者による編集・採用はSHOの文書正本とし、元SUIの島・関係・Role・原出典を書き戻したことにしない。逆編集は対象とLossが一意に資格化できたときのみ候補提示（SUI #3430/#3431、SHO #31〜33）。
+
+#### 追補の独立判定対照（既存Expectedへ割り当て。未実行）
+
+| 対照 | 操作 | 期待結果／停止条件 | Owner・既存Expected |
+| --- | --- | --- | --- |
+| **HSC-A** | 曖昧Queryで12 Card候補→人が1件除外・1件追加、別Canvasへ移動 | Q・E・A・確定S、元ID/Revisionを追跡。二Occurrenceを別証拠数とせず、元Pin維持。新追加は現在Grantを確認 | TAI #629 §11.8 P1、SUI SI-XC01/07 |
+| **HSC-B** | Pin後に元SourceをA→B→A、別利用者が権限を変更 | 同byte/見た目を現行参照資格とせず、再解決・再Read/再Preview。権限の無いAction/送信0 | TAI #271、SUI SI-RAW03/07、#3399 |
+| **HSC-C** | 二画面で同一Harness Session attachを試み、古いReplyが後着 | 実attach可否を明示。Request/Pin/Revisionが違うReplyを現行結果へ適用しない。attach不可ならActivity Handoffのみ | TAI #629 P2、ADR-0111 |
+| **HSC-D** | 同一World/同じQueryでRLS可視行が変わる。MCPも途中ページだけ読む | Providerの実Rowset/Coverageを別証拠にし、0件・欠損・秘匿・partialを区別 | TAI #271、SUI #3419、SI-RAW09 |
+| **HSC-E** | CSWが仮の二島とTask Role案を提案し、人が片方を拒否 | 採用されない候補を保持し、KJ island≠TEI正式Membership、Task候補≠実Effect。AI OFFを基線に比較 | SUI #3400 SV-03/05、TEI #2620、#2507 |
+| **HSC-F** | SHO文書選択→SUI構造Draft→文章Candidate→明示採用 | 選択本文/原Source/構造/文書の版とLoss、Disclosure、実readbackを別列。SUI外部公開Projectionだけから元構造を復元しない | SUI #3430/#3431、SHO #31〜33、SI-XC05/06 |
+
+**最短の次実証**は、（1）SUIの固定Card 6〜12枚でAI OFFと限定検索Q＋人間補正Sを比較、（2）Pin維持／解除／失効再解決のheadless→実UI経路のGapを観測、（3）Document/Reader→SHO最小候補の実一往復を先行Ownerで照合、（4）必要となった範囲に限りTEI表現BindingとCSWの追加価値を検証、の順。TAI #629の外部Harness実Attach・CSW実技能・TEI Role/Trait Runtime・本番操作はこの節で採用/実装したとは言わない。**HSC-A〜Fは全て提案段階・NOT RUN。**
+
+<!-- sui-target-qualification-and-identity-20261112 -->
+### 18.10 固定した参照が「一意に解決できた」とは限らない：Product別の識別資格
+
+[TAI Draft #629 §11.8.5](https://github.com/hat47x/tai-pleroma/pull/629)と[Draft #630](https://github.com/hat47x/tai-pleroma/pull/630)、[TEI #4475](https://github.com/hat47x/tei-platform/issues/4475)/[#4472](https://github.com/hat47x/tei-platform/issues/4472)を横断照合。§18.7の`Pinned Work Set`は利用者の**選択意図を安定して保持**するが、参照の存在・一意性・出典真正性・現時点での操作資格を保証するものではない。
+
+**最初に分けて確認する条件**：
+1. **参照の精度**：Product/Workspace/Document、要素Kind、安定Ref、表示Occurrence、元Source/Revision・選択範囲を混同しない。Qualified Refの構文が正しいことと、Source上で一件へ解決できることを分離する。旧`(DocumentID, CardID)`や本文一致から新しい全域Item IDを捏造しない。
+2. **一意性と競合**：同Kind/同IDの重複、同名別ID、Graph同端点の多重Relation、同Item別Canvas表示、同じ文章の別引用箇所を反例にする。**Index/検索/表示の戻り値1件を「原Sourceに1件しかない」の証拠にしない**。0件についても、権限・取得Scope・ページ終端・Index欠落を検査せず不存在としない。
+3. **参照はあるが内容不明**：未取得URL、外部Source未許可、Reader未対応、失効・partial、派生Projectionの非単射、未レビューの構造を区別。曖昧・欠損・非開示がある場合は、その**開示可能な範囲で**選択解除なしに保留し、適格に解決済みの残りの要素へのread-only探索を妨げない。
+4. **識別と意味対応は別**：異なるSUI Item/Island、CSW仮の束、SHO段落、TEI Data/Function/Business、実世界のEntity/Eventを同一Subjectへ自動統合しない。跨製品の同一対象・因果・役割対応は、出典/範囲/版/Lossを持った**提案Relation**として人間が検討可能にし、実Host/Owner Meaningへ自動昇格しない。
+5. **判定の非破壊性**：識別資格を確認するread-only操作やFingerprint算出で、元のItem/Model/Authority/Review/Selectionが変わらないことを必要条件とする。[TEI #4475](https://github.com/hat47x/tei-platform/issues/4475)は`ThreeElementModel.Index()`の同Kind同ID縮約と`ModelFingerprint()`の入力Slice/AuthorityLimitsの破壊・自己参照を**静的ソース調査から指摘**している。**後続の実装更新**：[TEI merged PR #4507](https://github.com/hat47x/tei-platform/pull/4507)でFingerprintの入力破壊・自己参照とDiagramへのAuthorityLimits引渡しは修正がmainに統合済み。一方、同Kind同IDの重複処理、CRUD索引/矛盾、現在Host Grantの実受理は別の未完了範囲であり、本節はそれらをPASS認定しない。
+
+**SHOで永続Occurrence IDを強制しない**：[SHO PR #29](https://github.com/hat47x/sho-composer/pull/29)のUTF-16→UTF-8範囲写像は限定CI済み。[SHO Draft #38](https://github.com/hat47x/sho-composer/pull/38)で提案される原文位置の都度再解決を、SUIのCard/Display Occurrence IDへ合わせるために変更しない。Source byte、Origin、BOM/EOL、buffer/disk、位置/文字列の照合と現在Versionを組み合わせ、同一文字列の別箇所は区別する。再解決不可能なら保留。OS/Editor内の実Writerと永続Storage fenceは独立資格。
+
+### 18.11 画面に見える完全性、元モデルの完全性、送信できる完全性を分離する
+
+同じ観測列で、**SUIの選択→Preview→AI/SHO/TEIへ送出→結果を戻す**過程を比較する。ただし一つの全製品共通Receipt/Policy Engineへ集約せず、Product既存Reader/Projection/StorageとTAIのActivity Handoffの実証から組み立てる。
+
+| 段階 | 実際に確かめる対象 | 禁止推論 |
+| --- | --- | --- |
+| Source admission | 読めたRaw・Source位置・Source版・欠落・未取得・Permission | URLやhashだけで元文書を現在読めるとしない |
+| Identity resolution | Qualified Kind/Ref・解決集合の一意性・多重性・同名別対象 | 先頭Hit、Indexで縮約された1件を正しい唯一対象としない |
+| Model/Projection | 元Sourceの全構造と、Reader/Canvas/Tree/Graph/CRUD/Markdownが実際に含む構造の差・Loss | 画面にないEdge、明示CRUD、保留・異論を「元にも無い」としない |
+| Audience/Disclosure | 現在のGrant/開示Scope・非公開部分・未レビュー・相手/送信先 | 表示可・Pin可・Review済みを別製品への送出可としない |
+| Consumer delivery | 実際に渡したbytes・Tool args/Reply/終端・Receipt・Source再読取 | 生成成功、API ACK、Schemaがあるだけで完全配送や保存完了としない |
+| Editing/Effect | readSet/writeSet/expected Revision、再資格化、Preview、人の採用、実Provider Effect | 過去の選択、同一Session、AI/CSW候補を現在の書込権限としない |
+
+**三つの本質的な非同一性**：
+- [TEI #4472](https://github.com/hat47x/tei-platform/issues/4472)の静的指摘では、CRUD派生表の生成時にData索引を取り違えたり、明示定義だけのFunction×Data対や矛盾を落としたりする可能性がある。SUI/SHO/AIが表だけを取得した場合、「表示されなかった操作は存在しない」と推測できない。修正はTEI側へ委譲。
+- [TEI Draft #4489](https://github.com/hat47x/tei-platform/pull/4489)の限定Projection未解決と、[TEI Draft #4500](https://github.com/hat47x/tei-platform/pull/4500)の業務責任・Case変化は、同じ図や説明ができてもMeaning/権限/現在の業務状態が異なる反例。SUIのKJ Islandや仮Taskを組織の実責任・承認・実Eventへ昇格させない。
+- [SHO Draft #38](https://github.com/hat47x/sho-composer/pull/38)の原文位置都度解決と[SHO #33](https://github.com/hat47x/sho-composer/issues/33)の別Draft採用では、「内容を人が編集できる」と「元SUI/TEIモデルを更新できる」を区別する。SHO著者本文の後からの編集やA→B→Aを、SUI抽出Item/TEI Meaningへの自動逆反映としない。
+
+本章はSUIのKJ-only／AI OFFの自由探索を阻害しない。Sourceを読む・Canvasに並べる・違和感を残す操作は**未整理/意味未確定のまま成立**する。他方、秘密情報を公開しない、不適格な編集候補を停止することは既存SafeMode/ADR-0111に従う。完全性の不足は画面全体の利用禁止ではなく、要求された**用途に相対的な資格不足**として扱う。
+
+### 18.12 追加する検証差分とOwnerへの引渡し（技術負例／NOT RUN）
+
+新しい全製品横断Checkerや第二のExpected SSOTを作らず、既存§17〜18、[TAI #271](https://github.com/hat47x/tai-pleroma/issues/271)/[#629](https://github.com/hat47x/tai-pleroma/pull/629)/[#630](https://github.com/hat47x/tai-pleroma/pull/630)、TEI #4475/#4472、SHO E0/G2/G3の既存独立Expectedへ付帯条件を付ける。
+
+| 対照 | 小さな一因子変更 | 独立Expectedと停止 |
+| --- | --- | --- |
+| **HSC-G** | SUIの同ItemをCanvas A/Bに2表示、そこへ別Item同文を追加 | 2 Occurrence≠2根拠、別Item同文≠同一Subject。表示選択から本体の更新対象を無断決定しない（SI-XC01、SUI #3430） |
+| **HSC-H** | 1 Productの実Sourceに同Kind/同IDを2件置く、または同端点多重Edge | 一意性未証明を黙って1件に縮約せず、正しい診断/資格保留。SUIでTEIのIndexerを再実装しない（TEI #4475、#2497） |
+| **HSC-I** | 元TEI CRUDには明示操作/衝突があるが表示表では1行もない | 欠損・矛盾の根拠をSource側で確認し、表の空白をOperationなしと解釈しない（TEI #4472） |
+| **HSC-J** | 同じSHO文中に同一文字列が2度、元RawはBOM/CRLFを含む。Source改版 | UTF-8 byte span/実Origin/Source版で正しい選択範囲だけ再解決。永続Occurrence IDは要求しない（SHO PR #29/#38） |
+| **HSC-K** | TEI FingerprintをPin資格の照合で2度計算し、Model/Authorityを比較 | ModelとAuthorityLimitsがbefore/afterで不変。Fingerprint自己参照で履歴と一致判定が変わらない（TEI #4475、独立実Goテスト待ち） |
+| **HSC-L** | GUIで選んだItemをAI/SHOへ送り、Provider Scope/Grantが送出直前に変化 | 現在のSource/Scope/Disclosureを再確認、未許可送出なし。拒否/未取得/Tool Reply部分のみを正直に報告（TAI #630、SUI SI-RAW08/09、ADR-0111） |
+
+**実証順**：P0=SUI内部Reader/Canvas選択＋元Sourceへの再到達をAI OFFで確認 → P1=同Item二表示・同文別Item・未レビューの少数Fixtureで一意性/開示を観測 → P2=SHOの既存E0実span写像をSUI選択資料へ用途限定接続 → P3=TAI #168のG0〜G2が先に成立した適格Harnessのみ実Tool送出・Reply・適用先照合へ → P4=TEI #4475/#4472の実製品修正結果を再読し、モデル投影/操作候補の採否を判断。**SUI本体の新Item/Canvas Schema・元Sourceの実移行はP0〜P1の実需要を確認するまで先行実装しない**。
+
+**資格と未了**：#4475のFingerprint/Diagram AuthorityLimitsに関する部分修正は[merged #4507](https://github.com/hat47x/tei-platform/pull/4507)に入ったが、#4475の同Kind同IDや#4472のCRUD修正は別範囲。SHO #29の17-case CIを実VS Code/Dirty Buffer/正式Writer/Storage CASへ拡大解釈しない。HSC-G〜L、実SUI UI固定Pin、同一Sessionの外部Harness送信・SUI↔SHO↔TEI実共同Read/Write、Owner Meaning受理、T2価値は本節では**未実行・未採用**。既存正本・EffectのOwnerへ戻す。
+
+<!-- sui-raw-evidence-crosslane-20261112 -->
+### 18.13 SUIの選択正しさ・Harness配送・共同接続・認知価値を別々に実証する
+
+11月12日以降の[TAI #271](https://github.com/hat47x/tai-pleroma/issues/271)、[Draft #629](https://github.com/hat47x/tai-pleroma/pull/629)、[TAI #168](https://github.com/hat47x/tai-pleroma/issues/168)、[SUI #3400](https://github.com/hat47x/sui-sensemaking/issues/3400)を踏まえ、§18.7〜18.12の選択資格と外部Harnessの実行資格を**独立の四つの観測列**に切り分ける。これは共通ランタイムの追加や新しい正式Gate名ではなく、既存Ownerへ実験結果を返すための比較方法である。
+
+| 観測列（便宜名） | 当該Ownerが実際に示すこと | 示さないこと |
+| --- | --- | --- |
+| **S：SUI単独選択** | AI OFFで、既存Card/Island/Readerの安定した選択、対象補正、元Source/Revision再解決、非公開要素の非露出、保存/再開の実Outcome | 外部HarnessがToolを読めること、AIの認知増分、別製品での操作資格 |
+| **H：Harness単独配送** | 実OS read-deny・実送出byte・Tool args/Reply完全性と終端・受け手のContext、適格Session/隔離 | SUIの意味構造、現在のSUI Grant、元資料の全件性、GUIが使いやすいこと |
+| **J：SUI×Harness同一Attempt接合** | **SとHの両方が対象範囲で成立した後**、同じPin/Source/Scope/Request/Tool Reply/Recipient表示が正しく結びつく。遅着・別Audience・切断でも誤適用しない | Session共通化だけでOwnerのMeaning受理やBusiness Effectが生じること |
+| **C：認知的な価値の差** | AI OFFの通常KJ、一般的なAI提案、CSWの仮の分類/島案を同じ実務資料と条件で比較し、関係発見・異論維持・再開・誘導害/操作負荷を別観測 | Jの通信成功だけでSUI/CSWの価値が生じたこと、内部DogfoodをT2と数えること |
+
+**実施順**：SとHは相互を待たずに小規模な独立検証を進める。Jは**適格な実Product/実Harness**に限定して後段で同一Attemptを試す。CはSUIの基本価値[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)/ADR-0089を基準に、AI OFF・非Harness利用を有効な対照とする。Hの基線は[TAI #168](https://github.com/hat47x/tai-pleroma/issues/168)のG0物理Read拒否→G1送出→G2 Tool Reply完全性→独立H2/H3比較の順を変更せず、SUI選択UIを初回の追加Blocking条件にしない。複数画面同一Live Sessionが非対応なら、用途限定Activity Handoffを別Sessionで試し、同一Session成功と称さない。
+
+Sの必要要素を明示する最初の試験は、Syntheticの6〜12件で、同文別Item・同Itemの別表示Occurrence・未レビュー/伏せられた島・動的候補Qと人の除外E/追加A・元Source改版を組み合わせる。**表示が同じでも内部Identityと意味が一致するとは限らない**ことを必ず含める。現行DocumentV1でできることと、将来論理Item/Canvasに必要なことを別列にする。
+
+### 18.14 未整理Itemの「保管できた」と、後日読めるEvidence/Sourceの関係を分離する
+
+[TEI #4307](https://github.com/hat47x/tei-platform/issues/4307)、[#4481](https://github.com/hat47x/tei-platform/issues/4481)、[#4493](https://github.com/hat47x/tei-platform/issues/4493)、[#4494](https://github.com/hat47x/tei-platform/issues/4494)、[#4503](https://github.com/hat47x/tei-platform/issues/4503)の**保管と限定取得の設計・負例**を、SUIのRaw/Inbox/ReaderのConsumer試験へ接続する。TEIのEvidenceをSUI Itemへ全面移管する、SUIに全Evidenceを自動登録する、KON Dataspace/汎用Evidence Registryを新たな必須基盤とすることはしない。
+
+まずSUIの「保存」操作で、(a)利用者が残した**Item identity**、(b)実Raw bytesまたは外部Locatorの**Content/Source reference**、(c)保存・取得・観測した**revision/attempt/status**、(d)人間が後から付けた**見立て/Role/Review**、(e)Canvas上の**Display Occurrence**を独立して説明できるかを検証する。Rawの同一hashはbyte一致の証拠に限り、異Source/出典・実体の同一性やレビュー資格は自動統合しない。大量Rawを投入した時点でTask/Graph/OKF Conceptの強制生成を行わない。
+
+**参照の4段階の必要な違い**：
+1. **登録のみ**：URLやLocatorを保存。内容未取得なら実byte/全文検索・オフライン再読込成功を主張しない。
+2. **Raw保管**：ローカルContent Storeなどに実byteを保存した事実を示す。受け取ったbyte列・時刻・Scopeを追跡し、再Readに成功するかは別。解析・Index・意味の確認は任意。
+3. **参照結合**：元Source/Revision/取得位置/実byte digestとItem/抽出Candidateを明示的に結ぶ。移動・同名異物・A→B→A・Catalog消失では歴史的参照を残し、現在の根拠としてはunresolved/partialを返す。
+4. **用途別の取得／共有**：必要集合・現在のGrant/Disclosure/Recipient・実Read Scopeを確認し、AI/SHO/TEIへの限定Projection/送出を明示操作にする。Locatorやdigest、存在件数、private catalog自体も機微情報になり得る。**閲覧/Pin/read-onlyという表示だけで外部Network read・cache write・uploadゼロを保証しない**。
+
+**Git連動と物理保管の関係**：GitHubにRaw/証拠の実体や存在情報を送らない`local-only`も成立させる。Git-linked-privateではGitはSourceの版、Raw/証拠の実体はローカル/NAS/S3等、Git→Manifestの紐付けはGit外のprivate catalog/receiptで管理可能な候補とする。これはTEI #4307の設計Profileを参照する比較であり、SUIの標準Storage Mode Enum採用ではない。GitHub公開を絶対条件とせず、Local-onlyのReader／既存SUI保存機構を最小基線とする。
+
+**復元の反例**：Raw blobだけ復元してもどのSource/Itemに結び付くか不明なら`unresolved`。catalogだけ復元してblob欠損なら`unavailable/partial`。Remote Put ACKだけで後日のReader再取得・世代一式の完全性・Owner受理を保証しない。永続Evidenceの保全/Retention・Cache eviction、権限とGCは[TEI #2845](https://github.com/hat47x/tei-platform/issues/2845)等の既存Ownerと比較し、新しい強制的な共通保管サービスを先に作らない。
+
+### 18.15 最小利用経路と技術反例：Raw→Reader→Pin→限定Handoff
+
+**最短の縦断は、まずSUI単独で**「未整理Rawを保存→Inboxで見つける→Readerで実Contentを再取得→人が範囲を選択・Pin→抽出CandidateをKJに配置→元Rawへ戻る」。次にAI OFFのまま複数Canvasの非干渉を試し、必要性が認められた時にだけ外部Harness、SHO、TEIの限定Consumerを接続する。従来の3 Card KJの最小価値を壊さない。初期段階でNAS/S3、数万Item、Graph全域索引、全製品公開UIを必須にしない。
+
+| 既存Ownerへ戻す対照 | 入力・変更 | 期待する実Outcome／禁止推論 |
+| --- | --- | --- |
+| **SIR-01**：SUI §17 SI-RAW01/02・TEI #4307 GL-01 | GitHub未接続で長文Rawを一件保管、別プロセスで再読、URLのみ別Item登録 | 長文はContentを取得できるか否かを実Readで判定。URLだけの登録はunknown/unfetched、GitHub送信0。強制Card/Role/AI呼出し0 |
+| **SIR-02**：SI-RAW03/05・TEI #4493 DR-02/03 | 同byte別原典、blobのみ／private catalogのみ別Workspaceへ移行 | byte identityとSource/Item identityを別扱い、必要根拠が復元できなければunresolved/partial。元位置や人間Reviewを偽造しない |
+| **SIR-03**：SI-XC01/05・SUI #3400 SV-06/09 | 同Itemを二Canvasへ、別Itemに同じ本文、Readerへ元範囲復帰 | Display Occurrenceは別、元Item/Sourceは維持。説明・配置が一致しても元Worldの同一を推定せず、表示削除だけでSource削除しない |
+| **SIR-04**：SUI HSC-A/B/L・TAI #629/#271 | Q候補12件→人が1件除外1件追加→Pin後にSource/Grant変化 | S=(Q−E)∪Aの選択意図を保持し、現在のRef/Source/Scope/Grant不適格なら書込/外部送出0。履歴上のPinは残る |
+| **SIR-05**：TEI #4503 EC-06/07/08/09・SUI SI-RAW08/09 | 3 Evidence必要・2件のみ実取得。Redacted 1件のみ外部送出、Tool Reply途中切断 | Required closure partial、Rawは非送出。事前予定とcache/Network実作用、生成済みbyteと実Consumer受領を別列 |
+| **SIR-06**：SUI #3391・SHO #31〜33・TEI #2497 | 元SHOから選択RawをSUIで構造候補化、別Markdown Draftで再開 | 原Source/Scope/Document/StructureのRevision、公開Loss、実Reader/Writer再Readを独立記録。元SHO/SUIの無断上書き、意味受理の自動昇格0 |
+
+**評価・判断**：SIRは**既存の独立Expectedへ紐づけるための照合票であり新しい第二テスト正本ではない**。原Itemへ戻れた割合、必要な手数、誤った二重カウント、AI OFFでの関係発見、引用位置再到達率、実送出の限定率、権限/失効誤適用をそれぞれ観測する。SUI本体の価値T2は[ADR-0089](adr/ADR-0089-product-value-canon.md)/[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)を正本とし、技術Fixtureの合格をT2に加算しない。
+
+**Owner/工程**：SUI Item/CanvasとReaderはHybrid計画/§17・#3400、異種Sourceは#3401、外部投影は#3368/#3391/#3392、SHOのWriterはSHO #4/#19/#20、TEI Evidence Store/Private Catalog/ProviderはTEI #4307/#4481/#4493/#4494、意図・取得・開示は#4503/#2516/#2515、Harness実配信とSessionはTAI #168/#271/#232。分担を変更しない。新しいStorage/Role Registryや中央Agent Loop、NAS/S3のSUI必須化は**非目標**。
+
+**現時点の証拠と未完了**：本節は2026-11-12の横断設計・利用順の整理のみ。S/H/J/Cの実照合、SIR-01〜06、新しいSUI Raw Item DB・本番Reader改修・二Canvas UI・Local CAS→SUI正式Binding、NAS/S3・外部Harness実送出、SHO正式Writer、TEI Role/Meaning、実T2はこの追補では**NOT RUN／NOT ACCEPTED**。過去のGitHub Doc Readbackや合成CI成功から本実装のPASSを導かない。
+
+<!-- sui-consumer-claim-ceiling-20261112 -->
+### 18.16 最小実装への引渡し票：現行DocumentV1で証明できる事柄から始める
+
+§17〜18.15の広い設計を、**最初の実Product試験で証明できる有限の縦断**へ縮約する。ここでのOwnerはSUIの既存Hybrid計画、価値の判定は[ADR-0089](adr/ADR-0089-product-value-canon.md)と[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)。SHO/TEI/KONに新たな実装依存を設けない。
+
+**2026-11-12時点の実コード照合による制限**：
+- [`frontend/src/domain/types.ts`](../03_Implement/frontend/src/domain/types.ts) の`DocumentV1`は`cards[]`、`edges[]`、`islands[]`とCanvas座標を保持する。一方`Card.meta.source`は**原資料へ戻るための自由記述**であり、検証済みSource ID/Revision/Raw bytes/spansを保証しない。文字列の一致・リンクらしさを根拠受理としない。
+- [`backend/src/sui_sensemaking_api/routes/docs.py`](../03_Implement/backend/src/sui_sensemaking_api/routes/docs.py) は保存済みDocumentの`GET /docs/{doc_id}`とDocument単位のETagを持つが、**agent credential側は伏せられた内容からの漏えい防止でETagを公開しない**。そのため利用者内部のCASと外部Agent/SHO Consumerが同じRevision資格で操作できると解釈しない。
+- 同ファイルの`GET /docs`は`limit <= 500`・`X-Next-Cursor`の一覧。現[MCP #3419](https://github.com/hat47x/sui-sensemaking/issues/3419)は最初のページのみのmetadata探索を静的に指摘している。Inbox/探す機能のPoCでは**未列挙と不存在を必ず分離**する。
+- Rawの任意媒体Reader、Raw Source Reference Store、新しい全域Item ID、Display Occurrence独立永続化はこのファイル群からは**実装済みと確認できない**。既存Document保存をそのまま「汎用Raw Item Storeの完成」として扱わない。
+
+**差分を小さく保つ段階引渡し（入口／出口の独立実観測）**：
+
+| Slice | 実装・検証の入口とOwner | 独立したExit／実装しないもの |
+| --- | --- | --- |
+| **R0 現行Baseline** | 既存DocumentV1を2件（Card3枚／同文別Card、Held/Island含む）保存。別Process/ブラウザで再Read、既存ETag/CASとSafeMode・元Cardへの戻りを観測。SUI既存API/テストがOwner | 保存前後と再Read実bytes/構造の一致、選択外/未レビューのAgent向け非開示、途中失敗/409診断。新Item Schema/Graph Engineなし |
+| **R1 Raw最小Slice** | 小さい日本語長文Rawと外部URL Locatorを各1件。**技術選択前に**既存Document添付で足りるか、明示されたローカルSource Readerを薄く接続するかをFit/Gap比較。独立Raw正本を先に発明しない | 長文の実保存→再起動→Readerの対象byte readback、URLのみはunfetched、元Raw改版時の引用候補stale。実Readerがないときは`unavailable`とし成功にしない |
+| **R2 Human Extraction** | 人がRaw上の実範囲を選び、原資料位置と版を持つ抽出Candidateを既存Card表示へ繋ぐ。SUIの意味形成はAI OFFで行う | 「元Rawへ戻る／元Rawとの差を見る」が成立し、候補と原文の同一性を分離。元にない理由を勝手に作らない。Card.meta.source自由記述だけで精密spanを装わない |
+| **R3 Select/Share試験** | Headlessで同Card別Canvas表示の**合成Occurrence**、人のQ/E/A補正、Reader/Rawへ戻るルートを比較。SHOへの実Raw引渡しと公開Harnessは別Owner | 本体1・表示2・別Source同文の区別、含める範囲と送出scope、返答の起点Pinの適格性。不適格/非公開は遮断。**合成Occurrenceを二Canvas永続化済みと記録しない** |
+
+**判断点**：R1が実Reader/source spanを既存構成で表現できない場合、最小Blob/Source Bindingの採用案を比較し、**どの欠落のために新しいデータ境界が必要なのか**を独立Evidenceで示す。新テーブル／新API／新Providerはその証拠と別のOwner採否がある場合だけ起票する。R0〜R3を必ず直列化せず、固定Fixture準備・Headless読み取りは安全に並走できる。
+
+### 18.17 Consumerの成功主張に上限を持たせる：SHO G5負例からの横断反映
+
+[SHO #44](https://github.com/hat47x/sho-composer/issues/44)は、G5のテスト用RunnerでAの実行経路を「外部Harness名」で**ラベル表示しただけ**なのに実Session起動の証拠と誤読できること、Bへ不正Scopeを渡していないのに全体`widenedScopeRejected=true`と宣言したこと、Network/OS全Sinkを監視せず「無断送信なし」と宣言したことを、**実Source/Receipt照合で発見**した。Runner修正とB側負例実行は別途未完了。SUIからのHandoffでも、表現が整っていても実観測を上回る成功Claimを出さない。
+
+| Claim（外部に言える上限） | 実際に観測するWitness | まだ言えないこと |
+| --- | --- | --- |
+| `source-read` | Source/Readerの実bytes・digest・Locator/RevisionとRead/Scope | 原典が正しい、現在も必ず取得可、必要全員分をRead済み |
+| `candidate-built` | SUI内部の限定Projection・Loss・対象ID/Kind・Source/開示Scope | SHO/AI/TEIが受領、原Worldへ逆編集可能 |
+| `handoff-attempted` | Tool/Process実呼出・送信予定範囲・実bytes・Recipient・Attempt ID | 受け手が全文を受理した、送出外の全Sinkが空 |
+| `consumer-read` | **受け手の実Process**でbyte数・Digest/終端・実Parser出力を再Read | 実Harness同一Session接続、正式Editor Save・Owner意味受理 |
+| `save-verified` | Saveの実Response・別Reader再Open/世代・必要ならCAS/Grant照合 | 外部Task/業務Effect、古い出典の現時点適用、Retention |
+| `effect-verified` | 実Host/Providerの独立Read/Effect Receiptと現在権限・同一Attempt | モデルMeaning受理や未観測第三者への無送信 |
+
+**実験の観測列**：SUI Producer/Reader、SHO Consumer/Writer、外部Harness Loader/Tool/Session、Host/Network、TEI/Providerを一列の単一Booleanへ畳まず、各段で`observed / not-run / unknown / refused / partial`と、対象/Source/実観測地点を記録する。新しい正式Status Enumや共通Receiptを宣言しない。内部Script/テスト引数の`--harness`ラベルと本物のAgent起動は区別。Aで拒否した負例を未実行のBに流用しない。Consumerがdigest一致でも、開示スコープ外や未公開SourceがOS/Tool/Networkへ出ていないことの全証明にはならない。保護判断はADR-0111、TAI #232、TEI #2515/#2516と各Hostに戻す。
+
+### 18.18 負例の先行順位・停止条件・設計の収束
+
+既存SI-RAW/SI-XC/HSC/SIR、SHO #44/TEI #4503の独立Expectedを**第二の試験正本へ転記せず**、最初のR0〜R3で判別力が高い反例だけ先に接続する。
+
+| 選ぶ反例 | 結果の要求 | 主たる引渡し |
+| --- | --- | --- |
+| **AC-01 現DocumentとRawの境界** | DocumentV1の再Read成功と新Raw Reader成功を別列。現APIで未提供なら`not-supported`、架空のSource Spanは0 | §18.16 R0/R1、SUI #3400、SI-RAW01/02 |
+| **AC-02 同一文字列と別出現** | 同文別Sourceを統合せず、同Item別表示を別根拠数にしない。DisplayとSourceのIdentityを区別 | §17 SI-XC01、§18 HSC-G、SHO E0 |
+| **AC-03 不完全な探索** | 501件目を最初のページだけで検索したら`not-enumerated`とし、存在しないと主張しない。認可範囲外ID/件数は漏らさない | SUI #3419、SI-RAW09 |
+| **AC-04 Recipientなしの偽PASS** | 未起動Harness名、未実行B負例、途中切断Replyに成功判定0。生成済みファイルの存在で受領/保存/正式意味受理を宣言しない | SHO #44、TAI #168/#271、§18.17 |
+| **AC-05 読取でも起こる作用** | Raw FetchがCache File作成/Networkアクセス/Credential利用を伴うなら、許可条件と実作用を表示。read-only表記を無送信/無書込の証拠にしない | TEI #4503 EC-06、#3182、ADR-0111 |
+| **AC-06 実保存後の紛失・競合** | 保存成功応答が消えても自動重複適用0。別Readerの現状態と元Item・保留/異論を再Readし、不明Commitを成功/失敗に作り替えない | SUI #3399 CU-09、TEI #4307、§18.14 |
+
+**終了条件（次の設計追補を自動で増やすより優先）**：R0/R1で(1)現製品でできることとRaw固有の欠落が再現可能、(2)Required Source/Reader/Disclosureの何が不明か説明できる、(3)一つの実資料に出典回帰できる、の各判定を**実行結果**として揃える。これらが揃わない限り、SUIに新汎用Document/Graph/Reader Store、KON中心集約、独自Harness Loop、外部Task実行の実装計画を先行しない。逆に小さい既存Store/Readerを通せば実証できる場合、新たな共通Core提案へ進まない。正式に足りない機能・試験は各Ownerの既存Issueへ帰属させ、Docsのみの累積をProduct PASSとしない。
+
+**資格**：本節はSource確認に基づく計画とClaim Ceilingの設計。R0〜R3のSUI実試験、AC-01〜06、SHO G5 Runner修正、実OS/Network egress、二Canvas永続化、任意媒体のRaw Reader、正式SUI→SHO/TEI保存、Owner受理、実務T2はいずれもこの追補では**NOT RUN**。
+
+<!-- sui-r0-r1-implementation-and-crossproduct-facts-20261112 -->
+### 18.19 11月12日夜の実証更新と実装引渡し：設計追補の増殖を止め、R0/R1を実測する
+
+**本節は最新実績の資格修正と作業の引渡し**であって、新しいSUI基本データモデル・TEIの共通Context型・新Handoff v2を提案するものではない。§18.18の「次は追加文書より実Source→Reader→再読取を優先」を維持する。
+
+**実装担当Issueを起票：[SUI #3438](https://github.com/hat47x/sui-sensemaking/issues/3438)**「R0/R1：現行DocumentV1実再読込と未整理Raw Readerの最小Fit/Gap」。既存Hybrid/ADR-0089/#3400の価値正本は変えず、次を**Product実試行**で確認する：現Documentの保存→別Process/Reader再取得、SafeModeとagent非公開境界、URL登録のみとRaw bytes取得の差、同文別Sourceと同Item別Occurrence、501件目以降の未探索、競合/ACK不明の停止線。RIR-01〜07は既存SI-RAW/HSC/AC・#3399/#3419に対応する**実装引渡しの独立Expected**であり、第二のScenario SSOTを立てない。
+
+#### 最新の横断成果の受入範囲
+
+| 更新・実出典 | 実際に成立した範囲 | SUIに適用する条件と、なお未成立の範囲 |
+| --- | --- | --- |
+| [TEI merged #4507](https://github.com/hat47x/tei-platform/pull/4507)、[Draft #4504](https://github.com/hat47x/tei-platform/pull/4504) | ModelFingerprintの入力非破壊・自己参照排除、DiagramのAuthorityLimits保持がmain修正済み。#4504では同Manifest/同World FPでも別Workspace Rootのread-only対照を追加、exact HEAD Health成功 | SUIにも内容・digest・同名だけで別Workspaceや別ItemへPinを移すことを禁止。Root/Scope/現在Source/Grantは別照合。TEI GUI実Pinは[#4515](https://github.com/hat47x/tei-platform/issues/4515)で未実証 |
+| [SHO merged #47](https://github.com/hat47x/sho-composer/pull/47)、[TAI merged #640](https://github.com/hat47x/tai-pleroma/pull/640) | G5のB側が**今回Consumerを動かさず過去Receipt JSONを再出力するだけでも**A/B形式一致を作れる反例を実試験化。CIは限定Consumer/Runner範囲 | SUI ProducerのReceipt・SHA一致を、SHO/外部Harnessが**このAttemptで**今のSourceを実Readした証拠にしない。現在の受信側Process・実byte・対象/Scopeの再確認は別資格。新しい署名/Nonce必須化は提案しない |
+| [TEI #4350](https://github.com/hat47x/tei-platform/issues/4350)／[S1](https://github.com/hat47x/tei-platform/blob/main/tools/reference-facet-mapping-check/README.md)／[S2](https://github.com/hat47x/tei-platform/blob/main/tools/reference-facet-structure-check/README.md)／[S3](https://github.com/hat47x/tei-platform/blob/main/tools/reference-representation-binding-check/README.md) | mainにFacet/Mapping・Structure・Representation Bindingの**headless read-only Reference実装と利用説明が存在**する。写像損失/曖昧/Context束縛を判別する資料として利用可能 | SUIの任意CanvasにTEI Function Data Contextの所持を強制しない。SUI Item/Island/Graph→TEIの正式Consumer接続、Rendering/UI、意味受理、外部Provider Effectは別実証。Referenceの契約判定を製品実装済みとしない |
+| [TEI Draft #4514](https://github.com/hat47x/tei-platform/pull/4514) | 構造FPが同じでもSource/Authorityのみ変わる場合、DocumentDraftの図参照をstaleと判別するコード/独立Expected案がある（未統合） | SUI CardやCanvasの表示・見立てが変わらなくても、原Raw/出典・Review/Disclosureが変化したときに現在資格を再確認。Source失効の自動復権をしない |
+| [TAI Draft #633](https://github.com/hat47x/tai-pleroma/pull/633)／[TEI #4515](https://github.com/hat47x/tei-platform/issues/4515) | GUIの選択対象・Source/Root・実Schema変更、Tool返信と現在の操作対象が独立である点をOwner別に具体化 | SUIのPin、SHOの引用span、TEIのNode/描画Edgeは各Productで再解決。SUI Island=TEI承認済み業務Relation、UI項目追加=実DB列追加、表示元ID=書込Grantという誤昇格を禁止 |
+
+#### 実証順と次の受領物
+
+- **最優先（SUI Product）**：[#3438](https://github.com/hat47x/sui-sensemaking/issues/3438)のR0を最初に実行し、実HTTP Save/GETと別Process再Read、AI OFF、SafeMode/ETag/競合の実Outcomeを報告する。R1でRaw専用Reader/Source Spanが現行Productに存在しなければ`unsupported`とし、足りない最小能力を**観測した差分**として返す。最初から新汎用Raw Storeを実装しない。
+- **小さく並走可（read-onlyの設計適合）**：SUI同文別Item・同Item別Canvas合成Occurrence、TEI #4504の別Root/同FP、TEI S1〜S3の非単射と利用目的別`lossy/unknown`、SHO #47の旧Receipt再利用を、既存独立Expectedの対照として照合する。公開・合成情報のみを使用し、実Product接続PASSに加算しない。
+- **次段（Producer/Consumerがそれぞれ適格になった後）**：公開SUI Raw/実Card一件の安全なProjection→SHO実Reader、次に同じ選択からTEIの型付きContext Candidateを**明示翻訳**。Source/Revision/Scope/必要集合・送出byte・受領Attemptを別列で記録し、旧Receiptの再利用を成功にしない。TEI/SHOのOwner Writer/Meaning/Grantはこの段階で自動移管しない。
+- **後置**：SUIの製品二Canvas永続化、複数Client協調、CSWの認知増分、NAS/S3と外部Harness実Session/OS隔離、正式Task Effect。一次価値T2は[ADR-0089](adr/ADR-0089-product-value-canon.md)の基線でSUI外の実務資料から別途判定。
+
+**停止・判定のルール**：①「Contentの保存」「Readerで実byteを再取得」「元Sourceへ適格に戻る」を一つのPASSへ畳まない。②新しいDocを書き足しただけでは、R0/R1進捗とは数えない。③Sourceが同じでも別Root/別Scopeへ暗黙再束縛しない。④G5 Receipt一致は実Consumer起動と同義ではない。⑤既存SUIで不足する事実が再現できて初めて、最小Plugin/Schema案の採否をProduct Ownerへ返す。
+
+**実行上限**：この節自体はDocs-onlyで、SUI #3438のHTTP別Process試行、Raw Reader改修、実SHO/SUI/TEI同一Attempt、実Studio/CanvasのPin/書込、実外部Harness、Owner Meaning受理、T2は**NOT RUN**。TEI #4507・SHO #47等の実績は各々のOwnerが検証した限定範囲にのみ帰属する。
+
+<!-- sui-r0-test-and-cross-product-20261113 -->
+#### 2026-11-13：設計から実装テストへ移した範囲と、最新の横断実績
+
+- **SUI自身の実装差分**：[SUI Draft #3439](https://github.com/hat47x/sui-sensemaking/pull/3439)で[#3438](https://github.com/hat47x/sui-sensemaking/issues/3438) R0の独立プロセス再読込回帰を新規1ファイルに実装。現行HTTP `PUT /docs/{id}`→Writer TestClientとDB Engine終了→**新しいPythonプロセス**の同API `GET`→JSON/ETag照合という実行経路を用意。公開合成の3Card/同文別`meta.source`/Hold/Island/Edge、stale `If-Match` 409、別Process 404を検査する。**実テスト証拠の追補**：[PR #3439 exact HEAD `2d0c22ee84c106ae803571c544ddc88d0eef37ee`](https://github.com/hat47x/sui-sensemaking/pull/3439) の [SUI 単体検証 #43336035937](https://github.com/hat47x/sui-sensemaking/actions/runs/43336035937) `backend-contract` で、新規2テストを明示的に対象一覧へ加え、実ログ **316 passed／fail 0／warning 1**、Ruffと契約確認も成功した。合格は合成DocumentV1+SQLite+新PythonプロセスのHTTP TestClientに限り、実Browser/Raw Reader/二Canvasを含まない。exact HEADの[SUI 単体検証 #43336035937](https://github.com/hat47x/sui-sensemaking/actions/runs/43336035937)はbackend-contract／frontend-unit／frontend-e2eが全てcompleted/success、[SUI MCP・agent認証 #43336036014](https://github.com/hat47x/sui-sensemaking/actions/runs/43336036014)も全4 Job completed/success。ただし新R0テストの実行先はbackend-contractだけであり、これを実BrowserによるR0再開やRaw Reader成功へ昇格しない。 Owner受理は別証拠。実Raw Reader/元資料byte span/Browser復帰/二Canvas永続化/二Client実競合はこのテスト対象外。
+- **TEIの実Readが前進**：[main統合 #4539](https://github.com/hat47x/tei-platform/pull/4539)は隔離PG16でEnvironment束縛→Driver Executor実Read→Function Data Context→限定Reference CLIの実行を確認した。ただし通常`tei` CLI・Studio・SUI/SHO Consumer・現在のHost Grantは未接続。0件でも全世界での不存在を宣言せず、RLS/列欠落/NULL/Join重複と取得Coverageを区別する実証は、SUIの異種Source Readerが持つべき**消費者側の停止線**の参考に限る。
+- **問いに必要な依存集合の区別**：[TEI main統合 #4550](https://github.com/hat47x/tei-platform/pull/4550)は申告Graph内の多段upstream unknownをRequired Consumerまで辿る改修。不要な依存で全成果をstaleにしない一方、必要な未取得Sourceを無視してcompleteとも言わない。SUIのReader/Canvas Pinでも「見えているカード・既知の関係の総数」と「この問いに必要で実取得済みの集合」を分ける。実Source Universeの完全性は別。
+- **編集逆写像を用途別に判定**：[TEI Draft #4538](https://github.com/hat47x/tei-platform/pull/4538)の限定Property行編集では、全体Graph→Tree Projectionがlossyでも**属性Slotの編集可否を操作相対で調べる必要**が明確になった。SUIでは、Canvas表示の座標移動、Card本文変更、原Raw span変更、SHO文章への書戻しを一つの「編集可」にしない。現在のDocumentV1ならCanvas上のCard座標の編集適格性を現行CASで扱う余地があるが、Item/Raw/SHOへの逆Patchは一意な元Ref/Scope/Revision/Grantを別に要求する。TEIの編集Ref結果をSUI実編集PASSへ転記しない。
+
+**次の受入依存**：SUI #3439の実Backend試験の限定合格と未実証範囲を#3438へ記録済み。次にRaw実byteのSource Reader/Fit-GapとR2の人手抽出へ進む。**PR #3437は設計候補、#3439はmain統合済みのProduct試験**として分け、共通Store・新Harness・第二Expected正本を先に採用しない。
