@@ -121,3 +121,123 @@ def test_invalid_or_tampered_capture_fails_closed(tmp_path: Path) -> None:
     store._target("tenant-a", "a").write_bytes(b"modified")
     with pytest.raises(SnapshotIntegrityError, match="integrity mismatch"):
         store.read(tenant_id="tenant-a", capture_id="a", expected_sha256=result.sha256_digest)
+
+
+# This concurrency probe is deliberately POSIX/local-only. The trusted test
+# directory is not a grant or sandbox, and the result is not a Product SLA.
+_CHILD_WRITE = """
+import json
+import sys
+import time
+from pathlib import Path
+from experiments.r2_immutable_snapshot_reference import (
+    LocalImmutableSnapshotReference, SnapshotConflict
+)
+
+root, capture_id, raw_hex, gate, ready = sys.argv[1:]
+Path(ready).write_text("ready", encoding="ascii")
+deadline = time.monotonic() + 15
+while not Path(gate).exists():
+    if time.monotonic() > deadline:
+        sys.exit(4)
+    time.sleep(0.002)
+raw = bytes.fromhex(raw_hex)
+try:
+    result = LocalImmutableSnapshotReference(Path(root)).put_once(
+        tenant_id="tenant-a", capture_id=capture_id, raw=raw,
+    )
+    print(json.dumps({"status": result.outcome, "digest": result.sha256_digest}))
+except SnapshotConflict:
+    print(json.dumps({"status": "conflict"}))
+"""
+
+
+def _two_process_writes(
+    tmp_path: Path, first: bytes, second: bytes
+) -> tuple[list[dict], Path]:
+    root = tmp_path / "nas"
+    gate = tmp_path / "release"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(BACKEND_DIR)
+    processes = []
+    try:
+        for index, raw in enumerate((first, second)):
+            ready = tmp_path / f"ready-{index}"
+            process = subprocess.Popen(
+                [
+                    sys.executable, "-c", _CHILD_WRITE,
+                    str(root), "same-capture", raw.hex(), str(gate), str(ready),
+                ],
+                cwd=BACKEND_DIR,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            processes.append(process)
+
+        import time
+
+        deadline = time.monotonic() + 15
+        while not all((tmp_path / f"ready-{i}").exists() for i in range(2)):
+            if time.monotonic() > deadline:
+                pytest.fail("writers did not reach the concurrency gate")
+            time.sleep(0.005)
+        gate.write_bytes(b"go")
+        observations = []
+        for process in processes:
+            out, err = process.communicate(timeout=25)
+            assert process.returncode == 0, err
+            observations.append(json.loads(out))
+        return observations, root
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+                process.communicate(timeout=5)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hard-link reference")
+@pytest.mark.parametrize("same_bytes", [True, False])
+def test_concurrent_independent_processes_cannot_replace_capture(
+    tmp_path: Path, same_bytes: bool,
+) -> None:
+    first = "原文A。".encode("utf-8")
+    second = first if same_bytes else "原文B。".encode("utf-8")
+    observations, root = _two_process_writes(tmp_path, first, second)
+    observed_statuses = sorted(result["status"] for result in observations)
+    if same_bytes:
+        assert observed_statuses == ["already-present", "created"]
+    else:
+        assert observed_statuses == ["conflict", "created"]
+    store = LocalImmutableSnapshotReference(root)
+    final = store._target("tenant-a", "same-capture").read_bytes()
+    assert final in {first, second}
+    assert not list(root.rglob("*.pending"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX hard-link reference")
+def test_uncommitted_pending_is_not_a_readable_snapshot(tmp_path: Path) -> None:
+    store = LocalImmutableSnapshotReference(tmp_path / "nas")
+    target = store._target("tenant-a", "capture-1")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    stale_pending = target.with_name(f".{target.name}.interrupted.pending")
+    stale_pending.write_bytes("未完了。".encode("utf-8"))
+
+    with pytest.raises(SnapshotUnavailable, match="unavailable"):
+        store.read(
+            tenant_id="tenant-a",
+            capture_id="capture-1",
+            expected_sha256=hashlib.sha256(stale_pending.read_bytes()).hexdigest(),
+        )
+
+    raw = "確定した取込。".encode("utf-8")
+    result = store.put_once(tenant_id="tenant-a", capture_id="capture-1", raw=raw)
+    assert result.outcome == "created"
+    assert store.read(
+        tenant_id="tenant-a", capture_id="capture-1",
+        expected_sha256=result.sha256_digest,
+    ) == raw
+    # No recovery/GC is claimed: a stale pending object remains for
+    # deliberate host-managed cleanup after an interrupted write.
+    assert stale_pending.exists()
