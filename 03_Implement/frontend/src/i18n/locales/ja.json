@@ -1959,5 +1959,15 @@
   "epistemic.detail.current_state_label": "現在の見立て",
   "epistemic.detail.actions_reusable": "この詳細から開いた操作を {count} 件、再利用できます",
   "epistemic.detail.actions_blocked": "この詳細から開いた操作の再利用は止めています。投影を更新してから、もう一度確認してください",
-  "epistemic.detail.data_only_note": "この詳細は参照データとしてのみ表示します。判断の承認や操作の権限を持ちません"
+  "epistemic.detail.data_only_note": "この詳細は参照データとしてのみ表示します。判断の承認や操作の権限を持ちません",
+  "raw_preview.title": "原文の一時確認（保存しません）",
+  "raw_preview.hint": "選択したテキストを、この画面内でだけ確認します。カードへの登録・サーバー保存・AIへの送信は行いません。原資料の継続的な参照権限は確認していません。",
+  "raw_preview.file_label": "UTF-8テキストファイル（1 MiB以下）",
+  "raw_preview.invalid_file": "読み込めませんでした。空でない1 MiB以下のUTF-8テキストファイルを選んでください。",
+  "raw_preview.unqualified": "一時プレビューです。正式な出典として登録されていません。",
+  "raw_preview.source_text": "原文（確認する範囲を選択してください）",
+  "raw_preview.check_selection": "選択範囲の位置を確認",
+  "raw_preview.invalid_selection": "元のバイト位置を特定できません。表示された原文内から続けて文字を選択してください。",
+  "raw_preview.span": "原文のバイト位置: [{start}, {end})（末尾を含みません）。選択範囲のハッシュを計算しましたが、出典の同一性や現在の参照権限は未確認です。",
+  "raw_preview.clear": "一時データを破棄"
 }

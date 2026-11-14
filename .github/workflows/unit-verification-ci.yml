@@ -57,9 +57,11 @@ jobs:
             tests/test_critique_history_model.py \
             tests/test_ai_safemode.py \
             tests/test_request_body_safety.py \
+            tests/test_r1_raw_source_probe.py \
             tests/test_context_bundle_routes.py \
             tests/test_agent_credential_http.py \
             tests/test_docs_access_control_integration.py \
+            tests/test_docs_source_binding_unaccepted.py \
             tests/test_docs_tenant_isolation_surfaces.py \
             tests/test_audit.py \
             tests/test_docs_audit_integration.py \
@@ -138,4 +140,5 @@ jobs:
             e2e/structure_decision_hold_restore.spec.ts \
             e2e/epistemic_review_panel.spec.ts \
             e2e/ce3_patch_workspace.spec.ts \
+            e2e/raw_utf8_selection_reference.spec.ts \
             --reporter=line

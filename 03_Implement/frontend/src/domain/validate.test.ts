@@ -4,6 +4,46 @@ import workerFixtureRaw from "../../tests/fixtures/worker/doc.small.json?raw";
 import { validateImportedDocument } from "./validate";
 
 describe("validateImportedDocument", () => {
+  it("rejects unadopted Source selection shapes before tolerant import can discard them", () => {
+    const base = {
+      version: 1,
+      id: "r2-source-import",
+      createdAt: "2026-11-14T00:00:00Z",
+      updatedAt: "2026-11-14T00:00:00Z",
+      transform: { panX: 0, panY: 0, zoom: 1 },
+      cards: [{ id: "card-1", text: "Human meaning", x: 0, y: 0 }],
+      edges: [],
+      islands: [],
+    };
+    const privateCanary = "private://never-reflect-this-locator";
+    const candidate = { qualifiedSourceRef: privateCanary, startByte: 38, endByte: 57 };
+    const attempts = [
+      { ...base, sourceBindings: { "card-1": candidate } },
+      { ...base, sourceSelections: [] },
+      { ...base, cards: [{ ...base.cards[0], sourceBinding: candidate }] },
+      { ...base, cards: [{ ...base.cards[0], sourceBindings: [candidate] }] },
+      { ...base, cards: [{ ...base.cards[0], meta: { sourceSelection: candidate } }] },
+      { ...base, cards: [{ ...base.cards[0], meta: { sourceSelections: [] } }] },
+    ];
+
+    for (const attempt of attempts) {
+      const result = validateImportedDocument(attempt);
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.error).toContain("Source binding contract is unavailable");
+      expect(result.error).not.toContain(privateCanary);
+    }
+
+    const legacy = validateImportedDocument({
+      ...base,
+      cards: [{ ...base.cards[0], meta: { source: "human note", seq: 1 } }],
+    });
+    expect(legacy.ok).toBe(true);
+    if (legacy.ok) {
+      expect(legacy.document.cards[0]?.meta?.source).toBe("human note");
+    }
+  });
+
   it("rejects retired document versions and string version aliases", () => {
     const base = {
       id: "doc_retired_version",

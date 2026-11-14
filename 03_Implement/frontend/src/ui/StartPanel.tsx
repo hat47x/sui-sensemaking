@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import { t } from "../i18n/translate";
+import { LocalRawPreviewDisclosure } from "../source/LocalRawPreviewPanel";
 
 type StartPanelProps = {
   expanded?: boolean;
@@ -245,6 +246,8 @@ export function StartPanel({
           {expanded ? <span style={{ fontSize: 12, color: "#475569" }}>{t("start_panel.action.import_review_pack_hint")}</span> : null}
         </button>
       </div>
+
+      {expanded ? <LocalRawPreviewDisclosure /> : null}
 
       {expanded && recentDocumentIds.length > 0 ? (
         <div style={{ display: "grid", gap: 6, borderTop: "1px solid #e2e8f0", paddingTop: 10 }}>
