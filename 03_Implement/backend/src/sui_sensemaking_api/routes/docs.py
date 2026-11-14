@@ -1011,6 +1011,12 @@ def get_document(
     else:
         response.headers["ETag"] = _format_etag(_compute_etag(doc_row.payload_json))
 
+    # Validate the exact projected payload BEFORE recording a successful
+    # "view" audit event. An out-of-contract stored Source candidate must not
+    # create a false evidence receipt for a Document that GET cannot return.
+    # DOGFOOD-02: a bad stored version is a bounded structured 422, not a 500.
+    document = _validate_document_payload_with_a1_contract(payload)
+
     # #3276: SafeMode does not redact reviewed text on the agent path. Record
     # whether this response actually exposed reviewed text, instead of always
     # claiming safe_mode=True (which could hide the event from an audit sink
@@ -1048,11 +1054,7 @@ def get_document(
             )
         )
 
-    # DOGFOOD-02: read path must enforce the A1 contract the same way PUT
-    # does. A stored doc with version != 1 otherwise fails raw pydantic
-    # validation as a 500; here it becomes a structured 422
-    # (A1_SCHEMA_VERSION_MISMATCH) with no stack-trace leak.
-    return _validate_document_payload_with_a1_contract(payload)
+    return document
 
 
 def _document_precondition_error(*, status_code: int, code: str, message: str) -> HTTPException:

@@ -1609,3 +1609,60 @@ describe("listDocuments", () => {
     await expect(listDocuments()).rejects.toThrow("Invalid document list response shape");
   });
 });
+
+
+describe("R2 pre-network Source selection rejection", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("refuses reserved Card, Meta and Document candidates before any HTTP egress", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new Error("network must not be touched"),
+    );
+    // Other tests can leave prior GET calls on an underlying mocked fetch.
+    // Only calls made during this preflight attempt are evidence of egress.
+    const beforeCalls = spy.mock.calls.length;
+    const secret = "private://the-source-locator-must-not-leave-the-browser";
+    const selection = { qualifiedSourceRef: secret, startByte: 38, endByte: 57 };
+    const base = createDocument();
+
+    // Simulate runtime JSON/caller objects that bypass TypeScript's excess-key checks.
+    const cases: unknown[] = [
+      { ...base, sourceBindings: { c1: selection } },
+      { ...base, sourceSelections: [selection] },
+      { ...base, cards: [{ ...base.cards[0], sourceBinding: selection }] },
+      { ...base, cards: [{ ...base.cards[0], sourceBindings: [selection] }] },
+      { ...base, cards: [{ ...base.cards[0], meta: { sourceSelection: selection } }] },
+      { ...base, cards: [{ ...base.cards[0], meta: { sourceSelections: [] } }] },
+    ];
+    for (const document of cases) {
+      try {
+        await putDocument(base.id, document as DocumentV1);
+        throw new Error("a reserved Source candidate was accepted");
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        const apiError = error as ApiError;
+        expect(apiError.status).toBe(422);
+        expect(apiError.code).toBe("source_binding_contract_unavailable");
+        expect(apiError.message).not.toContain(secret);
+      }
+    }
+    expect(spy.mock.calls.slice(beforeCalls)).toEqual([]);
+  });
+
+  it("continues to send an existing free-text Card.meta.source note normally", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify(createDocument()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const doc = createDocument();
+    doc.cards[0].meta = { source: "human-authored note" };
+    await putDocument(doc.id, doc);
+    expect(spy).toHaveBeenCalledTimes(1);
+    const sentBody = JSON.parse(String(spy.mock.calls[0]?.[1]?.body));
+    expect(sentBody.cards[0].meta.source).toBe("human-authored note");
+  });
+});
