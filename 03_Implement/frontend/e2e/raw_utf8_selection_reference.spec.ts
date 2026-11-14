@@ -8,7 +8,10 @@ test("R2 single DOM Text selection keeps second Japanese occurrence at the origi
   await page.goto("/");
 
   const result = await page.evaluate(async () => {
-    const { projectRawUtf8Bytes, resolveSingleDomTextNodeSelection } =
+    const {
+      captureRawContentCheckpoint, compareRawContentCheckpoint,
+      projectRawUtf8Bytes, resolveSingleDomTextNodeSelection,
+    } =
       await import("/src/source/raw_utf8_selection_reference.ts");
 
     const text = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
@@ -29,18 +32,27 @@ test("R2 single DOM Text selection keeps second Japanese occurrence at the origi
     selection.addRange(range);
 
     const second = resolveSingleDomTextNodeSelection(projection, element, selection);
+    const checkpoint = await captureRawContentCheckpoint(raw, second);
+    const contentCheck = await compareRawContentCheckpoint(Uint8Array.from(raw), checkpoint);
     const roundtrip = new TextDecoder("utf-8", { fatal: true })
       .decode(raw.subarray(second.startByte, second.endByte));
 
     selection.removeAllRanges();
     element.remove();
 
-    return { totalBytes: raw.length, second, roundtrip };
+    return { totalBytes: raw.length, second, checkpoint, contentCheck, roundtrip };
   });
 
   expect(result).toEqual({
     totalBytes: 57,
     second: { startByte: 38, endByte: 57, selectedText: "同じ言葉。🌊" },
+    checkpoint: {
+      rawSha256: "0d92d8f8852fffe376d1af5655ffea572b4989de7a77de64b182ee47a8ff20cf",
+      selectedSha256: "6b39ef0ed8a5f5771807dc348b88b79fc716b3ec6cdf541b24fbd6f4b0f53df7",
+      startByte: 38,
+      endByte: 57,
+    },
+    contentCheck: "content-match-only",
     roundtrip: "同じ言葉。🌊",
   });
 });
