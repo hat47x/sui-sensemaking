@@ -503,3 +503,57 @@ test("R2 observed selection A-B-A while hashing cannot confirm the old span", as
   await preview.getByTestId("raw-local-confirm-selection").click();
   await expect(preview.getByTestId("raw-local-span")).toContainText("[38, 57)");
 });
+
+
+test("R2 clearing a Raw preview preserves the selection inside an actual SUI Canvas Card", async ({ page }) => {
+  await page.goto("/?locale=ja");
+  const cards = page.locator("[data-card-id]");
+  await expect(cards).toHaveCount(3);
+  const originalLabels = await cards.allTextContents();
+
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await panel.locator("[data-start-expand]").click();
+  await page.getByTestId("raw-local-preview-disclosure").locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "temporary-local-raw.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("原文の一時的な確認"),
+  });
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveText("原文の一時的な確認");
+
+  // This is a genuine SUI Canvas Card, not an injected synthetic <p>.
+  // Trigger the actual preview-clear button without a pointer focus change.
+  const cardSelection = await page.evaluate(() => {
+    const card = document.querySelector("[data-card-id]");
+    const clearButton = document.querySelector<HTMLButtonElement>('[data-testid="raw-local-clear"]');
+    const selection = window.getSelection();
+    if (!card || !clearButton || !selection) throw new Error("missing-real-card-or-clear");
+    const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+    let cardTextNode: Node | null = null;
+    while (walker.nextNode()) {
+      if ((walker.currentNode.textContent ?? "").trim()) {
+        cardTextNode = walker.currentNode;
+        break;
+      }
+    }
+    if (!cardTextNode) throw new Error("missing-real-card-text");
+    const range = document.createRange();
+    range.selectNodeContents(cardTextNode);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const originalText = selection.toString();
+    if (!originalText.trim()) throw new Error("empty-real-card-selection");
+    clearButton.click();
+    return {
+      originalText,
+      afterClearText: selection.toString(),
+      anchorStillInCard: !!selection.anchorNode && card.contains(selection.anchorNode),
+    };
+  });
+  expect(cardSelection.afterClearText).toBe(cardSelection.originalText);
+  expect(cardSelection.anchorStillInCard).toBe(true);
+  await expect(preview.getByTestId("raw-local-source-text")).toHaveCount(0);
+  await expect(cards).toHaveCount(3);
+  expect(await cards.allTextContents()).toEqual(originalLabels);
+});
