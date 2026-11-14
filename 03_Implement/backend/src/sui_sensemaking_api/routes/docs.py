@@ -130,7 +130,7 @@ def _raise_a1_validation_error(*, code: str, contract_id: str, message: str) -> 
 # This is deliberately narrow, not a general unknown-field policy. Other
 # forward-compatible DocumentV1 keys keep their existing behavior.
 _UNACCEPTED_CARD_SOURCE_KEYS = frozenset(
-    {"sourceBinding", "sourceSelection", "sourceSelections"}
+    {"sourceBinding", "sourceBindings", "sourceSelection", "sourceSelections"}
 )
 _UNACCEPTED_DOCUMENT_SOURCE_KEYS = frozenset(
     {"sourceBindings", "sourceSelections"}
