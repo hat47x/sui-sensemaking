@@ -79,6 +79,17 @@ TEIのData/Graph/時系列/標準表現・Go単一バイナリ・外部Host/Prov
 **撤退条件**：全Sourceの中央取込、共有Registry、抽象APIの実装が先行して元資料への復帰や認知上の効果を示せない場合、IG1/IG2の小さなSource Reader・手動KJへ戻す。未実装を静かに成功扱いしない。
 
 
+### 6.1 R2製品接続のFit/Gap（実コード確認、未実装）
+
+実装者用の具体的な引渡しは、[R2 #3441 実コードFit/Gap追補](https://github.com/hat47x/sui-sensemaking/issues/3441#issuecomment-6869227748)を参照する。R0/R1の個別試験成功からR2 Product完成を主張できない理由を、**永続化・認可・再読込**の3点に絞って固定した。
+
+- `backend/src/sui_sensemaking_api/models.py`：`CardMeta`は`seq`と説明用`source: str`のみ。未知`meta`キーは消える。`CardBase.sources: list[str]`も出典位置・版の認証情報ではない。`DocumentV1`に現在のRaw Source Bindingを検証できる専用表現が無い。**未宣言`meta.sourceBinding`の挿入や、説明文字列へのJSON隠蔽は保存解決策にしない。**既存欄/分離された許可済み保存先/最小型付き拡張のFit/GapはProduct Ownerが判断する。
+- `02_Architecture/api.md` §1.3：単一Tenant系のPUTは`If-Match`が無いとLWW、SaaSは具体的ETag必須。R2では現GETから取得したETagに基づく**明示的な条件付きPUT**を正常系とし、旧ETagの409・ACK不明の独立GET再照合を別に検証。LWWを共同編集安全の証拠にしない。
+- R1 `experiments/r1_raw_source_probe.py`：明示Root下の1MiB以下のUTF-8 bytes・期待digest・half-open範囲検証に限定。Host Grant、OS Race、A→B→A履歴、正式Root Identityは担わない。Product側で現在のSource scope/Root/Grantを検査できない場合は**Reader公開APIへ接続しない**。Referenceの検査を認可と読み替えない。
+- R0 `tests/test_docs_cross_process_readback.py` とR1 `tests/test_r1_raw_source_probe.py` は別実験。**同じSource/選択位置→Card保存→別ProcessのProduct GET→現在RootでのRaw再Read**を連結して初めてIG1達成と判定する。後段のBrowser UIはこの経路の別観測として実施する。
+
+作業順は **F0 既存入口・保存先のFit/Gap／Owner決定 → F1 許可済みRawの手動選択 → F2 明示If-Match保存と別Process GET → F3 現在Source再照合と負例 → F4 Browser実操作**。適切なSource Authorityが存在しないならF1以前で停止して`unqualified`と記録し、合成Referenceとしてのみ検証を継続する。既存R2-SRC-01〜08を使い、新たなExpected正本を作らない。**全F0〜F4の製品実装・E2Eは今回NOT RUN。**
+
 ## 7. 表示選択の再資格化と反応的な再取得（IG4の実証契約）
 
 TEI [#2582](https://github.com/hat47x/tei-platform/issues/2582)のFunction Data Context／選択epoch、[#2500](https://github.com/hat47x/tei-platform/issues/2500)の逆編集資格、[#2497](https://github.com/hat47x/tei-platform/issues/2497)の非単射を、**SUI固有のRead/Preview/Applyの負例**として取り込む。TEI Reactive Runtimeを待たず、SUIの最初の受入は独立したread-only照合。UI selectionを新しい永続SSOTやAction資格にしない。
