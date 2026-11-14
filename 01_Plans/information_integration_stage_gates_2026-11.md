@@ -163,6 +163,25 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 
 **正式受入の最小接続**：Sourceの権威は既存Host/Provider側に置き、Doc readの確認とは独立に`SourceRef + Workspace/Root + 現在Grant + Revision/epoch + 選択byte span`を照合する。Cardへ永続保存する属性集合はA/B/C Owner選定と閲覧Projectionが成立してから確定する。未許可のPrincipalがハッシュ・参照個数・存在の推定をできないこと、権限失効後に既存Cardが残ること、Doc ETag/If-Match競合で他者変更を失わないことを**独立Readと実HTTP**で確認する。EvidenceはSource取得、Document CAS、Consumer受領、人間の意味受理を別票とし、F0〜F5をすべての読取用途に一律の直列Gateとして要求しない。
 
+### 6.2.4 R2を正式なSource復帰へ進めるためのOwner判断票（実装着手条件）
+
+**現時点の判断**：一時ファイルの読込・元バイト位置の復元・選択変更への追従は、[実装Draft #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)で限定的に実証した。しかし、ブラウザで利用者が選んだ`File`は**別プロセスから再び開けるSource参照ではない**。また、[R1 #3440](https://github.com/hat47x/sui-sensemaking/pull/3440)の許可rootを模したCLIは実ProductのRoot/Scope/Grantを管理せず、既存`ContentObjectReference`はDocumentコンテンツの管理参照であって任意のRawファイルの閲覧資格を与えない。したがって、Source保存用のJSON欄を先に決めるだけではR2の縦断が成立しない。
+
+**Ownerが最初に決めることは「保存先」より「どの実Sourceを、誰の権限で再読するか」**である。最初の1件の公開合成Rawについて、以下を一つの受入票に記録し、それぞれ未定なら未定のまま残す。
+
+| 決定項目 | 実装前に必要な回答 | 回答がない場合 |
+| --- | --- | --- |
+| **Sourceを保持・再解決する既存Host/Provider** | SUIのWebサーバが既存の許可Rootから読み直すのか、Desktopの既存Hostが再読するのか。どの実APIとPrincipalで可能か | ブラウザの一時Fileに限り、永続Source Bindingは作らない |
+| **Qualified identityと版** | Root/Workspace、Source occurrence、revision・観測時刻・変更履歴の取得可否。同byte別RootとA→B→Aをどう判別するか | Digestと相対pathを資格とせず、現在の同一性は`unknown` |
+| **DocumentとSourceの開示範囲** | 同じDocumentを読めてもSourceは読めないGuest/Member/Agentへの投影。Locator・opaque handle・hash・参照数・選択位置の扱い | A/Bを正式採用せず、既存Providerの権限分離がある場合のみCを再評価 |
+| **保存と失敗後の扱い** | 採用するA/B/C、既存Document ETag/If-Match、保存ACK不明、Card削除・複製・Hold/異論との整合 | 現行[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)の予約欄拒否を維持し、保存成功を装わない |
+
+**方式の比較は次の順で絞る**。第一候補AはCardに選択履歴を結び付け、既存Document CASで一緒に保存できる利点がある。ただし、現在Sourceを読む権限のないDocument読者へ参照情報を開示するなら**不採用**。BはCard IDとの孤児・複製の整合を追加で証明しなければならず、Document内の別Mapへ移すだけでは開示問題を解決しない。Cは、すでに権限分離と永続参照を持つ**実在のProvider**が見つかった場合に限り、二つの書込・部分成功・Receipt/Recoveryを比較する。今回の技術的な優先順位を、Ownerによる意味受理やSchema採用の代行にしない。
+
+**採用後、最初に実装・実測する縦断**：[R2-SRC-01〜08 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)の既存Expectedに沿って、(1)現在許可された実RawをProduct Readerから表示、(2)人が二番目の同文を選択、(3)Card本文と出典候補を分けて明示If-Matchで保存、(4)Writer終了後に**別プロセス**からDocument GET、(5)現在のSource権限とRevisionを改めて確認して元バイトへ戻る。この往復と並行し、Doc許可×Source拒否、同byte別Root、Source改版・欠落、409/ACK不明、Agent非開示を個別に反証する。**Card本文・Hold・異論を出典失効とともに消さない**。Productにまだ接続していないReference、擬似Grant、HTTPを通らない単体Projection、合成DOMだけのPASSから縦断成功を推論しない。
+
+**成果物と着手順**：まずOwner判断票にHost/Providerの**実在する読み取り入口**と開示責任を記録し、その次にA/B/Cを一つ選び、必要な最小Schema・Reader・権限Projection・保存経路を別々にレビューする。全テストの成功と実際の元資料への復帰が揃うまで、`R2 Product accepted`とは記録しない。SHO Writer、TEI意味受理、外部Harnessや中央Registryは、この縦断の必須依存にしない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
