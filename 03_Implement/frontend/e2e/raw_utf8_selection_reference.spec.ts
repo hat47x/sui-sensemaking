@@ -194,3 +194,52 @@ test("R2 browser File input preview preserves raw bytes and keeps the selected s
     extracted: "同じ言葉。🌊",
   });
 });
+
+
+test("R2 StartPanel File preview is user-visible, local-only and cleared when collapsed", async ({ page }) => {
+  const observedWrites: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() !== "GET" && request.method() !== "HEAD") {
+      observedWrites.push(request.method() + " " + request.url());
+    }
+  });
+
+  await page.goto("/?locale=ja");
+  const panel = page.locator('[data-panel="start-document-entry"]');
+  await expect(panel).toBeVisible();
+  await panel.locator("[data-start-expand]").click();
+  const disclosure = page.getByTestId("raw-local-preview-disclosure");
+  await disclosure.locator("summary").click();
+  const preview = page.getByTestId("raw-local-preview");
+  await expect(preview).toBeVisible();
+
+  const text = "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊";
+  await preview.getByTestId("raw-local-file-input").setInputFiles({
+    name: "human-chosen-raw.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(text)]),
+  });
+  const source = preview.getByTestId("raw-local-source-text");
+  await expect(source).toHaveText(text);
+  await expect(preview.getByTestId("raw-local-unqualified")).toContainText("正式な出典として登録されていません");
+
+  await page.evaluate(() => {
+    const element = document.querySelector('[data-testid="raw-local-source-text"]');
+    const node = element?.firstChild;
+    const selection = window.getSelection();
+    if (!node || !selection) throw new Error("missing-product-raw-text-node");
+    const range = document.createRange();
+    range.setStart(node, 15);
+    range.setEnd(node, 22);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await preview.getByTestId("raw-local-confirm-selection").click();
+  await expect(preview.getByTestId("raw-local-span")).toContainText("[38, 57)");
+  expect(observedWrites).toEqual([]);
+
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-preview")).toHaveCount(0);
+  await disclosure.locator("summary").click();
+  await expect(page.getByTestId("raw-local-source-text")).toHaveCount(0);
+});
