@@ -46,6 +46,7 @@ def _test_client(
     calls: list[str] = []
 
     def trusted_resolver(*, request: Request, db: object):
+        _ = (request, db)
         calls.append("trusted-session")
         if fail:
             raise HTTPException(
