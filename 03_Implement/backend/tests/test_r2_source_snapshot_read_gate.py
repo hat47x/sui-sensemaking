@@ -17,6 +17,8 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from experiments.r2_immutable_snapshot_reference import LocalImmutableSnapshotReference
 from sui_sensemaking_api.access_control import (
@@ -29,6 +31,8 @@ from sui_sensemaking_api.access_control import (
     NoopAccessControlAdapter,
 )
 from sui_sensemaking_api.auth_context import ResolvedIdentity
+from sui_sensemaking_api.document_access_resource import ServerOwnedDocumentResourceResolver
+from sui_sensemaking_api.models import Base, DocumentAccessMetadataRow, DocumentRow, TenantRow
 from sui_sensemaking_api.source_snapshot_read_gate import (
     AuthorizedCardSourceSelection,
     RawSelectionContentCheckpoint,
@@ -71,6 +75,7 @@ class _PolicyServer(ThreadingHTTPServer):
     def __init__(self) -> None:
         super().__init__(("127.0.0.1", 0), _Handler)
         self.source_allowed = False
+        self.document_allowed = True
         self.mode = "normal"
         self.requests: list[dict] = []
 
@@ -100,6 +105,10 @@ class _Handler(BaseHTTPRequestHandler):
             grant_is_document = (
                 resource["kind"] == "document"
                 and resource["policyRef"] == "document-policy"
+                and resource["docId"] == "doc-a"
+                and resource["tenantId"] == "tenant-a"
+                and body["auth"]["actorRef"] == "member-a"
+                and policy.document_allowed
             )
             response = json.dumps({
                 "allow": grant_is_document or (grant_is_source and policy.source_allowed)
@@ -332,10 +341,11 @@ def _environment(
             try:
                 observed = read_pinned_card_source_selection_for_member(
                     request=request,
-                    db=object(),
+                    db=context.get("doc_db", object()),
                     document_id=document_id,
                     card_id=card_id,
                     selection_resolver=saved,
+                    document_resource_resolver=context.get("doc_resource_resolver"),
                     authority_resolver=metadata,
                     source_policy_resolver=source_policy,
                     policy_adapter=context["adapter"],
@@ -353,6 +363,62 @@ def _environment(
 
         with TestClient(app) as client:
             yield client, context
+
+
+@dataclass
+class _DocumentPolicyBinding:
+    calls: int = 0
+
+    def resolve(
+        self, *, tenant: TenantContext, binding_id: str, policy_version: str,
+    ) -> str | None:
+        self.calls += 1
+        if (tenant.tenant_id, binding_id, policy_version) == (
+            "tenant-a", "doc-binding-a", "doc-policy-v1",
+        ):
+            return "document-policy"
+        return None
+
+
+@contextmanager
+def _pinned_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    # Unlike the saved Card resolver (still a test double), Document metadata
+    # is loaded through the actual tenant-scoped SQLAlchemy repository.
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'pinned-doc.sqlite3'}",
+        connect_args={"check_same_thread": False},
+    )
+    Base.metadata.create_all(bind=engine)
+    try:
+        with Session(engine) as db:
+            timestamp = "2026-11-15T00:00:00Z"
+            db.add(TenantRow(
+                id="tenant-a", display_name="Tenant A",
+                lifecycle_state="active", created_at=timestamp,
+                updated_at=timestamp,
+            ))
+            db.add(DocumentRow(
+                tenant_id="tenant-a", id="doc-a", version=1,
+                updated_at=timestamp, payload_json="{}",
+            ))
+            db.add(DocumentAccessMetadataRow(
+                tenant_id="tenant-a", doc_id="doc-a",
+                visibility="Restricted", policy_binding_id="doc-binding-a",
+                policy_version="doc-policy-v1", updated_at=timestamp,
+            ))
+            db.commit()
+            binding = _DocumentPolicyBinding()
+            doc_resolver = ServerOwnedDocumentResourceResolver(
+                policy_binding_resolver=binding,
+            )
+            with _environment(monkeypatch, tmp_path) as (client, data):
+                data["doc_db"] = db
+                data["doc_resource_resolver"] = doc_resolver
+                data["doc_binding"] = binding
+                yield client, data
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
 
 
 def _request(client: TestClient, **kwargs):
@@ -721,7 +787,7 @@ def test_pinned_card_selection_preserves_second_same_text_position(
 ) -> None:
     first = RAW.index(SECOND_TEXT.encode("utf-8"))
     assert first != SECOND_SPAN_START
-    with _environment(monkeypatch, tmp_path) as (client, data):
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         data["server"].source_allowed = True
         # A client cannot replace a server-saved span by supplying the first
         # position, even though both selections have the same selected digest.
@@ -751,7 +817,7 @@ def test_pinned_card_selection_preserves_second_same_text_position(
 def test_pinned_card_scope_mismatch_never_contacts_source_or_pdp(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, change: dict,
 ) -> None:
-    with _environment(monkeypatch, tmp_path) as (client, data):
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         data["saved"].row = _saved_card(**change)
         response = client.get(
             "/_r2_test_pinned_card",
@@ -769,7 +835,7 @@ def test_pinned_card_scope_mismatch_never_contacts_source_or_pdp(
 def test_pinned_card_resolver_missing_denied_or_failed_is_non_disclosing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, state: str,
 ) -> None:
-    with _environment(monkeypatch, tmp_path) as (client, data):
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         if state == "absent":
             data["saved"].row = None
         elif state == "denied":
@@ -791,7 +857,7 @@ def test_pinned_card_resolver_missing_denied_or_failed_is_non_disclosing(
 def test_pinned_card_denies_unauthenticated_before_saved_lookup(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    with _environment(monkeypatch, tmp_path) as (client, data):
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         response = client.get("/_r2_test_pinned_card")
         assert response.status_code == 409
         assert data["saved"].calls == 0
@@ -803,7 +869,7 @@ def test_pinned_card_denies_unauthenticated_before_saved_lookup(
 def test_pinned_card_rechecks_source_revocation_and_preserves_saved_binding(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    with _environment(monkeypatch, tmp_path) as (client, data):
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         data["server"].source_allowed = True
         headers = {VERSION_HEADER: "version-2"}
         assert client.get("/_r2_test_pinned_card", headers=headers).status_code == 200
@@ -821,7 +887,7 @@ def test_pinned_card_rechecks_source_revocation_and_preserves_saved_binding(
 def test_pinned_card_wrong_capture_does_not_retarget_to_equal_digest(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    with _environment(monkeypatch, tmp_path) as (client, data):
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         data["server"].source_allowed = True
         data["saved"].row = _saved_card(capture_id="another-capture")
         response = client.get(
@@ -838,7 +904,7 @@ def test_pinned_card_wrong_capture_does_not_retarget_to_equal_digest(
 def test_pinned_card_rejects_drifted_checkpoint_after_fresh_source_read(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    with _environment(monkeypatch, tmp_path) as (client, data):
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         data["server"].source_allowed = True
         data["saved"].row = _saved_card(checkpoint=RawSelectionContentCheckpoint(
             raw_sha256=DIGEST, selected_sha256=SECOND_SHA256,
