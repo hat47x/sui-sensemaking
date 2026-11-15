@@ -408,7 +408,7 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **選択の同一性はハッシュだけでは証明できない。** 同じ文言が二箇所にあれば、両方の選択部分Digestは等しい。今回の内部関数は、渡された範囲をそのまま検査するだけで、**以前Cardに保存された範囲と一致するかを保証しない**。その保証には、Ownerが受け入れたSource BindingとDocument CASによる保存済みの範囲・Capture Occurrenceの照合が必要である。Raw全体のDigestが一致しても、同Rootの過去のGrant、A→B→Aの履歴連続性、外部Originの最新版、別Consumerへの開示権限は認めない。
 
-**受入の位置付け**：これはSource読取と選択内容の限定的な接続であり、現在の`RawSelectionContentCheckpoint`／`SourceSelectionObservation`は**内部候補型**であってCardやDocumentV1の正式保存形式ではない。テスト用SaaS Session・localhost PDP・不変Rootを使用する。正式Authority/Raw Provider、Card出典の永続化、保存ACK不明・別Process再開、SHO/TEI受領と意味受理は引き続き別票とする。CIのexact HEADを確認する前にPASSと記録しない。
+**受入の位置付け**：これはSource読取と選択内容の限定的な接続であり、現在の`RawSelectionContentCheckpoint`／`SourceSelectionObservation`は**内部候補型**であってCardやDocumentV1の正式保存形式ではない。テスト用SaaS Session・localhost PDP・不変Rootを使用する。正式Authority/Raw Provider、Card出典の永続化、保存ACK不明・別Process再開、SHO/TEI受領と意味受理は引き続き別票とする。[PR #3459](https://github.com/hat47x/sui-sensemaking/pull/3459)は**mainへ統合済み**。Exact HEAD `1eebcb16df2304b7ba33af722eddc9452144aff1`に対する[単体CI #43695129100](https://github.com/hat47x/sui-sensemaking/actions/runs/43695129100)は**completed/success、backend契約テスト436件PASS（警告2件）**。Frontend単体/E2Eと[MCP・Agent認証の回帰 #43695129037](https://github.com/hat47x/sui-sensemaking/actions/runs/43695129037)もcompleted/success。これは現在の認可を経由した**内容だけの再照合**の合格であり、永続化されたCardの選択履歴やSourceの歴史的同一性を証明するものではない。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
