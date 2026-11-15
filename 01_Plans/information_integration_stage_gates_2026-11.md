@@ -424,6 +424,10 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 ### 6.2.14 保存済みCardの参照前に、Documentの現在許可を独立に通す（限定実装）
 
+**統合・検証結果（#3462）**：[PR #3462](https://github.com/hat47x/sui-sensemaking/pull/3462)をmainへ統合。Exact PR HEAD `62c5e479ae9786748b7a76d17f1d4fd1da29e7aa`に対し、[SUI単体検証 #43704268861](https://github.com/hat47x/sui-sensemaking/actions/runs/43704268861)は**completed/success、backend契約テスト452件PASS（警告2件）、Frontend単体・E2E成功**。[MCP・Agent認証回帰 #43704268878](https://github.com/hat47x/sui-sensemaking/actions/runs/43704268878)もcompleted/success（実PostgreSQL RLSを含む）。今回はDocumentの実SQLite保存メタデータとサーバー管理Resolverを使用したが、SaaS Member、Card保存選択、Source Authority、Raw Storeおよびlocalhost PDPはテストダブル／Referenceである。**実Document認可を通す内部処理の合格**であり、正式なCard選択履歴保存やProduction PDPの受入ではない。
+
+
+
 **#3461からの進展**：保存済みCardの選択Resolverを信用する前に、同じ認証済みMemberとTenantを使い、**既存SUIのサーバー管理Documentメタデータと現在の外部PDPを必ず確認する**。内部`read_pinned_card_source_selection_for_member`に`ServerOwnedDocumentResourceResolver`を追加し、実DBで解決したDocumentの`doc_id/tenant_id/policy_ref`を検査する。実装が異なるHeader互換Resolverや、Doc PolicyRefのない文書は、Source参照を含むこの内部投影に限り拒否する。Documentの一般的なGET/編集許可を勝手に変更するものではない。
 
 判定順は、①既存SaaS Member・現在のTenant Session、②**Server-owned Document資源とDocument専用read PDP（fail-safeはdeny）**、③保存済みCard選択Resolver、④Source専用Authority/Policyの現在PDP、⑤Rawバイトと選択位置の再照合とする。Documentへの閲覧許可だけではSourceを読めず、Sourceへの閲覧許可だけではDocumentのCard選択を参照できない。両PDPのどちらかが拒否・障害となった場合も、Raw/Locator/未公開の選択位置を返さない。
