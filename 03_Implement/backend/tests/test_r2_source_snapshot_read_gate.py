@@ -30,14 +30,24 @@ from sui_sensemaking_api.access_control import (
 )
 from sui_sensemaking_api.auth_context import ResolvedIdentity
 from sui_sensemaking_api.source_snapshot_read_gate import (
+    RawSelectionContentCheckpoint,
     SourceSnapshotReadAuthority,
     SourceSnapshotReadUnavailable,
+    read_source_selection_for_member,
     read_source_snapshot_for_member,
 )
 from sui_sensemaking_api.tenant_context import TenantContext
 
 RAW = b"\xef\xbb\xbf" + "前文\r\n同じ言葉。🌊\n後文\r同じ言葉。🌊".encode("utf-8")
 DIGEST = sha256(RAW).hexdigest()
+# Independently fixed in frontend/src/source/raw_utf8_selection_reference.test.ts
+SECOND_TEXT = "同じ言葉。🌊"
+SECOND_SPAN_START = 38
+SECOND_SPAN_END = 57
+SECOND_SHA256 = "6b39ef0ed8a5f5771807dc348b88b79fc716b3ec6cdf541b24fbd6f4b0f53df7"
+assert DIGEST == "0d92d8f8852fffe376d1af5655ffea572b4989de7a77de64b182ee47a8ff20cf"
+assert RAW[SECOND_SPAN_START:SECOND_SPAN_END] == SECOND_TEXT.encode("utf-8")
+assert sha256(RAW[SECOND_SPAN_START:SECOND_SPAN_END]).hexdigest() == SECOND_SHA256
 TENANT = TenantContext(
     tenant_id="tenant-a", membership_id="membership-a",
     resolved_by="verified_claim",
@@ -232,6 +242,44 @@ def _environment(
                     status_code=404, detail="source unavailable"
                 ) from None
             return {"rawHex": raw.hex()}
+
+        @app.get("/_r2_test_span")
+        def span(
+            request: Request,
+            start_byte: int = SECOND_SPAN_START,
+            end_byte: int = SECOND_SPAN_END,
+            raw_sha256: str = DIGEST,
+            selected_sha256: str = SECOND_SHA256,
+            capture_id: str = "capture-a",
+        ):
+            # Test-only route; the Product does not yet persist a Source
+            # selection or expose a Source endpoint.
+            checkpoint = RawSelectionContentCheckpoint(
+                raw_sha256=raw_sha256,
+                selected_sha256=selected_sha256,
+                start_byte=start_byte,
+                end_byte=end_byte,
+            )
+            try:
+                observed = read_source_selection_for_member(
+                    request=request,
+                    db=object(),
+                    capture_id=capture_id,
+                    checkpoint=checkpoint,
+                    authority_resolver=metadata,
+                    source_policy_resolver=source_policy,
+                    policy_adapter=context["adapter"],
+                    raw_reader=reader,
+                )
+            except SourceSnapshotReadUnavailable:
+                raise HTTPException(
+                    status_code=404, detail="source unavailable",
+                ) from None
+            return {
+                "startByte": observed.start_byte,
+                "endByte": observed.end_byte,
+                "selectedText": observed.selected_text,
+            }
 
         with TestClient(app) as client:
             yield client, context
@@ -466,3 +514,133 @@ def test_policy_adapter_name_or_subclass_cannot_impersonate_http_pdp(
         assert data["policy"].calls == 0
         assert data["server"].requests == []
         assert data["raw"].calls == 0
+
+
+def _span_request(client: TestClient, **params):
+    return client.get(
+        "/_r2_test_span",
+        headers={VERSION_HEADER: "version-2"},
+        params=params,
+    )
+
+
+def test_authorized_second_ordinal_utf8_span_matches_frontend_checkpoint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        response = _span_request(client)
+        assert response.status_code == 200
+        assert response.json() == {
+            "startByte": 38,
+            "endByte": 57,
+            "selectedText": "同じ言葉。🌊",
+        }
+        assert data["trusted_calls"] == ["trusted"]
+        assert len(data["server"].requests) == 1
+        assert data["server"].requests[0]["resource"]["kind"] == "source_snapshot"
+        assert data["raw"].calls == 1
+
+
+@pytest.mark.parametrize("params", [
+    {"start_byte": 39},  # inside the first UTF-8 byte of the second span
+    {"end_byte": 56},    # inside the last Unicode scalar
+    {"start_byte": 0, "end_byte": 3},  # leading BOM is not a UI text selection
+    {"start_byte": 38, "end_byte": 38},
+    {"start_byte": 57, "end_byte": 58},
+    {"raw_sha256": "0" * 64},
+    {"selected_sha256": "0" * 64},
+])
+def test_recheck_rejects_invalid_span_digest_or_bom_without_echo(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, params: dict,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        response = _span_request(client, **params)
+        assert response.status_code == 404
+        assert response.json() == {"detail": "source unavailable"}
+        assert "同じ言葉" not in response.text
+        assert data["raw"].calls == 1
+
+
+@pytest.mark.parametrize("start,end", [(39, 57), (38, 56)])
+def test_utf8_boundary_is_checked_even_when_selected_digest_matches_invalid_bytes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, start: int, end: int,
+) -> None:
+    forged_digest = sha256(RAW[start:end]).hexdigest()
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        response = _span_request(
+            client,
+            start_byte=start,
+            end_byte=end,
+            selected_sha256=forged_digest,
+        )
+        assert response.status_code == 404
+        assert data["server"].requests
+        assert data["raw"].calls == 1
+
+
+def test_recheck_rejects_content_drift_outside_selection(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        # A new current Authority and Raw with a changed prefix can authorize
+        # Raw bytes, but must NOT validate the older UI selection checkpoint.
+        mutated = RAW.replace("前文".encode("utf-8"), "新文".encode("utf-8"))
+        changed_digest = sha256(mutated).hexdigest()
+        assert len(mutated) == len(RAW)
+        data["raw"].store._target("tenant-a", "capture-a").write_bytes(mutated)
+        data["metadata"].row = _authority(sha256_digest=changed_digest)
+        response = _span_request(client)
+        assert response.status_code == 404
+        assert data["raw"].calls == 1
+        assert "新文" not in response.text
+
+
+def test_recheck_against_current_grant_revocation_preserves_no_raw_projection(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        assert _span_request(client).status_code == 200
+        data["server"].source_allowed = False
+        response = _span_request(client)
+        assert response.status_code == 404
+        assert data["raw"].calls == 1
+        assert len(data["server"].requests) == 2
+
+
+def test_document_only_policy_cannot_recover_selection(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        response = _span_request(client)
+        assert response.status_code == 404
+        assert data["metadata"].calls == 1
+        assert data["raw"].calls == 0
+
+
+def test_source_checkpoint_does_not_establish_historical_occurrence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    # Two identical phrases intentionally have the same selected digest.
+    # Changing the byte start/end changes the *selection identity* even when
+    # a content-only check succeeds. A trusted saved Card binding must fix the
+    # original range; this internal helper cannot prove it from bytes alone.
+    first = RAW.index(SECOND_TEXT.encode("utf-8"))
+    last = RAW.index(SECOND_TEXT.encode("utf-8"), first + 1)
+    assert (first, last) == (11, 38)
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        second = _span_request(client)
+        first_response = _span_request(
+            client, start_byte=first, end_byte=first + 19,
+        )
+        assert first_response.status_code == 200
+        assert first_response.json()["startByte"] == 11
+        assert second.status_code == 200
+        assert second.json()["startByte"] == 38
+        assert first_response.json()["selectedText"] == second.json()["selectedText"]
+        assert data["raw"].calls == 2
