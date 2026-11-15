@@ -805,7 +805,7 @@ def test_pinned_card_selection_preserves_second_same_text_position(
         assert data["saved"].calls == 1
         assert data["trusted_calls"] == ["trusted"]
         assert data["raw"].calls == 1
-        assert len(data["server"].requests) == 1
+        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document", "source_snapshot"]
 
 
 @pytest.mark.parametrize("change", [
@@ -827,7 +827,7 @@ def test_pinned_card_scope_mismatch_never_contacts_source_or_pdp(
         assert data["saved"].calls == 1
         assert data["metadata"].calls == 0
         assert data["policy"].calls == 0
-        assert data["server"].requests == []
+        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document"]
         assert data["raw"].calls == 0
 
 
@@ -850,7 +850,7 @@ def test_pinned_card_resolver_missing_denied_or_failed_is_non_disclosing(
         assert "capture-a" not in response.text
         assert data["saved"].calls == 1
         assert data["metadata"].calls == 0
-        assert data["server"].requests == []
+        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document"]
         assert data["raw"].calls == 0
 
 
@@ -881,7 +881,7 @@ def test_pinned_card_rechecks_source_revocation_and_preserves_saved_binding(
         assert data["saved"].calls == 2
         assert data["trusted_calls"] == ["trusted", "trusted"]
         assert data["raw"].calls == 1
-        assert len(data["server"].requests) == 2
+        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document", "source_snapshot", "document", "source_snapshot"]
 
 
 def test_pinned_card_wrong_capture_does_not_retarget_to_equal_digest(
@@ -897,7 +897,7 @@ def test_pinned_card_wrong_capture_does_not_retarget_to_equal_digest(
         assert response.status_code == 404
         assert data["metadata"].calls == 1
         assert data["policy"].calls == 0
-        assert data["server"].requests == []
+        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document"]
         assert data["raw"].calls == 0
 
 
@@ -916,4 +916,86 @@ def test_pinned_card_rejects_drifted_checkpoint_after_fresh_source_read(
         )
         assert response.status_code == 404
         assert data["raw"].calls == 1
+        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document", "source_snapshot"]
+
+
+def test_document_denial_stops_before_saved_card_or_source_grant(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        data["server"].document_allowed = False
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 0
+        assert data["metadata"].calls == 0
+        assert data["policy"].calls == 0
+        assert data["raw"].calls == 0
+        assert [item["resource"]["kind"] for item in data["server"].requests] == [
+            "document",
+        ]
+
+
+def test_document_policy_unavailable_does_not_use_read_only_fallback(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        data["server"].mode = "unavailable"
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 0
+        assert data["raw"].calls == 0
         assert len(data["server"].requests) == 1
+        assert data["server"].requests[0]["resource"]["kind"] == "document"
+
+
+def test_document_policy_binding_removed_in_database_stops_at_document_gate(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        db = data["doc_db"]
+        row = db.get(DocumentAccessMetadataRow, ("tenant-a", "doc-a"))
+        assert row is not None
+        row.policy_version = "unresolved-v2"
+        db.commit()
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={
+                VERSION_HEADER: "version-2",
+                "x-doc-visibility": "Public",
+                "x-policy-ref": "document-policy",
+            },
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 0
+        assert data["metadata"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
+
+
+def test_document_missing_row_is_non_disclosing_even_with_source_grant(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        db = data["doc_db"]
+        db.query(DocumentAccessMetadataRow).delete()
+        db.query(DocumentRow).delete()
+        db.commit()
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 0
+        assert data["metadata"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
