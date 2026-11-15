@@ -448,6 +448,18 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **次のProduct Gate**：OwnerがA/B/Cのうち最小のCard選択保存方式を決定した後、実`Document CAS`と**Revision Head／Selection Receiptの同時整合**を確認し、別Process再起動後にSource再認可→同じ原文位置へ復帰できることを実証する。Provider・Originの版とAuthorityを確定するまでは、未採用`sourceBinding`をDocumentV1に追加しない。
 
+### 6.2.16 Raw取得中のDocument更新・権限失効を返却直前に再確認する（限定実装）
+
+保存済みCardのSource参照では、**事前のDocument認可とRevision照合が正しくても、その後のSource Raw読取中にDocumentの権限・版・Card選択が変わり得る**。外部PDP、NAS/S3、DBは単一の原子的なスナップショットではない。したがって前段の合格結果だけを長時間保持したまま、選択本文を返すことは避ける。
+
+限定内部実装`read_pinned_card_source_selection_for_member`は、Raw全体と保存済みbyte範囲の照合後、返却直前に同一Member・Tenantを用いて**Document専用の現在read PDPを再判定**する。次に保存済みCard選択Resolverを再取得し、初回の選択記録と同一であることを確認する。最後にDocumentの実保存状態（Document Version・Head Version・Revision ID・当該Document所属・Revision投影）を改めて照合する。SQLAlchemyの既存Identity Mapだけで古い行を再利用しないよう、**読取専用Sessionに限ってキャッシュを失効**させて再照会する。いずれかの段階が拒否・不一致・障害なら、読取済みの原文も返さない。
+
+負例では、Rawを読んでいる間に①Documentのread Grantが取り消される、②Document Policy Bindingが変わる、③内容を変えずにDocument Versionが進む、④A→B→Aと元のJSONに戻る、⑤Cardの保存済みCaptureが再束縛される、という状況をテスト用フックで作り、返却を拒否する。変更がなければ二度目のDocument判定を通し、同じ原文位置を返す。これらは**同一要求の返却直前に変化を観察するための回帰テスト**であり、恒久的なGrantや原典の最新版を保証するものではない。
+
+**未解決の競合境界**：再確認直後のDocument変更、DBの分離レベルによる読取Snapshot、SourceのGrant・Authority変更とRaw取得の時点差、ネットワーク応答時の変更は、再確認の追加だけでは原子的に防げない。また`Session.expire_all`は未保存の変更を破棄し得るため、**この入口は読取専用Sessionへ限定**し、正式なProduct実装ではトランザクションとロック／CAS戦略を明示する。必要であればSource固有のGrant再判定・Authority同一性Receiptを別票で検証し、Document側の再確認がSource再認可を代替すると扱わない。
+
+**正式受入はまだ先**：Card選択の正本永続化とDocument Revisionへの同一Commit保存、Sourceの不変取込Occurrenceと現在Policy、別Processの原文位置復帰は未実証である。TEIのAccepted Meaning、SHOの受領・Provenance、AI／Agentへの二次開示も別の資格とReceiptで扱う。KONの独立サービス化や第二Registryは本段階の必須依存としない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
