@@ -22,7 +22,9 @@ from sui_sensemaking_api.access_control import (
     ExternalPolicyAccessControlAdapter,
     resolve_access_decision,
 )
+from sui_sensemaking_api.database_content_store import DatabaseDocumentContentStore
 from sui_sensemaking_api.document_access_resource import ServerOwnedDocumentResourceResolver
+from sui_sensemaking_api.models import CanvasRevisionHeadRow, CanvasRevisionRow
 from sui_sensemaking_api.source_member_context import (
     SourceMemberContext,
     resolve_source_member_context,
@@ -306,14 +308,20 @@ class AuthorizedCardSourceSelection:
     """Candidate Host-owned selection row, NOT an accepted Product schema.
 
     The resolver must authorize CURRENT Document read/projection, resolve the
-    saved Card by stable identity and revision, and return this row from
-    server-owned storage. Selection bytes alone are not a grant or receipt.
+    saved Card by stable identity and the Document head at save time, and
+    return this row from server-owned storage. Selection bytes alone are
+    not a grant, a CAS receipt, or a proof of historic occurrence.
     """
 
     tenant_id: str
     document_id: str
     card_id: str
     capture_id: str
+    # A saved Card selection is tied to one Document revision, not merely
+    # identical bytes. All three fields must come from trusted Host storage.
+    document_version: int
+    document_head_version: int
+    document_revision_id: str
     checkpoint: RawSelectionContentCheckpoint
 
 
@@ -343,9 +351,11 @@ def read_pinned_card_source_selection_for_member(
     The server-owned Document resource resolver and current PDP decision
     run BEFORE any Card selection lookup. This is an additional gate, not a
     substitute for the resolver's projection and saved-Revision obligations.
-    No Document read-only fail-safe is admitted for Source projection. The same authenticated member is
-    used to query that resolver and to authorize the Source read; no second
-    session resolution or fresh client-provided content checkpoint is allowed.
+    The saved row must also match the current server-owned Document version,
+    revision head version, and immutable revision ID, using a verified
+    generation projection. No Document read-only fallback is allowed.
+    The same Member Context is used throughout the request, and clients
+    cannot supply replacement offsets or revision identifiers.
     """
     if not _canonical(document_id, _CAPTURE_MAX_LENGTH) or not _canonical(
         card_id, _CAPTURE_MAX_LENGTH
@@ -403,9 +413,49 @@ def read_pinned_card_source_selection_for_member(
         or saved.document_id != document_id
         or saved.card_id != card_id
         or not _canonical(saved.capture_id, _CAPTURE_MAX_LENGTH)
+        or type(saved.document_version) is not int  # noqa: E721
+        or saved.document_version < 1
+        or type(saved.document_head_version) is not int  # noqa: E721
+        or saved.document_head_version < 1
+        or not _canonical(saved.document_revision_id, _CAPTURE_MAX_LENGTH)
         or not isinstance(saved.checkpoint, RawSelectionContentCheckpoint)
     ):
         raise SourceSnapshotReadUnavailable("source unavailable")
+
+    # This is the CURRENT revision of the actual Document, not a value
+    # supplied by the Card resolver. Verify the generation projection against
+    # the revision blob, and reject A→B→A or old-client writes even when the
+    # final bytes and selection digest match again.
+    try:
+        stored = DatabaseDocumentContentStore(db).load(
+            tenant=member.tenant, doc_id=document_id,
+        )
+        head = db.get(
+            CanvasRevisionHeadRow,
+            (member.tenant.tenant_id, document_id, "main"),
+        )
+        revision = (
+            None
+            if head is None
+            else db.get(
+                CanvasRevisionRow,
+                (member.tenant.tenant_id, head.revision_id),
+            )
+        )
+        if (
+            stored is None
+            or head is None
+            or revision is None
+            # The Revision head's FK only binds tenant+revision; it is not
+            # sufficient to prove that the Revision belongs to this Document.
+            or revision.doc_id != document_id
+            or stored.row.version != saved.document_version
+            or head.head_version != saved.document_head_version
+            or head.revision_id != saved.document_revision_id
+        ):
+            raise SourceSnapshotReadUnavailable("source unavailable")
+    except Exception:
+        raise SourceSnapshotReadUnavailable("source unavailable") from None
 
     raw = _read_source_snapshot_with_member(
         member=member,

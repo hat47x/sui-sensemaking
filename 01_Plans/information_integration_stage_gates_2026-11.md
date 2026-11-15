@@ -436,6 +436,18 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **残る採用ゲート**：DocumentのメタデータがDBにあることと、**保存済みCard選択が実Document Revisionから取得できること**は別である。Card側`AuthorizedCardSourceSelectionResolver`、Source専用Authority/Raw Provider、Document CAS、公開・伏字・転記本文のPrincipal別Projectionはまだ製品接続がない。正式Sourceの保存スキーマ・A/B/Cの受入前に、未採用`sourceBinding`をDocumentV1で保存できるようにしない。通常のDocument GETに許されている`read_only`障害時継続も、この内部Source投影の認可へ流用しない。AI/SHO/TEIへの外部送信や意味受理は、これら二つのread許可とも別票とする。
 
+### 6.2.15 保存済みCardの出典選択をDocument Revision Headに束縛する（内部契約候補）
+
+**前節までとの違い**：DocumentとSourceの現在のreadが両方許可され、Rawの選択byteが一致しても、Card選択記録の作成後にDocumentが再保存されていたら、元の選択位置を現在のCardに帰属させてはならない。特に同じ内容に戻るA→B→Aでは、本文・RawのDigestが再一致しても、途中の更新をなかったことにはできない。
+
+そのため、内部候補`AuthorizedCardSourceSelection`に、**選択保存時のDocument Version、Canvas Revision Head Version、Revision ID**を揃えて保持する。まず認証済みMemberで実Document権限を判定し、サーバー管理の保存済みCard選択を解決した後、既存`DatabaseDocumentContentStore.load`でRevision BlobとDocument投影の整合性を再検査する。さらに、実DBの`CanvasRevisionHeadRow`から現在のHeadを読み、**三つとも一致する場合だけ**Sourceの現在権限と原文byte再読へ進む。Headが参照する`CanvasRevisionRow`についても、**同一Tenantというだけでなく当該Documentへの所属**を確認する。Document AのHeadが、同じ内容を持つDocument BのRevisionを指していても、Card選択をAへ再束縛しない。保存済み選択情報をクライアントが提示して上書きする経路は設けない。
+
+この方法なら、内容が変わらずDocument Versionだけ進んだ場合、A→B→Aで旧内容と同じDocument Versionを再利用した場合、Head欠落や世代不一致、Revision投影と保存本文の不整合を、それぞれ独立して拒否できる。旧Clientが選択情報を保持せず上書きした場合も、過去の選択記録を自動的に現行Cardへ帰属させない。選択履歴の正本・Card本文・Hold・異論を勝手に修正するものではない。
+
+**重要な限界**：この三点照合は既存Document Revisionの**現在との一致検査**であり、保存済みCard選択Resolverが本当に当該Revisionの保存から生成されたことや、Source取込Occurrence・Root・現在Grantの真正性を証明しない。正式なCard Source BindingのDB SchemaやCAS、Revisionと保存候補を同一Commitへ束縛する機構は未採用。外部PDPへの問い合わせとDocument DB更新は一つの原子的な処理にはならないため、同時更新時の再確認・Race窓を別の受入票で実測する。TEIのAccepted Meaning、SHOのProvenance・実受領、AI/Agentへの二次開示は、今後も別の資格と判断で扱う。
+
+**次のProduct Gate**：OwnerがA/B/Cのうち最小のCard選択保存方式を決定した後、実`Document CAS`と**Revision Head／Selection Receiptの同時整合**を確認し、別Process再起動後にSource再認可→同じ原文位置へ復帰できることを実証する。Provider・Originの版とAuthorityを確定するまでは、未採用`sourceBinding`をDocumentV1に追加しない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
