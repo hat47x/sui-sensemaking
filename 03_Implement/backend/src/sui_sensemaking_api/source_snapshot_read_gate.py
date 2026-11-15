@@ -51,6 +51,30 @@ class SourceSnapshotReadAuthority:
     policy_version: str
 
 
+@dataclass(frozen=True, slots=True)
+class RawSelectionContentCheckpoint:
+    """Candidate content-only checkpoint matching the frontend R2 Reference.
+
+    This is NOT an accepted Card field, Source identity, grant, or revision.
+    The caller's byte range is untrusted until checked against a newly
+    authorized Raw read.
+    """
+
+    raw_sha256: str
+    selected_sha256: str
+    start_byte: int
+    end_byte: int
+
+
+@dataclass(frozen=True, slots=True)
+class SourceSelectionObservation:
+    """Selected bytes from one authorized read, NOT historical continuity."""
+
+    start_byte: int
+    end_byte: int
+    selected_text: str
+
+
 class SourceSnapshotAuthorityResolver(Protocol):
     """Trusted Host lookup; client headers cannot supply these fields."""
 
@@ -182,3 +206,65 @@ def read_source_snapshot_for_member(
     except Exception:
         raise SourceSnapshotReadUnavailable("source unavailable") from None
     return raw
+
+def read_source_selection_for_member(
+    *,
+    request: Request,
+    db: Session,
+    capture_id: str,
+    checkpoint: RawSelectionContentCheckpoint,
+    authority_resolver: SourceSnapshotAuthorityResolver,
+    source_policy_resolver: SourceSnapshotPolicyResolver,
+    policy_adapter: AccessControlAdapter,
+    raw_reader: SourceRawReader,
+) -> SourceSelectionObservation:
+    """Re-read and authorize the whole Raw before accepting an exact byte span.
+
+    The content checkpoint only constrains what bytes were selected; it cannot
+    revalidate original Root/Revision/Grant history or authorize disclosure to
+    another consumer. A future Product return must add those independent gates.
+    """
+    raw = read_source_snapshot_for_member(
+        request=request,
+        db=db,
+        capture_id=capture_id,
+        authority_resolver=authority_resolver,
+        source_policy_resolver=source_policy_resolver,
+        policy_adapter=policy_adapter,
+        raw_reader=raw_reader,
+    )
+
+    if (
+        not isinstance(checkpoint, RawSelectionContentCheckpoint)
+        or not isinstance(checkpoint.raw_sha256, str)
+        or _DIGEST_RE.fullmatch(checkpoint.raw_sha256) is None
+        or not isinstance(checkpoint.selected_sha256, str)
+        or _DIGEST_RE.fullmatch(checkpoint.selected_sha256) is None
+        or type(checkpoint.start_byte) is not int
+        or type(checkpoint.end_byte) is not int
+        or checkpoint.start_byte < (3 if raw.startswith(b"\xef\xbb\xbf") else 0)
+        or checkpoint.end_byte <= checkpoint.start_byte
+        or checkpoint.end_byte > len(raw)
+        or sha256(raw).hexdigest() != checkpoint.raw_sha256
+    ):
+        raise SourceSnapshotReadUnavailable("source unavailable")
+
+    start = checkpoint.start_byte
+    end = checkpoint.end_byte
+    selected = raw[start:end]
+    if sha256(selected).hexdigest() != checkpoint.selected_sha256:
+        raise SourceSnapshotReadUnavailable("source unavailable")
+
+    try:
+        # Byte indexes must be at Unicode scalar boundaries. The raw slice
+        # itself being decodable is insufficient: an offset inside a multi-byte
+        # scalar could otherwise pass if both ends lie inside different runs.
+        raw[:start].decode("utf-8", errors="strict")
+        text = selected.decode("utf-8", errors="strict")
+        raw[end:].decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        raise SourceSnapshotReadUnavailable("source unavailable") from None
+
+    return SourceSelectionObservation(
+        start_byte=start, end_byte=end, selected_text=text,
+    )

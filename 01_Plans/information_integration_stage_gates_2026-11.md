@@ -400,6 +400,16 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **導入対象外**：共通のSource RegistryやKON独立サービスを先に作ること、DocumentのreadやContent digestをSource Grantへ昇格させること、テスト用Local Rootを製品のTrusted Hostと見なすこと。この節は**Fit/Gapと着手条件の確定**であって、正式Schema・Providerの選定・Product E2Eの受入ではない。
 
+### 6.2.7 現在のSource読取許可と選択byte範囲の再照合（限定実装）
+
+フロントエンドの`raw_utf8_selection_reference.ts`には、BOMや改行を正規化せず、選択した範囲をUTF-8の`[startByte,endByte)`とRaw全体／選択部分それぞれのSHA-256で記録する限定Referenceがある。一方、バックエンドのSource読取ゲートは現在の許可を確認してRaw全体を取得するまでだった。
+
+今回の[PR #3459](https://github.com/hat47x/sui-sensemaking/pull/3459)では、**既存の認証・Source専用PDP・Raw Readerを毎回通した後**で、保存候補のバイト位置とハッシュが実際のRawに一致するか調べる内部関数を加える。UTF-8文字の途中、先頭BOM、空範囲、サイズ超過、原資料全体または選択範囲のDigest不一致は同じ非開示エラーで拒否する。前後のRawも厳密なUTF-8として復号できることを確かめ、表示テキストの改行やUnicodeを補正して合わせない。既存のフロントエンドReferenceにある同文二箇所目`[38,57)`と独立した期待Digestを、バックエンドのHTTP PDP付きテストで照合する。
+
+**選択の同一性はハッシュだけでは証明できない。** 同じ文言が二箇所にあれば、両方の選択部分Digestは等しい。今回の内部関数は、渡された範囲をそのまま検査するだけで、**以前Cardに保存された範囲と一致するかを保証しない**。その保証には、Ownerが受け入れたSource BindingとDocument CASによる保存済みの範囲・Capture Occurrenceの照合が必要である。Raw全体のDigestが一致しても、同Rootの過去のGrant、A→B→Aの履歴連続性、外部Originの最新版、別Consumerへの開示権限は認めない。
+
+**受入の位置付け**：これはSource読取と選択内容の限定的な接続であり、現在の`RawSelectionContentCheckpoint`／`SourceSelectionObservation`は**内部候補型**であってCardやDocumentV1の正式保存形式ではない。テスト用SaaS Session・localhost PDP・不変Rootを使用する。正式Authority/Raw Provider、Card出典の永続化、保存ACK不明・別Process再開、SHO/TEI受領と意味受理は引き続き別票とする。CIのexact HEADを確認する前にPASSと記録しない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
