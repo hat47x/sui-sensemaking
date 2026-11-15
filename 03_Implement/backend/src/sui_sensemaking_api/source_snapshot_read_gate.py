@@ -242,7 +242,7 @@ def read_source_selection_for_member(
         or _DIGEST_RE.fullmatch(checkpoint.selected_sha256) is None
         or type(checkpoint.start_byte) is not int
         or type(checkpoint.end_byte) is not int
-        or checkpoint.start_byte < (3 if raw.startswith(b"\\xef\\xbb\\xbf") else 0)
+        or checkpoint.start_byte < (3 if raw.startswith(b"\xef\xbb\xbf") else 0)
         or checkpoint.end_byte <= checkpoint.start_byte
         or checkpoint.end_byte > len(raw)
         or sha256(raw).hexdigest() != checkpoint.raw_sha256
