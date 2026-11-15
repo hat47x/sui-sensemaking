@@ -19,6 +19,7 @@ from sui_sensemaking_api.access_control import (
     AccessControlAdapter,
     AccessRequest,
     AccessResource,
+    ExternalPolicyAccessControlAdapter,
     resolve_access_decision,
 )
 from sui_sensemaking_api.source_member_context import resolve_source_member_context
@@ -117,7 +118,10 @@ def read_source_snapshot_for_member(
         raise SourceSnapshotReadUnavailable("source unavailable")
     # Authenticate before even looking up Source existence.
     member = resolve_source_member_context(request=request, db=db)
-    if getattr(policy_adapter, "name", None) != "external_http":
+    # Name-only matching permits a mock to impersonate an HTTP PDP. Until a
+    # trusted pluggable policy-provider contract is admitted, require the exact
+    # production HTTP adapter rather than a name-matched substitute/subclass.
+    if type(policy_adapter) is not ExternalPolicyAccessControlAdapter:
         raise SourceSnapshotReadUnavailable("source unavailable")
 
     try:
