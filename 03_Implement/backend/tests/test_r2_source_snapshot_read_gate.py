@@ -1168,3 +1168,39 @@ def test_pinned_card_rejects_document_generation_projection_drift(
         assert data["metadata"].calls == 0
         assert data["raw"].calls == 0
         assert data["server"].requests == []
+
+
+def test_pinned_card_rejects_revision_from_other_document_same_tenant(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    # The revision head FK binds tenant+revision, so a same-tenant revision
+    # with identical JSON bytes but belonging to doc-b is not a valid doc-a
+    # receipt. A matching saved head ID/version must still fail closed.
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        db = data["doc_db"]
+        DatabaseDocumentContentStore(db).save(
+            tenant=TENANT, doc_id="doc-b", version=1,
+            updated_at="2026-11-15T04:00:00Z",
+            content=ContentBlob.from_text("{}"),
+        )
+        db.commit()
+        head_a = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc-a", "main"))
+        head_b = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc-b", "main"))
+        assert head_a is not None and head_b is not None
+        assert head_a.revision_id != head_b.revision_id
+        head_a.revision_id = head_b.revision_id
+        db.commit()
+        data["saved"].row = data["saved_at_current_revision"](
+            document_revision_id=head_b.revision_id,
+        )
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 0
+        assert data["policy"].calls == 0
+        assert data["raw"].calls == 0
+        assert [r["resource"]["kind"] for r in data["server"].requests] == ["document"]
