@@ -1025,3 +1025,146 @@ def test_document_missing_row_is_non_disclosing_even_with_source_grant(
         assert data["metadata"].calls == 0
         assert data["server"].requests == []
         assert data["raw"].calls == 0
+
+
+def test_pinned_card_rejects_same_content_after_document_version_advance(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    # A no-op save can advance DocumentRow.version without changing the
+    # generation revision. The original Card selection is still versioned.
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        db = data["doc_db"]
+        original = data["saved"].row
+        assert original is not None
+        DatabaseDocumentContentStore(db).save(
+            tenant=TENANT, doc_id="doc-a", version=2,
+            updated_at="2026-11-15T01:00:00Z",
+            content=ContentBlob.from_text("{}"),
+        )
+        db.commit()
+        head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc-a", "main"))
+        assert head is not None
+        assert head.revision_id == original.document_revision_id
+        assert head.head_version == original.document_head_version
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 0
+        assert data["raw"].calls == 0
+        assert [r["resource"]["kind"] for r in data["server"].requests] == ["document"]
+
+
+def test_pinned_card_rejects_a_b_a_even_when_document_version_reused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    # Content digest and even a reused client version are insufficient: a
+    # persistent revision-head identity/version distinguishes this return.
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        db = data["doc_db"]
+        original = data["saved"].row
+        assert original is not None
+        store = DatabaseDocumentContentStore(db)
+        store.save(
+            tenant=TENANT, doc_id="doc-a", version=2,
+            updated_at="2026-11-15T02:00:00Z",
+            content=ContentBlob.from_text('{"changed":true}'),
+        )
+        db.commit()
+        store.save(
+            tenant=TENANT, doc_id="doc-a", version=1,
+            updated_at="2026-11-15T03:00:00Z",
+            content=ContentBlob.from_text("{}"),
+        )
+        db.commit()
+        head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc-a", "main"))
+        row = db.get(DocumentRow, ("tenant-a", "doc-a"))
+        assert head is not None and row is not None
+        assert row.version == original.document_version
+        assert row.payload_json == "{}"
+        assert head.revision_id != original.document_revision_id
+        assert head.head_version > original.document_head_version
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 0
+        assert data["server"].requests[0]["resource"]["kind"] == "document"
+        assert len(data["server"].requests) == 1
+        assert data["raw"].calls == 0
+
+
+@pytest.mark.parametrize("mismatch", [
+    {"document_version": 2},
+    {"document_version": True},
+    {"document_head_version": 2},
+    {"document_head_version": True},
+    {"document_revision_id": "not-the-current-revision"},
+    {"document_revision_id": ""},
+])
+def test_pinned_card_rejects_noncurrent_or_invalid_revision_receipt(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mismatch: dict,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        data["saved"].row = data["saved_at_current_revision"](**mismatch)
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 0
+        assert data["policy"].calls == 0
+        assert data["raw"].calls == 0
+        assert [r["resource"]["kind"] for r in data["server"].requests] == ["document"]
+
+
+def test_pinned_card_rejects_document_without_revision_head(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        db = data["doc_db"]
+        head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc-a", "main"))
+        assert head is not None
+        db.delete(head)
+        db.commit()
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 0
+        assert data["raw"].calls == 0
+        assert len(data["server"].requests) == 1
+
+
+def test_pinned_card_rejects_document_generation_projection_drift(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    # A raw DB overwrite that bypasses the generation head must not allow
+    # the Card selection just because old saved Head IDs still match.
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        db = data["doc_db"]
+        row = db.get(DocumentRow, ("tenant-a", "doc-a"))
+        assert row is not None
+        row.payload_json = '{"tampered":true}'
+        db.commit()
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 0
+        assert data["metadata"].calls == 0
+        assert data["raw"].calls == 0
+        assert data["server"].requests == []
