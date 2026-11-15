@@ -362,7 +362,7 @@ F0-Sの実装判断を、保存・別Process再読の**実証できた部分だ�
 
 **実SaaS認証経路を使うSource Member事前確認（限定実装）**：既存`saas_request_context.resolve_trusted_saas_request_session`が実施する本人識別・tenant所属・能力・active tenant sessionを**Sourceの事前確認でも再利用**する。新内部`source_member_context.resolve_source_member_context`はGuest CookieやAgent資格情報（混在も含む）をMemberのSource資格へ昇格させず、SaaSのtenant-sessionが必須の実行形態に限定して、現在のセッション版が一致する場合だけ`AuthContext/TenantContext`を次段へ渡す。単一Tenantの互換Header経路は、専用Trusted Hostの資格と非開示をOwnerが決めるまで、このSource入口から閉じる。ただし**本内部関数はSource Grantを発行せず、Raw Byteを読まず、公開APIに配線しない**。テストではTrusted SaaS resolverをダブルとし、Guest/Agent/古いSession/不明なPolicy起点を拒否する条件のみ証明する。正式なOIDC/BFFを介した製品一往復、Server-owned Source Policy Binding、外部PDPによる対象Scopeの実許可、Snapshot Reader接続と二次開示は別のOwner Gate。AI・SHO・TEIのConsumer資格やTEIの業務意味受理をMember認証から推定しない。
 
-**Sourceに渡す主体とPolicy実装の整合（限定的な拒否条件）**：既存のJWT認証とBFF認証済セッションは、DB上の`user_id`と認可用`auth_context.user_id`・`actor_ref`を同じ主体として生成する。SourceのMember事前確認でも**3つが一致しない入力を拒否**し、Sourceの存在確認・Authority取得・PDP送信より前に止める。また`external_http`という**名前だけを模倣した認可Adapterや、その実装を上書きしたSubClassをCurrent Source Grantとして受け入れない**。当面、Source用の内部読取ゲートは既存の正規HTTP Adapter実装だけを許可する。別のPolicy Pluginを使う場合はその出自・受入契約をOwner判断と独立テストで確認してから許可対象を広げる。Documentの既存の互換動作には影響させない。ただしこの一致確認は**実Hostが真正な本人・tenantを供給したこと自体を証明しない**。Root/Source occurrence/current Grant/Consumer開示/TEI意味受理も別票のままとする。
+**Sourceに渡す主体とPolicy実装の整合（#3457でmain統合）**：[PR #3457](https://github.com/hat47x/sui-sensemaking/pull/3457)の正確なHEAD `5173485eec57b13c3dc1bbfc1d41716ebad36369`について[単体CI #43686861580](https://github.com/hat47x/sui-sensemaking/actions/runs/43686861580)と[MCP/Agent CI #43686861591](https://github.com/hat47x/sui-sensemaking/actions/runs/43686861591)がcompleted/success。backend-contract **422件PASS（警告2件）**、Frontend単体/E2E・MCP/Agent・PostgreSQL RLSも成功した。**これは限定的な本人／Adapter取り違えの拒否が確認された結果であり、実HostのSource GrantやPDP設定の真正性を証明しない。** 既存のJWT認証とBFF認証済セッションは、DB上の`user_id`と認可用`auth_context.user_id`・`actor_ref`を同じ主体として生成する。SourceのMember事前確認でも**3つが一致しない入力を拒否**し、Sourceの存在確認・Authority取得・PDP送信より前に止める。また`external_http`という**名前だけを模倣した認可Adapterや、その実装を上書きしたSubClassをCurrent Source Grantとして受け入れない**。当面、Source用の内部読取ゲートは既存の正規HTTP Adapter実装だけを許可する。別のPolicy Pluginを使う場合はその出自・受入契約をOwner判断と独立テストで確認してから許可対象を広げる。Documentの既存の互換動作には影響させない。ただしこの一致確認は**実Hostが真正な本人・tenantを供給したこと自体を証明しない**。Root/Source occurrence/current Grant/Consumer開示/TEI意味受理も別票のままとする。
 
 **Source固有のメタデータ・現在Grant・Raw読取を連結する内部ゲート（#3455）**：mainへ統合済みのMember/Tenant/Current Session事前確認（#3454）と共通Source拒否ガード（#3453）を結ぶ最小の内部処理`source_snapshot_read_gate.read_source_snapshot_for_member`を[PR #3455](https://github.com/hat47x/sui-sensemaking/pull/3455)で**mainに統合した**。Exact HEAD `ebdb4ee489785f1830ba6653c256362dd833be8d`に対する[Unit CI #43681066460](https://github.com/hat47x/sui-sensemaking/actions/runs/43681066460)は**completed/success（backend-contract 413件PASS、警告2件、Frontend単体/E2E成功）**、[MCP/Agent CI #43681066411](https://github.com/hat47x/sui-sensemaking/actions/runs/43681066411)もcompleted/success。**合格したのはテスト用Host/PDP/Source Authorityを接続した内部ゲートであり、製品のRoot/Grant/Scope受理ではない。** Host側が供給する**Source専用Authority Resolver**から`tenant/capture/byte size/digest/policy binding ID/version`を解決し、**別のSource Policy Resolver**で現在のPolicyRefを解決した後に限り、実HTTP PDPへ`kind=source_snapshot`を送ってread判定し、許可時にだけRaw Readerを呼ぶ。読取結果はAuthorityに記録したbyte長・SHA-256と再照合する。欠落・異tenant/capture・Policy応答障害・Grant取消・Raw改ざんでは失敗理由やRawを返さない。同じDocumentのread許可はSource readに流用しない。ここでいうAuthorityは**内部インターフェース候補**であって、正式DB表・保存スキーマ・外部APIではない。テスト用のSourceメタデータ、テスト用SaaS Session、localhost PDP、ローカル不変Storeをつないでいるだけであり、実Hostが真のAuthorityを発行できることはまだ未実証である。
 
@@ -381,6 +381,24 @@ F0-Sの実装判断を、保存・別Process再読の**実証できた部分だ�
 5. **部分成功と外部Consumerを分離して検証する**：ACK不明や二Commitが必要な場合のRecovery、SHO/TEIへの二次開示・Consumer受領、Owner意味受理はそれぞれ独立票で確認する。IG1の単純なRaw readに一律の直列Gateとして課さない。
 
 Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄を製品Saveへ通さず、既存の未採用Binding拒否を維持する。PR #3448は判断の索引であり、第二のSource AuthorityやEvidence正本とはしない。**正式Raw Provider、実Host Grant、Card連携、Product E2Eは引き続きNOT RUN**。
+
+### 6.2.6 正式Raw Source Providerに向けた現行実装の適合性（F0・未採用）
+
+既存実装を確認した結果、**保存されたRawの存在・同一性・現在の閲覧資格を、Documentの格納モデル一つで代用することはできない**。最初の候補S（明示取込時点の不変Snapshot）については、既存実装を次のように評価する。
+
+| 現行の実装 | 再利用できる部分 | Raw Source Providerとして不足する部分 |
+| --- | --- | --- |
+| `content_blobs`／`ContentBlobRow` | tenant別のdigest、byte長、保存状態とBackend情報の管理 | `representation`は`full_json/gzip_json/gzip_delta`を許可するJSON系で、Raw取込Occurrence・Sourceの世代・現在Grantを表さない。同じdigestを異なるSource取込の識別子としない |
+| `NasContentStore`／`S3ContentStore` | 読取時のbyte長・digest照合、外部保存先を扱う既存実装 | NASの`put`は`os.replace`で同一IDを上書きできる。既存ReaderはUTF-8の`ContentBlob`へ変換し、任意の原byteと取込履歴の保全を保証しない。権限の再照会も持たない |
+| `LocalImmutableSnapshotReference`（#3450） | 同一Captureの不変書込・競合、再試行、別Processのbyte再読を確認した限定実装 | テスト用の信頼済Rootに依存し、DB側のCapture台帳、実Host権限、失効・削除、障害後のRecovery、運用・配布契約は未受理 |
+| `DocumentAccessMetadataRow`／`ServerOwnedDocumentResourceResolver` | 文書固有のポリシー参照を不透明なBinding IDから解決する設計 | `doc_id`はDocumentを指し、外部キーもDocumentに束縛される。**SourceのAuthorityや読取許可へ転用しない**。共通にできるのは必要条件を満たす通信部品まで |
+| `source_snapshot_read_gate`（#3455、#3457） | 認証済Member→Source専用Authority/Policy→現在PDP判定→Raw再読・整合性検査の順序と、本人/PDP取り違えの拒否 | Authority/Policy Resolver・Raw Readerの**実Provider接続は未実装**。テストダブルの成功を製品の有効Grantとしない |
+
+**次の実装を開始する条件**：既存SUI Host/Providerのどの責任領域に、`tenant + capture occurrence`に紐づく保存済みAuthorityを置けるか、実体・更新権限・Root・寿命・復旧方法をOwner判断票で特定する。Raw byteの格納には必要なら既存のNAS/S3機能を使うが、**置換可能なContent Storeそのものを不変Sourceとして採用しない**。不変なCaptureの保存と現在Grantの解決は別の責任とする。Document用SchemaにRaw用途を追加する場合も、単に表現種別を増やす前にCaptureの多重度・同byte別Root・A→B→Aと、旧Document互換を検証する。
+
+**最小の実証順**：公開合成UTF-8 Rawの1取込に限定し、①実Hostが発行・保存したCapture/Source Policy Bindingをプロセス再起動後に再解決、②その時点で認証されたMemberをSource専用PDPで判定、③許可時のみ別Processから同一Raw byteを読取、④拒否・失効・異Tenant・PDP障害・Root差替えではRawを返さず、Card本文・Hold・異論に影響を及ぼさない。この結果が揃って初めてA/B/Cの**選択履歴**の保存方式をOwnerが採否判断し、Document CASとCard選択位置の復帰へ進む。実Originの最新版を扱うL方式、AI/SHO/TEIへのExport/Shareと受領、業務意味の受理は別のGateとする。
+
+**導入対象外**：共通のSource RegistryやKON独立サービスを先に作ること、DocumentのreadやContent digestをSource Grantへ昇格させること、テスト用Local Rootを製品のTrusted Hostと見なすこと。この節は**Fit/Gapと着手条件の確定**であって、正式Schema・Providerの選定・Product E2Eの受入ではない。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
