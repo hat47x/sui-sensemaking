@@ -31,8 +31,16 @@ from sui_sensemaking_api.access_control import (
     NoopAccessControlAdapter,
 )
 from sui_sensemaking_api.auth_context import ResolvedIdentity
+from sui_sensemaking_api.content_store import ContentBlob
+from sui_sensemaking_api.database_content_store import DatabaseDocumentContentStore
 from sui_sensemaking_api.document_access_resource import ServerOwnedDocumentResourceResolver
-from sui_sensemaking_api.models import Base, DocumentAccessMetadataRow, DocumentRow, TenantRow
+from sui_sensemaking_api.models import (
+    Base,
+    CanvasRevisionHeadRow,
+    DocumentAccessMetadataRow,
+    DocumentRow,
+    TenantRow,
+)
 from sui_sensemaking_api.source_snapshot_read_gate import (
     AuthorizedCardSourceSelection,
     RawSelectionContentCheckpoint,
@@ -223,6 +231,9 @@ def _saved_card(**changes) -> AuthorizedCardSourceSelection:
         "document_id": "doc-a",
         "card_id": "card-a",
         "capture_id": "capture-a",
+        "document_version": 1,
+        "document_head_version": 1,
+        "document_revision_id": "unbound-test-only",
         "checkpoint": RawSelectionContentCheckpoint(
             raw_sha256=DIGEST, selected_sha256=SECOND_SHA256,
             start_byte=SECOND_SPAN_START, end_byte=SECOND_SPAN_END,
@@ -397,16 +408,29 @@ def _pinned_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
                 lifecycle_state="active", created_at=timestamp,
                 updated_at=timestamp,
             ))
-            db.add(DocumentRow(
-                tenant_id="tenant-a", id="doc-a", version=1,
-                updated_at=timestamp, payload_json="{}",
-            ))
+            db.flush()
+            DatabaseDocumentContentStore(db).save(
+                tenant=TENANT, doc_id="doc-a", version=1,
+                updated_at=timestamp, content=ContentBlob.from_text("{}"),
+            )
             db.add(DocumentAccessMetadataRow(
                 tenant_id="tenant-a", doc_id="doc-a",
                 visibility="Restricted", policy_binding_id="doc-binding-a",
                 policy_version="doc-policy-v1", updated_at=timestamp,
             ))
             db.commit()
+            head = db.get(CanvasRevisionHeadRow, ("tenant-a", "doc-a", "main"))
+            assert head is not None
+
+            def saved_at_current_revision(**changes) -> AuthorizedCardSourceSelection:
+                values = {
+                    "document_version": 1,
+                    "document_head_version": head.head_version,
+                    "document_revision_id": head.revision_id,
+                }
+                values.update(changes)
+                return _saved_card(**values)
+
             binding = _DocumentPolicyBinding()
             doc_resolver = ServerOwnedDocumentResourceResolver(
                 policy_binding_resolver=binding,
@@ -415,6 +439,8 @@ def _pinned_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
                 data["doc_db"] = db
                 data["doc_resource_resolver"] = doc_resolver
                 data["doc_binding"] = binding
+                data["saved_at_current_revision"] = saved_at_current_revision
+                data["saved"].row = saved_at_current_revision()
                 yield client, data
     finally:
         Base.metadata.drop_all(bind=engine)
@@ -818,7 +844,7 @@ def test_pinned_card_scope_mismatch_never_contacts_source_or_pdp(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, change: dict,
 ) -> None:
     with _pinned_environment(monkeypatch, tmp_path) as (client, data):
-        data["saved"].row = _saved_card(**change)
+        data["saved"].row = data["saved_at_current_revision"](**change)
         response = client.get(
             "/_r2_test_pinned_card",
             headers={VERSION_HEADER: "version-2"},
@@ -877,7 +903,7 @@ def test_pinned_card_rechecks_source_revocation_and_preserves_saved_binding(
         denied = client.get("/_r2_test_pinned_card", headers=headers)
         assert denied.status_code == 404
         assert "同じ言葉" not in denied.text
-        assert data["saved"].row == _saved_card()
+        assert data["saved"].row == data["saved_at_current_revision"]()
         assert data["saved"].calls == 2
         assert data["trusted_calls"] == ["trusted", "trusted"]
         assert data["raw"].calls == 1
@@ -889,7 +915,7 @@ def test_pinned_card_wrong_capture_does_not_retarget_to_equal_digest(
 ) -> None:
     with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         data["server"].source_allowed = True
-        data["saved"].row = _saved_card(capture_id="another-capture")
+        data["saved"].row = data["saved_at_current_revision"](capture_id="another-capture")
         response = client.get(
             "/_r2_test_pinned_card",
             headers={VERSION_HEADER: "version-2"},
@@ -906,7 +932,7 @@ def test_pinned_card_rejects_drifted_checkpoint_after_fresh_source_read(
 ) -> None:
     with _pinned_environment(monkeypatch, tmp_path) as (client, data):
         data["server"].source_allowed = True
-        data["saved"].row = _saved_card(checkpoint=RawSelectionContentCheckpoint(
+        data["saved"].row = data["saved_at_current_revision"](checkpoint=RawSelectionContentCheckpoint(
             raw_sha256=DIGEST, selected_sha256=SECOND_SHA256,
             start_byte=SECOND_SPAN_START - 1, end_byte=SECOND_SPAN_END,
         ))
