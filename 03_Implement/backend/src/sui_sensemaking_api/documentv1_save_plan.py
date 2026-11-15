@@ -3,6 +3,9 @@
 The plan lists what would be added, removed, or changed. It never saves and it
 warns when the existing document carries fields the projection does not cover,
 because a save built from the projection alone would drop them.
+
+No route, MCP tool, or CLI calls this module (SUI #3371). Saving a projection
+is not adopted; see the connection policy in ``documentv1_projection``.
 """
 
 from __future__ import annotations
