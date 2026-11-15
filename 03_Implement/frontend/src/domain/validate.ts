@@ -1127,7 +1127,8 @@ function parseIsoDate(value: unknown, fallback: string): string {
 // R2: the tolerant importer must not silently drop a future Source selection
 // while reconstructing known Card fields. Do not blanket-reject unrelated
 // unknown keys: this is only the explicitly reserved, unadopted Source shape.
-function hasUnacceptedSourceBindingFields(value: Record<string, unknown>): boolean {
+export function hasUnacceptedSourceBindingFields(value: unknown): boolean {
+  if (!isRecord(value)) return false;
   const documentKeys = ["sourceBindings", "sourceSelections"];
   const cardKeys = ["sourceBinding", "sourceBindings", "sourceSelection", "sourceSelections"];
   if (documentKeys.some((key) => Object.prototype.hasOwnProperty.call(value, key))) {

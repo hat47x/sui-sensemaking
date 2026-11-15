@@ -1,4 +1,5 @@
 import type { Card, Document, DocumentV1, Island, KnownEdgeType } from "../domain/types";
+import { hasUnacceptedSourceBindingFields } from "../domain/validate";
 import type { ResourceActionIntentV1 } from "./tei_card_move_action";
 import { isMergeMethod, type MergeMethod } from "../domain/merge_method";
 import {
@@ -521,6 +522,15 @@ export async function putDocument(
   ifMatch?: string,
   options: TenantScopedRequestOptions = {},
 ): Promise<DocumentWithEtag<DocumentV1>> {
+  // R2: reject before any fetch. Backend 422 alone still transmits a
+  // potentially private Source locator through the request body.
+  if (hasUnacceptedSourceBindingFields(document)) {
+    throw new ApiError(
+      422,
+      "Source binding contract is unavailable; no document was sent.",
+      { code: "source_binding_contract_unavailable" },
+    );
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...tenantSessionPreconditionHeaders(options),
