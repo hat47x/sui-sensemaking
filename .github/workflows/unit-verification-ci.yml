@@ -64,6 +64,7 @@ jobs:
             tests/test_r2_source_policy_core_boundary.py \
             tests/test_r2_source_policy_http_snapshot_readback.py \
             tests/test_r2_source_member_context.py \
+            tests/test_r2_source_snapshot_read_gate.py \
             tests/test_context_bundle_routes.py \
             tests/test_agent_credential_http.py \
             tests/test_docs_cross_process_readback.py \
