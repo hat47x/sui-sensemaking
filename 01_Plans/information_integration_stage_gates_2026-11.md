@@ -92,6 +92,11 @@ TEIのData/Graph/時系列/標準表現・Go単一バイナリ・外部Host/Prov
 
 ### 6.2 Source Bindingの保存候補と採否ゲート（F0判断票・未採用）
 
+**mainへ統合した限定実証（2026-11-15）**：[PR #3449](https://github.com/hat47x/sui-sensemaking/pull/3449)（現行NASの同ID上書き特性）、[PR #3450](https://github.com/hat47x/sui-sensemaking/pull/3450)（信頼されたローカルRoot上の不変Snapshot・同時Writer・別Process再読）、[PR #3451](https://github.com/hat47x/sui-sensemaking/pull/3451)（Documentとは独立したSource read判定・Fail-closed／Source kindのPolicy Wire）は**いずれもmainへマージ済み**。各PRの元HEADでCI successを確認済み。ただし、#3450/#3451は正式なProvider・Host Grantではなく、**テスト用Reference**である。新しい本番Source API、正式Source Binding、二Commit Recovery、Guest/Agent別の実Source開示、原文→Card→保存→再起動→原文復帰の製品E2Eは**NOT RUN**。
+
+**次に製品側で行う一つの縦断**：実Hostから検証済みPrincipal/tenantと現在のSource Policy Bindingを取得し、実PDPが`source_snapshot`をDocumentと区別して判定することを検証する。その資格でSnapshot Readerを呼び、A/B/Cの適格なBindingを選んだ後に、既存Document CASへ結ぶ。Snapshotの存否・取込/保存の証拠・現在read資格・公開/二次開示・Ownerの意味受理は独立した票として扱い、ReferenceのPASSから製品PASSへ自動昇格させない。
+
+
 **R2の重要な区別**：Cardに保存すべきものは「人がどのSourceのどの範囲を選んだか」という**選択の履歴**であり、「いまSourceを読んでよい」という**現在のGrant**ではない。Raw原文とCardの解釈を一つの本文に畳まない。Host/Providerはその時点のRoot/Scope/Grantを再解決し、保存済みDigest・相対path・Workspace名・旧PermissionをCurrent Authorityの代用にしない（TEI [#4504](https://github.com/hat47x/tei-platform/issues/4504)の同Manifest別Rootの読取反例と整合）。
 
 | F0の候補 | 長所 | 未解決・棄却の条件 |
@@ -193,6 +198,167 @@ Frontendの緩い`validateImportedDocument`も、予約Source選択欄があれ�
 **試験の組み立て**：まず単一Root・1MiB以下の公開合成Rawで`complete`を確認し、次に同じReader入口で`partial`・`unavailable`・`permission-denied`・`not-found`・`stale`を独立に起こせるか調べる。表現できない状態は擬似ステータスを作って成功とせず、Provider能力不足としてOwnerへ返す。特に`ContentObjectReference.state=READY`は**Documentコンテンツの保管状態**であり、任意のRawへの現在Grantや全文取得の完了を意味しない。SHOのProvenance、TEIのモデルRevision、TAIのActivity/Consumer受領もそれぞれ別の結果として照合する。**情報が揃ったか・実読取したか・現在閲覧可能か・保存されたか・意味を受理したか**を一つの`verified`にまとめない。
 
 **成果物と着手順**：まずOwner判断票にHost/Providerの**実在する読み取り入口**と開示責任を記録し、その次にA/B/Cを一つ選び、必要な最小Schema・Reader・権限Projection・保存経路を別々にレビューする。全テストの成功と実際の元資料への復帰が揃うまで、`R2 Product accepted`とは記録しない。SHO Writer、TEI意味受理、外部Harnessや中央Registryは、この縦断の必須依存にしない。
+
+### 6.2.5 F0の判断順：Source再読の権威とBinding保存先を分離する（2026-11-15／未採用）
+
+[実装Owner #3441のF0補強](https://github.com/hat47x/sui-sensemaking/issues/3441)に従い、**元Sourceを何として再読するか**と、**選択履歴をCard/Document/Providerのどこへ保存するか**を別の判断とする。A/B/Cは後者の比較であり、どの案も現在のSource Authorityを自動提供しない。
+
+| 先に確認する再読方式 | 実際に戻る対象 | F0で証明すること |
+| --- | --- | --- |
+| **S：管理された取込時Snapshot** | 利用者が明示的に取り込んだ**時点**のRaw bytes | 永続Raw格納入口、実Source read認可、byte保持、別Process再Read、開示/削除/失効。元の外部Fileの現在状態と同一視しない |
+| **L：外部Source再接続** | 元File/Workspace等の**現在**のSource | Hostが解決するRoot/Scope/Grantとrevision/history、安全な再読、別Root同byte・A→B→A・更新/失効への応答 |
+
+現行`content_store.py`はDocument/Bundle/Logの`ContentBlob.from_text`、`ContentBlobRow`はJSON表現のContent管理を中心に扱い、`ContentObjectReference.ready`だけでは任意のRawの現在Grantを示さない。`GET /docs/{id}`はDocumentのreadを判定するが、SourceごとのGrantを独立に解決した実証ではない。ブラウザの`File`一時プレビューも別ProcessのSource参照にはならない。したがって**既存保存機構をRaw Providerとして採用済みと書かない**。
+
+**次の実装着手順**：公開合成Raw 1件でSを最小Fit/Gapし、既存の許可済みL経路が実在すれば対照比較する。選んだ方式のReader/Principal/Scope/Revision・開示境界を実コードと試験名で示し、その後に限りA/B/Cのうち最小Bindingを採用検討する。Sを採る場合の到達点は「取り込んだ原文Snapshotへの復帰」であって、「元OS Fileの現在版へ復帰」ではない。Document可×Source不可のReader/Agent/GuestでLocator・opaque ID・digest・件数を漏らす場合はA/Bを採用せず、既存Provider側のCを再比較する。両方式ともSource資格が実証できなければ`unqualified`として停止する。
+
+R2-SRC-01〜08の独立Expectedを再利用する。**この節はF0を進めるための設計判断であり、Raw Source API・S/L採用・正式Grant・Save→別Process再Read・IG1 Product受入はNOT RUN**。IG2〜IG6、KON、TEI Host、SHO Consumerを新たな前提にしない。
+
+### 6.2.6 Mode Sの最小実装パケット：取得Snapshotと元Sourceを分けて検証する（2026-11-15）
+
+前節のS/Lは**再読の対象**、A/B/Cは**Card選択履歴の保存場所**であり、それぞれ独立に採否を決める。ここではMode S（管理された取込時Snapshot）を最初にFit/Gapする際の最小パケットを定める。**取込原文へ戻れたことを、元外部Fileの現在版や継続したRoot/Grantへ戻れたことと呼ばない。** Mode Lを採用する場合は従来§6.2.4のHost Root/Scope/Grant/Revision/historyを引き続き適用する。
+
+#### 6.2.6.1 別々に識別・再確認する対象
+
+| 対象 | 必要な最小の意味 | 混同すると失うもの |
+| --- | --- | --- |
+| **Origin（取込元）** | 利用者が明示選択した外部File等。存在・Locator・版・現在のGrantは取込後に変化し得る | File名・相対path・SHA一致を元OS Fileの継続Identity/現在資格にしない |
+| **Capture/Source occurrence（取込行為）** | どの作業領域で、どのPrincipalが、どの原資料を一回の取込として扱ったか。現在利用可能なAuthorityは別 | 同じbyteの二回取込・異なるRootからの取込を、一つの同一出典へ自動合一しない |
+| **Snapshot（保持された原byte）** | 取込時の**不変なbyte列**、byte長・digest、保存結果、読取範囲。BOM/CRLF/LF/Unicodeを無変換に保持 | `ContentBlob.from_text`で再符号化した内容、Document JSON、表示用Textを「元byte」と呼ばない |
+| **Selected span** | Snapshot上のUTF-8 half-open `[start,end)` と、その時点で人が選んだ範囲の照合結果 | 同文の二箇所、DOM/UTF-16位置、Cardの解釈本文を同一視しない |
+| **Card/Document** | 同じCardへ結ぶ過去の選択履歴、現在のDocument revision/ETag、Hold/異論 | Cardのread/save資格からSnapshot/Originのreadを自動許可しない |
+
+取込時のSnapshotが存在しても、Originの現在資格は**未解決のままでよい**。SnapshotとOriginを「同じSource」と一意に再束縛しない。必要なQualified IDはtenant/workspace/取込Occurrence/snapshotを区別する論理上の識別であり、今回の計画だけで新規Core型・汎用Registry・永続Schemaを宣言するものではない。
+
+#### 6.2.6.2 実装の最小縦断と二つのCommit
+
+1. **事前Fit/Gap**：既存`content_store.py`・`ContentBlobRow`はDocument/JSON表現中心であり、`ContentObjectReference.state=READY`もSource認可ではない。原byteを無変換で保持できる**実Call Site**とPrincipal/tenant/source開示境界が存在するかをOwnerへ提示する。見つからなければ、Raw専用の最小Provider/保存先を別候補として比較し、無断で既存Document JSON/自由記述欄へ詰め込まない。
+2. **明示取込**：利用者がFileを選び、上限付きで原byteを読み、表示用Text/選択用Text Runを派生させる。保存・外部送信を伴う場合はその操作を明示し、一時プレビューと混同しない。byte列・snapshotのdigest/byte長は保存した**実byte**から計算する。原ファイル名・mtime・digestは資格の代用にしない。
+3. **Snapshot保存結果**：実ProviderのCommit/ACKを観測し、別Processから同一Snapshot byteを読めることを確認する。Blobの重複排除を採る場合でも、**取込Occurrenceの個別Identityを維持**する。取得・保存がpartial、unknown、ACK不明なら成功と断定しない。
+4. **Card BindingとDocument保存**：保存方式A/B/Cを開示条件つきで採用した後に、元Snapshotの選択範囲を同一Cardへ結び、既存Documentの具体的ETagに対する条件付きSaveを実行する。Snapshot保存とDocument保存が別Commitであるなら**原子性を主張しない**。Snapshotだけ残る／Cardだけ残る／応答不明の各状態を区別し、必要なら既存Receipt/独立GETで再照合する。無根拠な自動再送・自動孤児削除はしない。
+5. **再開・復帰**：Writer終了→別ProcessでDocument GET→現在のSnapshot読取Grantと対象ID/保存結果を独立に検査→元byteから保存spanを再読。**Snapshotへの復帰**と表示し、元Originの現在版を確認したとの表示はしない。Sourceが読めなくてもCardの解釈・Hold・異論は保持する。
+
+#### 6.2.6.3 情報開示とRecoveryの停止線
+
+- **Document可×Snapshot不可**のPrincipal（Guest/Member/Agentを含む）には、Raw・内部Locator・opaque ID・Digest・保存済み参照数や存在を示す差分を、Document GET/Export/AI Context/関連Edge/集計を通じて漏らさない。Document内容から分離した実Server側Projection/Grantを証明できなければ、A/Bを正式採用しない。単一利用者ローカルの正常系だけで全Principalの安全性を主張しない。
+- SourceとDocumentのCommitが異なる場合、片側成功・片側失敗・ACK不明・再送を個別に記録し、未接続Snapshotは隔離候補として可視化する。任意のGC/Recoveryを自動採用せず、現在利用者の操作・所有とRetention/削除資格をOwnerが決める。Blobの物理同一性を二つの取込行為の同一性と混同しない。
+- **元Originの更新・失効**はMode Sの保存済みbyteを勝手に変更しない。一方で、外部Sourceの現在版が失効したことを、Snapshotの保存失敗ともみなさない。Originへの再接続を求められた場合だけLの再資格化を実行する。
+
+#### 6.2.6.4 既存Expectedの使い分けと実測票
+
+| 既存Case | Mode Sでの限定的な観測 | Sの成功から推定できないこと |
+| --- | --- | --- |
+| R2-SRC-01/02 | 同文二箇所を区別し、選択byte・Card ID・別Process Snapshot Readを一致させる | 元OS Fileの現在版を実Readできること |
+| R2-SRC-03/04 | 同byteの別取込を別Occurrenceとして保ち、A→B→AのOrigin履歴はunknownと記録 | 同Root／同外部Sourceが継続していること |
+| R2-SRC-05/06 | Snapshot取得不能/拒否時にCardを保持し、非公開メタをResponseへ出さない | 未実施のGuest/Agent実HTTP開示試験のPASS |
+| R2-SRC-07/08 | 二Commit partial/ACK不明と409の独立再照合、AI OFF 3 Card KJ基線 | 自動Recovery・全経路の共同編集・実務価値T2 |
+
+証拠票では、**Capture実行／Snapshot保存Receipt／Snapshot byte再Read／Document CAS／別Process GET／現在Snapshot Grant／元Origin再Read（L時だけ）／意味受理**を別列とし、各列の実Process・Source版・Scope・実byte/digest・Expected/Actual・CI HEAD・NOT RUNを記す。原文復帰の受入表示は「取込時Snapshotへ復帰（S）」と「外部Source現在版へ復帰（L）」を分ける。Sだけが成功した段階で、既存R2の**現在元Source復帰を全面PASS**と報告しない。
+
+**着手順と到達上限**：最初に1 MiB以下の公開日本語RawについてSの既存Store Fit/Gap、原byte保存/独立再読、Source開示を検証する。採否が可能になったときだけ最小Provider/Bindingを作る。実Browser一時選択の既存[Draft #3443](https://github.com/hat47x/sui-sensemaking/pull/3443)・予約欄拒否の[Draft #3444](https://github.com/hat47x/sui-sensemaking/pull/3444)の限界を維持し、既存[#3441](https://github.com/hat47x/sui-sensemaking/issues/3441)のR2-SRC-01〜08に実結果を戻す。**本節の新たなRaw永続API、別Process Snapshot/Origin再Read、Grant/部分Commit/Recovery試験はNOT RUN**。IG2以降、KON、TEI Host、SHO Writer、Harness Sessionを新しい必須依存にしない。
+
+### 6.2.7 正式採用後の旧Client再保存と秘匿欄の消失を防ぐ（移行時Gate・NOT RUN）
+
+**これまでの安全策から生じる次の課題**：マージ済み[#3444](https://github.com/hat47x/sui-sensemaking/pull/3444)は、未採用の`sourceBinding`等を現在のFrontend/Backendで拒否し、未知項目だけ失って保存成功に見える事故を限定的に防いでいる。しかし、将来A/B/Cのいずれかを正式採用した後は、**旧ClientやSourceを閲覧できないDocument編集者が、Source情報を含まないDocumentを正しいETagで再保存する場合**を別途防ぐ必要がある。`If-Match`が最新であることは、更新者が非表示のSource Bindingを理解・保持していることを意味しない。
+
+**最小の採用前不変条件**：保存済みSource選択を、単なるPUT payload内の欠落から黙って削除しない。旧Clientが新欄を読込時に省略した場合、またはDocumentのread/write資格はあるがSnapshot/Originの参照欄を表示できない場合、**(a) Serverが既存Bindingを安全に維持することを契約とテストで証明するか、(b) 当該更新を明示拒否する**。初期実装では(b)を比較の第一候補とし、既存Clientの無条件編集継続を優先してSourceを消失させない。明示的なBinding削除は、通常のDocument上書きとは区別して現在資格・対象Revision・意図を検査する。既存APIに根拠のない一律Version/Headerを新設したとは扱わない。
+
+| 既存の受入Caseに組み入れる負例 | 合格条件 |
+| --- | --- |
+| **R2-SRC-07**：新ClientがSource選択を保存したDocumentを、旧ClientがGET/parseした後、現在ETagでBinding欄なしPUT | Source選択の黙った消失0。Serverによる保持か、明示的な互換性拒否。409競合だけではこの試験を代用しない |
+| **R2-SRC-06/07**：Document編集可・Snapshot/Origin参照不可のPrincipalが、Redaction済みDocumentを保存 | 非開示参照の漏洩0、黙示的な削除/再束縛0。Agent read-onlyとGuest/Memberの実権限を別試験とする |
+| **R2-SRC-01/05**：旧Documentを新Clientが開く／新Documentを別Processで再開する | 旧形式は出典が「無い」ことを許し、新形式の出典は採用Schemaで保持。Source読取不能でもCard本文/異論/Holdを維持 |
+| **R2-SRC-07**：Card複製・分割・Merge・削除・Undoの操作でBindingが残存／消失する | 継承・除去はOwner決定の操作に限る。曖昧な操作は保留し、旧Clientの全文置換で参照を勝手に破棄しない |
+
+**実装開始前のチェック**：採用するA/B/Cについて、Frontendの厳密Importと緩い再読込、Pythonの検証、Document GETのPrincipal別Projection、PUTの全置換/条件付き更新、Export/Agent/Handoffの公開範囲を、**同じ保存済みSource選択**で縦断確認する。特に「GET時には伏せた欄が、PUTで省略された」場合の規則を明文化する。`ContentObjectReference.ready`、Document ETag、Snapshot digestだけで移行互換や現在Grantを代用しない。#3444の予約欄拒否は**採用前**の保護であり、採用後の黙示消失を防ぐ保証ではない。
+
+**到達上限と優先度**：本節はF2の正式Schema切替時に必要な拒否/保持の受入条件を追加するもので、F0-Sの原byte保存・Reader Fit/Gapを遅らせない。新Client/旧Clientの正式Source Binding移行、Guest/Member別Source Grant、実Update/Import/Export縦断は**NOT RUN**。新Registry、共通Client Version Service、第二のExpected正本を作らず、既存[#3441](https://github.com/hat47x/sui-sensemaking/issues/3441) R2-SRC-01〜08を用いる。
+
+### 6.2.8 原文から作られたCard本文の開示を、Source参照の開示と分けて検証する（2026-11-15／提案）
+
+**新しい論点**：前節までのSource Binding/Raw Snapshotの非開示は、**Sourceの一節をCard.textへ転記した場合の内容漏洩**を防ぐとは限らない。現行`routes/docs.py`の`_agent_document_view`は、`textReviewed=true`のCardの本文をAgentへ渡す。ここに元SourceのCurrent Grantや二次開示の検査は結び付いていない。また通常の`GET /docs/{id}`ではDocumentを読む権限とSourceを読む権限が一致するとは限らない。**人間が本文を確認したこと／出典を特定できること／その本文を相手へ公開できることは三つの別条件**である。既存の公開範囲・SafeModeに関する判断は[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)、既存の業務面Artifact公開経路のOwnerは[#3369](https://github.com/hat47x/sui-sensemaking/issues/3369)とする。
+
+#### 6.2.8.1 最小の操作上の区別（まだ新Schemaを設けない）
+
+| 生成物・操作 | 成立すること | 成立したとは言えないこと |
+| --- | --- | --- |
+| **選択範囲** | 現在閲覧中のSnapshot/Source内のbyte位置を人間が指定した | 取込後の継続Source資格、Card保存、他者への引用・共有許可 |
+| **原文からの直接転記・引用候補** | Snapshotに含まれていた文字列をCardに使う候補がある | Documentの権限だけで、Sourceの内容を含む本文を他Principalへ開示してよい |
+| **人間が記述した解釈・違和感・保留** | Cardとして独立に残せる人間の判断がある | 要約・言い換えだから秘密情報を含まない、出典の受理・真偽が確定した |
+| **Review・共有・Export・外部Handoff** | 目的別の確認・送出操作が行われ得る | `textReviewed`、Document GET成功、AIによる要約をSource二次開示の許可へ昇格できる |
+
+**R2初期の閉じた経路**：公開合成Raw、AI OFF、権限・送出範囲が確定しているDocumentで「選択→Card」を検証する。一時プレビューや人間のCard編集を、他者/Agent/SHO/TEIへの公開と連結しない。共有DocumentでSource由来の本文の送出資格が検証できない場合は、原文転記を伴う**永続Card作成・再配布を未資格として停止**し、Raw閲覧だけができることを保存資格の証明としない。未保存の元資料や本文を別経路で自動送信しない。
+
+#### 6.2.8.2 縦断で確認する公開経路と負例
+
+| 既存Caseを使う操作 | 合格条件・停止条件 |
+| --- | --- |
+| **R2-SRC-01/06**：非公開Sourceから選択した原文をCard.textへ転記し、Document自体は閲覧可能 | Sourceの読取・二次開示が未許可のPrincipalに、**参照だけでなく転記本文**が露出しない。現行Document GETと新Card化入口双方を検証。未実装経路なら公開を禁止 |
+| **R2-SRC-06**：Card `textReviewed=true`、Source read拒否/不明、Agent `GET /docs/{id}` | 人間によるReviewだけで原文由来テキストがAgentへ渡らないこと。既存`_agent_document_view`の`textReviewed`判定は独立のSource Grantではないため、実HTTPで再検査する |
+| **R2-SRC-06**：同じCardをExport/SHO Handoff/TEI投影/AI Context/検索・派生説明へ利用 | それぞれのConsumerとDisclosure Scopeで再判断。許可外Raw byte・転記・Locator・ID・件数・一部の存在を開示しない。本文を運ばないread-only TEI参照の現状を勝手に拡張しない |
+| **R2-SRC-05/06**：Snapshot Read拒否・Origin失効後のCard/異論/保留の再開 | 人間の履歴としてCardを自動消去しない。ただし**以後の外部公開・再送**を以前のGrantで正当化しない。元Originの失効と管理Snapshotの資格/Retentionは別判断で、過去の漏洩や第三者コピーの消去を保証しない |
+| **R2-SRC-06/08**：自動要約/人手の言い換えに原資料の機密事項が混入 | 「解釈だから公開可能」と自動判定しない。公開時の人間の再確認と対象先の許可を必要とする。任意の言い換えから秘密を完全検出できたとは主張しない |
+
+**実装選択肢の順序**：①公開合成資料で、Source由来の選択文字列と人間の記述を画面・試験で混同しない最小経路を確保、②Source本文の共有・二次開示を持つ製品用途が現れた段階で、既存Document/Source権限と操作別Exportのどこに実判定を置くかOwnerが決める、③必要なSource/Derived Disclosure表現だけを既存Card/Projection/Providerへ加える。これに先立って汎用Taint Engine・一括本文分類器・新Policy Host・新OKF Authorityを導入しない。既存Cardの意味やHold/異論を出典の失効に連動して自動破棄しない。
+
+**証拠の上限**：現行Agent投影の静的コードからは「レビュー済み本文を返す」ことまで確認できるが、**Source由来本文の二次開示制御・Member/Guest/Agent実HTTP・外部Consumer/Derived Content非漏洩の製品E2EはNOT RUN**。本節の追加はR2-SRC-01/05/06/08の受入観点であり、IG1の公開合成Raw・AI OFFの最小縦断を、実装されていない全製品公開契約の整備まで止めるものではない。
+
+### 6.2.9 次の実装PRへ渡す同一試行の証拠票と停止条件（2026-11-15）
+
+これ以上の抽象的な設計追加ではなく、**#3441のR2-SRC-01〜08を実コードで一段進める**ための、F0-S限定の実装・観測票である。TEIのSource→Loader→Provider→Consumerで採用する「宣言や同byteの一致だけで実到達を主張しない」原則を利用するが、SUIへTEI Hostや共通Evidence DBは導入しない。前節§6.2.5〜8は採否と安全境界の説明、本節は**次の小PRの順序**だけに限定する。
+
+#### 6.2.9.1 まず現行コードで判断できること
+
+- `content_store.py`の`ContentBlob.from_text`は文字列をUTF-8へエンコードする**Document等向けのContent表現**であり、外部Rawの元byte保存契約ではない。`ContentBlobRow.representation`の既存制約は`full_json/gzip_json/gzip_delta`なので、これに便乗して任意RawをJSONとして偽装保存しない。使用可能な実Blob経路があれば、元byte fidelity・読取資格・Blob/Documentの別Commitを独立検査してから採用を判断する。
+- `03_Implement/backend/experiments/r1_raw_source_probe.py`は元byteの読取とUTF-8選択範囲を検査する**Reference**で、実Hostの権限・race-free OS readやSource履歴は保証しない。`tests/test_r1_raw_source_probe.py`の成果を実Product Provider試験へ転用しない。
+- `03_Implement/backend/tests/test_docs_cross_process_readback.py`は実Documentの別Process GET、`frontend/src/source/raw_utf8_selection_reference.ts`はRaw byte→選択位置の局所的な検査である。**両方がPASSしても、同じCardのSourceを別Processで再Readした試行にはならない**。
+
+**F0-S実コードの再評価（2026-11-15／テストDraft）**：現行`external_content_store.py`には`NasContentStore.put/get`と`S3ContentStore.put/get`があり、NAS版は`ContentBlob.text.encode("utf-8")`を保存してDigest・byte長を検査する。**現行IG1で扱う妥当なUTF-8原文**なら、元bytesを`decode("utf-8")`でBOMを削らずに取り込み、そのまま再エンコードして一致させられる可能性がある。R2の[特性テストDraft #3449](https://github.com/hat47x/sui-sensemaking/pull/3449)は、BOM・混在改行・同文二箇所・別Python Process Readを実Store上で試す。また、**同一tenant/content_idの`put`は`os.replace`で既存Locatorを上書きし得る**ため、これをSource Snapshotの不変性証明として採用しない。別`content_id`で別Locatorになっても、Originのidentity・取込Occurrenceの正式Bindingや現在のRead Grantは証明しない。`get`はLocator/Digest/byte長を受けるが現在Principal/Source Grantを引数に取らず、上位の認可なしで公開Source APIへ流用しない。既存`ContentBlobRow`のJSON表現制約・管理領域・削除規則も別途Fit/Gapが必要。**#3449が成功した場合でも、既存NASの限定的なbyte復元能力が確認できただけ**であり、正式なRaw Source Store、非UTF-8一般、Card Binding、IG1受入はNOT RUNとする。
+
+#### 6.2.9.2 一つのAttemptで残す最小観測列
+
+| 同じ試行で記録する列 | 合格のための独立した実観測 | その観測だけでは保証しないこと |
+| --- | --- | --- |
+| **Raw input** | 取込Occurrenceと元byte長・SHA-256、Snapshotの実保存bytes。BOM/混在EOL/二つの同文の位置を固定 | 元OS Fileの現在版や保存元Rootの履歴 |
+| **Snapshot Store** | 実StoreのCommit結果と**Writer終了後の別Process Read**。保存失敗・ACK不明・partialを別状態にする | Card保存・Documentの正式Revision |
+| **Selected evidence** | 同じSource snapshotに対するhalf-open UTF-8 byte spanと選択byte digest、同文二箇所の区別 | 表示文字列や`Card.text`を元Raw byteそのものとみなすこと |
+| **Document/Card** | 同Card IDの採用Bindingを明示ETag/If-MatchでSaveし、別Process GETで必要情報が消失していない | Sourceの現在Grant・Reader資格・意味受理 |
+| **Read/Disclosure** | 現在のSnapshot資格を独立確認し、その資格で上記元byteを再読。Document可×Snapshot不可の拒否/非開示は別負例 | `textReviewed`やContent digestによる二次公開の許可 |
+| **復帰結果** | Card→選択した元byte位置へ実復帰しExpected/ActualとCI exact HEADを記録 | 元Originへの外部再接続、SHO/TEI実受領、実務T2 |
+
+**新しい公開Schema/証拠正本は作らない**。これらは既存#3441の一試行に付随する検査欄であり、各欄を`PASS/FAIL/UNKNOWN/NOT RUN`として独立に記す。未取得・空集合・permission denied・revision不一致・部分成功を一つの成功値に畳まない。実Sourceの出力本文や秘密Locatorを無権限のEvidence/CIログへ流さない。
+
+#### 6.2.9.3 実装PRの最小分割と完成の呼び方
+
+**最初の差分**はF0-S実Raw byte保存・別Process取得の可否を判定する小さな実験とし、既存Contentの使用可否・Scope・失敗状態をコードとテストで示す。必要なら独立したRaw Providerを**最小の用途限定部品**として比較するが、グローバルSource Registry、KON独立Service、全形式Normalizerは先行実装しない。この差分の成功は「Snapshot保存と別Process Readの限定実証」に留める。
+
+**次の差分**はOwnerがSの読取・開示境界を認めた場合に、A/B/Cのうち適格なBindingと実Document CAS・Readerの接続を行う。旧Clientが未認識欄を欠落させる正常ETag更新、Doc可×Snapshot不可、二Commit部分成功、A→B→A/別Origin同byteなどの既存R2-SRC負例を通す。未受理のSrc由来本文をAgent/SHO/TEIへ送らない。
+
+**文字コードの境界**：R2の現行対象はUTF-8（先頭BOM可）。UTF-16LEなどを表示目的でUTF-8へ変換する場合、**原byteのDigestと変換後DataのDigestを別にし、表示用変換物を原本と名乗らない**。ただしUTF-16LE等の取込/Span復帰をIG1の新しい合格条件に加えず、現行Readerが扱えない入力は明示拒否する。
+
+**停止条件**：対応する実Provider Call Site・権限・元byte再読が見つからなければF0-Sを未資格として記録し、Ownerへ具体的な不足を戻す。技術的な独立PASSを一つの統合E2Eへ合算しない。次の正式報告では、**コード変更と独立試験のないDocs-only追補をIG1実装進捗に数えない**。本節自体は文書改訂であり、F0-S実保存・別Process Raw再読・Card Bindingの製品E2E・外部受領は**NOT RUN**。
+
+### 6.2.10 Snapshot不変保存のReferenceと正式Providerの差（2026-11-15）
+
+F0-Sの実装判断を、保存・別Process再読の**実証できた部分だけ**で前へ進める。main統合済みの[PR #3449](https://github.com/hat47x/sui-sensemaking/pull/3449)で既存`NasContentStore`のUTF-8内容復元と同`content_id`上書きを実テストへ移し、**exact HEAD `1b32195944bd6cf02ee86f071c152b4a3b6877b5`のUnit CI #43640647344はcompleted/success、backend-contract 340件PASS**を確認。これは現行Storeの挙動の検証であり、不変性PASSではない。
+
+この不足に対する局所Referenceとして[PR #3450](https://github.com/hat47x/sui-sensemaking/pull/3450)は、信頼されたローカルRoot上で、1MiB以下の妥当なUTF-8 Rawを一回の`tenant/capture`単位で上書きせず保存する方式を試す。tmpファイルのflush/fsync後に`os.link`で非置換公開することで、**同じcaptureに違うbytesを再保存する要求をConflict**とし、同じbytesの再試行を`already-present`として独立照合できるか検証する。元byte/BOM/EOLと二番目の同文、別Capture同byte、改ざん・不正入力・別Python Processの読取をテストへ固定する。[exact HEAD `312b28a2ad7f4aa29fc5b15462a5de3bf65a7c5d`のUnit CI #43644075515](https://github.com/hat47x/sui-sensemaking/actions/runs/43644075515)はcompleted/success。backend-contract 342件PASS（今回のReference 4試験を含む）、Frontend単体/E2E jobもsuccessを確認。これは**信頼されたローカルRootでの限定ReferenceのPASS**であり、正式Snapshot Provider・Host Grant・Card結合の製品PASSへ昇格しない。
+
+| 軸 | 今回のReferenceで反証すること | 正式R2で未受理のまま残すもの |
+| --- | --- | --- |
+| 保存時の置換 | 同captureの異byte書込を黙って受け入れない。既存NASの`os.replace`と挙動を分離 | 正式不変Source Store・ストレージ障害/OS競合・Retention/削除 |
+| 再試行とACK不明 | 同bytesの再実行で元byteを別物に置換せず既存結果と照合できる | 複合操作の二Commit Recovery、Sourceの履歴連続性 |
+| 取込Occurrenceと内容Digest | 同bytesでも別Captureを自動同一視しない | 元Originの現在版への再接続、真正なSource identity |
+| 読取・開示 | テスト側が指定する信頼済みRoot内の内容一致だけを証明 | 現在のHost Root/Scope/Grant、Principal別非開示、Card由来本文の二次公開 |
+| UI/Consumer | 原bytesと選択範囲の限定実装をつなぐ準備 | DocumentV1 Binding、正式CAS、Browser縦断、SHO/TEI Consumer Receipt |
+
+**同時Writer・中断時の追加確認（#3450の限定試験）**：[PR #3450](https://github.com/hat47x/sui-sensemaking/pull/3450)の同一ブランチに、二つの独立Python Processを同時に`put_once`へ進める競合負例と、一時`.pending`だけが残った場合のread拒否・改めての保存を追加した。**同Capture同byte**なら`created`と`already-present`、**同Capture異byte**なら`created`と`conflict`に分かれ、確定済み原byteの勝手な置換がないことを検査する。未確定`.pending`は公開済みSnapshotではなく、自動回収は主張しない。これは**同一ローカルRootに対する二Processの限定競合試験**であり、停電・クラッシュ、NFS/S3の原子操作、Windows等での動作、Sourceの現在Grant、Documentとの二Commit、回収・保存Receiptの製品保証へ拡大しない。**exact HEAD `b393efd85fd0da80158a2f807f67196885b73d20`の[Unit CI #43649307237](https://github.com/hat47x/sui-sensemaking/actions/runs/43649307237)はcompleted/success、backend-contract 345件PASS**（同一Referenceの既存4件＋今回の競合2条件・Pending 1件を含む）。frontend-unit／frontend-e2eもsuccess。[MCPとagent認証の回帰CI #43649307151](https://github.com/hat47x/sui-sensemaking/actions/runs/43649307151)もcompleted/success。合格したのは信頼されたローカルRootでの**限定Reference**であり、Crash RecoveryやHost Grant・製品のSource Bindingを受理したことにはならない。
+
+**正式採用前のOwner Gate**：このReferenceを製品APIへ公開しない。Hostが現在資格を持つSource管理先を決定し、OSアクセス競合・プロセス障害時の永続性・古いPendingの回収・複数Writerの原子的な応答・テナント隔離・引用本文の開示・実存の二Commit/ACK不明を実証してから、適切な最小Providerの採否を決める。`os.link`という方法自体を全Targetの標準としない。原byte保持で成功したことを`Card/Source`連携や人間の意味受理へ転記しない。
+
+**F0-SのSource独立readゲート（#3451の限定Reference）**：[PR #3451](https://github.com/hat47x/sui-sensemaking/pull/3451)で、現行`access_control.py`の`AccessResource.kind`と`resolve_access_decision`を使い、`source_snapshot`をDocumentから区別する**テスト専用のPolicy接続**を追加した。Sourceの場合は`fail_safe_mode="deny"`・`require_tenant_scope=True`を強制し、Source固有のPolicy Bindingが不明、tenant/captureが不一致、Policy resolverが例外、PDPが到達不能ならReaderを呼ばない。Documentで互換的に使われる`NoopAccessControlAdapter`や`read_only` fallbackを、SourceのGrantへ自動昇格させない。**既存Policy TransportがSource用の`resource.kind`・テナント・Policy BindingをDocumentとは別フィールド値として送れること**も[#3451](https://github.com/hat47x/sui-sensemaking/pull/3451)の追加テストで確認対象とした。ただし**外部PDPがSource kindを実際に解釈・許否判定できること、Server/Hostが認証済Principalと現在のSource Bindingを確実に供給することは未検証**であり、テストダブルのAllowを正式Grantと呼ばない。Document read可能×Source read拒否と、同一内容/別ScopeのSource read拒否は別々に報告する。Current Source readに成功しても引用・AI/SHO/TEIへの二次開示は別認可とする。これにより「既存のPolicy Transportを再利用できる可能性」と「実際のSource Grantが存在すること」を混同しない。
+
+**当面の実行順**：①#3449の実績を現行NASのFit/Gapとして確定→②#3450のexact HEAD CI・単体負例を評価→③Ownerが用途限定Providerへ進めるか判断→④#3441既存R2-SRC-01〜08にSource Grant・Card CAS・別Process再読をつなぐ。PR #3448はこの判断の索引であり、新しいSource契約や独立したテスト正本ではない。**正式Raw Provider/Host Grant/二Commit Recovery/Card連携/Product E2EはNOT RUN**。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
