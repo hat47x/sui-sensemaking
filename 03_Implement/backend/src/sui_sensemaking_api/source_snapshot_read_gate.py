@@ -22,6 +22,7 @@ from sui_sensemaking_api.access_control import (
     ExternalPolicyAccessControlAdapter,
     resolve_access_decision,
 )
+from sui_sensemaking_api.document_access_resource import ServerOwnedDocumentResourceResolver
 from sui_sensemaking_api.source_member_context import (
     SourceMemberContext,
     resolve_source_member_context,
@@ -331,6 +332,7 @@ def read_pinned_card_source_selection_for_member(
     document_id: str,
     card_id: str,
     selection_resolver: AuthorizedCardSourceSelectionResolver,
+    document_resource_resolver: ServerOwnedDocumentResourceResolver,
     authority_resolver: SourceSnapshotAuthorityResolver,
     source_policy_resolver: SourceSnapshotPolicyResolver,
     policy_adapter: AccessControlAdapter,
@@ -338,9 +340,10 @@ def read_pinned_card_source_selection_for_member(
 ) -> SourceSelectionObservation:
     """Observe the saved Card's exact span; clients cannot substitute offsets.
 
-    The resolver is a required trusted Host boundary, not implemented here.
-    It MUST enforce Document read and accepted projection before returning a
-    persisted, server-owned Card selection. The same authenticated member is
+    The server-owned Document resource resolver and current PDP decision
+    run BEFORE any Card selection lookup. This is an additional gate, not a
+    substitute for the resolver's projection and saved-Revision obligations.
+    No Document read-only fail-safe is admitted for Source projection. The same authenticated member is
     used to query that resolver and to authorize the Source read; no second
     session resolution or fresh client-provided content checkpoint is allowed.
     """
@@ -349,6 +352,44 @@ def read_pinned_card_source_selection_for_member(
     ):
         raise SourceSnapshotReadUnavailable("source unavailable")
     member = resolve_source_member_context(request=request, db=db)
+
+    # The saved Card resolver cannot be the only proof of Document read.
+    # Resolve the actual Document metadata from the Host database and run a
+    # separate CURRENT Document PDP decision. "read_only" fallback for ordinary
+    # Document endpoints must not disclose a pinned Source selection.
+    if (
+        type(policy_adapter) is not ExternalPolicyAccessControlAdapter  # noqa: E721
+        or type(document_resource_resolver) is not ServerOwnedDocumentResourceResolver  # noqa: E721
+    ):
+        raise SourceSnapshotReadUnavailable("source unavailable")
+    try:
+        doc_resource = document_resource_resolver.resolve(
+            db=db, request=request, tenant=member.tenant,
+            action="read", doc_id=document_id,
+        )
+        if (
+            doc_resource.kind != "document"
+            or doc_resource.doc_id != document_id
+            or doc_resource.tenant_id != member.tenant.tenant_id
+            # Explicit policy binding is required for this internal Source
+            # projection, including if ordinary Document GET is public.
+            or not _canonical(doc_resource.policy_ref, _POLICY_REF_MAX_LENGTH)
+        ):
+            raise SourceSnapshotReadUnavailable("source unavailable")
+        doc_decision = resolve_access_decision(
+            adapter=policy_adapter,
+            request=AccessRequest(
+                action="read", auth=member.principal,
+                tenant=member.tenant, resource=doc_resource,
+            ),
+            fail_safe_mode="deny",
+            require_tenant_scope=True,
+        )
+        if not doc_decision.allow:
+            raise SourceSnapshotReadUnavailable("source unavailable")
+    except Exception:
+        raise SourceSnapshotReadUnavailable("source unavailable") from None
+
     try:
         saved = selection_resolver.resolve_authorized(
             member=member, document_id=document_id, card_id=card_id,
