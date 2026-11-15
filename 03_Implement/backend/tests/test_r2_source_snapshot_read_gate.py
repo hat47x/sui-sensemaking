@@ -195,11 +195,14 @@ class _AuthorizedSavedCard:
     row: AuthorizedCardSourceSelection | None
     calls: int = 0
     denied: bool = False
+    unavailable: bool = False
 
     def resolve_authorized(
         self, *, member, document_id: str, card_id: str,
     ) -> AuthorizedCardSourceSelection | None:
         self.calls += 1
+        if self.unavailable:
+            raise RuntimeError("private saved selection store")
         if self.denied:
             return None
         assert member.principal.actor_ref == "member-a"
@@ -773,7 +776,7 @@ def test_pinned_card_resolver_missing_denied_or_failed_is_non_disclosing(
         elif state == "denied":
             data["saved"].denied = True
         else:
-            data["saved"].row = "invalid provider result"
+            data["saved"].unavailable = True
         response = client.get(
             "/_r2_test_pinned_card",
             headers={VERSION_HEADER: "version-2"},
