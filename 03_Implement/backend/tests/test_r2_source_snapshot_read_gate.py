@@ -387,3 +387,16 @@ def test_noop_adapter_is_rejected_without_source_lookup(
         assert response.status_code == 404
         assert data["metadata"].calls == 0
         assert data["raw"].calls == 0
+
+
+def test_source_metadata_absence_fails_before_binding_or_policy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["metadata"].row = None
+        response = _request(client)
+        assert response.status_code == 404
+        assert data["metadata"].calls == 1
+        assert data["policy"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
