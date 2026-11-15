@@ -22,7 +22,10 @@ from sui_sensemaking_api.access_control import (
     ExternalPolicyAccessControlAdapter,
     resolve_access_decision,
 )
-from sui_sensemaking_api.source_member_context import resolve_source_member_context
+from sui_sensemaking_api.source_member_context import (
+    SourceMemberContext,
+    resolve_source_member_context,
+)
 from sui_sensemaking_api.tenant_context import TenantContext
 
 _DIGEST_RE = re.compile(r"[0-9a-f]{64}\Z")
@@ -123,10 +126,9 @@ def _qualified_authority(
     )
 
 
-def read_source_snapshot_for_member(
+def _read_source_snapshot_with_member(
     *,
-    request: Request,
-    db: Session,
+    member: SourceMemberContext,
     capture_id: str,
     authority_resolver: SourceSnapshotAuthorityResolver,
     source_policy_resolver: SourceSnapshotPolicyResolver,
@@ -140,8 +142,6 @@ def read_source_snapshot_for_member(
     """
     if not _canonical(capture_id, _CAPTURE_MAX_LENGTH):
         raise SourceSnapshotReadUnavailable("source unavailable")
-    # Authenticate before even looking up Source existence.
-    member = resolve_source_member_context(request=request, db=db)
     # Name-only matching permits a mock to impersonate an HTTP PDP. Until a
     # trusted pluggable policy-provider contract is admitted, require the exact
     # production HTTP adapter rather than a name-matched substitute/subclass.
@@ -207,6 +207,28 @@ def read_source_snapshot_for_member(
         raise SourceSnapshotReadUnavailable("source unavailable") from None
     return raw
 
+def read_source_snapshot_for_member(
+    *,
+    request: Request,
+    db: Session,
+    capture_id: str,
+    authority_resolver: SourceSnapshotAuthorityResolver,
+    source_policy_resolver: SourceSnapshotPolicyResolver,
+    policy_adapter: AccessControlAdapter,
+    raw_reader: SourceRawReader,
+) -> bytes:
+    """Authenticate this request before any Source authority or Raw lookup."""
+    member = resolve_source_member_context(request=request, db=db)
+    return _read_source_snapshot_with_member(
+        member=member,
+        capture_id=capture_id,
+        authority_resolver=authority_resolver,
+        source_policy_resolver=source_policy_resolver,
+        policy_adapter=policy_adapter,
+        raw_reader=raw_reader,
+    )
+
+
 def read_source_selection_for_member(
     *,
     request: Request,
@@ -234,6 +256,13 @@ def read_source_selection_for_member(
         raw_reader=raw_reader,
     )
 
+    return _observe_raw_selection(raw=raw, checkpoint=checkpoint)
+
+
+def _observe_raw_selection(
+    *, raw: bytes, checkpoint: RawSelectionContentCheckpoint,
+) -> SourceSelectionObservation:
+    """Check the exact byte span without shifting duplicate text positions."""
     if (
         not isinstance(checkpoint, RawSelectionContentCheckpoint)
         or not isinstance(checkpoint.raw_sha256, str)
@@ -268,3 +297,81 @@ def read_source_selection_for_member(
     return SourceSelectionObservation(
         start_byte=start, end_byte=end, selected_text=text,
     )
+
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorizedCardSourceSelection:
+    """Candidate Host-owned selection row, NOT an accepted Product schema.
+
+    The resolver must authorize CURRENT Document read/projection, resolve the
+    saved Card by stable identity and revision, and return this row from
+    server-owned storage. Selection bytes alone are not a grant or receipt.
+    """
+
+    tenant_id: str
+    document_id: str
+    card_id: str
+    capture_id: str
+    checkpoint: RawSelectionContentCheckpoint
+
+
+class AuthorizedCardSourceSelectionResolver(Protocol):
+    """Server-provided Document auth + saved selection lookup, not user input."""
+
+    def resolve_authorized(
+        self, *, member: SourceMemberContext, document_id: str, card_id: str,
+    ) -> AuthorizedCardSourceSelection | None: ...
+
+
+def read_pinned_card_source_selection_for_member(
+    *,
+    request: Request,
+    db: Session,
+    document_id: str,
+    card_id: str,
+    selection_resolver: AuthorizedCardSourceSelectionResolver,
+    authority_resolver: SourceSnapshotAuthorityResolver,
+    source_policy_resolver: SourceSnapshotPolicyResolver,
+    policy_adapter: AccessControlAdapter,
+    raw_reader: SourceRawReader,
+) -> SourceSelectionObservation:
+    """Observe the saved Card's exact span; clients cannot substitute offsets.
+
+    The resolver is a required trusted Host boundary, not implemented here.
+    It MUST enforce Document read and accepted projection before returning a
+    persisted, server-owned Card selection. The same authenticated member is
+    used to query that resolver and to authorize the Source read; no second
+    session resolution or fresh client-provided content checkpoint is allowed.
+    """
+    if not _canonical(document_id, _CAPTURE_MAX_LENGTH) or not _canonical(
+        card_id, _CAPTURE_MAX_LENGTH
+    ):
+        raise SourceSnapshotReadUnavailable("source unavailable")
+    member = resolve_source_member_context(request=request, db=db)
+    try:
+        saved = selection_resolver.resolve_authorized(
+            member=member, document_id=document_id, card_id=card_id,
+        )
+    except Exception:
+        raise SourceSnapshotReadUnavailable("source unavailable") from None
+
+    if (
+        not isinstance(saved, AuthorizedCardSourceSelection)
+        or saved.tenant_id != member.tenant.tenant_id
+        or saved.document_id != document_id
+        or saved.card_id != card_id
+        or not _canonical(saved.capture_id, _CAPTURE_MAX_LENGTH)
+        or not isinstance(saved.checkpoint, RawSelectionContentCheckpoint)
+    ):
+        raise SourceSnapshotReadUnavailable("source unavailable")
+
+    raw = _read_source_snapshot_with_member(
+        member=member,
+        capture_id=saved.capture_id,
+        authority_resolver=authority_resolver,
+        source_policy_resolver=source_policy_resolver,
+        policy_adapter=policy_adapter,
+        raw_reader=raw_reader,
+    )
+    return _observe_raw_selection(raw=raw, checkpoint=saved.checkpoint)
