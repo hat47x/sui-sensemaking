@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import json
 import threading
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from collections.abc import Callable
 from types import SimpleNamespace
 
 import pytest
@@ -1215,3 +1215,97 @@ def test_pinned_card_rejects_revision_from_other_document_same_tenant(
         assert data["policy"].calls == 0
         assert data["raw"].calls == 0
         assert [r["resource"]["kind"] for r in data["server"].requests] == ["document"]
+
+
+@pytest.mark.parametrize("change_during_raw", [
+    "document_grant_revoked",
+    "document_policy_binding_changed",
+    "document_same_bytes_resaved",
+    "document_a_b_a",
+    "saved_card_rebound",
+])
+def test_pinned_card_final_validation_rejects_changes_during_raw_read(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    change_during_raw: str,
+) -> None:
+    # The first Document and Source PDP requests may both allow. Changes
+    # *after* Source authorization but *before* returning Raw still fail.
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        original = data["saved"].row
+        assert original is not None
+
+        def change_in_flight() -> None:
+            db = data["doc_db"]
+            if change_during_raw == "document_grant_revoked":
+                data["server"].document_allowed = False
+            elif change_during_raw == "document_policy_binding_changed":
+                row = db.get(DocumentAccessMetadataRow, ("tenant-a", "doc-a"))
+                assert row is not None
+                row.policy_version = "revoked-after-source-check"
+                db.commit()
+            elif change_during_raw == "document_same_bytes_resaved":
+                DatabaseDocumentContentStore(db).save(
+                    tenant=TENANT, doc_id="doc-a", version=2,
+                    updated_at="2026-11-15T05:00:00Z",
+                    content=ContentBlob.from_text("{}"),
+                )
+                db.commit()
+            elif change_during_raw == "document_a_b_a":
+                store = DatabaseDocumentContentStore(db)
+                store.save(
+                    tenant=TENANT, doc_id="doc-a", version=2,
+                    updated_at="2026-11-15T06:00:00Z",
+                    content=ContentBlob.from_text('{"intermediate":true}'),
+                )
+                db.commit()
+                store.save(
+                    tenant=TENANT, doc_id="doc-a", version=1,
+                    updated_at="2026-11-15T07:00:00Z",
+                    content=ContentBlob.from_text("{}"),
+                )
+                db.commit()
+            else:
+                data["saved"].row = data["saved_at_current_revision"](
+                    capture_id="other-capture",
+                )
+            data["raw"].after_read = None
+
+        data["raw"].after_read = change_in_flight
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert SECOND_TEXT not in response.text
+        assert "capture-a" not in response.text
+        # Source bytes were fetched and locally verified, but never returned.
+        assert data["raw"].calls == 1
+        kinds = [r["resource"]["kind"] for r in data["server"].requests]
+        assert kinds[:2] == ["document", "source_snapshot"]
+        assert all(kind == "document" for kind in kinds[2:])
+        assert len(kinds) in {2, 3}
+        assert data["saved"].calls in {1, 2}
+
+
+def test_pinned_card_final_read_preserves_original_on_unmodified_session(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 200
+        assert response.json() == {
+            "startByte": SECOND_SPAN_START,
+            "endByte": SECOND_SPAN_END,
+            "selectedText": SECOND_TEXT,
+        }
+        assert data["raw"].calls == 1
+        assert data["saved"].calls == 2
+        assert data["trusted_calls"] == ["trusted"]
+        assert [r["resource"]["kind"] for r in data["server"].requests] == [
+            "document", "source_snapshot", "document",
+        ]
