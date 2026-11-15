@@ -440,7 +440,7 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **前節までとの違い**：DocumentとSourceの現在のreadが両方許可され、Rawの選択byteが一致しても、Card選択記録の作成後にDocumentが再保存されていたら、元の選択位置を現在のCardに帰属させてはならない。特に同じ内容に戻るA→B→Aでは、本文・RawのDigestが再一致しても、途中の更新をなかったことにはできない。
 
-そのため、内部候補`AuthorizedCardSourceSelection`に、**選択保存時のDocument Version、Canvas Revision Head Version、Revision ID**を揃えて保持する。まず認証済みMemberで実Document権限を判定し、サーバー管理の保存済みCard選択を解決した後、既存`DatabaseDocumentContentStore.load`でRevision BlobとDocument投影の整合性を再検査する。さらに、実DBの`CanvasRevisionHeadRow`から現在のHeadを読み、**三つとも一致する場合だけ**Sourceの現在権限と原文byte再読へ進む。保存済み選択情報をクライアントが提示して上書きする経路は設けない。
+そのため、内部候補`AuthorizedCardSourceSelection`に、**選択保存時のDocument Version、Canvas Revision Head Version、Revision ID**を揃えて保持する。まず認証済みMemberで実Document権限を判定し、サーバー管理の保存済みCard選択を解決した後、既存`DatabaseDocumentContentStore.load`でRevision BlobとDocument投影の整合性を再検査する。さらに、実DBの`CanvasRevisionHeadRow`から現在のHeadを読み、**三つとも一致する場合だけ**Sourceの現在権限と原文byte再読へ進む。Headが参照する`CanvasRevisionRow`についても、**同一Tenantというだけでなく当該Documentへの所属**を確認する。Document AのHeadが、同じ内容を持つDocument BのRevisionを指していても、Card選択をAへ再束縛しない。保存済み選択情報をクライアントが提示して上書きする経路は設けない。
 
 この方法なら、内容が変わらずDocument Versionだけ進んだ場合、A→B→Aで旧内容と同じDocument Versionを再利用した場合、Head欠落や世代不一致、Revision投影と保存本文の不整合を、それぞれ独立して拒否できる。旧Clientが選択情報を保持せず上書きした場合も、過去の選択記録を自動的に現行Cardへ帰属させない。選択履歴の正本・Card本文・Hold・異論を勝手に修正するものではない。
 
