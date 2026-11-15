@@ -30,9 +30,11 @@ from sui_sensemaking_api.access_control import (
 )
 from sui_sensemaking_api.auth_context import ResolvedIdentity
 from sui_sensemaking_api.source_snapshot_read_gate import (
+    AuthorizedCardSourceSelection,
     RawSelectionContentCheckpoint,
     SourceSnapshotReadAuthority,
     SourceSnapshotReadUnavailable,
+    read_pinned_card_source_selection_for_member,
     read_source_selection_for_member,
     read_source_snapshot_for_member,
 )
@@ -187,6 +189,39 @@ def _authority(**changes) -> SourceSnapshotReadAuthority:
 
 
 @contextmanager
+
+@dataclass
+class _AuthorizedSavedCard:
+    row: AuthorizedCardSourceSelection | None
+    calls: int = 0
+    denied: bool = False
+
+    def resolve_authorized(
+        self, *, member, document_id: str, card_id: str,
+    ) -> AuthorizedCardSourceSelection | None:
+        self.calls += 1
+        if self.denied:
+            return None
+        assert member.principal.actor_ref == "member-a"
+        assert member.tenant.tenant_id == "tenant-a"
+        return self.row
+
+
+def _saved_card(**changes) -> AuthorizedCardSourceSelection:
+    values = {
+        "tenant_id": "tenant-a",
+        "document_id": "doc-a",
+        "card_id": "card-a",
+        "capture_id": "capture-a",
+        "checkpoint": RawSelectionContentCheckpoint(
+            raw_sha256=DIGEST, selected_sha256=SECOND_SHA256,
+            start_byte=SECOND_SPAN_START, end_byte=SECOND_SPAN_END,
+        ),
+    }
+    values.update(changes)
+    return AuthorizedCardSourceSelection(**values)
+
+
 def _environment(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -221,9 +256,11 @@ def _environment(
         )
         app = FastAPI()
         app.state.runtime_profile = runtime_profile
+        saved = _AuthorizedSavedCard(row=_saved_card())
         context = {
             "metadata": metadata, "policy": source_policy, "raw": reader,
             "server": server, "adapter": adapter, "trusted_calls": trusted_calls,
+            "saved": saved,
         }
 
         @app.get("/_r2_test_read")
@@ -266,6 +303,37 @@ def _environment(
                     db=object(),
                     capture_id=capture_id,
                     checkpoint=checkpoint,
+                    authority_resolver=metadata,
+                    source_policy_resolver=source_policy,
+                    policy_adapter=context["adapter"],
+                    raw_reader=reader,
+                )
+            except SourceSnapshotReadUnavailable:
+                raise HTTPException(
+                    status_code=404, detail="source unavailable",
+                ) from None
+            return {
+                "startByte": observed.start_byte,
+                "endByte": observed.end_byte,
+                "selectedText": observed.selected_text,
+            }
+
+
+        @app.get("/_r2_test_pinned_card")
+        def pinned_card(
+            request: Request,
+            document_id: str = "doc-a",
+            card_id: str = "card-a",
+        ):
+            # An internal test-only endpoint. This does not implement a
+            # Product Document read decision or accepted Card Binding schema.
+            try:
+                observed = read_pinned_card_source_selection_for_member(
+                    request=request,
+                    db=object(),
+                    document_id=document_id,
+                    card_id=card_id,
+                    selection_resolver=saved,
                     authority_resolver=metadata,
                     source_policy_resolver=source_policy,
                     policy_adapter=context["adapter"],
@@ -644,3 +712,140 @@ def test_source_checkpoint_does_not_establish_historical_occurrence(
         assert second.json()["startByte"] == 38
         assert first_response.json()["selectedText"] == second.json()["selectedText"]
         assert data["raw"].calls == 2
+
+
+def test_pinned_card_selection_preserves_second_same_text_position(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    first = RAW.index(SECOND_TEXT.encode("utf-8"))
+    assert first != SECOND_SPAN_START
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        # A client cannot replace a server-saved span by supplying the first
+        # position, even though both selections have the same selected digest.
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+            params={"start_byte": first, "end_byte": first + 19},
+        )
+        assert response.status_code == 200
+        assert response.json() == {
+            "startByte": SECOND_SPAN_START,
+            "endByte": SECOND_SPAN_END,
+            "selectedText": SECOND_TEXT,
+        }
+        assert data["saved"].calls == 1
+        assert data["trusted_calls"] == ["trusted"]
+        assert data["raw"].calls == 1
+        assert len(data["server"].requests) == 1
+
+
+@pytest.mark.parametrize("change", [
+    {"tenant_id": "tenant-b"},
+    {"document_id": "other-doc"},
+    {"card_id": "other-card"},
+    {"capture_id": ""},
+])
+def test_pinned_card_scope_mismatch_never_contacts_source_or_pdp(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, change: dict,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["saved"].row = _saved_card(**change)
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 0
+        assert data["policy"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
+
+
+@pytest.mark.parametrize("state", ["absent", "denied", "error"])
+def test_pinned_card_resolver_missing_denied_or_failed_is_non_disclosing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, state: str,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        if state == "absent":
+            data["saved"].row = None
+        elif state == "denied":
+            data["saved"].denied = True
+        else:
+            data["saved"].row = "invalid provider result"
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert "capture-a" not in response.text
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
+
+
+def test_pinned_card_denies_unauthenticated_before_saved_lookup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        response = client.get("/_r2_test_pinned_card")
+        assert response.status_code == 409
+        assert data["saved"].calls == 0
+        assert data["metadata"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
+
+
+def test_pinned_card_rechecks_source_revocation_and_preserves_saved_binding(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        headers = {VERSION_HEADER: "version-2"}
+        assert client.get("/_r2_test_pinned_card", headers=headers).status_code == 200
+        data["server"].source_allowed = False
+        denied = client.get("/_r2_test_pinned_card", headers=headers)
+        assert denied.status_code == 404
+        assert "同じ言葉" not in denied.text
+        assert data["saved"].row == _saved_card()
+        assert data["saved"].calls == 2
+        assert data["trusted_calls"] == ["trusted", "trusted"]
+        assert data["raw"].calls == 1
+        assert len(data["server"].requests) == 2
+
+
+def test_pinned_card_wrong_capture_does_not_retarget_to_equal_digest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        data["saved"].row = _saved_card(capture_id="another-capture")
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["metadata"].calls == 1
+        assert data["policy"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
+
+
+def test_pinned_card_rejects_drifted_checkpoint_after_fresh_source_read(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        data["saved"].row = _saved_card(checkpoint=RawSelectionContentCheckpoint(
+            raw_sha256=DIGEST, selected_sha256=SECOND_SHA256,
+            start_byte=SECOND_SPAN_START - 1, end_byte=SECOND_SPAN_END,
+        ))
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert data["raw"].calls == 1
+        assert len(data["server"].requests) == 1
