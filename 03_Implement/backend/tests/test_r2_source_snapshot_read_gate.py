@@ -12,6 +12,7 @@ from dataclasses import dataclass, replace
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from collections.abc import Callable
 from types import SimpleNamespace
 
 import pytest
@@ -182,14 +183,19 @@ class _SourcePolicy:
 class _RawReader:
     store: LocalImmutableSnapshotReference
     calls: int = 0
+    after_read: Callable[[], None] | None = None
 
     def read(self, *, tenant_id: str, capture_id: str, expected_sha256: str):
         self.calls += 1
-        return self.store.read(
+        data = self.store.read(
             tenant_id=tenant_id,
             capture_id=capture_id,
             expected_sha256=expected_sha256,
         )
+        # Model a concurrent Document or policy change during Raw retrieval.
+        if self.after_read is not None:
+            self.after_read()
+        return data
 
 
 def _authority(**changes) -> SourceSnapshotReadAuthority:
@@ -828,10 +834,12 @@ def test_pinned_card_selection_preserves_second_same_text_position(
             "endByte": SECOND_SPAN_END,
             "selectedText": SECOND_TEXT,
         }
-        assert data["saved"].calls == 1
+        assert data["saved"].calls == 2
         assert data["trusted_calls"] == ["trusted"]
         assert data["raw"].calls == 1
-        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document", "source_snapshot"]
+        assert [item["resource"]["kind"] for item in data["server"].requests] == [
+            "document", "source_snapshot", "document",
+        ]
 
 
 @pytest.mark.parametrize("change", [
@@ -904,10 +912,13 @@ def test_pinned_card_rechecks_source_revocation_and_preserves_saved_binding(
         assert denied.status_code == 404
         assert "同じ言葉" not in denied.text
         assert data["saved"].row == data["saved_at_current_revision"]()
-        assert data["saved"].calls == 2
+        assert data["saved"].calls == 3
         assert data["trusted_calls"] == ["trusted", "trusted"]
         assert data["raw"].calls == 1
-        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document", "source_snapshot", "document", "source_snapshot"]
+        assert [item["resource"]["kind"] for item in data["server"].requests] == [
+            "document", "source_snapshot", "document",
+            "document", "source_snapshot",
+        ]
 
 
 def test_pinned_card_wrong_capture_does_not_retarget_to_equal_digest(
