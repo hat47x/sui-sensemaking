@@ -188,8 +188,6 @@ def _authority(**changes) -> SourceSnapshotReadAuthority:
     return SourceSnapshotReadAuthority(**values)
 
 
-@contextmanager
-
 @dataclass
 class _AuthorizedSavedCard:
     row: AuthorizedCardSourceSelection | None
@@ -225,6 +223,7 @@ def _saved_card(**changes) -> AuthorizedCardSourceSelection:
     return AuthorizedCardSourceSelection(**values)
 
 
+@contextmanager
 def _environment(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
