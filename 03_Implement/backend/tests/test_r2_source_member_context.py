@@ -177,6 +177,16 @@ def test_guest_cookie_cannot_be_promoted_from_document_grant(
     (replace(IDENTITY, user_id=None), TENANT),
     (replace(IDENTITY, auth_context=AuthContext(actor_ref=None, provider="oidc")), TENANT),
     (replace(IDENTITY, auth_context=AuthContext(actor_ref="member-a", provider="header")), TENANT),
+    # Both SaaS JWT and authenticated BFF cookie bind these to one user.
+    (replace(IDENTITY, auth_context=AuthContext(
+        actor_ref="other-member", user_id="member-a", provider="oidc",
+    )), TENANT),
+    (replace(IDENTITY, auth_context=AuthContext(
+        actor_ref="member-a", user_id="other-member", provider="oidc",
+    )), TENANT),
+    (replace(IDENTITY, auth_context=AuthContext(
+        actor_ref="member-a", user_id=None, provider="oidc",
+    )), TENANT),
     (IDENTITY, replace(TENANT, membership_id=None)),
     (IDENTITY, replace(TENANT, resolved_by="single_tenant_adapter")),
 ])

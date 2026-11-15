@@ -74,7 +74,10 @@ def resolve_source_member_context(
     tenant = trusted.tenant
     if (
         trusted.identity.user_id is None
-        or not principal.actor_ref
+        # SaaS JWT and authenticated cookie both bind actor_ref and user_id to
+        # the same provisioned user; do not send a different actor to Source PDP.
+        or principal.actor_ref != trusted.identity.user_id
+        or principal.user_id != trusted.identity.user_id
         or not principal.provider
         or principal.provider in {"header", "guest_session", "agent_credential"}
         or not tenant.tenant_id
