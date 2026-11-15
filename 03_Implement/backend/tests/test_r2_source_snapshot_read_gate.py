@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import threading
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient
 
 from experiments.r2_immutable_snapshot_reference import LocalImmutableSnapshotReference
 from sui_sensemaking_api.access_control import (
+    AccessDecision,
     AccessRequest,
     AccessResource,
     AuthContext,
@@ -397,6 +398,58 @@ def test_source_metadata_absence_fails_before_binding_or_policy(
         response = _request(client)
         assert response.status_code == 404
         assert data["metadata"].calls == 1
+        assert data["policy"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
+
+
+@pytest.mark.parametrize("principal", [
+    AuthContext(actor_ref="different-member", user_id="member-a", provider="oidc"),
+    AuthContext(actor_ref="member-a", user_id="different-member", provider="oidc"),
+    AuthContext(actor_ref="member-a", user_id=None, provider="oidc"),
+])
+def test_wrong_principal_disallows_source_lookup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, principal: AuthContext,
+) -> None:
+    # Even a server-provided session object must not send an unrelated
+    # actorRef to Source PDP or expose whether a capture exists.
+    identity = replace(IDENTITY, auth_context=principal)
+    with _environment(monkeypatch, tmp_path, identity=identity) as (client, data):
+        response = _request(client)
+        assert response.status_code == 403
+        assert response.json()["detail"]["code"] == "source_member_context_unavailable"
+        assert data["trusted_calls"] == ["trusted"]
+        assert data["metadata"].calls == 0
+        assert data["policy"].calls == 0
+        assert data["server"].requests == []
+        assert data["raw"].calls == 0
+
+
+@pytest.mark.parametrize("imposter", ["same-name", "subclass"])
+def test_policy_adapter_name_or_subclass_cannot_impersonate_http_pdp(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, imposter: str,
+) -> None:
+    class NameMatchedImposter:
+        name = "external_http"
+
+        def authorize(self, request: AccessRequest) -> AccessDecision:
+            _ = request
+            return AccessDecision(allow=True)
+
+    class InheritedImposter(ExternalPolicyAccessControlAdapter):
+        def authorize(self, request: AccessRequest) -> AccessDecision:
+            _ = request
+            return AccessDecision(allow=True)
+
+    with _environment(monkeypatch, tmp_path) as (client, data):
+        if imposter == "same-name":
+            data["adapter"] = NameMatchedImposter()
+        else:
+            data["adapter"] = InheritedImposter(config=data["adapter"]._config)
+        response = _request(client)
+        assert response.status_code == 404
+        assert data["trusted_calls"] == ["trusted"]
+        assert data["metadata"].calls == 0
         assert data["policy"].calls == 0
         assert data["server"].requests == []
         assert data["raw"].calls == 0
