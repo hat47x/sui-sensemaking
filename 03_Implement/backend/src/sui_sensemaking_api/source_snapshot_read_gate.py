@@ -333,36 +333,16 @@ class AuthorizedCardSourceSelectionResolver(Protocol):
     ) -> AuthorizedCardSourceSelection | None: ...
 
 
-def read_pinned_card_source_selection_for_member(
+def _require_current_document_read(
     *,
     request: Request,
     db: Session,
+    member: SourceMemberContext,
     document_id: str,
-    card_id: str,
-    selection_resolver: AuthorizedCardSourceSelectionResolver,
     document_resource_resolver: ServerOwnedDocumentResourceResolver,
-    authority_resolver: SourceSnapshotAuthorityResolver,
-    source_policy_resolver: SourceSnapshotPolicyResolver,
     policy_adapter: AccessControlAdapter,
-    raw_reader: SourceRawReader,
-) -> SourceSelectionObservation:
-    """Observe the saved Card's exact span; clients cannot substitute offsets.
-
-    The server-owned Document resource resolver and current PDP decision
-    run BEFORE any Card selection lookup. This is an additional gate, not a
-    substitute for the resolver's projection and saved-Revision obligations.
-    The saved row must also match the current server-owned Document version,
-    revision head version, and immutable revision ID, using a verified
-    generation projection. No Document read-only fallback is allowed.
-    The same Member Context is used throughout the request, and clients
-    cannot supply replacement offsets or revision identifiers.
-    """
-    if not _canonical(document_id, _CAPTURE_MAX_LENGTH) or not _canonical(
-        card_id, _CAPTURE_MAX_LENGTH
-    ):
-        raise SourceSnapshotReadUnavailable("source unavailable")
-    member = resolve_source_member_context(request=request, db=db)
-
+) -> None:
+    """Use CURRENT Document policy for a Source-bearing Card projection."""
     # The saved Card resolver cannot be the only proof of Document read.
     # Resolve the actual Document metadata from the Host database and run a
     # separate CURRENT Document PDP decision. "read_only" fallback for ordinary
@@ -400,28 +380,16 @@ def read_pinned_card_source_selection_for_member(
     except Exception:
         raise SourceSnapshotReadUnavailable("source unavailable") from None
 
-    try:
-        saved = selection_resolver.resolve_authorized(
-            member=member, document_id=document_id, card_id=card_id,
-        )
-    except Exception:
-        raise SourceSnapshotReadUnavailable("source unavailable") from None
 
-    if (
-        not isinstance(saved, AuthorizedCardSourceSelection)
-        or saved.tenant_id != member.tenant.tenant_id
-        or saved.document_id != document_id
-        or saved.card_id != card_id
-        or not _canonical(saved.capture_id, _CAPTURE_MAX_LENGTH)
-        or type(saved.document_version) is not int  # noqa: E721
-        or saved.document_version < 1
-        or type(saved.document_head_version) is not int  # noqa: E721
-        or saved.document_head_version < 1
-        or not _canonical(saved.document_revision_id, _CAPTURE_MAX_LENGTH)
-        or not isinstance(saved.checkpoint, RawSelectionContentCheckpoint)
-    ):
-        raise SourceSnapshotReadUnavailable("source unavailable")
 
+def _require_current_document_revision(
+    *,
+    db: Session,
+    member: SourceMemberContext,
+    document_id: str,
+    saved: AuthorizedCardSourceSelection,
+) -> None:
+    """Fail if Document version/head/revision ownership no longer matches."""
     # This is the CURRENT revision of the actual Document, not a value
     # supplied by the Card resolver. Verify the generation projection against
     # the revision blob, and reject A→B→A or old-client writes even when the
@@ -457,6 +425,70 @@ def read_pinned_card_source_selection_for_member(
     except Exception:
         raise SourceSnapshotReadUnavailable("source unavailable") from None
 
+
+
+def read_pinned_card_source_selection_for_member(
+    *,
+    request: Request,
+    db: Session,
+    document_id: str,
+    card_id: str,
+    selection_resolver: AuthorizedCardSourceSelectionResolver,
+    document_resource_resolver: ServerOwnedDocumentResourceResolver,
+    authority_resolver: SourceSnapshotAuthorityResolver,
+    source_policy_resolver: SourceSnapshotPolicyResolver,
+    policy_adapter: AccessControlAdapter,
+    raw_reader: SourceRawReader,
+) -> SourceSelectionObservation:
+    """Observe the saved Card's exact span; clients cannot substitute offsets.
+
+    The server-owned Document resource resolver and current PDP decision
+    run BEFORE any Card selection lookup. This is an additional gate, not a
+    substitute for the resolver's projection and saved-Revision obligations.
+    The saved row must also match the current server-owned Document version,
+    revision head version, and immutable revision ID, using a verified
+    generation projection. No Document read-only fallback is allowed.
+    The same Member Context is used throughout the request, and clients
+    cannot supply replacement offsets or revision identifiers.
+    """
+    if not _canonical(document_id, _CAPTURE_MAX_LENGTH) or not _canonical(
+        card_id, _CAPTURE_MAX_LENGTH
+    ):
+        raise SourceSnapshotReadUnavailable("source unavailable")
+    member = resolve_source_member_context(request=request, db=db)
+
+    _require_current_document_read(
+        request=request, db=db, member=member, document_id=document_id,
+        document_resource_resolver=document_resource_resolver,
+        policy_adapter=policy_adapter,
+    )
+
+    try:
+        saved = selection_resolver.resolve_authorized(
+            member=member, document_id=document_id, card_id=card_id,
+        )
+    except Exception:
+        raise SourceSnapshotReadUnavailable("source unavailable") from None
+
+    if (
+        not isinstance(saved, AuthorizedCardSourceSelection)
+        or saved.tenant_id != member.tenant.tenant_id
+        or saved.document_id != document_id
+        or saved.card_id != card_id
+        or not _canonical(saved.capture_id, _CAPTURE_MAX_LENGTH)
+        or type(saved.document_version) is not int  # noqa: E721
+        or saved.document_version < 1
+        or type(saved.document_head_version) is not int  # noqa: E721
+        or saved.document_head_version < 1
+        or not _canonical(saved.document_revision_id, _CAPTURE_MAX_LENGTH)
+        or not isinstance(saved.checkpoint, RawSelectionContentCheckpoint)
+    ):
+        raise SourceSnapshotReadUnavailable("source unavailable")
+
+    _require_current_document_revision(
+        db=db, member=member, document_id=document_id, saved=saved,
+    )
+
     raw = _read_source_snapshot_with_member(
         member=member,
         capture_id=saved.capture_id,
@@ -465,4 +497,31 @@ def read_pinned_card_source_selection_for_member(
         policy_adapter=policy_adapter,
         raw_reader=raw_reader,
     )
-    return _observe_raw_selection(raw=raw, checkpoint=saved.checkpoint)
+    observed = _observe_raw_selection(raw=raw, checkpoint=saved.checkpoint)
+
+    # Raw read/PDP lookup may be slow. Recheck the Document decision,
+    # selection receipt and revision immediately before returning the text.
+    # A read-only Session is required: expiring the identity map makes the
+    # second check query current DB state instead of replaying cached rows.
+    # This narrows (but cannot eliminate) concurrent-revocation races.
+    try:
+        db.expire_all()
+    except Exception:
+        raise SourceSnapshotReadUnavailable("source unavailable") from None
+    _require_current_document_read(
+        request=request, db=db, member=member, document_id=document_id,
+        document_resource_resolver=document_resource_resolver,
+        policy_adapter=policy_adapter,
+    )
+    try:
+        current_saved = selection_resolver.resolve_authorized(
+            member=member, document_id=document_id, card_id=card_id,
+        )
+    except Exception:
+        raise SourceSnapshotReadUnavailable("source unavailable") from None
+    if current_saved != saved:
+        raise SourceSnapshotReadUnavailable("source unavailable")
+    _require_current_document_revision(
+        db=db, member=member, document_id=document_id, saved=saved,
+    )
+    return observed
