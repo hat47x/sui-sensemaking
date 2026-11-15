@@ -382,7 +382,7 @@ F0-Sの実装判断を、保存・別Process再読の**実証できた部分だ�
 
 Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄を製品Saveへ通さず、既存の未採用Binding拒否を維持する。PR #3448は判断の索引であり、第二のSource AuthorityやEvidence正本とはしない。**正式Raw Provider、実Host Grant、Card連携、Product E2Eは引き続きNOT RUN**。
 
-### 6.2.6 正式Raw Source Providerに向けた現行実装の適合性（F0・未採用）
+### 6.2.11 正式Raw Source Providerに向けた現行実装の適合性（F0・未採用）
 
 既存実装を確認した結果、**保存されたRawの存在・同一性・現在の閲覧資格を、Documentの格納モデル一つで代用することはできない**。最初の候補S（明示取込時点の不変Snapshot）については、既存実装を次のように評価する。
 
@@ -400,7 +400,7 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **導入対象外**：共通のSource RegistryやKON独立サービスを先に作ること、DocumentのreadやContent digestをSource Grantへ昇格させること、テスト用Local Rootを製品のTrusted Hostと見なすこと。この節は**Fit/Gapと着手条件の確定**であって、正式Schema・Providerの選定・Product E2Eの受入ではない。
 
-### 6.2.7 現在のSource読取許可と選択byte範囲の再照合（限定実装）
+### 6.2.12 現在のSource読取許可と選択byte範囲の再照合（限定実装）
 
 フロントエンドの`raw_utf8_selection_reference.ts`には、BOMや改行を正規化せず、選択した範囲をUTF-8の`[startByte,endByte)`とRaw全体／選択部分それぞれのSHA-256で記録する限定Referenceがある。一方、バックエンドのSource読取ゲートは現在の許可を確認してRaw全体を取得するまでだった。
 
@@ -409,6 +409,18 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 **選択の同一性はハッシュだけでは証明できない。** 同じ文言が二箇所にあれば、両方の選択部分Digestは等しい。今回の内部関数は、渡された範囲をそのまま検査するだけで、**以前Cardに保存された範囲と一致するかを保証しない**。その保証には、Ownerが受け入れたSource BindingとDocument CASによる保存済みの範囲・Capture Occurrenceの照合が必要である。Raw全体のDigestが一致しても、同Rootの過去のGrant、A→B→Aの履歴連続性、外部Originの最新版、別Consumerへの開示権限は認めない。
 
 **受入の位置付け**：これはSource読取と選択内容の限定的な接続であり、現在の`RawSelectionContentCheckpoint`／`SourceSelectionObservation`は**内部候補型**であってCardやDocumentV1の正式保存形式ではない。テスト用SaaS Session・localhost PDP・不変Rootを使用する。正式Authority/Raw Provider、Card出典の永続化、保存ACK不明・別Process再開、SHO/TEI受領と意味受理は引き続き別票とする。[PR #3459](https://github.com/hat47x/sui-sensemaking/pull/3459)は**mainへ統合済み**。Exact HEAD `1eebcb16df2304b7ba33af722eddc9452144aff1`に対する[単体CI #43695129100](https://github.com/hat47x/sui-sensemaking/actions/runs/43695129100)は**completed/success、backend契約テスト436件PASS（警告2件）**。Frontend単体/E2Eと[MCP・Agent認証の回帰 #43695129037](https://github.com/hat47x/sui-sensemaking/actions/runs/43695129037)もcompleted/success。これは現在の認可を経由した**内容だけの再照合**の合格であり、永続化されたCardの選択履歴やSourceの歴史的同一性を証明するものではない。
+
+### 6.2.13 保存済みCardの選択位置を現在のSource権限で再読する（内部契約候補）
+
+**区別すべき二つの成功**：前節の内容照合は、同じ文言の二箇所をそれぞれ正しい範囲として認める。たとえば今回の合成Rawでは、最初の同文が`[11,30)`、二番目が`[38,57)`にあり、選択部分のDigestは同一となる。**どちらかを現在読めることだけでは、Cardが以前記録した位置に戻れたとはいえない。**保存済みCardとの対応は、クライアントが再送した範囲ではなく、サーバー側で照会した選択記録に固定する必要がある。
+
+今回の内部候補`AuthorizedCardSourceSelection`／`AuthorizedCardSourceSelectionResolver`と`read_pinned_card_source_selection_for_member`では、①既存SaaS HostでMemberとTenant Sessionを確認、②当該Memberに対する**現在のDocument read／Card投影を検査する責任を持つ**ResolverからDocument ID・Card IDに対応する保存済み選択を取得、③その記録が当該Tenant/Document/Cardと同一であることを確かめ、④記録されたCaptureに対して現在のSource専用PDPへreadを問い合わせ、⑤Raw全体・範囲・Digestを再検査する順序を設ける。最初のMember認証結果を同一処理内で引き回し、保存済みCardを読む主体とSourceを読む主体を取り違えない。
+
+**負例と必要な証拠**：同じ本文・同じ選択Digestでも、Clientが一箇所目のByte Offsetを付け直して二箇所目から再束縛させることは許さない。保存済み選択の不存在、異Tenant/Document/Card、別Capture、現在のSource Grant失効、Source内容改変、Resolver障害で原文位置・Locator・隠れたIDを開示しない。既存のCard本文・Hold・異論を自動削除する処理は導入しない。Documentのreadが拒否された場合は、Source権限の有無に関わらず保存済み選択を返さない設計とする。
+
+**この段階では未採用**：`AuthorizedCardSourceSelection`は**内部の保存済み選択候補型**に過ぎず、DocumentV1の正式Schemaではない。テスト用ResolverはDocumentの実PDPと永続Card Revisionを検証しないため、**「サーバー側の選択情報を使う流れ」を確認できても、正式なDocument認可・条件付き保存・再起動後の取得・旧Client上書き対策・非開示を製品で受け入れたことにはならない**。今後OwnerがA/B/Cの最小案を決定し、既存Document CAS・現在Document read・Principal別ProjectionをこのResolverへ接続する。Sourceの不変取込OccurrenceとRoot/世代の真正性は別のHost Gateとし、A→B→Aや同byte別Rootから現在資格が戻ったとは推定しない。SHO/TEIのConsumer受領・二次開示・Owner意味受理も引き続き別票とする。
+
+**段階計画の整理**：他PRとの統合によって重複していた旧`6.2.6`（Provider Fit/Gap）と旧`6.2.7`（Source読取・範囲照合）の節番号を`6.2.11`／`6.2.12`へ修正した。内容の採否は変更していない。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
