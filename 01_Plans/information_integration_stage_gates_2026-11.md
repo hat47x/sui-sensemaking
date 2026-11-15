@@ -370,7 +370,15 @@ F0-Sの実装判断を、保存・別Process再読の**実証できた部分だ�
 
 **実Providerへ進むための不足の所在**：Source専用Policy Bindingを**どのHost/Server側の保管・現在解決により得るか**、SourceのOwner/tenantと実Snapshot配置をどう整合させるか、外部PDPがDocumentとSourceのkindを本当に別権限として評価するか、拒否時にLocator/ID/件数や原文由来Card本文が投影されないか、を同一Principalで実HTTP負例として反証する。準備・認可・実読取・外部送出・Consumer受領・Ownerの意味受理はそれぞれ別票とする。これらが未実証の間は、公開Raw APIやA/B/C正式Bindingを採用しない。SHO/TEIを新しいSource Grant機関とせず、KONの独立化もP0の前提にしない。
 
-**実証済みReferenceからProductへ移る実行順（#3455統合後）**：①OwnerがS（管理された取込時Snapshot）を最初の比較対象とし、**実在するHost/ProviderとそのRaw Reader・Source Authority保存場所・Policy Bindingの現在解決者**を明記する。②その実入口で、Sourceの取込Occurrence、tenant/Root/Scope、byte完全性、RevisionまたはSource世代、失効・異Root・A→B→Aを、**現在のGrantと区別して**検証する。③既存のSaaS Auth EdgeとSource専用PDPをProduct要求へ接続し、Documentのみ許可、Source拒否/失効、PDP障害、部分取得、未許可Agent/Guestに対して存在・Locator・digest・選択位置を非開示とする。④A/B/Cから**Ownerが選定した最小の選択履歴保存方式**を既存Document CASへ結び、原文の同文2箇所目を選択→Card保存→別Process GET→現在のSource再読と同byte位置復帰を[R2-SRC-01〜08 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)で確認する。⑤保存ACK不明/二Commitを必要とする場合のRecovery、SHO/TEIへの二次開示・Consumer受領と意味受理は**各自の独立票**で確認し、IG1の単純なRaw readに全てを一律に要求しない。Host/Provider選択やSource保存資格が未決の間は、新しいSource JSON欄を製品Saveに通さず、既存の未採用Binding拒否を維持する。PR #3448はこれらの判断の索引であり、第二のSource Authorityや独立したEvidence正本にはしない。**正式Raw Provider、実Host Grant、Card連携、Product E2Eは引き続きNOT RUN**。
+**実証済みReferenceからProductへ移る実行順（#3455統合後）**
+
+1. **実Providerの責任を特定する**：OwnerがS（管理された取込時Snapshot）を最初の比較対象とし、実在するHost/Provider、Raw Reader、Source Authorityの保存場所、Source専用Policy Bindingの現在の解決者を明記する。
+2. **Sourceの同一性と取得品質を確かめる**：取込Occurrence、tenant/Root/Scope、byte完全性、RevisionまたはSource世代、失効・異Root・A→B→Aを検証する。Digestの再一致をSourceの履歴連続性や現在Grantの根拠にしない。
+3. **実認可と非開示を検証する**：既存SaaS Auth EdgeとSource専用PDPを製品要求につなぎ、Documentのみ許可、Source拒否・失効、PDP障害、部分取得、Agent/Guestの非許可を確認する。許可外では存在、Locator、digest、選択位置を返さない。
+4. **選択履歴の保存と原文復帰を通す**：OwnerがA/B/Cの最小方式を選び、既存Document CASで同文2箇所目の選択・Card保存・別Process GETを検証する。さらに現在のSourceを再読し、元byte位置へ復帰できることを[R2-SRC-01〜08 #3441](https://github.com/hat47x/sui-sensemaking/issues/3441)で確認する。
+5. **部分成功と外部Consumerを分離して検証する**：ACK不明や二Commitが必要な場合のRecovery、SHO/TEIへの二次開示・Consumer受領、Owner意味受理はそれぞれ独立票で確認する。IG1の単純なRaw readに一律の直列Gateとして課さない。
+
+Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄を製品Saveへ通さず、既存の未採用Binding拒否を維持する。PR #3448は判断の索引であり、第二のSource AuthorityやEvidence正本とはしない。**正式Raw Provider、実Host Grant、Card連携、Product E2Eは引き続きNOT RUN**。
 
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
