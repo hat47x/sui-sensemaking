@@ -61,6 +61,7 @@ jobs:
             tests/test_r2_f0_nas_snapshot_probe.py \
             tests/test_r2_immutable_snapshot_reference.py \
             tests/test_r2_source_read_grant_reference.py \
+            tests/test_r2_source_policy_core_boundary.py \
             tests/test_r2_source_policy_http_snapshot_readback.py \
             tests/test_context_bundle_routes.py \
             tests/test_agent_credential_http.py \

@@ -488,6 +488,23 @@ def resolve_access_decision(
     fail_safe_mode: FailSafeMode,
     require_tenant_scope: bool = False,
 ) -> AccessDecision:
+    # A Source Snapshot must not inherit the Document read_only fallback.
+    # This guard is intentionally in the shared decision entrypoint, so a
+    # future Source caller cannot bypass it by omitting the Reference wrapper.
+    # It does NOT verify that principal or policy_ref came from a trusted Host.
+    if request.resource is not None and request.resource.kind == "source_snapshot":
+        require_tenant_scope = True
+        fail_safe_mode = "deny"
+        if (
+            request.action != "read"
+            or request.auth is None
+            or not request.auth.actor_ref
+            or not request.auth.provider
+            or not request.resource.policy_ref
+            or getattr(adapter, "name", None) in {"noop", "mock"}
+        ):
+            return AccessDecision(allow=False, reason="source_grant_unavailable")
+
     tenant_boundary = apply_tenant_boundary_guard(
         request,
         required=require_tenant_scope,
