@@ -3,6 +3,21 @@
 The artifact is a read-only projection produced by TAI's TEI pilot. This module
 validates its envelope and element references, then returns immutable records.
 It does not write DocumentV1, run the API, or replace SUI's source of truth.
+
+Connection policy (SUI #3371):
+
+- ``from_artifact`` is on the read path. ``tei_sui_reference`` uses it to build
+  the typed reference served by ``GET /docs/{doc_id}/tei/sui-reference``
+  (ADR-0101, ADR-0116).
+- ``to_documentv1_payload`` is a contract check, not a save path. Tests use it
+  to show that a projection forms a valid ``DocumentV1`` and to pin the unit
+  digests and ``bundleHash`` shared with the frontend fixture. In production
+  code, only the non-writing ``documentv1_save_plan`` and ``documentv1_merge``
+  call it.
+- Saving a projection as a SUI document is not adopted. It would make the TEI
+  artifact a second source of truth, which ADR-0116 rules out. A new ADR must
+  decide that before any route, MCP tool, or CLI imports the save plan or the
+  merge. ``tests/test_documentv1_connection_policy.py`` enforces this.
 """
 
 from __future__ import annotations

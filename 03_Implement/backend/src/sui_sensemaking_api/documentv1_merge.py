@@ -4,6 +4,9 @@ The projection covers only a subset of DocumentV1. A save that replaces the
 document with the projection would delete fields the projection never carries.
 This merge keeps unknown document, card, and island fields, and keeps existing
 cards and islands that the projection does not mention.
+
+Only ``documentv1_save_plan`` uses this module. It never writes a document
+(SUI #3371; see the connection policy in ``documentv1_projection``).
 """
 
 from __future__ import annotations
