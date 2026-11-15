@@ -24,7 +24,7 @@ from sui_sensemaking_api.access_control import (
 )
 from sui_sensemaking_api.database_content_store import DatabaseDocumentContentStore
 from sui_sensemaking_api.document_access_resource import ServerOwnedDocumentResourceResolver
-from sui_sensemaking_api.models import CanvasRevisionHeadRow
+from sui_sensemaking_api.models import CanvasRevisionHeadRow, CanvasRevisionRow
 from sui_sensemaking_api.source_member_context import (
     SourceMemberContext,
     resolve_source_member_context,
@@ -434,9 +434,21 @@ def read_pinned_card_source_selection_for_member(
             CanvasRevisionHeadRow,
             (member.tenant.tenant_id, document_id, "main"),
         )
+        revision = (
+            None
+            if head is None
+            else db.get(
+                CanvasRevisionRow,
+                (member.tenant.tenant_id, head.revision_id),
+            )
+        )
         if (
             stored is None
             or head is None
+            or revision is None
+            # The Revision head's FK only binds tenant+revision; it is not
+            # sufficient to prove that the Revision belongs to this Document.
+            or revision.doc_id != document_id
             or stored.row.version != saved.document_version
             or head.head_version != saved.document_head_version
             or head.revision_id != saved.document_revision_id
