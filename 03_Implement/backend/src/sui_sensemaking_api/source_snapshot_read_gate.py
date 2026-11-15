@@ -121,7 +121,7 @@ def read_source_snapshot_for_member(
     # Name-only matching permits a mock to impersonate an HTTP PDP. Until a
     # trusted pluggable policy-provider contract is admitted, require the exact
     # production HTTP adapter rather than a name-matched substitute/subclass.
-    if type(policy_adapter) is not ExternalPolicyAccessControlAdapter:
+    if policy_adapter.__class__ is not ExternalPolicyAccessControlAdapter:
         raise SourceSnapshotReadUnavailable("source unavailable")
 
     try:
