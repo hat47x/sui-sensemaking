@@ -425,7 +425,7 @@ def test_wrong_principal_disallows_source_lookup(
         assert data["raw"].calls == 0
 
 
-@pytest.mark.parametrize("imposter", ["same-name", "subclass"])
+@pytest.mark.parametrize("imposter", ["same-name", "subclass", "fake-class"])
 def test_policy_adapter_name_or_subclass_cannot_impersonate_http_pdp(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, imposter: str,
 ) -> None:
@@ -441,9 +441,22 @@ def test_policy_adapter_name_or_subclass_cannot_impersonate_http_pdp(
             _ = request
             return AccessDecision(allow=True)
 
+    class FakeClassImposter:
+        name = "external_http"
+
+        @property
+        def __class__(self) -> type[ExternalPolicyAccessControlAdapter]:
+            return ExternalPolicyAccessControlAdapter
+
+        def authorize(self, request: AccessRequest) -> AccessDecision:
+            _ = request
+            return AccessDecision(allow=True)
+
     with _environment(monkeypatch, tmp_path) as (client, data):
         if imposter == "same-name":
             data["adapter"] = NameMatchedImposter()
+        elif imposter == "fake-class":
+            data["adapter"] = FakeClassImposter()
         else:
             data["adapter"] = InheritedImposter(config=data["adapter"]._config)
         response = _request(client)
