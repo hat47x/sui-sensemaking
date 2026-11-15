@@ -422,6 +422,16 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **段階計画の整理**：他PRとの統合によって重複していた旧`6.2.6`（Provider Fit/Gap）と旧`6.2.7`（Source読取・範囲照合）の節番号を`6.2.11`／`6.2.12`へ修正した。内容の採否は変更していない。
 
+### 6.2.14 保存済みCardの参照前に、Documentの現在許可を独立に通す（限定実装）
+
+**#3461からの進展**：保存済みCardの選択Resolverを信用する前に、同じ認証済みMemberとTenantを使い、**既存SUIのサーバー管理Documentメタデータと現在の外部PDPを必ず確認する**。内部`read_pinned_card_source_selection_for_member`に`ServerOwnedDocumentResourceResolver`を追加し、実DBで解決したDocumentの`doc_id/tenant_id/policy_ref`を検査する。実装が異なるHeader互換Resolverや、Doc PolicyRefのない文書は、Source参照を含むこの内部投影に限り拒否する。Documentの一般的なGET/編集許可を勝手に変更するものではない。
+
+判定順は、①既存SaaS Member・現在のTenant Session、②**Server-owned Document資源とDocument専用read PDP（fail-safeはdeny）**、③保存済みCard選択Resolver、④Source専用Authority/Policyの現在PDP、⑤Rawバイトと選択位置の再照合とする。Documentへの閲覧許可だけではSourceを読めず、Sourceへの閲覧許可だけではDocumentのCard選択を参照できない。両PDPのどちらかが拒否・障害となった場合も、Raw/Locator/未公開の選択位置を返さない。
+
+**限定テストの到達点**：実SQLiteの`TenantRow/DocumentRow/DocumentAccessMetadataRow`を使う`ServerOwnedDocumentResourceResolver`と、localhostへの実HTTP Document／Source二系統判定を接続する。Document拒否／失効／レコード欠落／クライアントがHeaderでPolicyRefを上書きしようとする負例では、保存済みCard ResolverもRaw Readerも呼ばれないことを確認する。先行の同文二箇所目・Source失効・Digest不一致の検査も維持する。
+
+**残る採用ゲート**：DocumentのメタデータがDBにあることと、**保存済みCard選択が実Document Revisionから取得できること**は別である。Card側`AuthorizedCardSourceSelectionResolver`、Source専用Authority/Raw Provider、Document CAS、公開・伏字・転記本文のPrincipal別Projectionはまだ製品接続がない。正式Sourceの保存スキーマ・A/B/Cの受入前に、未採用`sourceBinding`をDocumentV1で保存できるようにしない。通常のDocument GETに許されている`read_only`障害時継続も、この内部Source投影の認可へ流用しない。AI/SHO/TEIへの外部送信や意味受理は、これら二つのread許可とも別票とする。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
