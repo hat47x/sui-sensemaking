@@ -129,20 +129,23 @@ def _qualified_authority(
     )
 
 
-def _read_source_snapshot_with_member(
+@dataclass(frozen=True, slots=True)
+class _SourceReadReceipt:
+    """One authorization result, not an Owner acceptance or Source version."""
+
+    authority: SourceSnapshotReadAuthority
+    policy_ref: str
+
+
+def _require_current_source_read(
     *,
     member: SourceMemberContext,
     capture_id: str,
     authority_resolver: SourceSnapshotAuthorityResolver,
     source_policy_resolver: SourceSnapshotPolicyResolver,
     policy_adapter: AccessControlAdapter,
-    raw_reader: SourceRawReader,
-) -> bytes:
-    """Current one-request check: member -> Source metadata -> PDP -> bytes.
-
-    Nothing here is a bearer capability or a cached Grant. A subsequent read
-    must repeat the decision. Export/disclosure are separate operations.
-    """
+) -> _SourceReadReceipt:
+    """Resolve the CURRENT source binding and ask its own PDP for read."""
     if not _canonical(capture_id, _CAPTURE_MAX_LENGTH):
         raise SourceSnapshotReadUnavailable("source unavailable")
     # Name-only matching permits a mock to impersonate an HTTP PDP. Until a
@@ -194,21 +197,61 @@ def _read_source_snapshot_with_member(
     if not decision.allow:
         raise SourceSnapshotReadUnavailable("source unavailable")
 
+    return _SourceReadReceipt(authority=authority, policy_ref=policy_ref)
+
+
+def _read_source_snapshot_with_member(
+    *,
+    member: SourceMemberContext,
+    capture_id: str,
+    authority_resolver: SourceSnapshotAuthorityResolver,
+    source_policy_resolver: SourceSnapshotPolicyResolver,
+    policy_adapter: AccessControlAdapter,
+    raw_reader: SourceRawReader,
+    revalidate_after_raw: bool = False,
+) -> bytes:
+    """Authorize Source before Raw; optionally recheck for pinned Card output.
+
+    Rechecking is NOT a transactionally atomic grant, an Origin revision
+    guarantee, or a substitute for server-owned authority provenance.
+    """
+    verified = _require_current_source_read(
+        member=member,
+        capture_id=capture_id,
+        authority_resolver=authority_resolver,
+        source_policy_resolver=source_policy_resolver,
+        policy_adapter=policy_adapter,
+    )
     try:
         raw = raw_reader.read(
             tenant_id=member.tenant.tenant_id,
             capture_id=capture_id,
-            expected_sha256=authority.sha256_digest,
+            expected_sha256=verified.authority.sha256_digest,
         )
         if (
             not isinstance(raw, bytes)
-            or len(raw) != authority.byte_size
-            or sha256(raw).hexdigest() != authority.sha256_digest
+            or len(raw) != verified.authority.byte_size
+            or sha256(raw).hexdigest() != verified.authority.sha256_digest
         ):
             raise SourceSnapshotReadUnavailable("source unavailable")
     except Exception:
         raise SourceSnapshotReadUnavailable("source unavailable") from None
+    if revalidate_after_raw:
+        # Reading Raw may overlap with Source revocation, policy rotation or
+        # authority re-binding. A second HTTP allow alone is insufficient:
+        # the complete Source authority and resolved policy reference must
+        # also remain unchanged, even if Raw bytes/digest are identical.
+        current = _require_current_source_read(
+            member=member,
+            capture_id=capture_id,
+            authority_resolver=authority_resolver,
+            source_policy_resolver=source_policy_resolver,
+            policy_adapter=policy_adapter,
+        )
+        if current != verified:
+            raise SourceSnapshotReadUnavailable("source unavailable")
     return raw
+
 
 def read_source_snapshot_for_member(
     *,
@@ -496,6 +539,7 @@ def read_pinned_card_source_selection_for_member(
         source_policy_resolver=source_policy_resolver,
         policy_adapter=policy_adapter,
         raw_reader=raw_reader,
+        revalidate_after_raw=True,
     )
     observed = _observe_raw_selection(raw=raw, checkpoint=saved.checkpoint)
 
