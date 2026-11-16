@@ -84,6 +84,7 @@ class _PolicyServer(ThreadingHTTPServer):
     def __init__(self) -> None:
         super().__init__(("127.0.0.1", 0), _Handler)
         self.source_allowed = False
+        self.accepted_source_policies = {"source-only-policy"}
         self.document_allowed = True
         self.mode = "normal"
         self.requests: list[dict] = []
@@ -106,7 +107,7 @@ class _Handler(BaseHTTPRequestHandler):
                 resource["kind"] == "source_snapshot"
                 and resource["docId"] == "capture-a"
                 and resource["tenantId"] == "tenant-a"
-                and resource["policyRef"] == "source-only-policy"
+                and resource["policyRef"] in policy.accepted_source_policies
                 and body["tenant"]["tenantId"] == "tenant-a"
                 and body["auth"]["actorRef"] == "member-a"
                 and body["action"] == "read"
@@ -838,8 +839,10 @@ def test_pinned_card_selection_preserves_second_same_text_position(
         assert data["trusted_calls"] == ["trusted"]
         assert data["raw"].calls == 1
         assert [item["resource"]["kind"] for item in data["server"].requests] == [
-            "document", "source_snapshot", "document",
+            "document", "source_snapshot", "source_snapshot", "document",
         ]
+        assert data["metadata"].calls == 2
+        assert data["policy"].calls == 2
 
 
 @pytest.mark.parametrize("change", [
@@ -916,7 +919,7 @@ def test_pinned_card_rechecks_source_revocation_and_preserves_saved_binding(
         assert data["trusted_calls"] == ["trusted", "trusted"]
         assert data["raw"].calls == 1
         assert [item["resource"]["kind"] for item in data["server"].requests] == [
-            "document", "source_snapshot", "document",
+            "document", "source_snapshot", "source_snapshot", "document",
             "document", "source_snapshot",
         ]
 
@@ -953,7 +956,9 @@ def test_pinned_card_rejects_drifted_checkpoint_after_fresh_source_read(
         )
         assert response.status_code == 404
         assert data["raw"].calls == 1
-        assert [item["resource"]["kind"] for item in data["server"].requests] == ["document", "source_snapshot"]
+        assert [item["resource"]["kind"] for item in data["server"].requests] == [
+            "document", "source_snapshot", "source_snapshot",
+        ]
 
 
 def test_document_denial_stops_before_saved_card_or_source_grant(
@@ -1283,8 +1288,9 @@ def test_pinned_card_final_validation_rejects_changes_during_raw_read(
         assert data["raw"].calls == 1
         kinds = [r["resource"]["kind"] for r in data["server"].requests]
         assert kinds[:2] == ["document", "source_snapshot"]
-        assert all(kind == "document" for kind in kinds[2:])
-        assert len(kinds) in {2, 3}
+        assert kinds[2] == "source_snapshot"
+        assert all(kind == "document" for kind in kinds[3:])
+        assert len(kinds) in {3, 4}
         assert data["saved"].calls in {1, 2}
 
 
@@ -1307,5 +1313,7 @@ def test_pinned_card_final_read_preserves_original_on_unmodified_session(
         assert data["saved"].calls == 2
         assert data["trusted_calls"] == ["trusted"]
         assert [r["resource"]["kind"] for r in data["server"].requests] == [
-            "document", "source_snapshot", "document",
+            "document", "source_snapshot", "source_snapshot", "document",
         ]
+        assert data["metadata"].calls == 2
+        assert data["policy"].calls == 2
