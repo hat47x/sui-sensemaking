@@ -460,6 +460,18 @@ Host/ProviderとSourceの現在資格が未決なら、新しいSource JSON欄�
 
 **正式受入はまだ先**：Card選択の正本永続化とDocument Revisionへの同一Commit保存、Sourceの不変取込Occurrenceと現在Policy、別Processの原文位置復帰は未実証である。TEIのAccepted Meaning、SHOの受領・Provenance、AI／Agentへの二次開示も別の資格とReceiptで扱う。KONの独立サービス化や第二Registryは本段階の必須依存としない。
 
+### 6.2.17 Raw取得後のSource Authority・Policy・現在Grantを照合する（内部限定実装）
+
+前節のDocument側の返却直前確認だけでは、Source Raw Readerが処理している間に**Source固有の権限が失効したり、取込先・Policy Bindingが差し替わったりした場合**を検出できない。Rawのbyte長・Digestが一致していても、現在の読取許可や同一取込を証明するものではない。SourceとDocumentを別々のAuthorityとして扱う原則を、この同時更新の負例にも適用する。
+
+今回、既存のSource内部読取処理から**Source専用Authority解決→PolicyRef解決→外部PDP read判定**を共通化し、保存済みCardの出典選択を返す内部経路だけで、Rawの整合性確認後に**Sourceの現在状態を再確認**する。再取得したAuthorityのtenant/capture/byte長/Digest/Policy Binding ID/Versionと、再解決したPolicyRefが、Raw取得前の許可結果と一致し、かつ二度目のSource PDPもreadを許可した場合にだけ、Document側の最終確認へ進む。Auth Contextは要求の最初に一度解決したものを使用し、Raw自体を再取得しない。一般の`read_source_snapshot_for_member`／`read_source_selection_for_member`は今回の追加検査の対象外とし、動作範囲を明示する。
+
+**限定テスト**：合成Rawの読取中にSource Grant取消、Source PDP障害、Authority欠落、同CaptureのDigest変更、Policy Version更新、両方のPDP判定がallowでもPolicyRefが切り替わった場合を挿入する。拒否時は本文・Capture ID・Policy情報を返さず、変更のない正常例ではSource PDPを二回、Document PDPも二回通過して、保存済みの二箇所目のbyte位置へ復帰する。認可・Authorityの変更と既存のCard/Document保存を一つの同一視可能な結果に昇格させない。
+
+**受入上限**：この前後二回の検査は、**検査の間に一時的にA→B→Aへ戻った場合や、全項目が同一の別Root・別取込Occurrenceを見分けられない**。Source Authorityに実Origin/Root/世代の正式な同一性証明はなく、テストのResolver/PDPは実Hostではない。再照会直後の失効、DBトランザクションのIsolation、HTTP応答のタイミング差も残る。したがって**原子的なSource Grant/Document Revisionの証明でも、正式なSource Capture Receiptでもない**。将来の実Host/Provider受入ではSourceの世代・Root・取込Occurrenceを持った検証済みReceiptが必要となる。第二のRegistryやTEI独自Hostは作らず、SUIの既存責任境界から順に検証する。
+
+**Consumerと正本の分離**：TEIのSource Meaning／Operator受理やSHOの文書受領をSourceの一時的なread許可から推定しない。TEI側Shadow ValidatorがSUIの正式Domain Ruleを勝手に厳格化しない原則と同様に、ここで追加するのは**SUI内部の非開示・整合性検査**であり、共通Source Domain型やDocumentV1保存欄の採否ではない。DocumentV1のTEI投影は既存の読取専用経路に留め、保存経路を新設しない。
+
 ### 6.3 依存の種類に応じた選択的再資格化（IG1と後段を分離）
 
 全Document・Activity・Consumerを一律に失効させることも、同じDigest/OK Receiptだけですべてを継続有効とみなすこともしない。変更影響を既知の依存と現在Version/Scopeから説明し、分からなければ**そのClaimだけunknown**とする。
