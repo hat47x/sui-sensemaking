@@ -1317,3 +1317,86 @@ def test_pinned_card_final_read_preserves_original_on_unmodified_session(
         ]
         assert data["metadata"].calls == 2
         assert data["policy"].calls == 2
+
+
+@pytest.mark.parametrize("source_change", [
+    "grant_revoked",
+    "pdp_unavailable",
+    "authority_missing",
+    "authority_same_capture_new_digest",
+    "authority_new_policy_version",
+    "policy_ref_rotated_both_allowed",
+])
+def test_pinned_card_rechecks_current_source_receipt_after_raw_read(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, source_change: str,
+) -> None:
+    # The Document still allows. A Source change after the first PDP allow
+    # must prevent disclosure, even when the stored Raw bytes are unchanged.
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+
+        def change_during_raw() -> None:
+            if source_change == "grant_revoked":
+                data["server"].source_allowed = False
+            elif source_change == "pdp_unavailable":
+                data["server"].mode = "unavailable"
+            elif source_change == "authority_missing":
+                data["metadata"].row = None
+            elif source_change == "authority_same_capture_new_digest":
+                data["metadata"].row = _authority(sha256_digest="a" * 64)
+            elif source_change == "authority_new_policy_version":
+                data["metadata"].row = _authority(policy_version="policy-v2")
+            else:
+                # Both HTTP PDP decisions return allow=True; source identity
+                # must still be pinned to the original policy reference.
+                data["server"].accepted_source_policies.add("rotated-source-policy")
+                data["policy"].policy_ref = "rotated-source-policy"
+            data["raw"].after_read = None
+
+        data["raw"].after_read = change_during_raw
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 404
+        assert SECOND_TEXT not in response.text
+        assert "capture-a" not in response.text
+        assert "policy-v2" not in response.text
+        assert data["trusted_calls"] == ["trusted"]
+        assert data["saved"].calls == 1
+        assert data["metadata"].calls == 2
+        assert data["raw"].calls == 1
+        kinds = [r["resource"]["kind"] for r in data["server"].requests]
+        assert kinds[:2] == ["document", "source_snapshot"]
+        assert all(kind == "source_snapshot" for kind in kinds[2:])
+        if source_change == "policy_ref_rotated_both_allowed":
+            assert kinds == ["document", "source_snapshot", "source_snapshot"]
+            assert [
+                r["resource"]["policyRef"] for r in data["server"].requests[1:]
+            ] == ["source-only-policy", "rotated-source-policy"]
+        if source_change == "authority_same_capture_new_digest":
+            # First and second PDP are both allowing reads; the changed
+            # digest/authority receipt prevents returning the old bytes.
+            assert kinds == ["document", "source_snapshot", "source_snapshot"]
+
+
+def test_pinned_card_revalidates_same_source_without_refetching_raw(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    with _pinned_environment(monkeypatch, tmp_path) as (client, data):
+        data["server"].source_allowed = True
+        response = client.get(
+            "/_r2_test_pinned_card",
+            headers={VERSION_HEADER: "version-2"},
+        )
+        assert response.status_code == 200
+        assert response.json()["startByte"] == SECOND_SPAN_START
+        assert response.json()["endByte"] == SECOND_SPAN_END
+        assert response.json()["selectedText"] == SECOND_TEXT
+        assert data["trusted_calls"] == ["trusted"]
+        assert data["raw"].calls == 1
+        assert data["metadata"].calls == 2
+        assert data["policy"].calls == 2
+        assert [r["resource"]["kind"] for r in data["server"].requests] == [
+            "document", "source_snapshot", "source_snapshot", "document",
+        ]
