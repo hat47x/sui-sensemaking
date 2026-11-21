@@ -7,6 +7,7 @@
 - 既存の複合UI計画：[アウトライン／マインドマップとKJキャンバス](hybrid_outline_canvas_layout_plan.md)
 - 実装の優先順位：[ROADMAP](../ROADMAP.md)、[R0/R1実証 #3438](https://github.com/hat47x/sui-sensemaking/issues/3438)
 - AI・外部接続の境界：[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)、[ADR-0117](adr/ADR-0117-cross-product-handoff-context-envelope.md)
+- ライフログ・汎用属性・TEI専門機能の発展構想：[時間・意味・まとまり・属性を重ねる情報基盤](sui_lifelog_extensible_information_vision.md)（**将来構想／未実装**）
 
 ## 1. 目的と世界観
 
