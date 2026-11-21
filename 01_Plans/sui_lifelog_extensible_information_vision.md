@@ -7,6 +7,8 @@
 - 保存・文書の現行契約：[ADR-0058](adr/ADR-0058-document-contract-v1-rebaseline.md)、[ADR-0073](adr/ADR-0073-document-ownership-and-lifecycle-model.md)
 - 外部との意味・開示の境界：[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)、[ADR-0117](adr/ADR-0117-cross-product-handoff-context-envelope.md)
 - 既存の実証順：[複合UIとRaw/Readerの計画](hybrid_outline_canvas_layout_plan.md)、[ROADMAP](../ROADMAP.md)
+- 組織・社会への展開：[外部知識の連邦的接続とTrust](sui_federated_knowledge_future_vision.md)
+- 再構築と再選定：[TEI再構築・知見蒸留計画](sui_tei_reconstruction_distillation_plan.md)。旧ADRの`Accepted`やSafeModeは次期SUIでの採用を保証しない。
 
 ## 1. 構想の中心：記録を増やすのではなく、自分の情報基盤を育てる
 
