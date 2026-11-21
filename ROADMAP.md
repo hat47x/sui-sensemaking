@@ -93,6 +93,17 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 初期の確認対象は、同じノードの親子関係・位置・島を別々に保ち、人手で形成した島や保留を自動レイアウトで損なわないこと。KJキャンバス単独の自由探索も維持する。標準データ構造やSEIとの将来連携は候補とし、既存DocumentV1の契約変更は独立判断に残す。
 
+## 将来構想：文書の内側を巡り、洞察を育てる
+
+[基本構想書](01_Plans/sui_document_exploration_future_vision.md)に、カーラ・チャクラの多層性・循環・時間・相互照応から着想を得た長期的な操作体系を整理しました。宗教的な意匠ではなく、「潜る・巡る・重ねる・編む・還る」を情報探索の原則とします。**構想の採録であり、機能の実装・価値検証・DocumentV1契約変更を意味しません**。
+
+- **先に試す**：Markdown本文やアウトラインから独立したDocumentへドリルダウンし、相対URLで元の場所へ戻る。リンク先をアウトラインで連続表示し、既定のフラット化形式を連続Markdown文章にする。Markdownリスト・改行置換・YAML/JSONは代替形式。
+- **次に試す**：ノード・文章範囲・複数ItemをPinし、Context Packとして既存Harnessへ渡す。調査Documentを枝分かれさせ、結果は候補として確認してから取り込む。
+- **広げて試す**：アウトライン／マインドマップとKJキャンバスの往復、文書横断KJ、逆ドリルダウン、星図、Semantic Zoom、根拠・矛盾・未探索のLens、Trail・Landmark・Journey・Temporal Navigation。
+- **先行する必須の実証**：現行DocumentV1の保存・別Process再読、Rawへの復帰、同文別Item／同Item別Occurrence、循環リンク停止、AI OFF、古いRevisionの無断適用禁止。既存[#3438](https://github.com/hat47x/sui-sensemaking/issues/3438)、[#3400](https://github.com/hat47x/sui-sensemaking/issues/3400)と[複合UI計画](01_Plans/hybrid_outline_canvas_layout_plan.md)へ接続し、別の大規模な実装バックログは先に起こしません。
+
+Documentは基本単位とし、Worldという名称はさらに上位の概念に予約します。既存SafeMode・SaaS認可・人間の受理・開示制限は維持します。将来のローカルDesktop閲覧ではOS権限を尊重する方針ですが、現行サーバ版の認可を緩和しません。採用と優先順位の更新は[ADR-0089](01_Plans/adr/ADR-0089-product-value-canon.md)の実務価値検証に基づいて判断します。
+
 ## 検討候補：OKFの出典・確認・鮮度をSUIの自由な意味探索へ取り込む
 
 [OKF連携の製品要件 #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)と[Hybrid Tree/KJ計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)で、Card/Island/Tree/Edgeの出典、生成/確認履歴、再検討と、SHO/SEIへのLoss付きMarkdown投影を検証する。OKFをSUI DocumentV1やReviewの正本へ置き換えない。可視の知識から非公開Cardの存在を推定せず、AI/OFF・OKF Pluginなしでも手動KJ/Outlineを維持する。

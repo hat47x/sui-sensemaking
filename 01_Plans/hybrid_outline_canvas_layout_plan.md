@@ -6,6 +6,7 @@
 - 認知支援の導入基準: [ADR-0090](adr/ADR-0090-cognitive-assistance-candidate-layer-and-evidence-promotion.md)
 - 技術設計案: [独立UI・背景ツリー・粘性付き配置](../02_Architecture/hybrid-tree-canvas-layout-design.html)
 - 進行する仕事の正本: [ROADMAP](../ROADMAP.md)
+- 将来の体験構想: [文書ドリルダウン、AI探索、Insight Synthesis、時間的ナビゲーション](sui_document_exploration_future_vision.md)（**将来構想・未実装**。本計画の現行HC要件、R0/R1、DocumentV1契約、T2受入条件を変更しない）
 
 ## 1. 目的と利用者価値
 

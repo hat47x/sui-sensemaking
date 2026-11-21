@@ -60,6 +60,7 @@ SUI Sensemakingは、一つの正解へ早く収束すること自体を目的�
 
 このREADMEは、人間向けの入口です。運用の規約やAI向けの読み順は、役割に応じて、次を参照してください。
 
+- 将来の製品構想: [`SUI：文書の内側を巡り、洞察を育てる情報空間`](01_Plans/sui_document_exploration_future_vision.md)（ドリルダウン、文章・アウトライン・KJ・AI協業。**構想段階で未実装**）
 - AIエージェント向けの入口: [`AGENTS.md`](AGENTS.md)
 - 利用者向けの公開の入口: [`04_Documentation/public_index.md`](04_Documentation/public_index.md)（一般の利用者に、最初に案内する入口です）
 - 04の文書の保守者向けの入口: [`04_Documentation/README.md`](04_Documentation/README.md)（公開の入口ではなく、公開する文書と除外する文書の管理用です）
