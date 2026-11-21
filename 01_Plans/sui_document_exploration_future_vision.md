@@ -42,7 +42,7 @@ Document内部の構造、生成したDocument群の接続構造、Document自�
 - **Relation**：明示された関係。方向・複数辺・出典を保持する。Tree上の親子、KJの島、Canvasの近さを意味上のRelationと混同しない。
 - **Link**：文書や対象の参照。通常のURLを使い、ローカル文書間では相対URLを優先する。
 
-例：元のMarkdownに \`[参照整合性の調査](research/referential-integrity.md)\` と書けば、SUIのない環境でも参照をたどれる。見出しや本文の選択範囲へ戻るには、URLフラグメントを基本とし、必要時にDocument ID・Revision・範囲・Fingerprintを補助情報として保持する。本文が同じ別箇所に黙って付け替えない。
+例：元のMarkdownに `[参照整合性の調査](research/referential-integrity.md)` と書けば、SUIのない環境でも参照をたどれる。見出しや本文の選択範囲へ戻るには、URLフラグメントを基本とし、必要時にDocument ID・Revision・範囲・Fingerprintを補助情報として保持する。本文が同じ別箇所に黙って付け替えない。
 
 既存DocumentV1のカード・島・Edge・Document ETagを直ちに汎用Document/Item Storeの完成とみなさない。新スキーマ・新DB・第二の正本は実Source→Reader→別Process再読取で必要性を確認してから判断する。
 
