@@ -104,6 +104,18 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 Documentは基本単位とし、Worldという名称はさらに上位の概念に予約します。既存SafeMode・SaaS認可・人間の受理・開示制限は維持します。将来のローカルDesktop閲覧ではOS権限を尊重する方針ですが、現行サーバ版の認可を緩和しません。採用と優先順位の更新は[ADR-0089](01_Plans/adr/ADR-0089-product-value-canon.md)の実務価値検証に基づいて判断します。
 
+## 将来構想：ライフログと生成AIセッションを、成長する情報基盤へ
+
+[拡張可能なライフログ構想](01_Plans/sui_lifelog_extensible_information_vision.md)を[Document探索の基本構想](01_Plans/sui_document_exploration_future_vision.md)の発展として採録しました。生活記録、任意のツールからのメモ、AIハーネスのセッションや判断経緯を、**時間の連なり・意味のつながり・情報のまとまり・後から追加できる属性**で扱う方向です。特定分野の入力項目やSUI独自の新Storeを初期条件にしません。
+
+- **受入と記録**：外部ツール／AI Harness／TEI／SHO／SUIからUniversal Inboxへ参照・Snapshot・抽出・派生文書を受け取り、Quick CaptureはAI分析前に保存完了を確認する。原資料・実bytes取得・Readerの資格を区別する。
+- **時間と関係**：occurred／recorded／interpretedの時刻、複数DocumentにまたがるEpisode、Journey、検索・Constellationの距離の根拠、非公開セッションの検索結果への不漏えいを設計候補とする。
+- **任意属性**：Item／Document等に後からフィールドを付け、型・単位・尺度・欠測理由・版を保持する。現行`Card.meta`は未知のキーを許容しないので流用せず、既存DocumentV1との最小Fit/Gapを先に確かめる。
+- **TEIによる機能拡張**：必要な時点でフィールド・フォーム・集計・検証をTEIのDSL／Plugin／外部Hostで生成する。SUIの記録保存と外部実行・意味受理は独立して扱う。
+- **順序と停止線**：既存[#3438](https://github.com/hat47x/sui-sensemaking/issues/3438)のR0/R1を先行し、次は一件保存・再読・相対リンクへの復帰、二属性の後付け、模擬セッションの限定取り込み、三記録からのEpisode／新Document生成を小さく実証する。T2の価値検証まで既定機能への昇格はしない。
+
+本節は**長期的な方向を記録したもの**であり、現行SaaS認可、SafeMode、`human_reviewed`、既存DocumentV1のスキーマ、現在のIssue優先度を変更しません。健康・精神状態に関わる任意属性は自己記録を想定し、医学的な診断・妥当性を無条件に主張しません。
+
 ## 検討候補：OKFの出典・確認・鮮度をSUIの自由な意味探索へ取り込む
 
 [OKF連携の製品要件 #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)と[Hybrid Tree/KJ計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)で、Card/Island/Tree/Edgeの出典、生成/確認履歴、再検討と、SHO/SEIへのLoss付きMarkdown投影を検証する。OKFをSUI DocumentV1やReviewの正本へ置き換えない。可視の知識から非公開Cardの存在を推定せず、AI/OFF・OKF Pluginなしでも手動KJ/Outlineを維持する。
