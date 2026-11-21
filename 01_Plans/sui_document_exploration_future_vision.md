@@ -8,6 +8,8 @@
 - 実装の優先順位：[ROADMAP](../ROADMAP.md)、[R0/R1実証 #3438](https://github.com/hat47x/sui-sensemaking/issues/3438)
 - AI・外部接続の境界：[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)、[ADR-0117](adr/ADR-0117-cross-product-handoff-context-envelope.md)
 - ライフログ・汎用属性・TEI専門機能の発展構想：[時間・意味・まとまり・属性を重ねる情報基盤](sui_lifelog_extensible_information_vision.md)（**将来構想／未実装**）
+- 個人から社会へ：[独立した外部文書の関連・索引・Trust・組織利用](sui_federated_knowledge_future_vision.md)
+- 将来実装への移行：[旧ADRを選び直すTEI再構築・知見蒸留計画](sui_tei_reconstruction_distillation_plan.md)（現行のSafeModeも次期設計では廃止方向で再評価）
 
 ## 1. 目的と世界観
 
