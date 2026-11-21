@@ -8,6 +8,8 @@
 
 SUI Sensemakingは、人間とAIが未整理な情報から関係・仮説・構造を見いだし、意味が形づくられる過程を保ちながら理解を深めるための基盤です。
 
+**今後の開発方針（2026-11-22）**：現行のTypeScript／Python中心の機能拡張は、TEIの実用化まで原則凍結します。過去の実装・Issue・ADRは保存し、最新の世界観に照らして知見を選び直し、TEIで再構築する計画です。詳しくは[再構築・知見蒸留計画](01_Plans/sui_tei_reconstruction_distillation_plan.md)、[個人・組織・社会をつなぐ将来構想](01_Plans/sui_federated_knowledge_future_vision.md)を参照してください。旧版の現在の機能や安全設定を、次期版の必須設計と同一視しません。
+
 製品シリーズ全体の構想と役割の分担は、[YI Constellation 構想と設計](https://github.com/hat47x/tai-pleroma/blob/main/docs/YI_Constellation.pptx)をご覧ください。SUIは、観測・解釈・仮説を整理し、意味を探索する製品として紹介されています。資料の確認状況は2026年10月時点のものです。
 
 現在の中核インターフェースは、親和図法／KJ法に着想を得たキャンバスです。
