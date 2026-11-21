@@ -119,6 +119,30 @@ Episodeは固有の新テーブルを先に要しない。まずDocument／Item�
 
 上表は**論理設計候補**であり、新しいDB表、ABI、共有型Registryを確定したものではない。現行の[Card.meta](../03_Implement/frontend/src/domain/types.ts)は\`seq\`／\`source\`のみを意図した限定契約で、未知の\`meta\`キーを保存する汎用領域ではない。そこへ自由な属性を押し込んで現行バリデーションを迂回しない。現行DocumentV1を破壊せずに試す別のFixture／Sidecar／Plugin入力などから最小Fit/Gapを検証する。
 
+定義と値の関係を表す最小例（**概念スケッチであり、実装済みSchemaや確定ABIではない**）：
+
+\`\`\`yaml
+field:
+  id: personal.mood
+  appliesTo: item
+  valueType: enum
+  version: 1
+  options: [low, neutral, high]
+  visibilityDefault: private
+
+observation:
+  subject: item-001
+  fieldId: personal.mood
+  definitionVersion: 1
+  value: neutral
+  occurredAt: 2026-11-20
+  recordedAt: 2026-11-22T07:00:00+09:00
+  sourceKind: self-report
+  disclosure: private
+\`\`\`
+
+ここでは、同じ\`fieldId\`と定義版で値の意味を固定する。属性の定義を変えても過去の\`observation\`を暗黙変換せず、新しい定義版への移行・表示上の換算・分析対象からの除外を区別する。機微情報の宣言は閲覧・送信資格そのものを与えるものではなく、現行の権限境界に従う。
+
 ### 5.3 型と値の意味
 
 最初の基本型候補は、文字列、数値、真偽、日時・期間、列挙／複数選択、タグ、URL、対象参照、Markdown本文、必要なら単位付き数値とする。
