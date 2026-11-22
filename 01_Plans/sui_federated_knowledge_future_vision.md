@@ -5,6 +5,7 @@
 - 上位の体験構想：[Documentの階層化と洞察形成](sui_document_exploration_future_vision.md)
 - 個人の情報基盤：[ライフログ・AIセッション・任意属性](sui_lifelog_extensible_information_vision.md)
 - TEI再構築・知見蒸留：[再開計画](sui_tei_reconstruction_distillation_plan.md)
+- Gitリポジトリ全体からの意味探索・改修・Export：[Repository as Information Source](sui_repository_source_exploration_vision.md)
 - 現行の一次価値：[ADR-0089](adr/ADR-0089-product-value-canon.md)、[SUI #3400](https://github.com/hat47x/sui-sensemaking/issues/3400)
 - 意味・開示・所有の基線：[ADR-0084](adr/ADR-0084-sensemaking-lifecycle-and-authority-boundary.md)、[ADR-0085](adr/ADR-0085-sensemaking-semantic-artifacts-and-authority-axes.md)、[ADR-0073](adr/ADR-0073-document-ownership-and-lifecycle-model.md)、[ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)
 
@@ -69,6 +70,16 @@ AIが「同じ文書の別コピーかもしれない」「この部分に共通
 
 既存の[ADR-0098](adr/ADR-0098-human-authored-review-attestation-and-safemode-island-titles.md)、[ADR-0099](adr/ADR-0099-card-critique-revision-history.md)、[ADR-0100](adr/ADR-0100-structure-decision-history.md)、[ADR-0086](adr/ADR-0086-sensemaking-artifact-identity-provenance-authority-events.md)の区別を継承する。TEI Referenceの限定経路がreview attributionを提供していないことを「履歴が存在しない」と誤読しない。
 
+### Reviewと承認の位置付け（次期SUI）
+
+**SUIが基本機能として支えるのは、AIを含むレビュー・比較・反証を情報活動として記録すること**である。組織固有の正式承認フロー、押印、差戻し、職務権限による決裁は、TEIで生成される業務機能や既存の文書管理・ワークフローに委ねる。
+
+SUIでは、観測されたセッション操作、本人が明示した確認、レビュー結果、組織の正式承認を別の記録として参照する。これらを単一の`reviewed`フラグに還元しない。承認された文書を参照するときも、外部の承認対象のRevision／提出ファイルを識別し、その結果をSUIの文書状態の正本へ自動コピーしない。
+
+**ExportはSUIの基本能力**として残す。Markdownとリンクを標準の持出し口とし、SHO／TEI／外部ToolによるWord、PDFなどの独立成果物も参照できる。正式な文書としての境界は、それを管理する組織が決める。SnapshotとArtifactの識別を用いて提出版を固定できれば、SUI全体に編集ロックを強制しなくてよい。必要なLockは外部ワークフロー側の拡張候補とする。
+
+詳細は[Repository as Information Source §6–7](sui_repository_source_exploration_vision.md)を参照する。
+
 ## 5. Organization & Access：共有可能性を明示する
 
 組織への展開では、IdP、所属・役割、有効期間、複数所属、チーム階層、Documentの帰属、用途・相手先に応じた開示を必要に応じて扱う。TEIで検討する組織モデルおよびKONのIdP／AuthZとの連携を候補とし、SUI内に独自の共通認証Hostを新設しない。
@@ -98,7 +109,7 @@ AIが「同じ文書の別コピーかもしれない」「この部分に共通
 | --- | --- | --- |
 | F0 個人の外部参照 | 既存文書URL→SUI Inbox→元資料へ復帰→独立した調査文書 | リンクだけと実Readの区別、Source失効、範囲復帰 |
 | F1 類似性の探索 | 別Sourceの三文書→検索・Constellation→関連候補 | 同byteの別原典、別byteの同系列、公開範囲の非漏えい |
-| F2 記録のTrust | AI草稿→人手編集→明示Review→特定版への承認 | edit回数をreview扱いしない、改訂後の承認失効・再確認 |
+| F2 記録のTrust | AI草稿→レビュー活動・本人確認を記録→特定版Snapshotを外部ワークフローへ参照として渡す | 編集回数をレビュー・承認に昇格しない。提出物と承認対象の版を区別する |
 | F3 組織の限定共有 | 二所属・期間付き役割→閲覧・共有・AI送信の別判定 | 兼務・異動・失効、件数漏えい、PDP fail-closed |
 | F4 公開リンクと派生 | 一つの外部URL→引用箇所の調査文書→限定公開 | 原資料の無断全文配布なし、公開選択以外は含めない |
 
