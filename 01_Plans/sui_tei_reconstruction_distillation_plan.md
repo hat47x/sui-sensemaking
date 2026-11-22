@@ -3,7 +3,7 @@
 - 状態：**再開方針と将来構想の整理／新SUIの物理設計とリポジトリ構成は未決**
 - 整理日：2026-11-22
 - 調査時の旧SUI基点：`main` `b5f6295828e7d313d59958215066d03c8a063900`。Issueやコードの状態は再開時に再確認する。
-- 将来像：[Document探索](sui_document_exploration_future_vision.md)、[ライフログ・任意属性](sui_lifelog_extensible_information_vision.md)、[個人・組織・社会の連邦型情報空間](sui_federated_knowledge_future_vision.md)
+- 将来像：[Document探索](sui_document_exploration_future_vision.md)、[ライフログ・任意属性](sui_lifelog_extensible_information_vision.md)、[個人・組織・社会の連邦型情報空間](sui_federated_knowledge_future_vision.md)、[Git RepositoryとTEI意味モデルの探索](sui_repository_source_exploration_vision.md)
 - TEI側の既存計画：[SUI→TEI移行 M0〜M6](https://github.com/hat47x/tei-platform/blob/main/plan/design/SUI_TEI_MIGRATION_TASKS_2026-11.md)
 - 既存の進捗・経緯：[ROADMAP](../ROADMAP.md)、[AGENTS.md](../AGENTS.md)
 
@@ -65,6 +65,8 @@ SafeModeを廃止するために、SafeModeと同じ機能を別名で再実装�
 | 思考を編み直す | Item/Occurrence、Tree、マインドマップ、KJの島・Relation、逆ドリルダウン | 旧KJ実装のCanvas依存UI |
 | 時間と意味を重ねる | Timeline、Episode、任意属性、Provenance、AIセッションDocument | 旧Card.metaへの自由属性追加 |
 | 類似文書を結ぶ | URL、索引、検索・Constellation、類似・派生・Fork、Reference | 検索スコアを文書の同一性へ自動昇格 |
+| リポジトリを巡る | Git Repositoryの粗いリンク→commit／file／TEIモデル要素→キャンバス→改修案 | Git main／TEI Model Revision／Build Artifact／実配備を同一視しない |
+| 文書を独立させる | Snapshot／Revisionの束縛、Markdown標準Export、SHO/TEIでOffice/PDF生成 | SUIを全組織共通の承認ワークフロー・Office編集環境にしない |
 | 組織や社会へ広げる | 現在のAuthZ、所有と作成、レビュー・承認、公開リンク | 旧SafeMode・旧テナント階層の必須継承 |
 | TEIによって育てる | Field、Form、Query、Graph、生成UI、Plugin、外部Host | SUI固有の手書きHostや第二の正本 |
 
@@ -85,6 +87,8 @@ TEIのGo単一バイナリ、`*.tei.md`を中心とした設計、既存Hostへ�
 | AI・製品横断 | [ADR-0111](adr/ADR-0111-meaning-preserving-external-cognition-interface.md)、[ADR-0117](adr/ADR-0117-cross-product-handoff-context-envelope.md) | SessionをDocument扱い、送信・保存・意味受理の資格を再設計 | `reinterpret` |
 | 所有と認可 | [ADR-0073](adr/ADR-0073-document-ownership-and-lifecycle-model.md)、[ADR-0076](adr/ADR-0076-collaboration-concurrency-model.md)、[#3422](https://github.com/hat47x/sui-sensemaking/issues/3422)、[#3423](https://github.com/hat47x/sui-sensemaking/issues/3423) | 作成者／所有者、許可、競合、unknown Adapter拒否 | `reinterpret` |
 | SafeMode・review | [ADR-0041](adr/ADR-0041-core-value-invariants-single-guard.md)、[ADR-0068](adr/ADR-0068-safemode-enforcement-at-api-boundary.md)、[ADR-0098](adr/ADR-0098-human-authored-review-attestation-and-safemode-island-titles.md) | 未レビュー一律非表示は必要か。権限者への全文表示で十分か | **SafeModeは`reject`方向、AuthZを改めて設計** |
+| 提出とレビュー | [ADR-0117](adr/ADR-0117-cross-product-handoff-context-envelope.md)、[ADR-0099](adr/ADR-0099-card-critique-revision-history.md)、[ADR-0100](adr/ADR-0100-structure-decision-history.md) | レビューを知的活動として残す。正式承認は外部制度に委ね、提出SnapshotとArtifact byteを同定できるか | `reinterpret` |
+| リポジトリ参照 | [TEI移行パケット](https://github.com/hat47x/tei-platform/blob/main/plan/design/SUI_TEI_MIGRATION_IMPLEMENTATION_PACKET_2026-11.md)、[SUI #3401](https://github.com/hat47x/sui-sensemaking/issues/3401)、[TEI #2497](https://github.com/hat47x/tei-platform/issues/2497) | Repository単位→File→モデルIDへ潜る。TEIの読取専用参照と次期SUIのモデル探索を混同しない | `reinterpret` |
 | TEIパイロット | [ADR-0116](adr/ADR-0116-tei-sensemaking-reference-source-and-disclosure.md)、[M0〜M6](https://github.com/hat47x/tei-platform/blob/main/plan/design/SUI_TEI_MIGRATION_TASKS_2026-11.md) | read-only Consumerから新SUIの生成能力へ、何を移すか | `reinterpret` |
 
 新構想から生まれたInbox、Episode、World予約、任意Field、Constellation、組織階層、柔らかな文書統合は、旧実装に存在しないからといって候補から外さない。過去の選択だけで未来を制限しない。
@@ -124,8 +128,8 @@ Aの場合は旧コードを一斉移動させず、生成領域を独立させ�
 1. **G0 構想と蒸留**：今できる仕事。長期構想と旧資産の再選定を続ける。旧方式での新機能実装を目的化しない。
 2. **G1 TEI能力**：`*.tei.md`からモデル、基本UI、Reader/Writer、生成物を作り、別Processで動作する。TEI Studio Desktopのセルフビルドが進んでいる。旧TEIパイロットのread-only成功をSUI再実装の完了と混同しない。
 3. **G2 SUI最小体験**：外部Markdown／Harnessの限定SnapshotをInboxへ入れ、Documentを開く。文章から独立Documentへドリルダウンし、元へ戻り、Markdownへ出力できる。AI OFFでも成立。
-4. **G3 意味形成**：Itemの複数OccurrenceとKJ島、保留・異論、複数文書の再構成が、TEI生成UIで動く。T2実利用で価値を検証する。
-5. **G4 拡張**：任意Field、Episode、Live Collection、検索・Constellation、セッション分析、組織・社会向け公開を、必要な順に採否判断する。
+4. **G3 意味形成**：Itemの複数OccurrenceとKJ島、保留・異論、複数文書の再構成が、TEI生成UIで動く。T2実利用で価値を検証する。Repositoryの粗い参照から一つのTEIモデル要素へ潜り、改修案のDocumentへ戻れることを[RS0–RS3](sui_repository_source_exploration_vision.md)の一部として確認する。
+5. **G4 拡張**：任意Field、Episode、Live Collection、検索・Constellation、セッション分析、組織・社会向け公開を、必要な順に採否判断する。TEIへ改修案を渡す経路や正式文書のExport／外部承認参照は[RS4・RS5](sui_repository_source_exploration_vision.md)の限定実証から始め、完成したEditor／Approval HostをSUIに作らない。
 
 **再開を宣言する条件**は、TEIの基本シナリオで「生成→保存→別Reader再読→画面操作→Markdown書出し」が独立して成立し、日常の設計変更を手書きコードで継ぎ足さずに進められること。加えて、次期SUIがどの権限・公開・レビュー契約を採用するかを、既存ADRのStatusから独立に決めること。
 

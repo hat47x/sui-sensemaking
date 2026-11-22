@@ -118,6 +118,17 @@ Documentは基本単位とし、Worldという名称はさらに上位の概念�
 
 本節は**長期的な方向を記録したもの**であり、現行SaaS認可、SafeMode、`human_reviewed`、既存DocumentV1のスキーマ、現在のIssue優先度を変更しません。健康・精神状態に関わる任意属性は自己記録を想定し、医学的な診断・妥当性を無条件に主張しません。
 
+## 将来構想：Gitリポジトリを一つの情報源として扱う
+
+[Repository as Information Source](01_Plans/sui_repository_source_exploration_vision.md)を長期構想に採録しました。特定のGit Repositoryを丸ごとInboxへリンクし、必要に応じてcommit／Directory／File／Markdown節／TEIのモデル要素へ潜ります。**Repository全体の登録から、実際に読めたモデル構造の探索までを段階的に扱い、全ファイルの一括複製を前提にしません。**
+
+- **TEIとの循環**：要件・Data・Function・Rule・UIの明示的な構造を、SUIのアウトライン／KJ／Constellationへ読取専用で投影。改修案を独立Documentとして記録し、選択した案だけをTEIへ引き渡す。Gitのmain、TEI Model Revision、Build Artifact、実配備を別々に確認する。
+- **文書の境界**：SUIは自由な思考空間を保ち、組織が定めるOffice／PDF／Git文書を外部正本としてリンクする。SUIの基本ExportはMarkdown／相対URLと必要な構造化データ。SHO・TEI等が完成品を生成できる。提出版はSnapshotとArtifact byteを固定する。
+- **ReviewとApproval**：個人のAIレビューや反証は通常の情報活動として扱う。正式な押印・決裁・承認フローをSUIのビルトインにせず、TEI／既存DMS等の外部業務制度へ委譲する。Lockも必要な組織の拡張とし、SUIの全Documentに必須としない。
+- **検証**：RS0〜RS5（粗い登録→固定Revisionの再読→TEIモデル探索→キャンバスで改修案→TEIへの引渡し→版指定Export）を、[再構築ゲート](01_Plans/sui_tei_reconstruction_distillation_plan.md)と整合させて段階化する。TEI側の既存M0〜M6は逆方向の意味付きRepository探索を実証したものではない。
+
+**現行TypeScript／Pythonで新実装を始める計画ではありません。** TEI実用化前には外部Sourceの代表Fixture、独立Expected、旧Issue／ADRの再選定を進め、実装・採否は再開ゲートに従います。
+
 ## 検討候補：OKFの出典・確認・鮮度をSUIの自由な意味探索へ取り込む
 
 [OKF連携の製品要件 #3392](https://github.com/hat47x/sui-sensemaking/issues/3392)と[Hybrid Tree/KJ計画案](01_Plans/hybrid_outline_canvas_layout_plan.md)で、Card/Island/Tree/Edgeの出典、生成/確認履歴、再検討と、SHO/SEIへのLoss付きMarkdown投影を検証する。OKFをSUI DocumentV1やReviewの正本へ置き換えない。可視の知識から非公開Cardの存在を推定せず、AI/OFF・OKF Pluginなしでも手動KJ/Outlineを維持する。

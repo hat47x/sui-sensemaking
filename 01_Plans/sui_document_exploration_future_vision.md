@@ -10,6 +10,7 @@
 - ライフログ・汎用属性・TEI専門機能の発展構想：[時間・意味・まとまり・属性を重ねる情報基盤](sui_lifelog_extensible_information_vision.md)（**将来構想／未実装**）
 - 個人から社会へ：[独立した外部文書の関連・索引・Trust・組織利用](sui_federated_knowledge_future_vision.md)
 - 将来実装への移行：[旧ADRを選び直すTEI再構築・知見蒸留計画](sui_tei_reconstruction_distillation_plan.md)（現行のSafeModeも次期設計では廃止方向で再評価）
+- Gitリポジトリ全体の粗いリンク、TEI設計要素の探索、Snapshot／Export：[Repository as Information Source](sui_repository_source_exploration_vision.md)
 
 ## 1. 目的と世界観
 
