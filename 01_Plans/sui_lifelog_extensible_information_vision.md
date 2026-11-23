@@ -260,7 +260,7 @@ TEIで機能を拡張するときは、次の順序で扱う。
 
 関連するTEI設計：[型付きData・ContextとActionの適合条件](https://github.com/hat47x/tei-platform/blob/main/plan/design/SEMANTIC_CONTEXT_ACTION_AFFORDANCE_2026-11.md)。現時点では設計上の整合性を整理したもので、SUI–TEI間の正式なField AdapterやWriter経路の実装を意味しない。
 
-## 11. 構想の位置付けと覆す条件
+## 12. 構想の位置付けと覆す条件
 
 本書はSUIが専門分野ごとの固定的なライフログアプリを目指すという意味ではない。**生活や知的活動のどこで生まれた情報も受け止め、時間・意味・まとまり・属性を重ねて再利用し、必要な専門機能をTEIなどで後から足せる**ことを、長期的な製品方向として採録する。
 
