@@ -135,6 +135,75 @@ Aの場合は旧コードを一斉移動させず、生成領域を独立させ�
 
 TEIの現行M0〜M6は限定的な移行作業であり、新SUIが完成した根拠にはならない。TEI側の担当Issueを無断で書き換えない。
 
+## 9. 次期SUIで選び直す共通の情報構造（2026-11-23追補）
+
+旧SUIのCard・Island・DocumentV1を汎用的な永続モデルへそのまま拡大しない。まず、「何を記録しているか」「どの場所に表示しているか」「どこから取得したか」「いつの状態か」を、利用者に説明できる形で分ける。新しい共通Schemaや第二の正本を先に作るという意味ではない。
+
+| 観点 | 必要な識別・意味 | 次期SUIで守ること |
+| --- | --- | --- |
+| **外部Source** | Repository、文書、Harness Session、URL、TEIモデル、実行結果のLocator | URLの登録と本文の取得を混同しない。取得不能でも参照を残せる |
+| **情報本体** | Document／Item／Episode、任意Fieldとその定義版 | 本文・観測・仮説・AI生成を混ぜず、型を後付けできる |
+| **表示と関係** | Occurrence、Tree、KJの島、Relation、Constellationの候補 | 一つのItemを複数箇所へ置いても本体を複製せず、表示上の距離を意味関係にしない |
+| **取得した時点** | Source Revision、Snapshot、取得範囲、完全性、Anchor、現在のアクセス資格 | 一致する本文でも出典・版・取得資格が異なれば区別する |
+| **作業中の文脈** | 現在の選択、固定した対象集合、問い、役割、除外項目、送出時点のContext Pack | Focusの移動でAIの対象を変えない。固定対象も現在性とGrantは再確認する |
+| **作用と成果** | 提案、編集、正式な保存、生成物、外部受領、レビュー記録、承認への参照 | プレビュー・書き込み成功・意味受理・配備・正式承認を同一視しない |
+
+「Event」「Task」「Action」も、出来事の記録、検討する課題、これから実行する処理を表す**役割候補**として扱う。SUIでEventを記録したことから、TEIの業務Operationが実行されたという意味は生じない。必要ならItem／Document／Relationと属性でまず表し、利用価値が確認できた後に専門型を採否判断する。
+
+### 見えている対象と、作業を依頼する対象を分ける
+
+TEIの[固定対象・文脈棚構想](https://github.com/hat47x/tei-platform/blob/main/plan/design/GUI_CUI_PINNED_CONTEXT_WORKBENCH_2026-11.md)から、SUIにも取り入れたいのは「PinというUIの形」そのものではなく、**問いと対象を保持したまま別のビューやHarnessへ進めること**である。
+
+例えばConstellation上でRepository Aの要件、Repository Bの同じ名前のモデル、過去の自分のメモを選び、「相違を調べる」という問いとともに固定する。画面を移動しても選んだ参照を保持するが、Sourceが更新されたり開示資格が失効したりした場合は、現在の資料として無断再束縛しない。
+
+動的な検索結果を固定したつもりで、後から増えた非公開資料をAIへ送ることも認めない。AI送出時には**その時点で実際に解決・開示された対象集合**をContext Packへ固定する。SourceのRevision、取得の不完全さ、引用・除外箇所を見せ、結果の適用時に保存先を再確認する。
+
+この動きはSUIのInbox、ライフログ、Document Reader、KJキャンバス、Constellationで共通になる。アプリごとに第二のSession管理基盤を作らず、GUI・CLI・MCP／Harnessが同じ意味の参照操作を利用できるかをTEI側と照合する。
+
+## 10. TEIの型・Context・生成UIへつなぐ境界
+
+TEIではX-TEA由来のDataとFunctionの間にContextが入り、対象・用途に応じてUIを構成する。次期SUIでも、この考え方を生かす。
+
+- SUIの基本ビューはInbox、Document Reader、アウトライン／マインドマップ、KJキャンバス、検索／Constellation等の**探索用Projection**。これらのためだけに業務画面の固定的な機能タイプを増やさない。
+- SUIが後から付けたFieldを、必要に応じてTEIの型付きData、Context、表示・入力・集計の機能へ結び付ける。**SUIの自由なタグ・観測値をそのままTEIの受理済み業務意味へ昇格させない**。
+- TEIの標準データ構造から生成できる一覧、表、フォーム等は宣言的なUIとGeneratorを利用する。AIは利用者の目的とモデルを基にUI定義や操作候補を生成できるが、生成案の見た目を実保存・業務実行の証拠としない。
+- Markdown、Graphviz、表、括弧なしClojure風記法などの表層表現は、保存元の表現を尊重し、標準データ・意味候補への変換と逆投影の損失を明示する。特定構文をSUI共通の必須言語にはしない。
+- SUIの思考キャンバスからTEIへ渡すのは、対象となるSource／Model ID、観測版、変更意図と候補、根拠・未解決事項である。TEIの正式Writer、Shared Acceptance、Targetの生成・実配備はそれぞれのOwnerが行う。
+
+参照するTEIの原典は、[Everything is Dataの表層構文と標準データの境界](https://github.com/hat47x/tei-platform/blob/main/plan/design/EVERYTHING_DATA_SYNTAX_NORMAL_FORM_EQUIVALENCE_2026-11.md)、[Semantic ContextとActionの提示／実行の分離](https://github.com/hat47x/tei-platform/blob/main/plan/design/SEMANTIC_CONTEXT_ACTION_AFFORDANCE_2026-11.md)、[複数Contextの編集・保存境界](https://github.com/hat47x/tei-platform/blob/main/plan/design/FUNCTION_CONTEXT_EDIT_SESSION_SAVE_BOUNDARY_2026-11.md)。いずれも本文の設計候補や限定試験を、次期SUIの正式ABI採用と読み替えない。
+
+## 11. TEI実用化の判定をSUIの再開ゲートへ接続する
+
+G1で必要なのは、TEIのPoCが動くという説明だけではない。SUIを構築する上で最小限の**定義→生成→実際の保存→別経路からの再読→画面上の利用→再生成**を、手書きのTypeScript／Pythonの追加なしで行えることである。
+
+| 証拠段階 | 実証すること | その段階では主張しないこと |
+| --- | --- | --- |
+| **E0** | TEIのモデル／`*.tei.md`が解析・検証できる | UIが生成された、実保存できた |
+| **E1** | 生成したUIで一つの属性やDocumentが表示できる | Writerが正式保存した |
+| **E2** | 権限付きWriterが一つの値を保存し、別Reader・別Processで再読できる | 外部の業務意味が受理された |
+| **E3** | SUIの一件のInbox登録→Document→原資料復帰→Markdown ExportをTEI生成物で完走する | KJ／Constellation全体が完成した |
+| **E4** | TreeとKJの配置、Pinnedな対象、Context Pack、AI OFFの操作が同一モデル上で成立する | 生成UIの価値が実利用で証明された |
+| **E5** | 実務での調査・改修作業が旧方式や既存ツールに対して有効と確認できる | 全分野への一般化、正式承認制度の内蔵 |
+
+G2以降は「旧SUIの全機能を移植したか」ではなく、E3のような一つの**小さく実用的な情報の往復**から判定する。TEI Studio Desktopのセルフビルドは依然として重要な前提であるが、その進捗だけでSUI再開を宣言しない。TEIなしで生成物を実行・再ビルド・通常保守できるという独立性も、別の検収項目として残す。
+
+最初のSUI題材は、公開できる小規模なTEI Repositoryと二つの独立したメモを対象とする。粗いRepositoryリンク、固定した特定コミット、Documentの一節、TEI Data/Function／Contextの読み取り投影を確認したうえで、KJ上で「改修の問い」を作る。実変更や承認まで一度に完成させることは要求しない。
+
+## 12. 蒸留を実際の再開計画に変えるための記録単位
+
+旧SUIのADRやIssueを追加の巨大な管理台帳へコピーしない。検討した原典を、新構想の該当箇所にリンクし、**課題／当時の解／新しい見方／選び直した結論／否定する反例／実装ゲート**だけを残す。
+
+| 原典にある解 | 新SUIでの読み直し | 最初に反証すること |
+| --- | --- | --- |
+| SafeModeの未レビュー遮蔽（ADR-0041／0068／0098） | 旧製品の保護策。次期版ではAuthZと外部提供権限を基本にし、レビューは文書の履歴へ | 正当な権限者が未レビュー本文を読める一方、権限外には索引・件数からも漏れない |
+| `human_reviewed`二値状態（ADR-0098） | 個人AIレビュー、本人による確認、組織承認の違いを表す履歴／Relation | AIレビューを受けただけで本人確認済みや正式承認にならない |
+| DocumentV1のカード・島・Edge（ADR-0058） | 次期のItem／Occurrence／Relation／Episodeモデルへの観測材料 | 同名別ID、同一Item多配置、Tree／KJ／Graphが衝突しない |
+| TEI向けread-only参照（ADR-0116／TEI M0〜M6） | 外部Source ReaderとDisclosureの先例。次期SUI自体のWriter契約ではない | 成功した参照をSourceの正式編集・意味受理とみなさない |
+| 既存Handoff票（ADR-0117） | 一時的な参照と送受領範囲を束ねる先例。共有の永続Session型ではない | 受渡しができても相手の保存、最新版照合、外部Effectを自動認定しない |
+| Tree／KJ複合UI計画（HC-01〜17） | 独立したProjection間で同じ情報へ戻る操作を重視。UIはTEI生成経路から比較 | KJ座標・親子・意味Relationを自動同期させない |
+
+この表は次期SUIの最終採択ではなく、[D0〜D6](#6-蒸留工程過去のadrを写し取るのではなく選び直す)で最初に検証する仮説である。旧原典に含まれる具体的な版・反例は残し、過去のAcceptedを自動的な採否理由にしない。
+
 ## 9. 結語
 
 SUIの長期構想は、旧SUIを完成させるための追加要件表ではない。**将来のTEI生成版SUIを新たに設計するための出発点**である。
