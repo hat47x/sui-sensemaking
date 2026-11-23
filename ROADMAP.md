@@ -2,7 +2,18 @@
 
 > **開発方針（2026-11-22）**：SUIの現行TypeScript／Python中心実装について、新機能の追加はTEIの実用化まで原則凍結します。現行IssueやAccepted ADRは当時の判断と実装の記録であり、次期SUIへそのまま移す確定要件ではありません。将来構想に照らして**再選定・蒸留**し、[TEI再構築・知見蒸留計画](01_Plans/sui_tei_reconstruction_distillation_plan.md)を再開ロードマップとします。特に**SafeModeは次期SUIで廃止方向**とし、閲覧資格・共有・外部AI送信とレビュー／承認の別管理で代替可能かを検証します。現行実装のSafeModeは、新版が成立するまで維持します。
 
-価値の定義と、現在の証拠の状態は、[`ADR-0089`](01_Plans/adr/ADR-0089-product-value-canon.md) が正本です。
+## 次期SUIの再開に向けて、今進めること
+
+[TEI再構築・知見蒸留計画](01_Plans/sui_tei_reconstruction_distillation_plan.md)に、旧SUIの情報を最新の構想から再選定する具体的な観点と、TEI再開の実証段階E0〜E5を追記しました。
+
+- **構想を選び直す**：旧ADRの採択履歴は残し、Document／Item／Occurrence／Relation／Episode、出典、時間、属性、レビュー・認可の意味を現在の世界観で比較する。SafeModeや二値レビュー状態を次期版の必須条件にはしない。
+- **TEIとの接続を狭く実証する**：型付きData、Function Data Context、生成UI、Writerと別Reader再読の能力を確認し、Repositoryリンク→Document→原資料復帰→Markdown Exportの一巡へ進む。TEI StudioのセルフビルドだけでSUI再開を宣言しない。
+- **選択と作用を混同しない**：KJ・Constellation・Document Readerの固定対象、問い、Context Pack、最新のSourceとGrantを区別し、AIの提案が別対象へ無断適用されないようにする。
+- **複雑さを抑える**：SUIの基本ビューは探索のために使い、分野固有のフォームや機能は必要に応じてTEIで生成する。新たな承認Hostや第二の情報正本は作らない。
+
+**旧版の保守Issueと以下の実装記録は、次期版の着手順とは異なります。** 旧方式による新機能実装は原則凍結し、再開後の採否は上記の縦断検証と実利用に従って決めます。
+
+旧SUIが受理した価値の定義と、当時の証拠の状態は、[ADR-0089](01_Plans/adr/ADR-0089-product-value-canon.md) に記録されています。
 
 SUI Sensemakingは、まとまりきらない定性の資料や観察を、早すぎる分類、要約、合意でつぶさず、出典、異論、保留、来歴を残したまま構造化し、あとから根拠に戻れる、共有できる理解へ育てる道具です。1人の開発者が、生成AIを使って開発しています。
 
@@ -10,7 +21,7 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 外部のAI、TEI、TAI、MCPクライアントがSUIの意味形成へ関与するとき、出典、異論、保留、人間の判断権を失わず、接続の方向と権限を一箇所で説明できるようにします。読み取り投影、handoff、提案ingest、送信の四類型と、接続ごとに書く5点の宣言は、[`ADR-0111`](01_Plans/adr/ADR-0111-meaning-preserving-external-cognition-interface.md) が正本です。
 
-## 中核の原則
+## 旧SUIの中核原則（稼働中の実装・保守に適用）
 
 - 意味を急いで閉じない（曖昧さの保持）。
 - 人間が決める。AIの出力は提案だけを出し（proposal-only）、`human_reviewed` は人間だけが設定する。
@@ -24,7 +35,7 @@ SUI Sensemakingは、まとまりきらない定性の資料や観察を、早�
 
 外部のAIエージェントへの読み取り専用の接続も実装済みです。`03_Implement/mcp` のMCPサーバーは、`get_context_projection` で文書の文脈の投影を、`get_proposal_status` でAI提案の状態を返します。書き込みのツールはありません。エージェントは、テナントに結び付いた資格情報（`ADR-0093`）か、OAuthのトークン交換（`ADR-0094`）で認証します。投影は、カードと島の単位ごとのdigestを持ち、単位で版を照合できます（`ADR-0103`）。TEIのepistemic reference artifactは、読み取り専用のAPIで渡せます（`ADR-0101`、`ADR-0102`）。接続手順は [`mcp_agent_connection.md`](04_Documentation/mcp_agent_connection.md) にあります。
 
-## 未完の作業と、次の作業
+## 旧実装で未完だった作業（参照用。TEI再構築時に再選定）
 
 1. **`check-narrative` の規模への対応**: 現在は全量を送る。DeepSeek（`deepseek-flash`）で、300カード・30島の全量を合成データで測った（2026-10-09）。入力はプロバイダ報告値で約10万トークン（20回ずつの評価は、物語が全カードに触れる形で約4.7万トークン）、APIが報告する文脈長は1,048,576トークンで、全量は収まる。1回は約3〜8秒、約0.03ドル（ピーク時の上限見積もり）だった。ただし、島を1つだけ物語から欠いた入力では、思考モードの影響が大きい。`scripts/evaluate_check_narrative_omission.py` で20回ずつ測ると、DeepSeek（`deepseek-flash`）は思考モード `enabled` で20回中20回検出し（Wilson下限0.84）、欠かさない対照20回のうち誤検出は2回だった。無料枠の OpenRouter の `nvidia/nemotron-3-super-120b-a12b:free` は、`enabled` で20回中11回（下限0.34、誤検出0）、`disabled` で0回だった。無料モデルは最終判断の基準（下限0.8）を満たさず、最終判断には使わない。分割は要らないと判断し、最終判断のタスクは既定で思考モード有効にした（`SUI_DEEPSEEK_THINKING_TASK_MAP` でタスク別に上書きできる。管理者がタスクの種類ごとに個別設定する仕組みは今後の課題）。ローカルのOllama（qwen3.5:4b、GPUなし）は、他の処理と競合するCPUで約1万トークンの入力に15分以上かかり、全量の検証には使えなかった。
 2. **価値の検証**: T3のパイロット（2026-10-02）では、H1は絞り込み（narrow）、H3は修正（modify）、H4は絞り込み（narrow）になった（`ADR-0089` の5節、`provisional`）。次は、T2（自分の実務での利用）で確かめる。
